@@ -24,6 +24,7 @@
 # standard imports
 import json
 import os
+import pathlib
 # third-party imports
 import numpy
 import pytest
@@ -96,8 +97,8 @@ def test_check_npz_integrity_success(tmp_path):
         label_array=None,
     )
     block = builder.build_data_block(inputs, cfg, context)
-    block.save(str(fpath))
-    res = io.check_npz_integrity((0, 0), str(fpath))
+    block.save(fpath)
+    res = io.check_npz_integrity((0, 0), fpath)
     assert res == {(0, 0): True}
 
 
@@ -107,7 +108,7 @@ def test_check_npz_integrity_missing():
     When: Running check_npz_integrity.
     Then: Return a dictionary flagging the file as invalid.
     '''
-    res = io.check_npz_integrity((0, 0), 'non_existent_file.npz')
+    res = io.check_npz_integrity((0, 0), pathlib.Path('non_existent_file.npz'))
     assert res == {(0, 0): False}
 
 
@@ -120,7 +121,7 @@ def test_check_npz_integrity_corrupted(tmp_path):
     fpath = tmp_path / 'corrupt.npz'
     with open(fpath, 'w', encoding='UTF-8') as f:
         f.write('not a zip file')
-    res = io.check_npz_integrity((0, 0), str(fpath))
+    res = io.check_npz_integrity((0, 0), fpath)
     assert res == {(0, 0): False}
 
 
@@ -131,12 +132,12 @@ def test_build_single_block_success(dummy_geotiff_factory):
     When: Running build_single_block.
     Then: Return a DataBlock containing calculated indices and labels.
     '''
-    img_path = str(dummy_geotiff_factory(
+    img_path = dummy_geotiff_factory(
         filename='image.tif', width=16, height=16, bands=5
-    ))
-    lbl_path = str(dummy_geotiff_factory(
+    )
+    lbl_path = dummy_geotiff_factory(
         filename='label.tif', width=16, height=16, bands=1
-    ))
+    )
 
     window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
 
@@ -187,12 +188,12 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     When: Running build_single_block with default options.
     Then: Return a block containing only the original image bands.
     '''
-    img_path = str(dummy_geotiff_factory(
+    img_path = dummy_geotiff_factory(
         filename='image2.tif', width=16, height=16, bands=5
-    ))
-    lbl_path = str(dummy_geotiff_factory(
+    )
+    lbl_path = dummy_geotiff_factory(
         filename='label2.tif', width=16, height=16, bands=1
-    ))
+    )
 
     window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
     label_specs: dict[str, geo_core.CategoricalSpec] = {
@@ -319,12 +320,12 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
     When: Running raster_assembler.
     Then: Return path to serialized DataBlock with valid coverage.
     '''
-    img_path = str(dummy_geotiff_factory(
+    img_path = dummy_geotiff_factory(
         filename='image.tif', width=16, height=16, bands=5
-    ))
-    lbl_path = str(dummy_geotiff_factory(
+    )
+    lbl_path = dummy_geotiff_factory(
         filename='label.tif', width=16, height=16, bands=1
-    ))
+    )
 
     with rasterio.open(lbl_path, 'r+') as src:
         arr = numpy.ones((1, 16, 16), dtype=numpy.uint8)
@@ -361,7 +362,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
     inputs = {'test_block': read_input}
 
     fpath = assembler.build_test_block(
-        save_dpath=str(tmp_path / 'test_blocks'),
+        save_dpath=tmp_path / 'test_blocks',
         inputs=inputs,
         target_head='class_head',
         valid_px_per=0.5,
@@ -379,9 +380,9 @@ def test_read_label_specs_dataset_level_tags(dummy_geotiff_factory):
     When: Reading label specs via assembler.
     Then: Return parsed label specifications dictionary.
     '''
-    lbl_path = str(dummy_geotiff_factory(
+    lbl_path = dummy_geotiff_factory(
         filename='single_lbl.tif', width=16, height=16, bands=1
-    ))
+    )
     with rasterio.open(lbl_path, 'r+') as src:
         src.set_band_description(1, 'landcover')
         src.update_tags(
@@ -408,9 +409,9 @@ def test_read_schemes_nested_and_flat(dummy_geotiff_factory):
     When: Reading schemes via assembler.
     Then: Correctly parse and merge schemes dictionaries.
     '''
-    feat_path = str(dummy_geotiff_factory(
+    feat_path = dummy_geotiff_factory(
         filename='feat_schemes.tif', width=16, height=16, bands=1
-    ))
+    )
     with rasterio.open(feat_path, 'r+') as src:
         src.update_tags(
             schemes="{'s2': {'rgb': ['blue', 'green', 'red']}}"

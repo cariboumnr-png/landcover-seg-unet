@@ -21,10 +21,6 @@
 
 '''Unit tests for dataset normalizer and view builder (view.py).'''
 
-# standard imports
-import pathlib
-# third-party imports
-import pytest
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset.normalizer as normalizer
@@ -67,6 +63,8 @@ def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
         'aligned_grid': 'grid_1',
         'source_image': '/path/img.tif',
         'source_image_sha_256': 'img_hash',
+        'source_label': None,
+        'source_label_sha_256': None,
     }
     meta_0_256: geo_core.DatasetBlockMeta = {
         'block_name': 'row_000256_col_000000',
@@ -80,6 +78,8 @@ def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
         'aligned_grid': 'grid_1',
         'source_image': '/path/img.tif',
         'source_image_sha_256': 'img_hash',
+        'source_label': None,
+        'source_label_sha_256': None,
     }
     return {
         'row_000000_col_000000': meta_0_0,

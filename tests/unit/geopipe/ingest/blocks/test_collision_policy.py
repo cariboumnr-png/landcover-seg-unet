@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-function-docstring,redefined-outer-name
 
 '''Unit tests for intra-pool block collision policies and provenance.'''
 
@@ -109,7 +109,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
         block_windowns_artifact_fapth=paths.windows,
-        collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
+        collisions_artifacts_fpath=tmp_path / 'collisions_run1.json',
         harmonize_run_id='harm_0001',
         ingest_run_id='run_0001',
     )
@@ -149,7 +149,7 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='skip',
     )
-    col2_fpath = str(tmp_path / 'collisions_run2.json')
+    col2_fpath = tmp_path / 'collisions_run2.json'
     context2 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
@@ -184,7 +184,10 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
         assert record['incumbent_harmonize_run'] == 'harm_0001'
 
     # verify telemetry report
+    assert logger2.summary is not None
+    assert logger2.summary['data_blocks']
     c_stats = logger2.summary['data_blocks']['stats']
+    assert c_stats
     assert c_stats['blocks_collided'] == len(catalog_run1)
     assert c_stats['blocks_skipped'] == len(catalog_run1)
     assert c_stats['blocks_overwritten'] == 0
@@ -221,7 +224,7 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
         block_windowns_artifact_fapth=paths.windows,
-        collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
+        collisions_artifacts_fpath=tmp_path / 'collisions_run1.json',
         harmonize_run_id='harm_0001',
         ingest_run_id='run_0001',
     )
@@ -251,7 +254,7 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
         artifacts_policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         collision_policy='overwrite',
     )
-    col2_fpath = str(tmp_path / 'collisions_run2.json')
+    col2_fpath = tmp_path / 'collisions_run2.json'
     context2 = blocks.BlockPipelineRuntimeContext(
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
@@ -284,7 +287,10 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
         assert record['incumbent_harmonize_run'] == 'harm_0001'
 
     # verify telemetry
+    assert logger2.summary is not None
+    assert logger2.summary['data_blocks']
     c_stats = logger2.summary['data_blocks']['stats']
+    assert c_stats
     assert c_stats['blocks_overwritten'] > 0
     assert c_stats['blocks_skipped'] == 0
 
@@ -320,7 +326,7 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
         block_windowns_artifact_fapth=paths.windows,
-        collisions_artifacts_fpath=str(tmp_path / 'collisions_run1.json'),
+        collisions_artifacts_fpath=tmp_path / 'collisions_run1.json',
         harmonize_run_id='harm_0001',
         ingest_run_id='run_0001',
     )
@@ -354,7 +360,7 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
         world_grid=world_grid,
         block_artifact_paths=paths.data_blocks,
         block_windowns_artifact_fapth=paths.windows,
-        collisions_artifacts_fpath=str(tmp_path / 'collisions_run2.json'),
+        collisions_artifacts_fpath=tmp_path / 'collisions_run2.json',
         harmonize_run_id='harm_0002',
         ingest_run_id='run_0002',
     )
