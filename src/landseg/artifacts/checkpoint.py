@@ -46,7 +46,7 @@ class CheckpointMeta(typing.TypedDict):
 def save_checkpoint(
     *,
     model: core.MultiheadModelLike,
-    fpath: str,
+    fpath: str | pathlib.Path,
     ckpt_meta: CheckpointMeta,
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
@@ -72,24 +72,27 @@ def save_checkpoint(
         'step': ckpt_meta['step']
     }
     # safer saving to avoid race conditions
-    tmp = fpath + '.tmp'
+    target_fpath = pathlib.Path(fpath)
+    target_fpath.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target_fpath.with_name(f'{target_fpath.name}.tmp')
     for attempt in range(10):
         try:
             torch.save(state, tmp)
             # ensure buffers are flushed before rename
             time.sleep(0.05)
 
-            pathlib.Path(tmp).replace(fpath)
+            tmp.replace(target_fpath)
             return
         except (PermissionError, RuntimeError) as _:
             if attempt == 9:
                 raise
             time.sleep(0.2 * (attempt + 1))
 
+
 def load_checkpoint(
     *,
     model: core.MultiheadModelLike,
-    fpath: str,
+    fpath: str | pathlib.Path,
     map_device: str,
     optimizer: torch.optim.Optimizer | None = None,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None

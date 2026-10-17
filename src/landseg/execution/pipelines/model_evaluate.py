@@ -49,6 +49,7 @@ class ModelEvaluation(base.SessionPipeline):
                 mode_override='evaluate',
                 eval_split=eval_config.valid_split,
             )
+            runner.set_head_state()
 
             self.logger.set_inputs({
                 'checkpoint': eval_config.checkpoint,
