@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring,redefined-outer-name
-
 '''Unit tests for intra-pool block collision policies and provenance.'''
 
 # standard imports
@@ -37,53 +35,16 @@ import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks as blocks
 
 
-# ----- fixtures
-@pytest.fixture
-def test_setup_factory(tmp_path, dummy_geotiff_factory):
-    '''Prepare synthetic rasters and grid for collision tests.'''
-    def _create():
-        img = dummy_geotiff_factory(
-            filename='comp_11band.tif',
-            width=256,
-            height=256,
-            bands=11,
-            crs='EPSG:3161',
-            dtype=numpy.float32,
-        )
-        lbl = dummy_geotiff_factory(
-            filename='label.tif',
-            width=256,
-            height=256,
-            bands=1,
-            crs='EPSG:3161',
-            dtype=numpy.uint8,
-        )
-        with rasterio.open(lbl, 'r+') as dataset:
-            dataset.set_band_description(1, 'land_cover')
-            dataset.update_tags(
-                1, num_cls=2, ignore_cls='[255]', index_base=1
-            )
-
-        world_grid = grid_builder.build_grid(
-            mode='ref',
-            ref_fpath=img,
-            tile_size=(256, 256),
-            tile_stride=(128, 128),
-        )
-        paths = artifacts.IngestionPaths(tmp_path)
-        return world_grid, paths, img, lbl
-
-    return _create
-
-
 # ----- collision policy tests
-def test_collision_policy_skip(tmp_path, test_setup_factory):
+def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
     '''
     Given: An incumbent block pool with established catalog lineage.
     When: Ingesting an overlapping batch under policy 'skip'.
     Then: Preserve incumbent blocks and record skipped collisions.
     '''
-    world_grid, paths, img, lbl = test_setup_factory()
+    world_grid, paths, img, lbl = _create_test_setup(
+        tmp_path, dummy_geotiff_factory
+    )
 
     # run initial batch (run 1)
     rep1_fpath = str(tmp_path / 'rep1.json')
@@ -193,13 +154,15 @@ def test_collision_policy_skip(tmp_path, test_setup_factory):
     assert c_stats['blocks_overwritten'] == 0
 
 
-def test_collision_policy_overwrite(tmp_path, test_setup_factory):
+def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
     '''
     Given: An incumbent block pool with established catalog lineage.
     When: Ingesting an overlapping batch under policy 'overwrite'.
     Then: Overwrite incumbent blocks and update lineage metadata.
     '''
-    world_grid, paths, img, lbl = test_setup_factory()
+    world_grid, paths, img, lbl = _create_test_setup(
+        tmp_path, dummy_geotiff_factory
+    )
 
     # run initial batch (run 1)
     logger1 = ingest.IngestionLogger(
@@ -295,13 +258,15 @@ def test_collision_policy_overwrite(tmp_path, test_setup_factory):
     assert c_stats['blocks_skipped'] == 0
 
 
-def test_collision_policy_error(tmp_path, test_setup_factory):
+def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
     '''
     Given: An incumbent block pool with established catalog lineage.
     When: Ingesting an overlapping batch under policy 'error'.
     Then: Raise ArtifactError before creating or modifying blocks.
     '''
-    world_grid, paths, img, lbl = test_setup_factory()
+    world_grid, paths, img, lbl = _create_test_setup(
+        tmp_path, dummy_geotiff_factory
+    )
 
     # run initial batch (run 1)
     logger1 = ingest.IngestionLogger(
@@ -378,3 +343,38 @@ def test_collision_policy_error(tmp_path, test_setup_factory):
         catalog = json.load(f)
     first_key = next(iter(catalog))
     assert catalog[first_key]['harmonize_run_id'] == 'harm_0001'
+
+
+# ----- private helpers
+def _create_test_setup(tmp_path, dummy_geotiff_factory):
+    '''Prepare synthetic rasters and grid for collision tests.'''
+    img = dummy_geotiff_factory(
+        filename='comp_11band.tif',
+        width=256,
+        height=256,
+        bands=11,
+        crs='EPSG:3161',
+        dtype=numpy.float32,
+    )
+    lbl = dummy_geotiff_factory(
+        filename='label.tif',
+        width=256,
+        height=256,
+        bands=1,
+        crs='EPSG:3161',
+        dtype=numpy.uint8,
+    )
+    with rasterio.open(lbl, 'r+') as dataset:
+        dataset.set_band_description(1, 'land_cover')
+        dataset.update_tags(
+            1, num_cls=2, ignore_cls='[255]', index_base=1
+        )
+
+    world_grid = grid_builder.build_grid(
+        mode='ref',
+        ref_fpath=img,
+        tile_size=(256, 256),
+        tile_stride=(128, 128),
+    )
+    paths = artifacts.IngestionPaths(tmp_path)
+    return world_grid, paths, img, lbl

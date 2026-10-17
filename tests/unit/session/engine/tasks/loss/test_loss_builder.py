@@ -22,7 +22,6 @@
 '''Unit tests for loss builder module (builder.py).'''
 
 # third-party imports
-import pytest
 import torch
 # local imports
 import landseg.session.engine.tasks.loss.builder as builder

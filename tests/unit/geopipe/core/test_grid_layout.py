@@ -295,4 +295,3 @@ def test_coords_str_roundtrip():
     assert coords_str.xy_name((0, 0)) == 'row_000000_col_000000'
     assert coords_str.name_xy('row_000034_col_000012') == (12, 34)
     assert coords_str.name_xy('row_000000_col_000000') == (0, 0)
-

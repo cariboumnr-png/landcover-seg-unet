@@ -22,12 +22,10 @@
 '''Unit tests for assembler modules build blocks API.'''
 
 # standard imports
-import json
 import os
 import pathlib
 # third-party imports
 import numpy
-import pytest
 import rasterio
 # local imports
 import landseg.artifacts as artifacts
@@ -37,34 +35,6 @@ import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
 import landseg.geopipe.utils as geo_utils
-
-
-# ----- fixtures
-@pytest.fixture(name='assembler_config_json')
-def fixture_assembler_config_json(tmp_path):
-    '''Mock metadata source config file JSON.'''
-    data = {
-        'image_band_map': {
-            'red': 0,
-            'green': 1,
-            'blue': 2,
-            'nir': 3,
-            'dem': 4
-        },
-        'label_specs': {
-            'class_head': {
-                'num_cls': 2,
-                'ignore_cls': [255]
-            }
-        },
-        'label_color_map': {
-            '1': [0, 255, 0]
-        }
-    }
-    fpath = tmp_path / 'config.json'
-    with open(fpath, 'w', encoding='UTF-8') as f:
-        json.dump(data, f)
-    return fpath
 
 
 # ----- integrity checks
