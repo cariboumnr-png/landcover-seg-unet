@@ -21,11 +21,12 @@
 
 '''Unit tests for block image and label statistics aggregation.'''
 
+# standard imports
+import pathlib
 # third-party imports
 import numpy
 import pytest
 # local imports
-import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.materialize.stats as mat_stats
 
 
@@ -70,9 +71,7 @@ def test_aggregate_image_stats_success(mocker):
     Then: Correctly aggregate band means and standard deviations.
     '''
     mock_block = mocker.Mock()
-    mock_block.data.image = numpy.random.rand(2, 64, 64).astype(
-        numpy.float32
-    )
+    mock_block.data.image = numpy.random.rand(2, 64, 64).astype(numpy.float32)
     mock_block.manifest = {
         'image_stats': {
             'band_0': {
@@ -88,11 +87,9 @@ def test_aggregate_image_stats_success(mocker):
         }
     }
 
-    mocker.patch(
-        'landseg.geopipe.core.DataBlock.load', return_value=mock_block
-    )
+    mocker.patch('landseg.geopipe.core.DataBlock.load', return_value=mock_block)
 
-    input_blocks = {'block1.npz', 'block2.npz'}
+    input_blocks = {pathlib.Path('block1.npz'), pathlib.Path('block2.npz')}
     result = mat_stats.aggregate_image_stats(input_blocks)
 
     assert len(result) == 2
@@ -110,9 +107,7 @@ def test_aggregate_image_stats_channel_indices(mocker):
     Then: Aggregate statistics only for selected channels remapped.
     '''
     mock_block = mocker.Mock()
-    mock_block.data.image = numpy.random.rand(3, 64, 64).astype(
-        numpy.float32
-    )
+    mock_block.data.image = numpy.random.rand(3, 64, 64).astype(numpy.float32)
     mock_block.manifest = {
         'image_stats': {
             'band_0': {'count': 100, 'mean': 10.0, 'm2': 400.0},
@@ -125,9 +120,10 @@ def test_aggregate_image_stats_channel_indices(mocker):
         'landseg.geopipe.core.DataBlock.load', return_value=mock_block
     )
 
-    input_blocks = {'block1.npz'}
+    input_blocks = {pathlib.Path('block1.npz')}
     result = mat_stats.aggregate_image_stats(
-        input_blocks, channel_indices=[2, 0]
+        input_blocks,
+        channel_indices=[2, 0]
     )
 
     assert len(result) == 2

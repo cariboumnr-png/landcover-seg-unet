@@ -68,5 +68,5 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     with open(report_fpath, 'r', encoding='utf-8') as f:
         report_data = json.load(f)
     assert report_data['status'] == 'SUCCESS'
-    assert report_data['grid']['grid_fpath'] == grid_fpath
+    assert report_data['grid']['grid_fpath'] == str(grid_fpath)
     assert report_data['total_tiles'] == len(grid_data)

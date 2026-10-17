@@ -24,7 +24,7 @@
 '''Unit tests for the data ingestion execution pipeline.'''
 
 # standard imports
-import os
+import pathlib
 import typing
 # third-party imports
 import omegaconf
@@ -66,19 +66,11 @@ def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
     pipelines.DataIngestion(config).run()
 
     # verify the generated outputs
-    out_dpath = config.data.ingestion.output_dpath
-    assert os.path.exists(
-        os.path.join(out_dpath, 'data_blocks', 'catalog.json')
-    )
-    assert os.path.exists(
-        os.path.join(out_dpath, 'data_blocks', 'schema.json')
-    )
-    assert os.path.exists(
-        os.path.join(out_dpath, 'data_blocks', 'blocks')
-    )
-    assert os.path.exists(
-        os.path.join(out_dpath, 'run_0001', 'report.json')
-    )
+    out_dpath = pathlib.Path(config.data.ingestion.output_dpath)
+    assert (out_dpath / 'data_blocks' / 'catalog.json').exists()
+    assert (out_dpath / 'data_blocks' / 'schema.json').exists()
+    assert (out_dpath / 'data_blocks' / 'blocks').exists()
+    assert (out_dpath / 'run_0001' / 'report.json').exists()
 
 
 def test_data_ingest_pipeline_targeted_harmonization_run(
@@ -120,20 +112,16 @@ def test_data_ingest_pipeline_targeted_harmonization_run(
     )
     pipelines.DataHarmonization(config_batch2).run()
 
-    h_root = str(tmp_path / 'harmonized')
-    assert os.path.exists(os.path.join(h_root, 'run_0001'))
-    assert os.path.exists(os.path.join(h_root, 'run_0002'))
+    h_root = tmp_path / 'harmonized'
+    assert (h_root / 'run_0001').exists()
+    assert (h_root / 'run_0002').exists()
 
     # ingest targeting run_0001 (reverting config for ingestion)
     pipelines.DataIngestion(config).run()
-    out_dpath = config.data.ingestion.output_dpath
-    assert os.path.exists(
-        os.path.join(out_dpath, 'data_blocks', 'catalog.json')
-    )
-    assert os.path.exists(
-        os.path.join(out_dpath, 'run_0001', 'report.json')
-    )
-    assert not os.path.exists(os.path.join(out_dpath, 'run_0002'))
+    out_dpath = pathlib.Path(config.data.ingestion.output_dpath)
+    assert (out_dpath / 'data_blocks' / 'catalog.json').exists()
+    assert (out_dpath / 'run_0001' / 'report.json').exists()
+    assert not (out_dpath / 'run_0002').exists()
 
 
 def test_data_ingest_pipeline_with_spectral_and_topo(
@@ -169,10 +157,8 @@ def test_data_ingest_pipeline_with_spectral_and_topo(
     pipelines.DataIngestion(config).run()
 
     # verify generated outputs
-    out_dpath = config.data.ingestion.output_dpath
-    assert os.path.exists(
-        os.path.join(out_dpath, 'data_blocks', 'catalog.json')
-    )
+    out_dpath = pathlib.Path(config.data.ingestion.output_dpath)
+    assert (out_dpath / 'data_blocks' / 'catalog.json').exists()
 
 
 def test_data_ingest_validate_missing_harmonization(tmp_path):

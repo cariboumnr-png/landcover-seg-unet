@@ -185,9 +185,7 @@ def test_build_data_block_label_canonicalize_base_layer():
     '''
     cfg = _make_config()
     ctx = _make_context(label_specs=BASE_LABELSPECS)
-    inputs = _make_inputs(
-        label_array=BASE_LABEL_ARRAY,
-    )
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert len(block.data.label) == 1
@@ -218,9 +216,7 @@ def test_build_data_block_label_canonicalize_zero_based_index():
     }
     cfg = _make_config()
     ctx = _make_context(label_specs=zero_based_specs)
-    inputs = _make_inputs(
-        label_array=zero_based_array,
-    )
+    inputs = _make_inputs(label_array=zero_based_array)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
     stack_base = block.data.label[0]
@@ -241,9 +237,7 @@ def test_build_data_block_label_stats_valid_ratio():
     '''
     cfg = _make_config()
     ctx = _make_context(label_specs=BASE_LABELSPECS)
-    inputs = _make_inputs(
-        label_array=BASE_LABEL_ARRAY,
-    )
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
     valid = float(numpy.mean(BASE_LABEL_ARRAY != 4))
@@ -258,17 +252,12 @@ def test_build_data_block_label_stats_class_count_entropy():
     '''
     cfg = _make_config()
     ctx = _make_context(label_specs=BASE_LABELSPECS)
-    inputs = _make_inputs(
-        label_array=BASE_LABEL_ARRAY,
-    )
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
-    assert block.manifest['label_count'] == {
-        'base': [16384, 16384, 16384, 0]
-    }
-    assert block.manifest['label_entropy'] == {
-        'base': pytest.approx(- numpy.log2(1 / 3))
-    }
+    ent = pytest.approx(- numpy.log2(1 / 3))
+    assert block.manifest['label_count'] == {'base': [16384, 16384, 16384, 0]}
+    assert block.manifest['label_entropy'] == {'base': ent}
 
 
 # ----- `DataBlockInputs` tests
@@ -406,9 +395,7 @@ def test_calc_slope_and_aspect():
 
     # invalid neighbor returns nodata tuple
     grad[0, 0] = -999.9
-    assert builder._Calc.slope_n_aspect(grad, -999.9) == (
-        -999.9, -999.9, -999.9
-    )
+    assert builder._Calc.slope_n_aspect(grad, -999.9) == (-999.9, -999.9, -999.9)
 
 
 def test_calc_tpi():
@@ -417,14 +404,10 @@ def test_calc_tpi():
     When: Calculating topographic position index.
     Then: Return positive, negative, and zero indices respectively.
     '''
-    peak = numpy.array(
-        [[10, 10, 10], [10, 20, 10], [10, 10, 10]], dtype=float
-    )
+    peak = numpy.array([[10, 10, 10], [10, 20, 10], [10, 10, 10]], dtype=float)
     assert builder._Calc.tpi(peak, -999.9) == pytest.approx(10.0)
 
-    pit = numpy.array(
-        [[20, 20, 20], [20, 10, 20], [20, 20, 20]], dtype=float
-    )
+    pit = numpy.array([[20, 20, 20], [20, 10, 20], [20, 20, 20]], dtype=float)
     assert builder._Calc.tpi(pit, -999.9) == pytest.approx(-10.0)
 
     flat = numpy.full((3, 3), 42.0)

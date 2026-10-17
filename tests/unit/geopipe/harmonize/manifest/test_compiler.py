@@ -23,7 +23,6 @@
 
 # standard imports
 import json
-import pathlib
 # third-party imports
 import pytest
 # local imports

@@ -114,6 +114,7 @@ def test_data_harmonize_pipeline_collision_skip(tmp_path, dummy_data_paths):
     )
     ctrl = artifacts.Controller[dict](manifest_fp)
     runs = ctrl.fetch()
+    assert runs
     assert len(runs) == 2
     uids = list(runs.keys())
     assert runs[uids[0]]['status'] == 'SUCCESS'
@@ -140,4 +141,4 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
         RuntimeError,
         match='Upstream pipeline "world-grid"'
     ):
-        pipeline._validate()
+        pipeline._validate() # pylint: disable=protected-access

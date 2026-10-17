@@ -39,9 +39,7 @@ def test_normalize_image_math():
     Then: Correctly apply z-score normalization and replace invalid
         pixels with global mean.
     '''
-    raw_img = numpy.array(
-        [[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32
-    )
+    raw_img = numpy.array([[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32)
     # pixel (1, 1) is invalid
     mask = numpy.array([[True, True], [True, False]], dtype=bool)
 
@@ -176,4 +174,3 @@ def test_purge_removes_stale_files(tmp_path):
     assert purged_count == 1
     assert expected_file.exists()
     assert not stale_file.exists()
-

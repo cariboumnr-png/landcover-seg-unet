@@ -72,7 +72,7 @@ def test_intersect_aoi_raster_basic(tmp_path):
     canvas_transform = rasterio.transform.from_origin(
         500000.0, 600000.0, 20.0, 20.0
     )
-    aoi_path = str(tmp_path / 'test_aoi.tif')
+    aoi_path = tmp_path / 'test_aoi.tif'
     _create_dummy_geotiff(
         aoi_path,
         crs='EPSG:3161',
@@ -101,7 +101,7 @@ def test_intersect_aoi_raster_reprojection(tmp_path):
     '''
     # EPSG:4326 transform around -80 deg lon, 45 deg lat
     aoi_transform = rasterio.transform.from_origin(-80.5, 45.5, 0.01, 0.01)
-    aoi_path = str(tmp_path / 'aoi_4326.tif')
+    aoi_path = tmp_path / 'aoi_4326.tif'
     _create_dummy_geotiff(
         aoi_path,
         crs='EPSG:4326',
@@ -139,13 +139,17 @@ def test_resolve_aoi_partitions_priority_conflict(tmp_path):
     canvas_transform = rasterio.transform.from_origin(
         500000.0, 600000.0, 20.0, 20.0
     )
-    test_aoi = str(tmp_path / 'test_aoi.tif')
-    val_aoi = str(tmp_path / 'val_aoi.tif')
+    test_aoi = tmp_path / 'test_aoi.tif'
+    val_aoi = tmp_path / 'val_aoi.tif'
     _create_dummy_geotiff(
-        test_aoi, transform=canvas_transform, shape=(256, 256)
+        test_aoi,
+        transform=canvas_transform,
+        shape=(256, 256)
     )
     _create_dummy_geotiff(
-        val_aoi, transform=canvas_transform, shape=(256, 256)
+        val_aoi,
+        transform=canvas_transform,
+        shape=(256, 256)
     )
 
     candidates = [(0, 0), (256, 256)]
@@ -181,9 +185,9 @@ def test_resolve_aoi_partitions_scenario_1_three_splits(tmp_path):
         500000.0, 600000.0 - 256 * 20, 20.0, 20.0
     )
 
-    test_path = str(tmp_path / 'test.tif')
-    val_path = str(tmp_path / 'val.tif')
-    train_path = str(tmp_path / 'train.tif')
+    test_path = tmp_path / 'test.tif'
+    val_path = tmp_path / 'val.tif'
+    train_path = tmp_path / 'train.tif'
 
     _create_dummy_geotiff(test_path, transform=t_test)
     _create_dummy_geotiff(val_path, transform=t_val)

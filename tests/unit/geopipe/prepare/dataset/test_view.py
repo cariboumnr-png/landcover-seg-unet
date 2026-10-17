@@ -27,66 +27,6 @@ import landseg.geopipe.prepare.dataset.normalizer as normalizer
 import landseg.geopipe.prepare.dataset.view as view_mod
 
 
-# ----- test helpers
-def _make_dummy_schema() -> geo_core.DatasetSchema:
-    '''Construct minimal DatasetSchema for dataset view tests.'''
-    return {
-        'schema_id': 'data_schema/v1.1',
-        'tensor_shapes': {'image': {'H': 256, 'W': 256}},
-        'io_conventions': {
-            'image_band_map': {'blue': 0, 'green': 1, 'red': 2, 'nir': 3},
-            'label_band_map': {'landcover': 0},
-        },
-        'labels': {
-            'label_num_cls': {'landcover': 3},
-            'label_class_names': {'landcover': ['c1', 'c2', 'c3']},
-            'label_ignore_cls': {'landcover': [255]},
-        },
-        'dataset': {
-            'image_schemes': {'rgb': {'channels': ['blue', 'green', 'red']}},
-            'label_schemes': {},
-        },
-    }  # type: ignore[return-value]
-
-
-def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
-    '''Construct minimal catalog mapping for dataset view tests.'''
-    meta_0_0: geo_core.DatasetBlockMeta = {
-        'block_name': 'row_000000_col_000000',
-        'file_path': '/path/block_0_0.npz',
-        'row_col': [0, 0],
-        'valid_px_ratios': {'landcover': 1.0},
-        'class_count': {'landcover': [100, 200, 300]},
-        'schema_version': 'v1.0',
-        'creation_time': '2026-09-18T00:00:00',
-        'sha_256': 'abc123hash',
-        'aligned_grid': 'grid_1',
-        'source_image': '/path/img.tif',
-        'source_image_sha_256': 'img_hash',
-        'source_label': None,
-        'source_label_sha_256': None,
-    }
-    meta_0_256: geo_core.DatasetBlockMeta = {
-        'block_name': 'row_000256_col_000000',
-        'file_path': '/path/block_256_0.npz',
-        'row_col': [256, 0],
-        'valid_px_ratios': {'landcover': 0.4},
-        'class_count': {'landcover': [50, 150, 250]},
-        'schema_version': 'v1.0',
-        'creation_time': '2026-09-18T00:00:00',
-        'sha_256': 'def456hash',
-        'aligned_grid': 'grid_1',
-        'source_image': '/path/img.tif',
-        'source_image_sha_256': 'img_hash',
-        'source_label': None,
-        'source_label_sha_256': None,
-    }
-    return {
-        'row_000000_col_000000': meta_0_0,
-        'row_000256_col_000000': meta_0_256,
-    }
-
-
 # ----- `read_dataset_manifest` tests
 def test_read_dataset_manifest_basic():
     '''
@@ -150,3 +90,63 @@ def test_build_dataset_view_success():
     assert ds_view.features.indices == (0, 1)
     assert len(ds_view.manifest.valid_blocks) == 2
     assert 'landcover' in ds_view.targets.head_names
+
+
+# ----- private helpers
+def _make_dummy_schema() -> geo_core.DatasetSchema:
+    '''Construct minimal DatasetSchema for dataset view tests.'''
+    return {
+        'schema_id': 'data_schema/v1.1',
+        'tensor_shapes': {'image': {'H': 256, 'W': 256}},
+        'io_conventions': {
+            'image_band_map': {'blue': 0, 'green': 1, 'red': 2, 'nir': 3},
+            'label_band_map': {'landcover': 0},
+        },
+        'labels': {
+            'label_num_cls': {'landcover': 3},
+            'label_class_names': {'landcover': ['c1', 'c2', 'c3']},
+            'label_ignore_cls': {'landcover': [255]},
+        },
+        'dataset': {
+            'image_schemes': {'rgb': {'channels': ['blue', 'green', 'red']}},
+            'label_schemes': {},
+        },
+    }  # type: ignore[return-value]
+
+
+def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
+    '''Construct minimal catalog mapping for dataset view tests.'''
+    meta_0_0: geo_core.DatasetBlockMeta = {
+        'block_name': 'row_000000_col_000000',
+        'file_path': '/path/block_0_0.npz',
+        'row_col': [0, 0],
+        'valid_px_ratios': {'landcover': 1.0},
+        'class_count': {'landcover': [100, 200, 300]},
+        'schema_version': 'v1.0',
+        'creation_time': '2026-09-18T00:00:00',
+        'sha_256': 'abc123hash',
+        'aligned_grid': 'grid_1',
+        'source_image': '/path/img.tif',
+        'source_image_sha_256': 'img_hash',
+        'source_label': None,
+        'source_label_sha_256': None,
+    }
+    meta_0_256: geo_core.DatasetBlockMeta = {
+        'block_name': 'row_000256_col_000000',
+        'file_path': '/path/block_256_0.npz',
+        'row_col': [256, 0],
+        'valid_px_ratios': {'landcover': 0.4},
+        'class_count': {'landcover': [50, 150, 250]},
+        'schema_version': 'v1.0',
+        'creation_time': '2026-09-18T00:00:00',
+        'sha_256': 'def456hash',
+        'aligned_grid': 'grid_1',
+        'source_image': '/path/img.tif',
+        'source_image_sha_256': 'img_hash',
+        'source_label': None,
+        'source_label_sha_256': None,
+    }
+    return {
+        'row_000000_col_000000': meta_0_0,
+        'row_000256_col_000000': meta_0_256,
+    }

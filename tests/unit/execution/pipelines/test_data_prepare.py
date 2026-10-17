@@ -22,7 +22,7 @@
 '''Unit tests for the data preparation execution pipeline.'''
 
 # standard imports
-import os
+import pathlib
 import typing
 # third-party imports
 import omegaconf
@@ -93,14 +93,12 @@ def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
     pipelines.DataPreparation(config).run()
 
     # verify the generated preparation outputs
-    out_dpath = config.data.preparation.output_dpath
-    assert os.path.exists(os.path.join(out_dpath, 'block_splits_source.json'))
-    assert os.path.exists(
-        os.path.join(out_dpath, 'block_splits_prepared.json')
-    )
-    assert os.path.exists(os.path.join(out_dpath, 'image_stats.json'))
-    assert os.path.exists(os.path.join(out_dpath, 'report.json'))
-    assert os.path.exists(os.path.join(out_dpath, 'schema.json'))
+    out_dpath = pathlib.Path(config.data.preparation.output_dpath)
+    assert (out_dpath / 'block_splits_source.json').exists()
+    assert (out_dpath / 'block_splits_prepared.json').exists()
+    assert (out_dpath / 'image_stats.json').exists()
+    assert (out_dpath / 'report.json').exists()
+    assert (out_dpath / 'schema.json').exists()
 
 
 def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):

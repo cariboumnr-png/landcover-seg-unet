@@ -133,10 +133,16 @@ def test_build_single_block_success(dummy_geotiff_factory):
     Then: Return a DataBlock containing calculated indices and labels.
     '''
     img_path = dummy_geotiff_factory(
-        filename='image.tif', width=16, height=16, bands=5
+        filename='image.tif',
+        width=16,
+        height=16,
+        bands=5
     )
     lbl_path = dummy_geotiff_factory(
-        filename='label.tif', width=16, height=16, bands=1
+        filename='label.tif',
+        width=16,
+        height=16,
+        bands=1
     )
 
     window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
@@ -189,10 +195,16 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
     Then: Return a block containing only the original image bands.
     '''
     img_path = dummy_geotiff_factory(
-        filename='image2.tif', width=16, height=16, bands=5
+        filename='image2.tif',
+        width=16,
+        height=16,
+        bands=5
     )
     lbl_path = dummy_geotiff_factory(
-        filename='label2.tif', width=16, height=16, bands=1
+        filename='label2.tif',
+        width=16,
+        height=16,
+        bands=1
     )
 
     window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
@@ -246,10 +258,16 @@ def test_build_blocks_orchestrator(
     Then: Save built DataBlocks to the output path.
     '''
     img_path = dummy_geotiff_factory(
-        filename='image.tif', width=16, height=16, bands=5
+        filename='image.tif',
+        width=16,
+        height=16,
+        bands=5
     )
     lbl_path = dummy_geotiff_factory(
-        filename='label.tif', width=16, height=16, bands=1
+        filename='label.tif',
+        width=16,
+        height=16,
+        bands=1
     )
 
     out_dir = tmp_path / 'blocks'
@@ -321,10 +339,16 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
     Then: Return path to serialized DataBlock with valid coverage.
     '''
     img_path = dummy_geotiff_factory(
-        filename='image.tif', width=16, height=16, bands=5
+        filename='image.tif',
+        width=16,
+        height=16,
+        bands=5
     )
     lbl_path = dummy_geotiff_factory(
-        filename='label.tif', width=16, height=16, bands=1
+        filename='label.tif',
+        width=16,
+        height=16,
+        bands=1
     )
 
     with rasterio.open(lbl_path, 'r+') as src:
@@ -381,7 +405,10 @@ def test_read_label_specs_dataset_level_tags(dummy_geotiff_factory):
     Then: Return parsed label specifications dictionary.
     '''
     lbl_path = dummy_geotiff_factory(
-        filename='single_lbl.tif', width=16, height=16, bands=1
+        filename='single_lbl.tif',
+        width=16,
+        height=16,
+        bands=1
     )
     with rasterio.open(lbl_path, 'r+') as src:
         src.set_band_description(1, 'landcover')
@@ -410,12 +437,13 @@ def test_read_schemes_nested_and_flat(dummy_geotiff_factory):
     Then: Correctly parse and merge schemes dictionaries.
     '''
     feat_path = dummy_geotiff_factory(
-        filename='feat_schemes.tif', width=16, height=16, bands=1
+        filename='feat_schemes.tif',
+        width=16,
+        height=16,
+        bands=1
     )
     with rasterio.open(feat_path, 'r+') as src:
-        src.update_tags(
-            schemes="{'s2': {'rgb': ['blue', 'green', 'red']}}"
-        )
+        src.update_tags(schemes="{'s2': {'rgb': ['blue', 'green', 'red']}}")
 
     schemes = assembler.read_schemes(feat_path)
     assert 's2' in schemes
