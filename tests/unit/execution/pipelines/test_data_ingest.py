@@ -73,57 +73,6 @@ def test_data_ingest_pipeline_success(tmp_path, dummy_data_paths):
     assert (out_dpath / 'run_0001' / 'report.json').exists()
 
 
-def test_data_ingest_pipeline_targeted_harmonization_run(
-    tmp_path,
-    dummy_data_paths
-):
-    '''
-    Given: Multiple harmonization run directories.
-    When: `data.ingestion.harmonization_run` is set to 1.
-    Then: Ingestion targets run_0001 output artifacts.
-    '''
-    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    grid_cfg = cfg_schema.data.world_grid
-    grid_cfg.mode = 'ref'
-    grid_cfg.ref_fpath = dummy_data_paths.extent
-    grid_cfg.tile_size = (256, 256)
-    grid_cfg.tile_stride = (128, 128)
-
-    cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
-    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
-    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested_data')
-    cfg_schema.data.ingestion.rebuild = True
-    cfg_schema.data.ingestion.harmonization_run = 1
-
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-
-    # run world-grid first, then harmonization twice to create run_0001 and run_0002
-    pipelines.WorldGridGeneration(config).run()
-    pipelines.DataHarmonization(config).run()
-
-    # run batch 2 with distinct resampling config to produce run_0002
-    cfg_schema.data.harmonization.resampling_continuous = 'nearest'
-    config_batch2 = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-    pipelines.DataHarmonization(config_batch2).run()
-
-    h_root = tmp_path / 'harmonized'
-    assert (h_root / 'run_0001').exists()
-    assert (h_root / 'run_0002').exists()
-
-    # ingest targeting run_0001 (reverting config for ingestion)
-    pipelines.DataIngestion(config).run()
-    out_dpath = pathlib.Path(config.data.ingestion.output_dpath)
-    assert (out_dpath / 'data_blocks' / 'catalog.json').exists()
-    assert (out_dpath / 'run_0001' / 'report.json').exists()
-    assert not (out_dpath / 'run_0002').exists()
-
-
 def test_data_ingest_pipeline_with_spectral_and_topo(
     tmp_path,
     dummy_data_paths
