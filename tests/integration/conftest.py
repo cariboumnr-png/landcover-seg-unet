@@ -19,29 +19,31 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for coordinates-to-string format utilities (coords_str.py).'''
+'''
+Shared configuration and fixtures for integration tests.
+'''
 
+# standard imports
+import pathlib
+# third-party imports
+import pytest
 # local imports
-import landseg.geopipe.utils.coords_str as coords_str
+import landseg.testing as testing
+
+# absolute path to repository root
+ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 
 
-# ----- `xy_name` tests
-def test_xy_name():
+# ----- session fixtures
+@pytest.fixture(scope='session', autouse=True)
+def ensure_canonical_dummy_data():
     '''
-    Given: A tuple of (x, y) coordinates.
-    When: Converting to a canonical string name.
-    Then: Formats as 'row_YYYYYY_col_XXXXXX' with zero-padding.
-    '''
-    assert coords_str.xy_name((12, 34)) == 'row_000034_col_000012'
-    assert coords_str.xy_name((0, 0)) == 'row_000000_col_000000'
+    Ensure canonical on-disk dummy dataset exists before integration suite.
 
-
-# ----- `name_xy` tests
-def test_name_xy():
+    Equivalent to running `python scripts/generate_dummy_data.py --yes`.
     '''
-    Given: A canonical row/col block name string.
-    When: Converting back to coordinates.
-    Then: Correctly parses out the (x, y) integer tuple.
-    '''
-    assert coords_str.name_xy('row_000034_col_000012') == (12, 34)
-    assert coords_str.name_xy('row_000000_col_000000') == (0, 0)
+    in_dir = ROOT_DIR / 'experiment' / 'input'
+    paths = testing.TIFFPaths(root=in_dir)
+    if not paths.all_paths_exist:
+        testing.generate_dummy_data(in_dir)
+    return paths

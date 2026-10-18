@@ -53,9 +53,9 @@ class GridConfigs:
 
 # ----- public functions
 def build_grid(
+    *,
     tile_size: tuple[int, int],
     tile_stride: tuple[int, int],
-    *,
     mode: typing.Literal['ref', 'manual'] | str,
     ref_fpath: pathlib.Path | None = None,
     manual_specs: GridConfigs | None = None,

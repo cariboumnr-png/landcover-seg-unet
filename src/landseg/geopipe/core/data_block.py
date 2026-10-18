@@ -158,7 +158,7 @@ class DataBlock:
         )
         return cls(data=arrays, manifest=manifest)
 
-    def save(self, fpath: pathlib.Path) -> None:
+    def save(self, fpath: pathlib.Path | str) -> None:
         '''
         Save the DataBlock to a compressed .npz file.
 
@@ -169,6 +169,7 @@ class DataBlock:
             fpath:
                 output file path ending with .npz.
         '''
+        fpath = pathlib.Path(fpath)
         if fpath.suffix != '.npz':
             raise ValueError(f'Output path must end with .npz: {fpath}')
 

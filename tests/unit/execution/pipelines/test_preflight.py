@@ -21,8 +21,6 @@
 
 '''Unit tests for standalone pre-flight execution validation module.'''
 
-# standard imports
-import os
 # third-party imports
 import pytest
 # local imports
@@ -30,6 +28,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.preflight as preflight
+import landseg.execution.preflight.engine as engine
 
 
 # ----- `inspect_target` tests
@@ -135,13 +134,13 @@ def test_probe_filesystem(tmp_path):
     When: `dir_writable()` and `target_file_exists()` are called.
     Then: Return passing probe results with category Filesystem.
     '''
-    dir_result = preflight.probes.dir_writable(str(tmp_path), 'test_dir')
+    dir_result = preflight.probes.dir_writable(tmp_path, 'test_dir')
     assert dir_result.category == 'Filesystem'
     assert dir_result.pid == 'test_dir'
     assert dir_result.status == preflight.ProbeStatus.PASS
 
     file_result = preflight.probes.target_file_exists(
-        str(tmp_path / 'out.json'), 'test_file'
+        tmp_path / 'out.json', 'test_file'
     )
     assert file_result.category == 'Filesystem'
     assert file_result.pid == 'test_file'
@@ -207,14 +206,14 @@ def test_probe_policy():
 
 def test_inspect_target():
     '''
-    Given: An execution target (batch-ingest).
+    Given: An execution target (data-ingest).
     When: `inspect_target()` is invoked.
     Then: Return a valid PreflightResult with diagnostic probes.
     '''
     cfg = configs.RootConfig()
-    result = preflight.inspect_target('batch-ingest', cfg)
+    result = preflight.inspect_target('data-ingest', cfg)
     assert isinstance(result, preflight.PreflightResult)
-    assert result.target == 'batch-ingest'
+    assert result.target == 'data-ingest'
     probe_ids = [p.pid for p in result.probes]
     assert 'ingestion_output' in probe_ids
     assert 'collision_policy' in probe_ids
@@ -245,7 +244,7 @@ def test_probe_canonical_ordering():
     targets = (
         'world-grid',
         'data-harmonize',
-        'batch-ingest',
+        'data-ingest',
         'model-train',
     )
     for target in targets:
@@ -424,9 +423,9 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
     When: `export_preflight_report()` is executed.
     Then: Persist report JSON with timestamped UID under exp_root/preflight.
     '''
-    exp_root = str(tmp_path / 'exp')
+    exp_root = tmp_path / 'exp'
     cfg = configs.RootConfig()
-    cfg.execution.exp_root = exp_root
+    cfg.execution.exp_root = str(exp_root)
 
     result = preflight.PreflightResult(
         target='model-train',
@@ -445,9 +444,9 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
         result, cfg, 'model-train'
     )
 
-    assert os.path.exists(report_fp)
-    assert f'preflight_report_{uid}.json' in report_fp
-    assert os.path.dirname(report_fp) == os.path.join(exp_root, 'preflight')
+    assert report_fp.exists()
+    assert report_fp.name == f'preflight_report_{uid}.json'
+    assert report_fp.parent == exp_root / 'preflight'
 
     report_data = artifacts.Controller[dict].load_json_or_fail(
         report_fp
@@ -459,7 +458,7 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
 
 
 # ----- `run_preflight` dispatch tests
-def test_run_preflight_dispatch_single_target(tmp_path):
+def test_run_preflight_dispatch_single_target(tmp_path, dummy_data_paths):
     '''
     Given: A valid RootConfig with target='world-grid'.
     When: `run_preflight()` is invoked.
@@ -467,6 +466,7 @@ def test_run_preflight_dispatch_single_target(tmp_path):
     '''
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
+    cfg.data.world_grid.ref_fpath = str(dummy_data_paths.extent)
 
     result = preflight.run_preflight(cfg, target='world-grid')
 
@@ -492,11 +492,11 @@ def test_run_preflight_dispatch_all_targets(tmp_path, monkeypatch):
     results = preflight.run_preflight(cfg, target='all')
 
     assert isinstance(results, list)
-    assert len(results) == len(preflight.SUPPORTED_TARGETS)
+    assert len(results) == len(engine.SUPPORTED_TARGETS)
     targets = [r.target for r in results]
     assert 'world-grid' in targets
     assert 'model-train' in targets
-    assert 'batch-ingest' in targets
+    assert 'data-ingest' in targets
     assert 'diagnose-overfit' in targets
 
 

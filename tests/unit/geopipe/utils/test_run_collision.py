@@ -19,11 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for `landseg.artifacts.ledger`.'''
+'''Unit tests for `landseg.geopipe.utils.run_collision`.'''
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.artifacts.ledger as ledger
+import landseg.geopipe.utils as geo_utils
 
 
 # ----- `compute_fingerprint` tests
@@ -37,9 +37,9 @@ def test_compute_fingerprint_deterministic():
     payload_b = {'a': 1, 'b': 2, 'nested': {'x': 10, 'y': 20}}
     payload_c = {'a': 1, 'b': 3}
 
-    fp_a = ledger.compute_fingerprint(payload_a)
-    fp_b = ledger.compute_fingerprint(payload_b)
-    fp_c = ledger.compute_fingerprint(payload_c)
+    fp_a = geo_utils.compute_fingerprint(payload_a)
+    fp_b = geo_utils.compute_fingerprint(payload_b)
+    fp_c = geo_utils.compute_fingerprint(payload_c)
 
     assert isinstance(fp_a, str)
     assert len(fp_a) == 64
@@ -47,25 +47,25 @@ def test_compute_fingerprint_deterministic():
     assert fp_a != fp_c
 
 
-# ----- `check_run_collision` tests
-def test_check_run_collision_missing_manifest(tmp_path):
+# ----- `find_run_collision` tests
+def test_find_run_collision_missing_manifest(tmp_path):
     '''
     Given: A non-existent runs manifest filepath.
     When: Checking for run collision.
     Then: Return None cleanly without error.
     '''
-    missing_fp = str(tmp_path / 'nonexistent_manifest.json')
-    result = ledger.check_run_collision('any_hash', missing_fp)
+    missing_fp = tmp_path / 'nonexistent_manifest.json'
+    result = geo_utils.find_run_collision('any_hash', missing_fp)
     assert result is None
 
 
-def test_check_run_collision_status_filtering(tmp_path):
+def test_find_run_collision_status_filtering(tmp_path):
     '''
     Given: A runs manifest with SUCCESS, FAILED, and SKIPPED runs.
     When: Checking for collisions with different fingerprints and status.
     Then: Return colliding UID only for SUCCESS runs by default.
     '''
-    manifest_fp = str(tmp_path / 'runs_manifest.json')
+    manifest_fp = tmp_path / 'runs_manifest.json'
     manifest_data = {
         'run_success': {
             'run_uid': 'run_success',
@@ -86,23 +86,23 @@ def test_check_run_collision_status_filtering(tmp_path):
     artifacts.Controller[dict](manifest_fp).persist(manifest_data)
 
     # successful run matches
-    found = ledger.check_run_collision('hash_success', manifest_fp)
+    found = geo_utils.find_run_collision('hash_success', manifest_fp)
     assert found == 'run_success'
 
     # failed run is ignored under default success_status='SUCCESS'
-    found_failed = ledger.check_run_collision('hash_failed', manifest_fp)
+    found_failed = geo_utils.find_run_collision('hash_failed', manifest_fp)
     assert found_failed is None
 
     # skipped run is ignored under default success_status='SUCCESS'
-    found_skipped = ledger.check_run_collision('hash_skipped', manifest_fp)
+    found_skipped = geo_utils.find_run_collision('hash_skipped', manifest_fp)
     assert found_skipped is None
 
     # non-existent hash returns None
-    found_none = ledger.check_run_collision('unknown_hash', manifest_fp)
+    found_none = geo_utils.find_run_collision('unknown_hash', manifest_fp)
     assert found_none is None
 
     # custom success_status matches target status
-    found_custom = ledger.check_run_collision(
+    found_custom = geo_utils.find_run_collision(
         'hash_skipped', manifest_fp, success_status='SKIPPED'
     )
     assert found_custom == 'run_skipped'

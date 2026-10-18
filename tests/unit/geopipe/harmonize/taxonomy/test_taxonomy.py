@@ -21,8 +21,11 @@
 
 # pylint: disable=protected-access
 
+
 '''Unit tests for taxonomy resolver and gatekeeper validation.'''
 
+# standard imports
+import pathlib
 # third-party imports
 import pytest
 # local imports
@@ -36,7 +39,7 @@ def test_get_available_profiles_finds_registered_profiles():
     When: `get_available_profiles` is called.
     Then: Return list containing registered profiles.
     '''
-    profiles = taxonomy.get_profiles('knowledge')
+    profiles = taxonomy.get_profiles(pathlib.Path('knowledge'))
     assert 'ontario_tree_species_grouped_profiles' in profiles
     assert 'ontario_tree_species_profiles' in profiles
 
@@ -47,7 +50,7 @@ def test_get_available_profiles_nonexistent_dir(tmp_path):
     When: `get_available_profiles` is called.
     Then: Return an empty list without raising.
     '''
-    empty_root = str(tmp_path / 'nonexistent')
+    empty_root = tmp_path / 'nonexistent'
     profiles = taxonomy.get_profiles(empty_root)
     assert profiles == []
 
@@ -61,7 +64,7 @@ def test_resolve_taxonomy_metadata_success():
     '''
     code_lookup = taxonomy._resolve_taxonomy_metadata(
         'ontario_tree_species_grouped_profiles',
-        root='knowledge',
+        root=pathlib.Path('knowledge'),
     )
     assert 'SB_BLACK_SPRUCE' in code_lookup
     assert code_lookup['SB_BLACK_SPRUCE']['code'] == 'SB_BLACK_SPRUCE'
@@ -76,7 +79,7 @@ def test_resolve_taxonomy_metadata_not_found(tmp_path):
     with pytest.raises(ValueError, match='Taxonomy profile "invalid_prof"'):
         taxonomy._resolve_taxonomy_metadata(
             'invalid_prof',
-            root=str(tmp_path),
+            root=tmp_path,
         )
 
 
@@ -95,7 +98,7 @@ def test_validate_specs_species_mapping():
         'ontario_tree_species_grouped_profiles',
         species_mapping,
         num_cls=2,
-        knowledge_root='knowledge',
+        knowledge_root=pathlib.Path('knowledge'),
     )
     assert specs['profile'] == 'ontario_tree_species_grouped_profiles'
     canonical_indices = specs.get('canonical_indices')
@@ -119,7 +122,7 @@ def test_validate_specs_unknown_code():
             'ontario_tree_species_grouped_profiles',
             species_mapping,
             num_cls=2,
-            knowledge_root='knowledge',
+            knowledge_root=pathlib.Path('knowledge'),
         )
 
 
@@ -137,5 +140,5 @@ def test_validate_specs_count_mismatch():
             'ontario_tree_species_grouped_profiles',
             species_mapping,
             num_cls=2,
-            knowledge_root='knowledge',
+            knowledge_root=pathlib.Path('knowledge'),
         )

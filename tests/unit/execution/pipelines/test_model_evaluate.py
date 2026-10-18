@@ -19,16 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
+# pylint: disable=protected-access
 
 '''
-Unit tests for model evaluate pipeline (model_evaluate.py).
+Unit tests for the model evaluation execution pipeline.
+
+These tests verify pipeline lifecycle, configuration validation, and the
+session runner interaction contract. Complete end-to-end evaluation with
+real model weights and checkpoints is tested in integration tests.
 '''
 
 # standard imports
-import dataclasses
-import os
 import typing
 # third-party imports
 import omegaconf
@@ -36,25 +37,21 @@ import pytest
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.core as core
 import landseg.execution.pipelines.model_evaluate as eval_pipeline
-import landseg.models as models
-import landseg.session as session
 
 
-# ----- `ModelEvaluation` tests
+# ----- `ModelEvaluation` configuration validation tests
 def test_evaluate_invalid_split_raises_value_error(tmp_path):
     '''
     Given: A RootConfig with an invalid evaluation split.
     When: `config.session.evaluation.validate()` is called.
-    Then: Raise a ValueError.
+    Then: Raise a ConfigValidationError.
     '''
-    chk_file = str(tmp_path / 'chk.pt')
-    with open(chk_file, 'w', encoding='utf-8') as f:
-        f.write('dummy')
+    chk_file = tmp_path / 'chk.pt'
+    chk_file.write_text('dummy', encoding='utf-8')
 
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    schema.execution.exp_root = str(tmp_path)
+    schema.execution.exp_root = tmp_path
     schema.session.evaluation.checkpoint = chk_file
     schema.session.evaluation.split = 'invalid'
 
@@ -67,18 +64,64 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
         config.session.evaluation.validate()
 
 
-def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
+def test_evaluate_validate_missing_checkpoint(tmp_path):
     '''
-    Given: A valid RootConfig and mock dependencies.
-    When: `ModelEvaluation.run` is called.
-    Then: Execute evaluation and persist results.
+    Given: Evaluation configuration with non-existent checkpoint path.
+    When: Calling `config.session.evaluation.validate()` on RootConfig.
+    Then: Raise a ConfigValidationError.
     '''
-    exp_root = str(tmp_path / 'exp')
-    chk_file = str(tmp_path / 'chk.pt')
-    with open(chk_file, 'w', encoding='utf-8') as f:
-        f.write('dummy')
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = tmp_path
+    schema.session.evaluation.checkpoint = tmp_path / 'missing.pt'
+    schema.session.evaluation.split = 'val'
 
-    prep_root = str(tmp_path / 'prep')
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    with pytest.raises(configs.schema.base.ConfigValidationError):
+        config.session.evaluation.validate()
+
+
+def test_evaluate_validate_missing_prep_report(tmp_path):
+    '''
+    Given: Evaluation configuration without upstream preparation report.
+    When: Calling `validate` on `ModelEvaluation`.
+    Then: Raise a RuntimeError indicating missing preparation report.
+    '''
+    chk_file = tmp_path / 'chk.pt'
+    chk_file.write_text('dummy', encoding='utf-8')
+
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = tmp_path
+    schema.data.preparation.output_dpath = tmp_path / 'prep'
+    schema.session.evaluation.checkpoint = chk_file
+    schema.session.evaluation.split = 'val'
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    pipeline = eval_pipeline.ModelEvaluation(config)
+    with pytest.raises(
+        RuntimeError,
+        match='Upstream pipeline "data-prepare"'
+    ):
+        pipeline._validate()
+
+
+# ----- `ModelEvaluation` execution and lifecycle tests
+def test_evaluate_pipeline_success(tmp_path, mocker):
+    '''
+    Given: A valid RootConfig and mock session runner.
+    When: `ModelEvaluation.run` is called.
+    Then: Execute evaluation and persist evaluation metrics artifact.
+    '''
+    exp_root = tmp_path / 'exp'
+    chk_file = tmp_path / 'chk.pt'
+    chk_file.write_text('dummy', encoding='utf-8')
+
+    prep_root = tmp_path / 'prep'
     prep_paths = artifacts.PreparationPaths(root=prep_root)
     artifacts.Controller[dict](prep_paths.report).persist({'status': 'SUCCESS'})
 
@@ -93,85 +136,54 @@ def test_evaluate_pipeline_success(tmp_path, dataspecs, monkeypatch):
         omegaconf.OmegaConf.to_object(schema)
     )
 
-    @dataclasses.dataclass
-    class MockHeadMetrics:
-        as_dict: dict = dataclasses.field(
-            default_factory=lambda: {'iou': 0.85}
-        )
-
-    @dataclasses.dataclass
-    class MockValidation:
-        head_metrics: dict = dataclasses.field(
-            default_factory=lambda: {'head_1': MockHeadMetrics()}
-        )
-
-    @dataclasses.dataclass
-    class MockEvalResult:
-        validation: MockValidation = dataclasses.field(
-            default_factory=MockValidation
-        )
-        target_metrics: float = 0.85
-
-    class MockRunner:
-        def run_epoch(self, _epoch: int):
-            return MockEvalResult()
-
-    class DummyModel:
-        def parameters(self):
-            return []
-
-    mock_model = typing.cast(core.MultiheadModelLike, DummyModel())
-
-    monkeypatch.setattr(
-        eval_pipeline.geopipe, 'build_dataspec', lambda *a, **kw: dataspecs
+    mock_metric = mocker.Mock(as_dict={'iou': 0.85})
+    mock_runner = mocker.Mock()
+    mock_runner.run_epoch.return_value = mocker.Mock(
+        validation=mocker.Mock(head_metrics={'head_1': mock_metric}),
+        target_metrics=0.85,
     )
-    monkeypatch.setattr(
-        models, 'build_multihead_unet', lambda *a, **kw: mock_model
-    )
-    monkeypatch.setattr(
-        session,
+
+    mocker.patch.object(
+        eval_pipeline.ModelEvaluation,
         'build_session_runner',
-        lambda *a, **kw: MockRunner(),
+        return_value=mock_runner,
     )
 
     target_metric = eval_pipeline.ModelEvaluation(config).run()
 
+    mock_runner.set_head_state.assert_called_once()
     assert target_metric == 0.85
-    assert os.path.exists(f'{exp_root}/results/run_0001/evaluation.json')
+    eval_fpath = exp_root / 'results' / 'run_0001' / 'evaluation.json'
+    assert eval_fpath.exists()
+    assert artifacts.Controller[dict](eval_fpath).fetch() == {
+        'head_1': {'iou': 0.85}
+    }
+
+    report_fpath = exp_root / 'results' / 'run_0001' / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'SUCCESS'
+    assert report['results'] == {'final': 0.85}
 
 
-def test_evaluate_validate_missing_checkpoint(tmp_path):
+def test_evaluate_pipeline_failure(tmp_path, mocker):
     '''
-    Given: Evaluation configuration with non-existent checkpoint path.
-    When: Calling `config.session.evaluation.validate()` on RootConfig.
-    Then: Raise a FileNotFoundError.
+    Given: Evaluation pipeline where the runner fails.
+    When: `ModelEvaluation.run` is called.
+    Then: Re-raise exception and mark report status as FAILED.
     '''
-    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    schema.execution.exp_root = str(tmp_path)
-    schema.session.evaluation.checkpoint = str(tmp_path / 'missing.pt')
-    schema.session.evaluation.split = 'val'
+    exp_root = tmp_path / 'exp'
+    chk_file = tmp_path / 'chk.pt'
+    chk_file.write_text('dummy', encoding='utf-8')
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(schema)
-    )
-    with pytest.raises(FileNotFoundError, match='Checkpoint not found'):
-        config.session.evaluation.validate()
-
-
-def test_evaluate_validate_missing_prep_report(tmp_path):
-    '''
-    Given: Evaluation configuration without upstream preparation report.
-    When: Calling `validate` on `ModelEvaluation`.
-    Then: Raise a RuntimeError indicating missing preparation report.
-    '''
-    chk_file = str(tmp_path / 'chk.pt')
-    with open(chk_file, 'w', encoding='utf-8') as f:
-        f.write('dummy')
+    prep_root = tmp_path / 'prep'
+    prep_paths = artifacts.PreparationPaths(root=prep_root)
+    artifacts.Controller[dict](prep_paths.report).persist({'status': 'SUCCESS'})
 
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-    schema.execution.exp_root = str(tmp_path)
-    schema.data.preparation.output_dpath = str(tmp_path / 'prep')
+    schema.execution.exp_root = exp_root
+    schema.data.preparation.output_dpath = prep_root
     schema.session.evaluation.checkpoint = chk_file
     schema.session.evaluation.split = 'val'
 
@@ -179,9 +191,57 @@ def test_evaluate_validate_missing_prep_report(tmp_path):
         configs.RootConfig,
         omegaconf.OmegaConf.to_object(schema)
     )
+
+    mock_runner = mocker.Mock()
+    mock_runner.run_epoch.side_effect = RuntimeError('evaluation error')
+    mocker.patch.object(
+        eval_pipeline.ModelEvaluation,
+        'build_session_runner',
+        return_value=mock_runner,
+    )
+
     pipeline = eval_pipeline.ModelEvaluation(config)
-    with pytest.raises(
-        RuntimeError,
-        match='Upstream pipeline "data-prepare"'
-    ):
-        pipeline._validate()
+    with pytest.raises(RuntimeError, match='evaluation error'):
+        pipeline.run()
+
+    report_fpath = exp_root / 'results' / 'run_0001' / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'FAILED'
+
+
+def test_evaluate_build_context_empty_split_raises(tmp_path, mocker, dataspecs):
+    '''
+    Given: DataSpecs whose evaluation split is empty.
+    When: `_build_context` is executed by ModelEvaluation.
+    Then: Raise RuntimeError indicating split has no blocks.
+    '''
+    prep_root = tmp_path / 'prep'
+    prep_paths = artifacts.PreparationPaths(root=prep_root)
+    artifacts.Controller[dict](prep_paths.report).persist({'status': 'SUCCESS'})
+
+    chk_file = tmp_path / 'chk.pt'
+    chk_file.write_text('dummy', encoding='utf-8')
+
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = tmp_path / 'exp'
+    schema.data.preparation.output_dpath = prep_root
+    schema.session.evaluation.checkpoint = chk_file
+    schema.session.evaluation.split = 'test'
+
+    # simulate empty test split
+    dataspecs.splits.test.clear()
+    mocker.patch.object(
+        eval_pipeline.geopipe,
+        'build_dataspec',
+        return_value=dataspecs,
+    )
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    pipeline = eval_pipeline.ModelEvaluation(config)
+    with pytest.raises(RuntimeError, match='has no blocks in prepared dataset'):
+        pipeline._build_context()

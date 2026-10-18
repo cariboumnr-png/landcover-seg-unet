@@ -94,14 +94,16 @@ def run_datablocks_partition(
     # ensure canvas CRS and transform default from context
     if partition_config.aoi is not None:
         aoi = partition_config.aoi
+        ctx_crs = getattr(context, 'crs', None)
+        ctx_tf = getattr(context, 'transform', None)
         new_crs = (
-            context.crs
-            if (aoi.canvas_crs == 'EPSG:3161' and context.crs)
+            ctx_crs
+            if (aoi.canvas_crs == 'EPSG:3161' and ctx_crs)
             else aoi.canvas_crs
         )
         new_tf = (
-            context.transform
-            if (aoi.canvas_transform is None and context.transform)
+            ctx_tf
+            if (aoi.canvas_transform is None and ctx_tf)
             else aoi.canvas_transform
         )
         if new_crs != aoi.canvas_crs or new_tf != aoi.canvas_transform:

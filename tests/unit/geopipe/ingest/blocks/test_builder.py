@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=protected-access
+
 '''Unit tests for DataBlockInputs, DataBlockConfig, and build_data_block.'''
 
 # standard imports
@@ -29,6 +31,7 @@ import pytest
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.assembler.builder as builder
 
 
 # ----- aliases
@@ -182,9 +185,7 @@ def test_build_data_block_label_canonicalize_base_layer():
     '''
     cfg = _make_config()
     ctx = _make_context(label_specs=BASE_LABELSPECS)
-    inputs = _make_inputs(
-        label_array=BASE_LABEL_ARRAY,
-    )
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
     assert len(block.data.label) == 1
@@ -215,9 +216,7 @@ def test_build_data_block_label_canonicalize_zero_based_index():
     }
     cfg = _make_config()
     ctx = _make_context(label_specs=zero_based_specs)
-    inputs = _make_inputs(
-        label_array=zero_based_array,
-    )
+    inputs = _make_inputs(label_array=zero_based_array)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
     stack_base = block.data.label[0]
@@ -238,9 +237,7 @@ def test_build_data_block_label_stats_valid_ratio():
     '''
     cfg = _make_config()
     ctx = _make_context(label_specs=BASE_LABELSPECS)
-    inputs = _make_inputs(
-        label_array=BASE_LABEL_ARRAY,
-    )
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
     valid = float(numpy.mean(BASE_LABEL_ARRAY != 4))
@@ -255,17 +252,12 @@ def test_build_data_block_label_stats_class_count_entropy():
     '''
     cfg = _make_config()
     ctx = _make_context(label_specs=BASE_LABELSPECS)
-    inputs = _make_inputs(
-        label_array=BASE_LABEL_ARRAY,
-    )
+    inputs = _make_inputs(label_array=BASE_LABEL_ARRAY)
     block = assembler.build_data_block(inputs, cfg, ctx)
 
-    assert block.manifest['label_count'] == {
-        'base': [16384, 16384, 16384, 0]
-    }
-    assert block.manifest['label_entropy'] == {
-        'base': pytest.approx(- numpy.log2(1 / 3))
-    }
+    ent = pytest.approx(- numpy.log2(1 / 3))
+    assert block.manifest['label_count'] == {'base': [16384, 16384, 16384, 0]}
+    assert block.manifest['label_entropy'] == {'base': ent}
 
 
 # ----- `DataBlockInputs` tests
@@ -368,6 +360,62 @@ def test_config_post_init_missing_required_bands(indice, required):
     inputs = _make_inputs()
     with pytest.raises(ValueError, match=f'{required} band missing'):
         assembler.build_data_block(inputs, cfg, ctx)
+
+
+# ----- `_Calc` numerical calculators tests
+def test_calc_entropy():
+    '''
+    Given: Uniform and non-uniform class counts.
+    When: Calculating Shannon entropy via `_Calc.entropy`.
+    Then: Return theoretical maximum or proportional bits.
+    '''
+    assert builder._Calc.entropy([1, 1, 1, 1]) == pytest.approx(2.0)
+    assert builder._Calc.entropy([1, 1, 2]) == pytest.approx(1.5)
+    assert builder._Calc.entropy([42]) == pytest.approx(0.0)
+    assert builder._Calc.entropy([1, 0, 1]) == pytest.approx(1.0)
+
+
+def test_calc_slope_and_aspect():
+    '''
+    Given: Known flat and gradient elevation grids.
+    When: Calculating slope and aspect.
+    Then: Return exact expected gradient and direction vectors.
+    '''
+    flat = numpy.full((3, 3), 42.0)
+    slope, cos, sin = builder._Calc.slope_n_aspect(flat, -999.9)
+    assert slope == pytest.approx(0.0)
+    assert cos == pytest.approx(1.0)
+    assert sin == pytest.approx(0.0)
+
+    grad = numpy.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]], dtype=float)
+    slope, cos, sin = builder._Calc.slope_n_aspect(grad, -999.9)
+    assert slope == pytest.approx(1.0)
+    assert cos == pytest.approx(-1.0)
+    assert sin == pytest.approx(0.0)
+
+    # invalid neighbor returns nodata tuple
+    grad[0, 0] = -999.9
+    assert builder._Calc.slope_n_aspect(grad, -999.9) == (-999.9, -999.9, -999.9)
+
+
+def test_calc_tpi():
+    '''
+    Given: 3x3 elevation grids with center peaks, pits, and flats.
+    When: Calculating topographic position index.
+    Then: Return positive, negative, and zero indices respectively.
+    '''
+    peak = numpy.array([[10, 10, 10], [10, 20, 10], [10, 10, 10]], dtype=float)
+    assert builder._Calc.tpi(peak, -999.9) == pytest.approx(10.0)
+
+    pit = numpy.array([[20, 20, 20], [20, 10, 20], [20, 20, 20]], dtype=float)
+    assert builder._Calc.tpi(pit, -999.9) == pytest.approx(-10.0)
+
+    flat = numpy.full((3, 3), 42.0)
+    assert builder._Calc.tpi(flat, -999.9) == pytest.approx(0.0)
+
+    # invalid center cell returns nodata
+    pit[1, 1] = numpy.nan
+    assert builder._Calc.tpi(pit, -999.9) == -999.9
 
 
 # ----- helpers

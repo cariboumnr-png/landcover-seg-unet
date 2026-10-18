@@ -65,7 +65,7 @@ class BlockBuildingInputs:
         '''Return `True` is label raster is provided.'''
         return (
             bool(self.label_fpath)
-            and self.label_fpath.exists()
+            and pathlib.Path(self.label_fpath).exists()
         )
 
 

@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 # pylint: disable=too-few-public-methods
 
 '''Fixtures for testing `landseg.session.orchestration` subpackage.'''

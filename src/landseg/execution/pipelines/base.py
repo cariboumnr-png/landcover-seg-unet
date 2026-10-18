@@ -253,7 +253,7 @@ class SessionPipeline(BasePipeline):
             config=self.config.session,
             context=session.SessionBuildContext(
                 device=c.DEVICE,
-                session_paths=self.artifact_paths.session,
+                session_paths=self.pipeline_paths,
                 eval_dataset=eval_split,
                 logger=self.logger
             ),

@@ -24,7 +24,7 @@ Shared configuration and fixtures for the landseg test suite.
 '''
 
 # standard imports
-import os
+import pathlib
 import pytest
 # third-party imports
 import numpy
@@ -33,7 +33,7 @@ import rasterio.transform
 import landseg.testing as testing
 
 # absolute path to the repo root folder
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def dummy_data_paths():
     If any files do not exist, they will be automatically generated to
     ensure the integration tests pass out-of-the-box.
     '''
-    in_dir = os.path.join(ROOT_DIR, 'experiment', 'input')
+    in_dir = ROOT_DIR / 'experiment' / 'input'
     paths = testing.TIFFPaths(root=in_dir)
 
     if not paths.all_paths_exist:

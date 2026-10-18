@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for segmentation metrics module (segmentation.py).'''
 
 # third-party imports
@@ -197,7 +195,8 @@ def test_confusion_matrix_compute():
     metrics = cm.compute()
 
     assert isinstance(metrics, core.AccumulatedMetrics)
-    assert metrics._locked
+    with pytest.raises(AttributeError, match='Object is immutable'):
+        metrics.mean = 0.0
     assert metrics.ious['1'] == 1.0
     assert metrics.ious['2'] == 1.0
     assert metrics.mean == 1.0

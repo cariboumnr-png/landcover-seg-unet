@@ -19,91 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=protected-access
+
 '''Unit tests for the data preparation execution pipeline.'''
 
 # standard imports
-import os
 import typing
 # third-party imports
 import omegaconf
 import pytest
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
+import landseg.geopipe.prepare as prepare
 
 
-# ----- `DataPreparation` tests
-def test_data_prepare_pipeline_success(tmp_path, dummy_data_paths):
-    '''
-    Given: A RootConfig pointing to valid raster inputs and temporary
-        output directories.
-    When: Running data ingest followed by data prepare pipelines.
-    Then: Correctly partition the data blocks, aggregate image stats,
-        normalize blocks, and compile schemas.
-    '''
-    # compose config with OmegaConf
-    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-
-    # override world grid fields
-    grid_cfg = cfg_schema.data.world_grid
-    grid_cfg.mode = 'ref'
-    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
-    grid_cfg.params.ref_fpath = dummy_data_paths.extent
-    grid_cfg.params.crs_string = 'EPSG:3161'
-    grid_cfg.params.tile_size = (256, 256)
-    grid_cfg.params.tile_stride = (128, 128)
-
-    cfg_schema.data.harmonization.dataset_manifest = dummy_data_paths.manifest
-    cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
-
-    cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested')
-    cfg_schema.data.ingestion.rebuild = True
-
-    # override transform fields
-    transform_cfg = cfg_schema.data.preparation
-    transform_cfg.output_dpath = str(tmp_path / 'prepared')
-    transform_cfg.rebuild = True
-
-    transform_cfg.datasetview.valid_pxs = {'image': 0.05}
-    transform_cfg.datasetview.focal_target = None
-
-    transform_cfg.partition.val_ratio = 0.2
-    transform_cfg.partition.test_ratio = 0.1
-    transform_cfg.partition.buffer_step = 1
-
-    transform_cfg.scoring.reward = {0: 1.0}
-    transform_cfg.scoring.alpha = 1.0
-    transform_cfg.scoring.beta = 0.5
-
-    transform_cfg.hydration.max_skew_rate = 1.5
-
-    # convert back to standard typed `RootConfig` dataclass
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-
-    # 1) run world-grid and harmonize to populate ETL outputs in EPSG:3161
-    pipelines.WorldGridGeneration(config).run()
-    pipelines.DataHarmonization(config).run()
-
-    # 2) run the ingestion pipeline to build ingestion inputs
-    pipelines.DataIngestion(config).run()
-
-    # 3) run the preparation pipeline
-    pipelines.DataPreparation(config).run()
-
-    # verify the generated preparation outputs
-    out_dpath = config.data.preparation.output_dpath
-    assert os.path.exists(os.path.join(out_dpath, 'block_splits_source.json'))
-    assert os.path.exists(
-        os.path.join(out_dpath, 'block_splits_prepared.json')
-    )
-    assert os.path.exists(os.path.join(out_dpath, 'image_stats.json'))
-    assert os.path.exists(os.path.join(out_dpath, 'report.json'))
-    assert os.path.exists(os.path.join(out_dpath, 'schema.json'))
-
-
+# ----- `DataPreparation` validation tests
 def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
     '''
     Given: Preparation configuration without upstream catalog/schema.
@@ -124,4 +56,103 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
         RuntimeError,
         match='Upstream pipeline "data-ingest"'
     ):
-        pipeline._validate()
+        pipeline.run()
+
+
+# ----- `DataPreparation` execution and lifecycle tests
+def test_data_prepare_pipeline_success(tmp_path, mocker):
+    '''
+    Given: Upstream ingestion artifacts and mocked prepare runner.
+    When: Calling `run` on `DataPreparation`.
+    Then: Execute preparation and persist report with status SUCCESS.
+    '''
+    ingest_dpath = tmp_path / 'ingested'
+    catalog_fpath = ingest_dpath / 'data_blocks' / 'catalog.json'
+    schema_fpath = ingest_dpath / 'data_blocks' / 'schema.json'
+    runs_fpath = ingest_dpath / 'ingestion_runs.json'
+
+    artifacts.Controller[dict](catalog_fpath).persist({'test_block': {}})
+    artifacts.Controller[dict](schema_fpath).persist({})
+    artifacts.Controller[list](runs_fpath).persist(
+        [{'status': 'SUCCESS', 'run_id': 'run_0001'}]
+    )
+
+    prep_dpath = tmp_path / 'prepared'
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
+    cfg_schema.data.preparation.output_dpath = str(prep_dpath)
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    mock_context = mocker.Mock()
+    mocker.patch.object(
+        pipelines.DataPreparation,
+        '_build_context',
+        return_value=mock_context,
+    )
+    mock_run = mocker.patch.object(prepare, 'run_data_preparation')
+
+    pipeline = pipelines.DataPreparation(config)
+    pipeline.run()
+
+    mock_run.assert_called_once()
+    report_fpath = prep_dpath / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'SUCCESS'
+
+
+def test_data_prepare_pipeline_failure(tmp_path, mocker):
+    '''
+    Given: Upstream ingestion artifacts and runner that raises an error.
+    When: Calling `run` on `DataPreparation`.
+    Then: Re-raise error and mark report status as FAILED.
+    '''
+    ingest_dpath = tmp_path / 'ingested'
+    catalog_fpath = ingest_dpath / 'data_blocks' / 'catalog.json'
+    schema_fpath = ingest_dpath / 'data_blocks' / 'schema.json'
+    runs_fpath = ingest_dpath / 'ingestion_runs.json'
+
+    artifacts.Controller[dict](catalog_fpath).persist({'test_block': {}})
+    artifacts.Controller[dict](schema_fpath).persist({})
+    artifacts.Controller[list](runs_fpath).persist(
+        [{'status': 'SUCCESS', 'run_id': 'run_0001'}]
+    )
+
+    prep_dpath = tmp_path / 'prepared'
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
+    cfg_schema.data.preparation.output_dpath = str(prep_dpath)
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    mock_context = mocker.Mock()
+    mocker.patch.object(
+        pipelines.DataPreparation,
+        '_build_context',
+        return_value=mock_context,
+    )
+    mocker.patch.object(
+        prepare,
+        'run_data_preparation',
+        side_effect=RuntimeError('partitioning failure'),
+    )
+
+    pipeline = pipelines.DataPreparation(config)
+    with pytest.raises(RuntimeError, match='partitioning failure'):
+        pipeline.run()
+
+    report_fpath = prep_dpath / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'FAILED'

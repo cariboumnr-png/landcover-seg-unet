@@ -245,5 +245,5 @@ def test_configurator_preflight(mocker, tmp_path):
 
     assert res == 'report'
     mock_run_preflight.assert_called_once()
-    assert mock_run_preflight.call_args.kwargs['target'] == 'world-grid'
+    assert mock_run_preflight.call_args.args[1] == 'world-grid'
     assert mock_run_preflight.call_args.kwargs['strict'] is True

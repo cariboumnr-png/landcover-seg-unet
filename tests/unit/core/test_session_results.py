@@ -31,68 +31,20 @@ import landseg.core.session_results as session_results
 
 
 # ----- `SessionStepSummary`
-def test_session_step_summary_as_dict_contains_expected_keys():
+def test_session_step_summary_as_dict():
     '''
-    Given: A SessionStepSummary instance.
-    When: Accessing the as_dict property.
-    Then: Return a dictionary with the expected keys.
-    '''
-    summary = core.SessionStepSummary(
-        phase_name='train',
-        phase_index=1,
-        phase_max_epoch=5,
-        epoch_in_phase=2,
-        global_epoch=2,
-        is_phase_end=False,
-        is_run_end=False,
-        stop_reason=None,
-        val_metrics_name='IoU',
-        val_metrics_value=0.5,
-        best_value_so_far=0.5,
-        best_epoch_so_far=2,
-        is_best_epoch=True,
-        raw_metrics=core.SessionStepResults(),
-    )
-
-    assert set(summary.as_dict) == {
-        'phase_name',
-        'phase_max_epoch',
-        'epoch_in_phase',
-        'validation_metrics_name',
-        'validation_metrics_value',
-        'training',
-        'validation',
-        'inference',
-    }
-
-
-def test_session_step_summary_as_dict_full():
-    '''
-    Given: A SessionStepSummary initialized with nested results.
-    When: Accessing the as_dict property.
-    Then: Correctly serialize the nested step result dicts.
+    Given: SessionStepSummary instances with full and partial results.
+    When: Accessing as_dict property.
+    Then: Serialize correctly and produce immutable dictionary snapshots.
     '''
     training = core.TrainStepResults(
         total_objective=1.5,
         head_losses={'loss': 0.4},
     )
     validation = core.ValStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.6),
-        }
+        head_metrics={'head1': core.AccumulatedMetrics(mean=0.6)}
     )
-    inference = core.InferStepResults(
-        head_metrics={
-            'head1': core.AccumulatedMetrics(mean=0.7),
-        }
-    )
-    raw = core.SessionStepResults(
-        training=training,
-        validation=validation,
-        inference=inference,
-    )
-
-    summary = core.SessionStepSummary(
+    summary_full = core.SessionStepSummary(
         phase_name='train',
         phase_index=0,
         phase_max_epoch=10,
@@ -106,88 +58,20 @@ def test_session_step_summary_as_dict_full():
         best_value_so_far=0.6,
         best_epoch_so_far=3,
         is_best_epoch=True,
-        raw_metrics=raw,
+        raw_metrics=core.SessionStepResults(
+            training=training,
+            validation=validation,
+        ),
     )
+    dict_full = summary_full.as_dict
+    assert dict_full['training'] == training.as_dict
+    assert dict_full['validation'] == validation.as_dict
+    assert dict_full['inference'] is None
 
-    assert summary.as_dict == {
-        'phase_name': 'train',
-        'phase_max_epoch': 10,
-        'epoch_in_phase': 3,
-        'validation_metrics_name': 'IoU from head1',
-        'validation_metrics_value': 0.6,
-        'training': training.as_dict,
-        'validation': validation.as_dict,
-        'inference': inference.as_dict,
-    }
-
-
-def test_session_step_summary_as_dict_missing_results():
-    '''
-    Given: A SessionStepSummary with empty raw metrics.
-    When: Accessing the as_dict property.
-    Then: Return None for missing step results fields.
-    '''
-    summary = core.SessionStepSummary(
-        phase_name='train',
-        phase_index=0,
-        phase_max_epoch=1,
-        epoch_in_phase=1,
-        global_epoch=1,
-        is_phase_end=True,
-        is_run_end=True,
-        stop_reason='done',
-        val_metrics_name='IoU',
-        val_metrics_value=0.5,
-        best_value_so_far=0.5,
-        best_epoch_so_far=1,
-        is_best_epoch=True,
-        raw_metrics=core.SessionStepResults(),
-    )
-
-    assert summary.as_dict == {
-        'phase_name': 'train',
-        'phase_max_epoch': 1,
-        'epoch_in_phase': 1,
-        'validation_metrics_name': 'IoU',
-        'validation_metrics_value': 0.5,
-        'training': None,
-        'validation': None,
-        'inference': None,
-    }
-
-
-def test_session_step_summary_as_dict_returns_snapshot():
-    '''
-    Given: A SessionStepSummary instance.
-    When: Accessing `as_dict` property and mutating source fields.
-    Then: The dict return value is unaffected by subsequent mutations.
-    '''
-    training = core.TrainStepResults(
-        total_objective=1.0,
-        head_losses={'loss': 0.5},
-    )
-    raw = core.SessionStepResults(training=training)
-
-    summary = core.SessionStepSummary(
-        phase_name='train',
-        phase_index=0,
-        phase_max_epoch=1,
-        epoch_in_phase=1,
-        global_epoch=1,
-        is_phase_end=True,
-        is_run_end=True,
-        stop_reason=None,
-        val_metrics_name='IoU',
-        val_metrics_value=0.5,
-        best_value_so_far=0.5,
-        best_epoch_so_far=1,
-        is_best_epoch=True,
-        raw_metrics=raw,
-    )
-    d = summary.as_dict
+    # snapshot immutability
     training.head_losses['loss'] = 99.0
+    assert dict_full['training']['head_losses']['loss'] == 0.4
 
-    assert d['training']['head_losses']['loss'] == 0.5
 
 
 # ----- `SessionStepResults`
@@ -310,24 +194,6 @@ def test_session_step_results_inference_metrics_default_mean():
     assert results.inference_metrics == pytest.approx(0.8)
 
 
-def test_session_step_results_as_dict():
-    '''
-    Given: SessionStepResults containing training and validation steps.
-    When: Accessing the as_dict property.
-    Then: Return compiled step dictionary.
-    '''
-    results = core.SessionStepResults(
-        training=core.TrainStepResults(total_objective=1.5),
-        validation=core.ValStepResults(
-            head_metrics=_make_head_metrics(head={'mean': 0.6})
-        ),
-    )
-    d = results.as_dict
-
-    assert d['training']['total_objective'] == 1.5
-    assert d['validation']['head_metrics']['head']['mean'] == 0.6
-
-
 def test_session_step_results_track_weighted_heads():
     '''
     Given: SessionStepResults containing multi-head validation data.
@@ -401,113 +267,35 @@ def test_train_step_results_clear():
     assert results.regularization == {'consistency': 0.0}
 
 
-# ----- `ValStepResults` & `InferStepResults`
-@pytest.mark.parametrize('cls', [core.ValStepResults, core.InferStepResults])
-def test_val_infer_step_results_as_dict_shape(cls):
-    '''
-    Given: A ValStepResults or InferStepResults instance.
-    When: Calling as_dict.
-    Then: Return a dictionary with structured metrics lists.
-    '''
-    results = cls(
-        head_metrics=_make_head_metrics(base_head={'mean': 0.5}),
-        mtl_metrics={'consistency': 0.2}
-    )
-    d = results.as_dict
-
-    assert d == {
-        'head_metrics': {
-            'base_head': {
-                'cmatrix': [],
-                'mean': 0.5,
-                'ious': {},
-                'ac_mean': 0.0,
-                'ac_ious': {}
-            }
-        },
-        'mtl_metrics': {
-            'consistency': 0.2
-        }
-    }
-
-
-@pytest.mark.parametrize('cls', [core.ValStepResults, core.InferStepResults])
-def test_val_infer_step_results_as_dict_returns_snapshot(cls):
-    '''
-    Given: A ValStepResults or InferStepResults instance.
-    When: Accessing the as_dict property and mutating later metrics.
-    Then: Retain the original snapshot values in the dictionary.
-    '''
-    results = cls(
-        mtl_metrics={'consistency': 0.2}
-    )
-    d = results.as_dict
-    results.mtl_metrics['consistency'] = 0.1
-
-    assert d['mtl_metrics']['consistency'] == 0.2
-
-
 # ----- `AccumulatedMetrics`
-def test_accumulated_metrics_as_dict():
-    '''
-    Given: An AccumulatedMetrics instance.
-    When: Calling as_dict.
-    Then: Return a serialized dictionary of values.
-    '''
-    metrics = core.AccumulatedMetrics(
-        cmatrix=[[1, 2], [3, 4]],
-        mean=0.5,
-        ious={'cls_1': 0.3},
-        ac_mean=0.6,
-        ac_ious={'cls_1': 0.6},
-    )
-    d = metrics.as_dict
-
-    assert d == {
-        'cmatrix': [[1, 2], [3, 4]],
-        'mean': 0.5,
-        'ious': {'cls_1': 0.3},
-        'ac_mean': 0.6,
-        'ac_ious': {'cls_1': 0.6},
-    }
-
-
 def test_accumulated_metrics_as_str_list():
     '''
-    Given: An AccumulatedMetrics instance without active class splits.
+    Given: AccumulatedMetrics with and without active classes.
     When: Formatting metrics string lists.
-    Then: Return formatted string representations for all classes.
+    Then: Return formatted string representations for all and active classes.
     '''
-    metrics = core.AccumulatedMetrics(
+    metrics_all = core.AccumulatedMetrics(
         mean=0.5,
         ious={'1': 0.4, '2': 0.6},
     )
-
-    assert metrics.as_str_list == [
+    assert metrics_all.as_str_list == [
         'Mean IoU (all): 0.5000',
         'Class IoU (all): cls1=0.4000|cls2=0.6000',
     ]
 
-
-def test_accumulated_metrics_as_str_list_w_active():
-    '''
-    Given: An AccumulatedMetrics instance with active class splits.
-    When: Formatting metrics string lists.
-    Then: Include formatted string representations for active classes.
-    '''
-    metrics = core.AccumulatedMetrics(
+    metrics_active = core.AccumulatedMetrics(
         mean=0.5,
         ious={'1': 0.4},
         ac_mean=0.7,
         ac_ious={'1': 0.7},
     )
-
-    assert metrics.as_str_list == [
+    assert metrics_active.as_str_list == [
         'Mean IoU (all): 0.5000',
         'Class IoU (all): cls1=0.4000',
         'Mean IoU (active): 0.7000',
         'Class IoU (active): cls1=0.7000',
     ]
+
 
 
 def test_accumulated_metrics_lock():

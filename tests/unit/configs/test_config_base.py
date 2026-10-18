@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''
 Unit tests for `landseg.configs.schema.base`.
@@ -106,7 +105,7 @@ def test_base_config_section_attr_validation_and_as_dict():
     Then: Validate attributes and serialize dataclass to dictionary.
     '''
     @dataclasses.dataclass
-    class DummySection(base.BaseConfigSection):
+    class _DummySection(base.BaseConfigSection):
         epoch: int = 10
         mode: str = 'train'
 
@@ -114,7 +113,7 @@ def test_base_config_section_attr_validation_and_as_dict():
             self.require_attr_type_range('epoch', int, (1, 100))
             self.require_attr_type_range('mode', str, ['train', 'val'])
 
-    section = DummySection()
+    section = _DummySection()
     section.validate()
     assert section.as_dict == {'epoch': 10, 'mode': 'train'}
 
@@ -123,6 +122,6 @@ def test_base_config_section_attr_validation_and_as_dict():
     assert base_sec.validate() is None
 
     # invalid attribute value raises ConfigValidationError
-    invalid_sec = DummySection(epoch=-5)
+    invalid_sec = _DummySection(epoch=-5)
     with pytest.raises(base.ConfigValidationError):
         invalid_sec.validate()

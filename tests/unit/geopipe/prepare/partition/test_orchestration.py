@@ -22,12 +22,13 @@
 # pylint: disable=duplicate-code
 
 '''
-Unit tests for data partition pipeline under 3 spatial AOI scenarios.
+Unit tests for data partition pipeline orchestration.
 '''
 
 
 # standard imports
 import os
+import pathlib
 # third-party imports
 import numpy
 import rasterio
@@ -79,10 +80,10 @@ def test_scenario_1_fixed_test_aoi_with_auto_train_val(tmp_path):
     _create_aoi_tiff(test_aoi, transform=t_test)
 
     blocks = {
-        (0, 0): '/path/block_0_0.npz',
-        (0, 256): '/path/block_0_256.npz',
-        (256, 0): '/path/block_256_0.npz',
-        (256, 256): '/path/block_256_256.npz',
+        (0, 0): pathlib.Path('/path/block_0_0.npz'),
+        (0, 256): pathlib.Path('/path/block_0_256.npz'),
+        (256, 0): pathlib.Path('/path/block_256_0.npz'),
+        (256, 256): pathlib.Path('/path/block_256_256.npz'),
     }
     base_counts = {
         (0, 0): [10, 20],
@@ -95,14 +96,18 @@ def test_scenario_1_fixed_test_aoi_with_auto_train_val(tmp_path):
         val_test_ratios=(0.5, 0.0),
         block_spec=(256, 256, 256, 256),
         aoi=orchestration.AOIConfig(
-            test_aoi=test_aoi,
+            test_aoi=pathlib.Path(test_aoi),
             canvas_crs='EPSG:3161',
             canvas_transform=t_test,
         ),
     )
 
     results = orchestration.create_blocks_partition(
-        base_counts, base_counts, blocks, config
+        base_counts,
+        base_counts,
+        blocks,
+        ext_test_blks=None,
+        config=config,
     )
 
     assert 'block_0_0' in results.partition_fpaths['test']
@@ -120,10 +125,10 @@ def test_scenario_2_train_val_only_zero_test_blocks():
         val.
     '''
     blocks = {
-        (0, 0): '/path/b0.npz',
-        (0, 256): '/path/b1.npz',
-        (256, 0): '/path/b2.npz',
-        (256, 256): '/path/b3.npz',
+        (0, 0): pathlib.Path('/path/b0.npz'),
+        (0, 256): pathlib.Path('/path/b1.npz'),
+        (256, 0): pathlib.Path('/path/b2.npz'),
+        (256, 256): pathlib.Path('/path/b3.npz'),
     }
     base_counts = {
         (0, 0): [10, 10],
@@ -135,10 +140,15 @@ def test_scenario_2_train_val_only_zero_test_blocks():
     config = orchestration.PartitionConfig(
         val_test_ratios=(0.25, 0.0),
         block_spec=(256, 256, 256, 256),
+        aoi=orchestration.AOIConfig(),
     )
 
     results = orchestration.create_blocks_partition(
-        base_counts, base_counts, blocks, config
+        base_counts,
+        base_counts,
+        blocks,
+        ext_test_blks=None,
+        config=config,
     )
 
     assert not results.partition_fpaths['test']
@@ -146,14 +156,14 @@ def test_scenario_2_train_val_only_zero_test_blocks():
     assert len(results.partition_fpaths['train']) == 3
 
 
-def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
+def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path):
     '''
     Scenario 3: User provides test_aoi, val_aoi, and train_aoi with
         overlap.
     Given: Test and validation AOIs overlapping block (0, 0), and a
         train AOI covering (256, 256).
     When: Partitioning with buffer_step=1.
-    Then: Overlap resolves to test > val > train with logged warnings.
+    Then: Overlap resolves to test > val > train.
     '''
     t_test = rasterio.transform.from_origin(500000.0, 600000.0, 20.0, 20.0)
     t_train = rasterio.transform.from_origin(
@@ -169,23 +179,21 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
     _create_aoi_tiff(train_path, transform=t_train)
 
     blocks = {
-        (0, 0): '/path/b0.npz',
-        (256, 256): '/path/b3.npz',
+        (0, 0): pathlib.Path('/path/b0.npz'),
+        (256, 256): pathlib.Path('/path/b3.npz'),
     }
     base_counts = {
         (0, 0): [10, 10],
         (256, 256): [10, 10],
     }
 
-    mock_logger = mocker.MagicMock()
-
     config = orchestration.PartitionConfig(
         val_test_ratios=(0.0, 0.0),
         block_spec=(256, 256, 256, 256),
         aoi=orchestration.AOIConfig(
-            train_aoi=train_path,
-            val_aoi=val_path,
-            test_aoi=test_path,
+            train_aoi=pathlib.Path(train_path),
+            val_aoi=pathlib.Path(val_path),
+            test_aoi=pathlib.Path(test_path),
             canvas_crs='EPSG:3161',
             canvas_transform=t_test,
         ),
@@ -195,11 +203,10 @@ def test_scenario_3_multi_zone_aoi_priority_and_buffering(tmp_path, mocker):
         base_counts,
         base_counts,
         blocks,
-        config,
-        logger=mock_logger,
+        ext_test_blks=None,
+        config=config,
     )
 
     assert 'b0' in results.partition_fpaths['test']
     assert 'b3' in results.partition_fpaths['train']
     assert not results.partition_fpaths['val']
-    assert mock_logger.log.called

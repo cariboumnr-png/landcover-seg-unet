@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for spatial geometry definition and raster warping.'''
 
 # third-party imports
@@ -56,9 +54,9 @@ def test_warp_sentinel2_to_grid(dummy_geotiff_factory, tmp_path):
     )
     layout = geo_core.GridLayout(spec)
 
-    out_path = str(tmp_path / 'warped_s2.vrt')
+    out_path = tmp_path / 'warped_s2.vrt'
     spatial.warp_to_grid(
-        input_path=str(s2_path),
+        input_path=s2_path,
         output_path=out_path,
         world_grid=layout,
         is_categorical=False
@@ -102,9 +100,9 @@ def test_warp_categorical_labels_preserves_integer_values(
     )
     layout = geo_core.GridLayout(spec)
 
-    out_path = str(tmp_path / 'warped_labels.vrt')
+    out_path = tmp_path / 'warped_labels.vrt'
     spatial.warp_to_grid(
-        input_path=str(label_path),
+        input_path=label_path,
         output_path=out_path,
         world_grid=layout,
         is_categorical=True

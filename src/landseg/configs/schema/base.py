@@ -116,6 +116,9 @@ class BaseConfigSection:
                 f'got {value} with type: {type(value)} instead'
             )
 
+        if isinstance(value, str) and not value.strip():
+            raise ValueError(f'Value [{value_name}] must be non-empty')
+
         if require_range is None:
             return # skip if range is not to be checked
 
@@ -131,9 +134,6 @@ class BaseConfigSection:
                 )
 
         if isinstance(value, str):
-            if not value.strip():
-                raise ValueError(f'Value [{value_name}] must be non-empty')
-
             allowed = _is_literal_range(require_range)
             if value.lower() not in allowed:
                 raise ValueError(

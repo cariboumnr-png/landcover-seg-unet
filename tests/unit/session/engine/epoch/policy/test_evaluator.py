@@ -20,7 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=duplicate-code
-# pylint: disable=protected-access
 # pylint: disable=redefined-outer-name
 
 '''Unit tests for evaluator policy module (policy/evaluator.py).'''

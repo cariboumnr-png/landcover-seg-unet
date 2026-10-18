@@ -86,6 +86,9 @@ def build_catalog(
     # return dict
     new_entries: dict[str, geo_core.DatasetBlockMeta] = {}
 
+    source_image = pathlib.Path(source_image)
+    source_label = pathlib.Path(source_label) if source_label else None
+
     # get hash values from input rasters
     img_hash = artifacts.Controller.get_sha256(source_image)
     if source_label:

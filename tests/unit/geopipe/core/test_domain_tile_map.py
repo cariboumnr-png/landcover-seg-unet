@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''Unit tests for domain mapping module (domain_tile_map.py).'''
 
@@ -41,7 +40,7 @@ def test_domain_tile_map_container():
     assert len(tile_map) == 0
 
     # set data manually
-    tile_map._data[(0, 0)] = {
+    tile_map._data[(0, 0)] = { # pylint: disable=protected-access
         'majority': 1,
         'major_freq': 0.8,
         'pca_feature': [0.1, 0.2]

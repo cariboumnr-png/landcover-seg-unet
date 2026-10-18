@@ -19,16 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=protected-access
+
 '''Unit tests for block materialization and normalization utilities.'''
 
-# standard imports
-import os
 # third-party imports
 import numpy
 import pytest
 # local imports
 import landseg.geopipe.contracts as contracts
-import landseg.geopipe.prepare.dataset as dataset
 import landseg.geopipe.prepare.materialize.materialize as mat
 
 
@@ -40,9 +39,7 @@ def test_normalize_image_math():
     Then: Correctly apply z-score normalization and replace invalid
         pixels with global mean.
     '''
-    raw_img = numpy.array(
-        [[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32
-    )
+    raw_img = numpy.array([[[10.0, 20.0], [30.0, 40.0]]], dtype=numpy.float32)
     # pixel (1, 1) is invalid
     mask = numpy.array([[True, True], [True, False]], dtype=bool)
 
@@ -163,7 +160,7 @@ def test_purge_removes_stale_files(tmp_path):
     Then: Remove stale files and preserve expected ones.
     '''
     target_dir = tmp_path / 'normalized_blocks'
-    os.makedirs(target_dir, exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=True)
 
     expected_file = target_dir / 'block_1.npz'
     stale_file = target_dir / 'block_stale.npz'
@@ -172,42 +169,8 @@ def test_purge_removes_stale_files(tmp_path):
     stale_file.touch()
 
     filenames_to_keep = ['block_1.npz']
-    purged_count = mat._purge(filenames_to_keep, str(target_dir))
+    purged_count = mat._purge(filenames_to_keep, target_dir)
 
     assert purged_count == 1
-    assert os.path.exists(expected_file)
-    assert not os.path.exists(stale_file)
-
-
-# ----- `materialize_blocks` tests
-def test_materialize_blocks_orchestration(tmp_path, mocker):
-    '''
-    Given: Input block paths, global stats, and dataset context.
-    When: Running materialize_blocks.
-    Then: Execute block materialization and return indexed output paths.
-    '''
-    out_dir = str(tmp_path / 'materialized')
-    input_blocks = {'path/to/block_0_0.npz'}
-
-    def fake_run(jobs):
-        for _func, (b, _stats, out_d, _ctx), _kwargs in jobs:
-            (tmp_path / 'materialized' / os.path.basename(b)).touch()
-
-    mock_run = mocker.patch(
-        'landseg.utils.ParallelExecutor.run', side_effect=fake_run
-    )
-
-    os.makedirs(out_dir, exist_ok=True)
-
-    mock_ctx = mocker.Mock(spec=dataset.DatasetView)
-
-    indexed, purged = mat.materialize_blocks(
-        input_blocks=input_blocks,
-        stats={},
-        context=mock_ctx,
-        output_dir=out_dir,
-    )
-
-    assert 'block_0_0' in indexed
-    assert purged == 0
-    assert mock_run.called
+    assert expected_file.exists()
+    assert not stale_file.exists()

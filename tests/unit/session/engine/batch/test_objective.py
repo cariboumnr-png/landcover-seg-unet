@@ -20,6 +20,7 @@
 # =========================================================================== #
 
 # pylint: disable=protected-access
+# pylint: disable=unsubscriptable-object
 
 '''Unit tests for objective module (objective.py).'''
 
@@ -79,14 +80,14 @@ def test_get_masks_exclusion_and_parent():
     )
 
     assert masks is not None
-    assert 0.05 in masks  # pylint: disable=unsupported-membership-test
-    assert 0.0 in masks  # pylint: disable=unsupported-membership-test
+    assert 0.05 in masks.keys()
+    assert 0.0 in masks.keys()
 
     expected_excl = torch.tensor([[False, True], [False, False]])
     expected_parent = torch.tensor([[False, False], [True, False]])
 
-    assert torch.equal(masks[0.05], expected_excl)  # pylint: disable=unsubscriptable-object
-    assert torch.equal(masks[0.0], expected_parent)  # pylint: disable=unsubscriptable-object
+    assert torch.equal(masks[0.05], expected_excl)
+    assert torch.equal(masks[0.0], expected_parent)
 
 
 # ----- `_prep_loss_compute` helper tests

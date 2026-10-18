@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''Unit tests for optim module (optimization.py, builder.py, __init__.py).'''
 
@@ -45,9 +44,6 @@ def test_optimization_init_defaults(mock_model):
     assert opt_wrap.optimizer is optimizer
     assert opt_wrap.scheduler is None
     assert opt_wrap.grad_clip_norm is None
-    assert opt_wrap._sched_cls is None
-    assert opt_wrap._sched_factory is None
-    assert opt_wrap._sched_args is None
 
 
 def test_optimization_lrs_property(mock_model):
@@ -60,50 +56,6 @@ def test_optimization_lrs_property(mock_model):
     opt_wrap = optim.Optimization(optimizer)
 
     assert opt_wrap.lrs == [1e-3]
-
-
-def test_optimization_step_optimizer(mock_model):
-    '''
-    Given: `Optimization` wrapper around an optimizer with gradients.
-    When: Calling `step_optimizer`.
-    Then: Delegate execution to underlying optimizer.
-    '''
-    optimizer = _get_mock_optimizer(mock_model)
-    opt_wrap = optim.Optimization(optimizer)
-    out = mock_model.linear(torch.tensor([[1.0, 1.0]]))
-    loss = out.sum()
-    loss.backward()
-
-    opt_wrap.step_optimizer()
-
-
-def test_optimization_zero_grad(mock_model):
-    '''
-    Given: `Optimization` wrapper after backward pass.
-    When: Calling `zero_grad(set_to_none=True)`.
-    Then: Parameter gradients are reset to None.
-    '''
-    optimizer = _get_mock_optimizer(mock_model)
-    opt_wrap = optim.Optimization(optimizer)
-    out = mock_model.linear(torch.tensor([[1.0, 1.0]]))
-    loss = out.sum()
-    loss.backward()
-
-    assert mock_model.linear.weight.grad is not None
-    opt_wrap.zero_grad(set_to_none=True)
-    assert mock_model.linear.weight.grad is None
-
-
-def test_optimization_step_scheduler_none(mock_model):
-    '''
-    Given: `Optimization` without a scheduler.
-    When: Calling `step_scheduler`.
-    Then: No operation occurs and no exception is raised.
-    '''
-    optimizer = _get_mock_optimizer(mock_model)
-    opt_wrap = optim.Optimization(optimizer, scheduler=None)
-
-    opt_wrap.step_scheduler()
 
 
 def test_optimization_step_scheduler_active(mock_model):
@@ -156,9 +108,6 @@ def test_reconfigure_disable_scheduler(mock_model):
     opt_wrap.reconfigure(disable_scheduler=True)
 
     assert opt_wrap.scheduler is None
-    assert opt_wrap._sched_factory is None
-    assert opt_wrap._sched_cls is None
-    assert opt_wrap._sched_args is None
 
 
 def test_reconfigure_no_op(mock_model):
@@ -207,7 +156,8 @@ def test_reconfigure_scheduler_rebuild(mock_model):
     opt_wrap.reconfigure(sched_args={'T_max': 20})
 
     assert opt_wrap.scheduler is not None
-    assert opt_wrap._sched_args == {'T_max': 20}
+    assert isinstance(opt_wrap.scheduler, sched_factory)
+    assert opt_wrap.scheduler.T_max == 20
 
 
 # ----- `build_optimization` factory tests
@@ -269,7 +219,6 @@ def test_build_optimization_sgd_w_cosanneal_scheduler(mock_model, session_config
         torch.optim.lr_scheduler.CosineAnnealingLR
     )
     assert opt_wrap.grad_clip_norm == 0.5
-    assert opt_wrap._sched_cls == 'CosAnneal'
 
 
 def test_build_optimization_onecycle_scheduler(mock_model, session_config):

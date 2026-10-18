@@ -19,170 +19,134 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for dataset view orchestration (view.py).'''
+'''Unit tests for dataset normalizer and view builder (view.py).'''
 
-# standard imports
-import typing
-# third-party imports
-import pytest
-import rasterio.transform
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset.normalizer as normalizer
 import landseg.geopipe.prepare.dataset.view as view_mod
 
 
-# ----- `build_dataset_view` tests
-def test_build_dataset_view(monkeypatch: pytest.MonkeyPatch):
+# ----- `read_dataset_manifest` tests
+def test_read_dataset_manifest_basic():
     '''
-    Given: Ingested catalog, schema metadata, and user parameters.
-    When: Running build_dataset_view.
-    Then: Orchestrate and return a unified DatasetView.
+    Given: Valid catalog entries and schema.
+    When: `read_dataset_manifest` is evaluated.
+    Then: Correctly parse base coordinates and valid class counts.
     '''
-    dummy_view = normalizer.NormalizedDataBlocksManifest(
-        valid_blocks={(0, 0): 'path/to/block_0_0.h5'},
-        external_test_blocks=None,
-        crs='EPSG:3161',
-        transform=rasterio.transform.Affine.identity(),
-        raw_class_counts={(0, 0): {'landcover': [10, 20, 30]}},
+    inputs = normalizer.DataBlocksManifestInputs(
+        schema=_make_dummy_schema(),
+        catalog=_make_dummy_catalog(),
     )
+    res = normalizer.read_dataset_manifest(inputs, focal_head='landcover')
 
-    dummy_schema: geo_core.DatasetSchema = typing.cast(
-        geo_core.DatasetSchema,
-        {
-            'tensor_shapes': {
-                'image': {'H': 256, 'W': 256},
-            },
-            'io_conventions': {
-                'image_band_map': {'blue': 0, 'green': 1, 'red': 2},
-                'label_band_map': {'landcover': 0},
-            },
-            'labels': {
-                'label_num_cls': {'landcover': 2},
-                'label_class_names': {'landcover': ['c1', 'c2']},
-                'label_ignore_cls': {'landcover': [255]},
-            },
-            'dataset': {
-                'image_schemes': {},
-                'label_schemes': {
-                    'landcover': {
-                        'binary': {
-                            'reclass': {'1': [1, 2]},
-                            'reclass_name': {'1': 'VEG'},
-                        }
-                    }
-                },
-            },
-        },
-    )
-
-    # mock read_catalog
-    monkeypatch.setattr(
-        normalizer,
-        'read_catalog',
-        lambda *args, **kwargs: dummy_view,
-    )
-
-    params = view_mod.DatasetViewConfig(
-        head_pxs_thres={'landcover': 0.5},
-        features=['red', 'blue'],
-        targets={'landcover': 'binary'},
-    )
-
-    dview = view_mod.build_dataset_view(
-        'fake/catalog.json',
-        dummy_schema,
-        config=params,
-        canvas_crs='EPSG:3161',
-        canvas_transform=rasterio.transform.Affine.identity(),
-    )
-
-    # verify dataset view structure
-    assert isinstance(dview, view_mod.DatasetView)
-    assert dview.features.names == ('red', 'blue')
-    assert dview.features.indices == (2, 0)
-    assert dview.targets.head_names == [
-        'landcover',
-        'landcover_group',
-        'landcover_VEG',
-    ]
-    assert dview.targets.head_parent['landcover_VEG'] == 'landcover_group'
-    assert dview.targets.head_parent_cls['landcover_VEG'] == 1
-
-    # verify in-memory derived class counts for reclassified focal head
-    assert dview.focal_head == 'landcover_group'
-    # group 0 = 10 + 20 = 30
-    assert dview.valid_class_counts == {(0, 0): [30]}
-    assert dview.base_class_counts == {(0, 0): [30]}
-    assert dview.valid_blocks == {(0, 0): 'path/to/block_0_0.h5'}
-    assert dview.crs == 'EPSG:3161'
+    assert len(res.valid_blocks) == 2
+    assert (0, 0) in res.valid_blocks
+    assert (0, 256) in res.valid_blocks
+    assert res.valid_class_counts[(0, 0)] == [100, 200, 300]
+    assert res.base_class_counts[(0, 0)] == [100, 200, 300]
 
 
-def test_build_dataset_view_explicit_focal_target(
-    monkeypatch: pytest.MonkeyPatch,
-):
+def test_read_dataset_manifest_threshold_filtering():
     '''
-    Given: Explicit focal_target requested in dataset parameters.
-    When: Running build_dataset_view.
-    Then: Correctly resolve focal head and populate matching counts.
+    Given: Catalog entries with varying valid_px_ratios.
+    When: Setting a head_pxs_thres requirement of 0.8.
+    Then: Filter out entries below the threshold.
     '''
-    dummy_view = normalizer.NormalizedDataBlocksManifest(
-        valid_blocks={(0, 0): 'path/to/block_0_0.h5'},
-        external_test_blocks=None,
-        crs='EPSG:3161',
-        transform=rasterio.transform.Affine.identity(),
-        raw_class_counts={(0, 0): {'landcover': [10, 20, 30]}},
+    inputs = normalizer.DataBlocksManifestInputs(
+        schema=_make_dummy_schema(),
+        catalog=_make_dummy_catalog(),
     )
-
-    dummy_schema: geo_core.DatasetSchema = typing.cast(
-        geo_core.DatasetSchema,
-        {
-            'tensor_shapes': {
-                'image': {'H': 256, 'W': 256},
-            },
-            'io_conventions': {
-                'image_band_map': {'blue': 0},
-                'label_band_map': {'landcover': 0},
-            },
-            'labels': {
-                'label_num_cls': {'landcover': 2},
-                'label_class_names': {'landcover': ['c1', 'c2']},
-                'label_ignore_cls': {'landcover': [255]},
-            },
-            'dataset': {
-                'image_schemes': {},
-                'label_schemes': {
-                    'landcover': {
-                        'binary': {
-                            'reclass': {'1': [1, 2]},
-                            'reclass_name': {'1': 'VEG'},
-                        }
-                    }
-                },
-            },
-        },
-    )
-
-    monkeypatch.setattr(
-        normalizer,
-        'read_catalog',
-        lambda *args, **kwargs: dummy_view,
-    )
-
-    params = view_mod.DatasetViewConfig(
-        head_pxs_thres={'landcover': 0.5},
+    res = normalizer.read_dataset_manifest(
+        inputs,
+        head_pxs_thres={'landcover': 0.8},
         focal_head='landcover',
-        targets={'landcover': 'binary'},
     )
+    # only (0, 0) has valid_px_ratio = 1.0 >= 0.8
+    assert len(res.valid_blocks) == 1
+    assert (0, 0) in res.valid_blocks
+    assert (0, 256) not in res.valid_blocks
 
-    dview = view_mod.build_dataset_view(
-        'fake/catalog.json',
-        dummy_schema,
-        config=params,
-        canvas_crs='EPSG:3161',
-        canvas_transform=rasterio.transform.Affine.identity(),
+
+# ----- `build_dataset_view` tests
+def test_build_dataset_view_success():
+    '''
+    Given: DataBlocksManifestInputs and configuration parameters.
+    When: Calling `build_dataset_view`.
+    Then: Construct integrated DatasetView with resolved features/targets.
+    '''
+    inputs = normalizer.DataBlocksManifestInputs(
+        schema=_make_dummy_schema(),
+        catalog=_make_dummy_catalog(),
     )
+    cfg = view_mod.DatasetViewConfig(
+        focal_head='landcover',
+        features=['blue', 'green'],
+    )
+    ds_view = view_mod.build_dataset_view(inputs, cfg)
 
-    assert dview.focal_head == 'landcover'
-    assert dview.valid_class_counts == {(0, 0): [10, 20, 30]}
-    assert dview.base_class_counts == {(0, 0): [10, 20, 30]}
+    assert ds_view.focal_head == 'landcover'
+    assert ds_view.features.names == ('blue', 'green')
+    assert ds_view.features.indices == (0, 1)
+    assert len(ds_view.manifest.valid_blocks) == 2
+    assert 'landcover' in ds_view.targets.head_names
+
+
+# ----- private helpers
+def _make_dummy_schema() -> geo_core.DatasetSchema:
+    '''Construct minimal DatasetSchema for dataset view tests.'''
+    return {
+        'schema_id': 'data_schema/v1.1',
+        'tensor_shapes': {'image': {'H': 256, 'W': 256}},
+        'io_conventions': {
+            'image_band_map': {'blue': 0, 'green': 1, 'red': 2, 'nir': 3},
+            'label_band_map': {'landcover': 0},
+        },
+        'labels': {
+            'label_num_cls': {'landcover': 3},
+            'label_class_names': {'landcover': ['c1', 'c2', 'c3']},
+            'label_ignore_cls': {'landcover': [255]},
+        },
+        'dataset': {
+            'image_schemes': {'rgb': {'channels': ['blue', 'green', 'red']}},
+            'label_schemes': {},
+        },
+    }  # type: ignore[return-value]
+
+
+def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
+    '''Construct minimal catalog mapping for dataset view tests.'''
+    meta_0_0: geo_core.DatasetBlockMeta = {
+        'block_name': 'row_000000_col_000000',
+        'file_path': '/path/block_0_0.npz',
+        'row_col': [0, 0],
+        'valid_px_ratios': {'landcover': 1.0},
+        'class_count': {'landcover': [100, 200, 300]},
+        'schema_version': 'v1.0',
+        'creation_time': '2026-09-18T00:00:00',
+        'sha_256': 'abc123hash',
+        'aligned_grid': 'grid_1',
+        'source_image': '/path/img.tif',
+        'source_image_sha_256': 'img_hash',
+        'source_label': None,
+        'source_label_sha_256': None,
+    }
+    meta_0_256: geo_core.DatasetBlockMeta = {
+        'block_name': 'row_000256_col_000000',
+        'file_path': '/path/block_256_0.npz',
+        'row_col': [256, 0],
+        'valid_px_ratios': {'landcover': 0.4},
+        'class_count': {'landcover': [50, 150, 250]},
+        'schema_version': 'v1.0',
+        'creation_time': '2026-09-18T00:00:00',
+        'sha_256': 'def456hash',
+        'aligned_grid': 'grid_1',
+        'source_image': '/path/img.tif',
+        'source_image_sha_256': 'img_hash',
+        'source_label': None,
+        'source_label_sha_256': None,
+    }
+    return {
+        'row_000000_col_000000': meta_0_0,
+        'row_000256_col_000000': meta_0_256,
+    }

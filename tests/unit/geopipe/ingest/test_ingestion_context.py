@@ -19,12 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=protected-access
+
 '''Unit tests for ingestion context resolution.'''
 
 # standard imports
-import dataclasses
-import json
-import os
+import pathlib
 # third-party imports
 import pytest
 # local imports
@@ -34,71 +34,25 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.context as ingest_context
 
 
-# ----- private helpers
-def _create_dummy_grid(fpath: str) -> geo_core.GridLayout:
-    '''Create and persist a minimal grid layout artifact.'''
-    spec = geo_core.GridSpec(
-        crs='EPSG:32617',
-        origin=(0.0, 1000.0),
-        pixel_size=(10.0, 10.0),
-        tile_size=(16, 16),
-        tile_stride=(8, 8),
-        grid_extent=(160.0, 160.0),
-    )
-    layout = geo_core.GridLayout(spec)
-    ctrl = artifacts.PayloadController[
-        list[list[int]], geo_core.GridMeta
-    ](
-        fpath,
-        schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
-    )
-    ctrl.save(layout.to_payload())
-    return layout
-
-
 # ----- `IngestionContext` tests
-def test_ingestion_context_properties(tmp_path):
-    '''
-    Given: Instantiated IngestionContext.
-    When: Checking has_data and attempting attribute mutation.
-    Then: has_data evaluates correctly and mutation raises error.
-    '''
-    grid_fp = str(tmp_path / 'grid.json')
-    layout = _create_dummy_grid(grid_fp)
-    ctx = ingest_context.IngestionContext(
-        grid=layout,
-        grid_fpath=grid_fp,
-        domains={'landcover': '/data/lc.tif'},
-        features='/data/features.vrt',
-        labels='/data/labels.vrt',
-        valid_mask_raster='/data/mask.tif',
-    )
-    assert ctx.has_data is True
-    assert ctx.grid_fpath == grid_fp
-    assert ctx.grid.gid == layout.gid
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        # pylint: disable=dataclass-cannot-be-modified
-        ctx.grid_fpath = 'other_path'
-
-
 def test_build_ingestion_context_success(tmp_path):
     '''
     Given: World grid, runs manifest, and harmonization report.
     When: `build_ingestion_context` is executed.
     Then: Successfully resolve IngestionContext with loaded GridLayout.
     '''
-    grid_fp = str(tmp_path / 'grid.json')
+    grid_fp = tmp_path / 'grid.json'
     layout = _create_dummy_grid(grid_fp)
 
-    harm_dpath = str(tmp_path / 'harmonized')
-    run_dpath = os.path.join(harm_dpath, 'run_0001')
-    os.makedirs(run_dpath, exist_ok=True)
+    harm_dpath = tmp_path / 'harmonized'
+    run_dpath = harm_dpath / 'run_0001'
+    run_dpath.mkdir(parents=True, exist_ok=True)
 
-    report_content = {
+    report_content: contracts.HarmonizationReportSchema = {
         'run_uid': 'uid_test_0001',
         'run_id': 'run_0001',
         'timestamp': '2026-09-18T00:00:00Z',
+        'fingerprint': 'hash_test_0001',
         'status': 'SUCCESS',
         'provenance': {},
         'harmonized_sources': {},
@@ -109,9 +63,9 @@ def test_build_ingestion_context_success(tmp_path):
         },
         'valid_mask_raster': '/final/valid_pixel_mask.vrt',
         'grid_id': layout.gid,
-        'grid_fpath': grid_fp,
+        'grid_fpath': str(grid_fp),
     }
-    report_fp = os.path.join(run_dpath, 'harmonize_report.json')
+    report_fp = run_dpath / 'report.json'
     artifacts.Controller[contracts.HarmonizationReportSchema](
         report_fp
     ).persist(report_content)
@@ -121,9 +75,11 @@ def test_build_ingestion_context_success(tmp_path):
     manifest_rec: contracts.HarmonizationRunRecord = {
         'run_uid': 'uid_test_0001',
         'run_id': 'run_0001',
-        'run_folder': run_dpath,
+        'run_folder': str(run_dpath),
+        'source_dataset_manifest': '/fake/manifest.json',
         'status': 'SUCCESS',
         'timestamp': '2026-09-18T00:00:00Z',
+        'fingerprint': 'hash_test_0001',
     }
     artifacts.Controller[dict](harm_paths.runs_manifest).persist({
         'uid_test_0001': manifest_rec
@@ -135,9 +91,9 @@ def test_build_ingestion_context_success(tmp_path):
 
     assert ctx.grid.gid == layout.gid
     assert ctx.grid_fpath == grid_fp
-    assert ctx.features == '/final/features.vrt'
-    assert ctx.labels == '/final/labels.vrt'
-    assert ctx.domains == {'domain_landcover': '/final/domain_lc.tif'}
+    assert ctx.features == pathlib.Path('/final/features.vrt')
+    assert ctx.labels == pathlib.Path('/final/labels.vrt')
+    assert ctx.domains == {'domain_landcover': pathlib.Path('/final/domain_lc.tif')}
     assert ctx.has_data is True
     assert ctx.run_uid == 'uid_test_0001'
     assert ctx.harmonization_run_id == 'run_0001'
@@ -149,7 +105,7 @@ def test_discover_runs_missing_manifest_raises(tmp_path):
     When: `_resolve_harmonization_runs` is invoked.
     Then: Raise ArtifactError.
     '''
-    harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'nonexistent'))
+    harm_paths = artifacts.HarmonizationPaths(tmp_path / 'nonexistent')
     with pytest.raises(
         artifacts.ArtifactError,
         match='manifest does not exist'
@@ -163,14 +119,16 @@ def test_discover_runs_no_successful_runs_raises(tmp_path):
     When: `_resolve_harmonization_runs` is invoked.
     Then: Raise ArtifactError indicating no successful runs.
     '''
-    harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'harm'))
+    harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')
     harm_paths.init_pipeline_folders()
     manifest_rec: contracts.HarmonizationRunRecord = {
         'run_uid': 'uid_fail_0001',
         'run_id': 'run_0001',
         'run_folder': '/fake/run_0001',
+        'source_dataset_manifest': '/fake/manifest.json',
         'status': 'FAILED',
         'timestamp': '2026-09-18T00:00:00Z',
+        'fingerprint': 'hash_fail_0001',
     }
     artifacts.Controller[dict](harm_paths.runs_manifest).persist({
         'uid_fail_0001': manifest_rec
@@ -189,20 +147,24 @@ def test_resolve_harmonization_run_by_uid_and_latest():
     When: Resolving by target UID, index, run_id, and None.
     Then: Return matching records accordingly.
     '''
-    runs = {
+    runs: dict[str, contracts.HarmonizationRunRecord] = {
         'uid_1': {
             'run_uid': 'uid_1',
             'run_id': 'run_0001',
             'run_folder': '/data/run_0001',
+            'source_dataset_manifest': '/fake/manifest.json',
             'status': 'SUCCESS',
             'timestamp': '2026-09-18T00:00:00Z',
+            'fingerprint': 'hash_1',
         },
         'uid_2': {
             'run_uid': 'uid_2',
             'run_id': 'run_0002',
             'run_folder': '/data/run_0002',
+            'source_dataset_manifest': '/fake/manifest.json',
             'status': 'SUCCESS',
             'timestamp': '2026-09-19T00:00:00Z',
+            'fingerprint': 'hash_2',
         },
     }
 
@@ -235,7 +197,7 @@ def test_discover_ingested_harmonization_uids(tmp_path):
     When: `_resolve_ingestion_runs` is invoked.
     Then: Return only UIDs corresponding to SUCCESS runs.
     '''
-    ingest_paths = artifacts.IngestionPaths(str(tmp_path / 'ingest'))
+    ingest_paths = artifacts.IngestionPaths(tmp_path / 'ingest')
     # when manifest does not exist
     assert ingest_context._resolve_ingestion_runs(
         ingest_paths.runs_manifest
@@ -278,25 +240,29 @@ def test_resolve_pending_ingestion_batches(tmp_path):
     When: `resolve_pending_ingestion_batches` is called under modes.
     Then: Correctly plan batches for pending, latest, and targeted.
     '''
-    harm_paths = artifacts.HarmonizationPaths(str(tmp_path / 'harm'))
+    harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')
     harm_paths.init_pipeline_folders()
-    ingest_paths = artifacts.IngestionPaths(str(tmp_path / 'ingest'))
+    ingest_paths = artifacts.IngestionPaths(tmp_path / 'ingest')
     ingest_paths.init_pipeline_folders()
 
-    harm_manifest = {
+    harm_manifest: dict[str, contracts.HarmonizationRunRecord] = {
         'harm_1': {
             'run_uid': 'harm_1',
             'run_id': 'run_0001',
             'run_folder': str(tmp_path / 'harm' / 'run_0001'),
+            'source_dataset_manifest': '/fake/manifest.json',
             'status': 'SUCCESS',
             'timestamp': '2026-09-24T00:00:00Z',
+            'fingerprint': 'hash_harm_1',
         },
         'harm_2': {
             'run_uid': 'harm_2',
             'run_id': 'run_0002',
             'run_folder': str(tmp_path / 'harm' / 'run_0002'),
+            'source_dataset_manifest': '/fake/manifest.json',
             'status': 'SUCCESS',
             'timestamp': '2026-09-24T01:00:00Z',
+            'fingerprint': 'hash_harm_2',
         },
     }
     artifacts.Controller[dict](harm_paths.runs_manifest).persist(
@@ -381,7 +347,7 @@ def test_verify_pool_grid_compatibility(tmp_path):
     '''
     grid_fp = str(tmp_path / 'grid.json')
     layout = _create_dummy_grid(grid_fp)
-    schema_fp = str(tmp_path / 'schema.json')
+    schema_fp = tmp_path / 'schema.json'
 
     # when schema artifact does not exist -> no error
     ingest_context.verify_pool_grid_compatibility(schema_fp, layout)
@@ -420,3 +386,26 @@ def test_verify_pool_grid_compatibility(tmp_path):
         ingest_context.verify_pool_grid_compatibility(
             schema_fp, mismatched_layout
         )
+
+
+# ----- private helpers
+def _create_dummy_grid(fpath: pathlib.Path | str) -> geo_core.GridLayout:
+    '''Create and persist a minimal grid layout artifact.'''
+    spec = geo_core.GridSpec(
+        crs='EPSG:32617',
+        origin=(0.0, 1000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(16, 16),
+        tile_stride=(8, 8),
+        grid_extent=(160.0, 160.0),
+    )
+    layout = geo_core.GridLayout(spec)
+    ctrl = artifacts.PayloadController[
+        list[list[int]], geo_core.GridMeta
+    ](
+        fpath,
+        schema_id=geo_core.GridLayout.SCHEMA_ID,
+        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    )
+    ctrl.save(layout.to_payload())
+    return layout

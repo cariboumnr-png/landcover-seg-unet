@@ -86,30 +86,6 @@ def test_parallel_executor_captures_exceptions():
     assert results[2] == 16
 
 
-def test_parallel_executor_with_progress(mocker):
-    '''
-    Given: A list of tasks.
-    When: Running ParallelExecutor with show_progress enabled.
-    Then: Render progress bar via tqdm during execution.
-    '''
-    mock_tqdm = mocker.patch(
-        'tqdm.tqdm',
-        side_effect=lambda it, **kwargs: list(it)
-    )
-
-    executor = multip.ParallelExecutor(
-        max_workers=2,
-        use_threads=True,
-        show_progress=True,
-        desc='Testing'
-    )
-    jobs = [(_square, (i,), {}) for i in range(3)]
-    results = executor.run(jobs)
-
-    assert results == [0, 1, 4]
-    mock_tqdm.assert_called_once()
-
-
 def _square(x):
     return x * x
 

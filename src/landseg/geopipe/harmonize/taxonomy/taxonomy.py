@@ -53,7 +53,7 @@ def get_profiles(knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT) -> list[str]:
         list[str]:
             List of profile directory names containing species metadata.
     '''
-    emb_dir = knowledge_root / 'embeddings'
+    emb_dir = pathlib.Path(knowledge_root) / 'embeddings'
     if not emb_dir.is_dir():
         return []
     profiles: list[str] = []
@@ -127,7 +127,7 @@ def _resolve_taxonomy_metadata(
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths = [
-        root / 'embeddings' / profile / 'species_metadata.json',
+        pathlib.Path(root) / 'embeddings' / profile / 'species_metadata.json',
         pathlib.Path(profile) / 'species_metadata.json',
         pathlib.Path(profile),
     ]

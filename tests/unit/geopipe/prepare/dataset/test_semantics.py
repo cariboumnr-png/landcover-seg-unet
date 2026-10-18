@@ -28,46 +28,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset.semantics as semantics
 
 
-# ----- test helpers
-def _make_dummy_schema(
-    *,
-    image_bands: dict[str, int] | None = None,
-    image_schemes: dict[str, dict[str, list[str]]] | None = None,
-    label_bands: dict[str, int] | None = None,
-    label_num_cls: dict[str, int] | None = None,
-    label_class_names: dict[str, list[str]] | None = None,
-    label_ignore_cls: dict[str, list[int]] | None = None,
-    label_schemes: (
-        dict[str, dict[str, geo_core.LabelScheme]] | None
-    ) = None,
-) -> geo_core.DatasetSchema:
-    '''Construct mock DatasetSchema dictionary for testing.'''
-    img_map = image_bands or {'blue': 0, 'green': 1, 'red': 2}
-    lbl_map = label_bands or {'landcover': 0}
-    num_cls = label_num_cls or {'landcover': 3}
-    c_names = label_class_names or {
-        'landcover': ['c1', 'c2', 'c3']
-    }
-    ign_cls = label_ignore_cls or {'landcover': [255]}
-    return {
-        'schema_id': 'data_schema/v1.1',
-        'tensor_shapes': {'image': {'H': 256, 'W': 256}},
-        'io_conventions': {
-            'image_band_map': img_map,
-            'label_band_map': lbl_map,
-        },
-        'labels': {
-            'label_num_cls': num_cls,
-            'label_class_names': c_names,
-            'label_ignore_cls': ign_cls,
-        },
-        'dataset': {
-            'image_schemes': image_schemes or {},
-            'label_schemes': label_schemes or {},
-        },
-    }  # type: ignore[return-value]
-
-
 # ----- `resolve_feature_channels` tests
 def test_resolve_feature_channels_default():
     '''
@@ -401,3 +361,43 @@ def test_resolve_focal_head():
     # unknown target error
     with pytest.raises(KeyError, match='Focal target "unknown" not found'):
         semantics.resolve_focal_head(heads_ctx, 'unknown')
+
+
+# ----- private helpers
+def _make_dummy_schema(
+    *,
+    image_bands: dict[str, int] | None = None,
+    image_schemes: dict[str, dict[str, list[str]]] | None = None,
+    label_bands: dict[str, int] | None = None,
+    label_num_cls: dict[str, int] | None = None,
+    label_class_names: dict[str, list[str]] | None = None,
+    label_ignore_cls: dict[str, list[int]] | None = None,
+    label_schemes: (
+        dict[str, dict[str, geo_core.LabelScheme]] | None
+    ) = None,
+) -> geo_core.DatasetSchema:
+    '''Construct mock DatasetSchema dictionary for testing.'''
+    img_map = image_bands or {'blue': 0, 'green': 1, 'red': 2}
+    lbl_map = label_bands or {'landcover': 0}
+    num_cls = label_num_cls or {'landcover': 3}
+    c_names = label_class_names or {
+        'landcover': ['c1', 'c2', 'c3']
+    }
+    ign_cls = label_ignore_cls or {'landcover': [255]}
+    return {
+        'schema_id': 'data_schema/v1.1',
+        'tensor_shapes': {'image': {'H': 256, 'W': 256}},
+        'io_conventions': {
+            'image_band_map': img_map,
+            'label_band_map': lbl_map,
+        },
+        'labels': {
+            'label_num_cls': num_cls,
+            'label_class_names': c_names,
+            'label_ignore_cls': ign_cls,
+        },
+        'dataset': {
+            'image_schemes': image_schemes or {},
+            'label_schemes': label_schemes or {},
+        },
+    }  # type: ignore[return-value]

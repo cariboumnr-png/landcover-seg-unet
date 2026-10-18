@@ -88,8 +88,6 @@ class SessionConfig(base.BaseConfigSection):
         self.engine.validate()
 
         if mode == 'train':
-            self.orchestration.validate()
-
             if self.mode == 'continuous':
                 if self.orchestration.curriculum.schema != 'single':
                     raise ValueError(
@@ -107,6 +105,8 @@ class SessionConfig(base.BaseConfigSection):
                     f'Invalid mode: {self.mode}, '
                     f'must be "continuous" or "curriculum"'
                 )
+
+            self.orchestration.validate()
 
         else:
             self.evaluation.validate()

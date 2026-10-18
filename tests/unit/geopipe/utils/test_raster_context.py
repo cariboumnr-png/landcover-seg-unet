@@ -19,51 +19,61 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for raster open context manager (raster_context.py).'''
+'''Unit tests for open_rasters context manager (raster_context.py).'''
 
+# standard imports
+import pathlib
 # third-party imports
+import numpy
 import pytest
 # local imports
 import landseg.geopipe.utils.raster_context as raster_context
 
 
 # ----- `open_rasters` tests
-def test_open_rasters_success(mocker):
+def test_open_rasters_success(dummy_geotiff_factory):
     '''
-    Given: A mixture of valid raster file paths and None entries.
-    When: `open_rasters` is executed.
-    Then: Yields opened readers for paths and None for None entries,
-        closing all on exit.
+    Given: Two valid GeoTIFF files and a None placeholder.
+    When: Opening them via `open_rasters` context manager.
+    Then: Yield opened reader instances and close them upon exit.
     '''
-    # mock pathlib.Path.exists to confirm existence
-    mocker.patch('pathlib.Path.exists', return_value=True)
+    r1 = dummy_geotiff_factory(
+        filename='r1.tif', width=10, height=10, bands=1, dtype=numpy.uint8
+    )
+    r2 = dummy_geotiff_factory(
+        filename='r2.tif', width=10, height=10, bands=1, dtype=numpy.uint8
+    )
 
-    # mock rasterio.open context manager behavior
-    mock_reader = mocker.Mock()
-    mock_open = mocker.patch('rasterio.open')
-    mock_open.return_value.__enter__.return_value = mock_reader
+    with raster_context.open_rasters(r1, None, r2) as (reader1, none_r, reader2):
+        assert reader1 is not None
+        assert none_r is None
+        assert reader2 is not None
+        assert reader1.width == 10
+        assert reader2.width == 10
+        assert not reader1.closed
+        assert not reader2.closed
 
-    with raster_context.open_rasters(
-        'raster1.tif', None, 'raster2.tif'
-    ) as readers:
-        assert len(readers) == 3
-        assert readers[0] == mock_reader
-        assert readers[1] is None
-        assert readers[2] == mock_reader
-
-    # check entering and exit behavior
-    assert mock_open.call_count == 2
-    assert mock_open.return_value.__exit__.call_count == 2
+    assert reader1.closed
+    assert reader2.closed
 
 
-def test_open_rasters_missing_file(mocker):
+def test_open_rasters_missing_file_raises():
     '''
-    Given: A raster file path that does not exist.
-    When: `open_rasters` is executed.
-    Then: Raise an AssertionError.
+    Given: A non-existent raster file path.
+    When: Opening via `open_rasters`.
+    Then: Raise AssertionError with file not found message.
     '''
-    mocker.patch('pathlib.Path.exists', return_value=False)
-
+    missing_fp = pathlib.Path('/nonexistent/path/raster.tif')
     with pytest.raises(AssertionError, match='Raster not found'):
-        with raster_context.open_rasters('missing.tif') as _:
+        with raster_context.open_rasters(missing_fp):
             pass
+
+
+def test_open_rasters_empty():
+    '''
+    Given: No raster arguments.
+    When: Opening via `open_rasters`.
+    Then: Yield an empty tuple without error.
+    '''
+    with raster_context.open_rasters() as readers:
+        assert not readers

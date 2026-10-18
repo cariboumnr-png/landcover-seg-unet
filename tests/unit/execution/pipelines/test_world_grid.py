@@ -23,7 +23,6 @@
 
 # standard imports
 import json
-import os
 import typing
 # third-party imports
 import omegaconf
@@ -44,10 +43,9 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
     grid_cfg.output_dpath = str(tmp_path / 'world_grids')
-    grid_cfg.params.ref_fpath = dummy_data_paths.extent
-    grid_cfg.params.crs_string = 'EPSG:3161'
-    grid_cfg.params.tile_size = (256, 256)
-    grid_cfg.params.tile_stride = (128, 128)
+    grid_cfg.ref_fpath = dummy_data_paths.extent
+    grid_cfg.tile_size = (256, 256)
+    grid_cfg.tile_stride = (128, 128)
 
     config = typing.cast(
         configs.RootConfig,
@@ -57,24 +55,18 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     pipelines.WorldGridGeneration(config).run()
 
     # verify canonical world grid artifact was generated
-    grid_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'grid_row_256_128_col_256_128.json'
-    )
-    assert os.path.exists(grid_fpath)
+    grid_fpath = tmp_path / 'world_grids' /'grid_row_256_128_col_256_128.json'
+    assert grid_fpath.exists()
     with open(grid_fpath, 'r', encoding='utf-8') as f:
         grid_data = json.load(f)
     assert isinstance(grid_data, list)
     assert len(grid_data) > 0
 
     # verify grid report artifact was generated
-    report_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'report.json'
-    )
-    assert os.path.exists(report_fpath)
+    report_fpath = tmp_path / 'world_grids' / 'report.json'
+    assert report_fpath.exists()
     with open(report_fpath, 'r', encoding='utf-8') as f:
         report_data = json.load(f)
     assert report_data['status'] == 'SUCCESS'
-    assert report_data['grid']['grid_fpath'] == grid_fpath
+    assert report_data['grid']['grid_fpath'] == str(grid_fpath)
     assert report_data['total_tiles'] == len(grid_data)

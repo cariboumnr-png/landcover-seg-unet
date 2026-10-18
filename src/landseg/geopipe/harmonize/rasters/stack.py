@@ -66,6 +66,8 @@ def stack_rasters(
             Mapping of raster role ('features', 'labels') to stacked
             VRT file path.
     '''
+    output_dir = pathlib.Path(output_dir)
+
     def _out_path(tag: str) -> pathlib.Path:
         return output_dir / f'harmonized_{tag}_STACKED.vrt'
 
@@ -112,9 +114,7 @@ def _composite_vrt(
     out_p = output_path.resolve()
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
-    resolved_sources = [
-        str(p.resolve()) for p in source_paths
-    ]
+    resolved_sources = [str(pathlib.Path(p).resolve()) for p in source_paths]
     _build_stacked_vrt_xml(resolved_sources, output_path, raster_type)
 
     return out_p

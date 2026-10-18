@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
 
 '''
 Unit tests for `landseg.configs.schema.data.specification`.
@@ -53,4 +52,3 @@ def test_data_specs_custom_values():
     )
     assert specs.domain_ids_name == 'eco_region'
     assert specs.domain_vec_name == 'climate_vec'
-

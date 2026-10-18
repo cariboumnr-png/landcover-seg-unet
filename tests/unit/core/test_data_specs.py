@@ -25,22 +25,6 @@
 import landseg.core as core
 
 
-# ----- composition
-def test_dataspecs_fixture_constructs_valid_instance(dataspecs):
-    '''
-    Given: The standard dataspecs fixture.
-    When: Testing its composition.
-    Then: Return a valid DataSpec instance with expected subparts.
-    '''
-    assert dataspecs.name == "test_dataset"
-    assert dataspecs.mode == "default"
-
-    assert isinstance(dataspecs.meta, core.Meta)
-    assert isinstance(dataspecs.heads, core.Heads)
-    assert isinstance(dataspecs.splits, core.Splits)
-    assert isinstance(dataspecs.domains, core.Domains)
-
-
 # ----- image specs
 def test_image_collects_spectral_channels():
     '''

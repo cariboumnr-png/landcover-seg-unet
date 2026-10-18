@@ -21,7 +21,6 @@
 
 # pylint: disable=duplicate-code
 # pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
 # pylint: disable=redefined-outer-name
 
 '''Unit tests for epoch executor module (executor.py).'''

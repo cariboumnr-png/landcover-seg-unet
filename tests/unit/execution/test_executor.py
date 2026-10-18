@@ -130,5 +130,3 @@ def test_execute_command_unknown_command_raises_key_error():
     )
     with pytest.raises(KeyError, match='Unknown command'):
         executor.execute_command(config)
-
-

@@ -54,18 +54,16 @@ def test_build_grid_ref(dummy_geotiff_factory):
         filename='ref_raster.tif',
         width=16,
         height=16,
-        bands=1
+        bands=1,
+        crs='EPSG:32617',
     )
 
-    # set up grid parameters for ref mode
-    config = _Params(
-        ref_fpath=str(ref_path),
-        crs_string='EPSG:32617',
+    grid = grid_builder.build_grid(
         tile_size=(8, 8),
-        tile_stride=(4, 4)
+        tile_stride=(4, 4),
+        mode='ref',
+        ref_fpath=ref_path,
     )
-
-    grid = grid_builder.build_grid('ref', config)
 
     # 16x16 pixels image, tiles specs of 8x8 with 4 overlap.
     # step size = 8-4 = 4.
@@ -82,16 +80,17 @@ def test_build_grid_manual():
     Then: Create the GridLayout matching the provided spatial
         extent bounds.
     '''
-    config = _Params(
-        crs_string='EPSG:32617',
-        origin=(500000.0, 5000000.0),
-        pixel_size=(10.0, 10.0),
-        extent_in_crs_units=(160.0, 160.0), # 16x16 pixels
+    grid = grid_builder.build_grid(
         tile_size=(8, 8),
-        tile_stride=(4, 4)
+        tile_stride=(4, 4),
+        mode='manual',
+        manual_specs=grid_builder.GridConfigs(
+            crs_string='EPSG:32617',
+            origin=(500000.0, 5000000.0),
+            pixel_size=(10.0, 10.0),
+            extent_in_crs_units=(160.0, 160.0),
+        ),
     )
-
-    grid = grid_builder.build_grid('manual', config)
     assert len(grid) == 16
 
 
@@ -101,11 +100,9 @@ def test_build_grid_invalid():
     When: `build_grid` is executed.
     Then: Raise a ValueError.
     '''
-    config = _Params(
-        crs_string='EPSG:32617',
-        tile_size=(8, 8),
-        tile_stride=(4, 4)
-    )
-
     with pytest.raises(ValueError, match='Invalid extent mode'):
-        grid_builder.build_grid('invalid', config)
+        grid_builder.build_grid(
+            tile_size=(8, 8),
+            tile_stride=(4, 4),
+            mode='invalid',
+        )

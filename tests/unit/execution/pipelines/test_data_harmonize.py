@@ -19,11 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=protected-access
+
 '''Unit tests for the data harmonization execution pipeline.'''
 
 # standard imports
-import json
-import os
 import typing
 # third-party imports
 import omegaconf
@@ -32,96 +32,10 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
+import landseg.geopipe.harmonize as harmonize
 
 
-# ----- `DataHarmonization` tests
-def test_data_harmonize_pipeline_success(tmp_path, dummy_data_paths):
-    '''
-    Given: Valid dummy input rasters and manifest configuration.
-    When: `DataHarmonization.run` is executed.
-    Then: Produce harmonized VRTs, valid pixel mask, and canonical world grid.
-    '''
-    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-
-    # configure world grid and harmonization
-    grid_cfg = cfg_schema.data.world_grid
-    grid_cfg.mode = 'ref'
-    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
-    grid_cfg.params.ref_fpath = dummy_data_paths.extent
-    grid_cfg.params.crs_string = 'EPSG:3161'
-    grid_cfg.params.tile_size = (256, 256)
-    grid_cfg.params.tile_stride = (128, 128)
-
-    harm_cfg = cfg_schema.data.harmonization
-    harm_cfg.dataset_manifest = dummy_data_paths.manifest
-    harm_cfg.output_dpath = str(tmp_path / 'harmonized')
-
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-
-    pipelines.WorldGridGeneration(config).run()
-    pipelines.DataHarmonization(config).run()
-
-    # verify run folder output
-    run_dir = str(tmp_path / 'harmonized' / 'run_0001')
-    assert os.path.exists(run_dir)
-    assert os.path.exists(os.path.join(run_dir, 'report.json'))
-    assert os.path.exists(os.path.join(run_dir, 'valid_pixel_mask.vrt'))
-
-    # verify canonical world grid artifact was generated
-    grid_fpath = os.path.join(
-        str(tmp_path / 'world_grids'),
-        'grid_row_256_128_col_256_128.json'
-    )
-    assert os.path.exists(grid_fpath)
-    with open(grid_fpath, 'r', encoding='utf-8') as f:
-        grid_data = json.load(f)
-    assert isinstance(grid_data, list)
-    assert len(grid_data) > 0
-
-
-def test_data_harmonize_pipeline_collision_skip(tmp_path, dummy_data_paths):
-    '''
-    Given: An already completed harmonization run.
-    When: `DataHarmonization.run` is executed again with identical inputs.
-    Then: Second run is detected as collision and recorded as SKIPPED.
-    '''
-    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
-
-    grid_cfg = cfg_schema.data.world_grid
-    grid_cfg.mode = 'ref'
-    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
-    grid_cfg.params.ref_fpath = dummy_data_paths.extent
-    grid_cfg.params.crs_string = 'EPSG:3161'
-    grid_cfg.params.tile_size = (256, 256)
-    grid_cfg.params.tile_stride = (128, 128)
-
-    harm_cfg = cfg_schema.data.harmonization
-    harm_cfg.dataset_manifest = dummy_data_paths.manifest
-    harm_cfg.output_dpath = str(tmp_path / 'harmonized')
-
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
-
-    pipelines.WorldGridGeneration(config).run()
-    pipelines.DataHarmonization(config).run()
-    pipelines.DataHarmonization(config).run()
-
-    manifest_fp = os.path.join(
-        str(tmp_path / 'harmonized'), 'harmonization_runs.json'
-    )
-    ctrl = artifacts.Controller[dict](manifest_fp)
-    runs = ctrl.fetch()
-    assert len(runs) == 2
-    uids = list(runs.keys())
-    assert runs[uids[0]]['status'] == 'SUCCESS'
-    assert runs[uids[1]]['status'] == 'SKIPPED'
-
-
+# ----- `DataHarmonization` validation tests
 def test_data_harmonize_validate_missing_world_grid(tmp_path):
     '''
     Given: Harmonization configuration without upstream world grid report.
@@ -143,3 +57,104 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
         match='Upstream pipeline "world-grid"'
     ):
         pipeline._validate()
+
+
+# ----- `DataHarmonization` execution and lifecycle tests
+def test_data_harmonize_pipeline_success(tmp_path, mocker):
+    '''
+    Given: Upstream world-grid report and mocked harmonization runner.
+    When: Calling `run` on `DataHarmonization`.
+    Then: Execute harmonization, update manifest, and write SUCCESS report.
+    '''
+    grid_dpath = tmp_path / 'world_grids'
+    grid_report = grid_dpath / 'report.json'
+    artifacts.Controller[dict](grid_report).persist({'status': 'SUCCESS'})
+
+    manifest_fpath = tmp_path / 'dataset_manifest.json'
+    manifest_fpath.write_text('{}', encoding='utf-8')
+
+    harm_dpath = tmp_path / 'harmonized'
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.world_grid.output_dpath = str(grid_dpath)
+    cfg_schema.data.harmonization.output_dpath = str(harm_dpath)
+    cfg_schema.data.harmonization.dataset_manifest = str(manifest_fpath)
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    mock_context = mocker.Mock(is_collision=False)
+    mocker.patch.object(
+        harmonize,
+        'build_harmonization_context',
+        return_value=mock_context,
+    )
+    mock_run = mocker.patch.object(harmonize, 'run_data_harmonization')
+
+    pipeline = pipelines.DataHarmonization(config)
+    pipeline.run()
+
+    mock_run.assert_called_once()
+    report_fpath = harm_dpath / 'run_0001' / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'SUCCESS'
+
+    runs_fpath = harm_dpath / 'harmonization_runs.json'
+    assert runs_fpath.exists()
+    runs = artifacts.Controller[dict](runs_fpath).fetch()
+    assert runs
+
+
+def test_data_harmonize_pipeline_failure(tmp_path, mocker):
+    '''
+    Given: Upstream world-grid report and runner that raises an error.
+    When: Calling `run` on `DataHarmonization`.
+    Then: Re-raise error and mark report status as FAILED.
+    '''
+    grid_dpath = tmp_path / 'world_grids'
+    grid_report = grid_dpath / 'report.json'
+    artifacts.Controller[dict](grid_report).persist({'status': 'SUCCESS'})
+
+    manifest_fpath = tmp_path / 'dataset_manifest.json'
+    manifest_fpath.write_text('{}', encoding='utf-8')
+
+    harm_dpath = tmp_path / 'harmonized'
+    cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    cfg_schema.execution.exp_root = str(tmp_path / 'exp')
+    cfg_schema.data.world_grid.output_dpath = str(grid_dpath)
+    cfg_schema.data.harmonization.output_dpath = str(harm_dpath)
+    cfg_schema.data.harmonization.dataset_manifest = str(manifest_fpath)
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(cfg_schema)
+    )
+
+    mock_context = mocker.Mock(is_collision=False)
+    mocker.patch.object(
+        harmonize,
+        'build_harmonization_context',
+        return_value=mock_context,
+    )
+    mocker.patch.object(
+        harmonize,
+        'run_data_harmonization',
+        side_effect=RuntimeError('Harmonization failed unexpectedly')
+    )
+
+    pipeline = pipelines.DataHarmonization(config)
+    with pytest.raises(
+        RuntimeError,
+        match='Harmonization failed unexpectedly'
+    ):
+        pipeline.run()
+
+    report_fpath = harm_dpath / 'run_0001' / 'report.json'
+    assert report_fpath.exists()
+    report = artifacts.Controller[dict](report_fpath).fetch()
+    assert report
+    assert report['status'] == 'FAILED'
