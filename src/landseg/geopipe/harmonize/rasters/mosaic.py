@@ -32,21 +32,18 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import math
-import os
 import pathlib
 import typing
-import xml.etree.ElementTree
 # third-party imports
 import rasterio
 import rasterio.crs
 import rasterio.enums
-import rasterio.shutil
 import rasterio.transform
-import rasterio.vrt
 import rasterio.warp
+# local imports
+import landseg.geopipe.harmonize.rasters.utils as raster_utils
 
 
 # ----- private dataclasses
@@ -380,18 +377,17 @@ def _prepare_single_tile(
         )
 
         if needs_warp:
-            ctx.cache_dir.mkdir(parents=True, exist_ok=True)
             vrt_file = ctx.cache_dir / f'warped_{idx:04d}_{path.stem}.vrt'
-            with rasterio.vrt.WarpedVRT(
-                src,
+            raster_utils.write_warped_vrt(
+                src=src,
+                output_path=vrt_file,
                 crs=ctx.dst_crs,
                 transform=tile_transform,
                 width=width,
                 height=height,
                 resampling=ctx.resample_alg,
                 nodata=ctx.nodata_val,
-            ) as warped:
-                rasterio.shutil.copy(warped, vrt_file, driver='VRT')
+            )
             ref_path = vrt_file
         else:
             ref_path = path
@@ -447,170 +443,43 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
 ) -> None:
     '''Construct master GDAL VRT XML connecting all mosaic tiles.'''
     layout = _calculate_mosaic_layout(tiles, res_x, res_y)
-    transform_str = (
-        f'{layout.transform.c}, {layout.transform.a}, '
-        f'{layout.transform.b}, {layout.transform.f}, '
-        f'{layout.transform.d}, {layout.transform.e}'
+    root = raster_utils.create_vrt_root(
+        width=layout.width,
+        height=layout.height,
+        crs=dst_crs,
+        transform=layout.transform,
     )
-
-    root = xml.etree.ElementTree.Element(
-        'VRTDataset',
-        rasterXSize=str(layout.width),
-        rasterYSize=str(layout.height),
-    )
-    xml.etree.ElementTree.SubElement(root, 'SRS').text = dst_crs.to_wkt()
-    xml.etree.ElementTree.SubElement(
-        root,
-        'GeoTransform',
-    ).text = transform_str
 
     for band_idx in range(1, meta.band_count + 1):
-        _add_mosaic_band_node(
+        desc = (
+            meta.descriptions[band_idx - 1]
+            if meta.descriptions and meta.descriptions[band_idx - 1]
+            else f'band_{band_idx}'
+        )
+        band_node = raster_utils.add_vrt_band(
             root=root,
             band_idx=band_idx,
-            tiles=tiles,
-            layout=layout,
-            meta=meta,
-            output_dir=output_path.parent,
-            relative_paths=relative_paths,
+            dtype=meta.dtypes[band_idx - 1],
+            nodata=meta.nodata_val,
+            description=desc,
         )
 
-    xml.etree.ElementTree.indent(root, space='  ', level=0)
-    xml.etree.ElementTree.ElementTree(root).write(
-        output_path,
-        encoding='utf-8',
-        xml_declaration=True,
-    )
+        for t in tiles:
+            dst_x = int(round((t.min_x - layout.min_x) / layout.res_x))
+            dst_y = int(round((layout.max_y - t.max_y) / layout.res_y))
 
+            raster_utils.add_vrt_source(
+                band_node=band_node,
+                source_path=t.vrt_path,
+                source_band=band_idx,
+                width=t.width,
+                height=t.height,
+                dtype=meta.dtypes[band_idx - 1],
+                dst_rect=(dst_x, dst_y, t.width, t.height),
+                src_rect=(0, 0, t.width, t.height),
+                nodata=meta.nodata_val,
+                relative_paths=relative_paths,
+                output_dir=output_path.parent,
+            )
 
-def _add_mosaic_band_node( # pylint: disable=too-many-arguments
-    *,
-    root: xml.etree.ElementTree.Element,
-    band_idx: int,
-    tiles: list[_TileGeometry],
-    layout: _MosaicLayout,
-    meta: _MosaicMetadata,
-    output_dir: pathlib.Path,
-    relative_paths: bool,
-) -> None:
-    '''Append a VRTRasterBand node and its tile sources to the VRT root.'''
-    dtype_str = _gdal_dtype_name(meta.dtypes[band_idx - 1])
-    band_node = xml.etree.ElementTree.SubElement(
-        root,
-        'VRTRasterBand',
-        dataType=dtype_str,
-        band=str(band_idx),
-    )
-
-    if meta.nodata_val is not None:
-        xml.etree.ElementTree.SubElement(
-            band_node,
-            'NoDataValue',
-        ).text = str(meta.nodata_val)
-
-    desc = (
-        meta.descriptions[band_idx - 1]
-        if meta.descriptions and meta.descriptions[band_idx - 1]
-        else f'band_{band_idx}'
-    )
-    xml.etree.ElementTree.SubElement(
-        band_node,
-        'Description',
-    ).text = desc
-
-    for t in tiles:
-        _add_tile_source_node(
-            band_node=band_node,
-            band_idx=band_idx,
-            tile=t,
-            layout=layout,
-            meta=meta,
-            output_dir=output_dir,
-            relative_paths=relative_paths,
-        )
-
-
-def _add_tile_source_node( # pylint: disable=too-many-arguments
-    *,
-    band_node: xml.etree.ElementTree.Element,
-    band_idx: int,
-    tile: _TileGeometry,
-    layout: _MosaicLayout,
-    meta: _MosaicMetadata,
-    output_dir: pathlib.Path,
-    relative_paths: bool,
-) -> None:
-    '''Attach a SimpleSource or ComplexSource XML node for a tile.'''
-    dst_x = int(round((tile.min_x - layout.min_x) / layout.res_x))
-    dst_y = int(round((layout.max_y - tile.max_y) / layout.res_y))
-
-    src_tag = (
-        'ComplexSource' if meta.nodata_val is not None else 'SimpleSource'
-    )
-    src_node = xml.etree.ElementTree.SubElement(band_node, src_tag)
-
-    file_ref = (
-        os.path.relpath(tile.vrt_path, output_dir)
-        if relative_paths
-        else str(tile.vrt_path.resolve())
-    )
-    rel_val = '1' if relative_paths else '0'
-
-    xml.etree.ElementTree.SubElement(
-        src_node,
-        'SourceFilename',
-        relativeToVRT=rel_val,
-    ).text = file_ref
-
-    xml.etree.ElementTree.SubElement(
-        src_node,
-        'SourceBand',
-    ).text = str(band_idx)
-
-    xml.etree.ElementTree.SubElement(
-        src_node,
-        'SourceProperties',
-        RasterXSize=str(tile.width),
-        RasterYSize=str(tile.height),
-        DataType=_gdal_dtype_name(meta.dtypes[band_idx - 1]),
-    )
-
-    xml.etree.ElementTree.SubElement(
-        src_node,
-        'SrcRect',
-        xOff='0',
-        yOff='0',
-        xSize=str(tile.width),
-        ySize=str(tile.height),
-    )
-
-    xml.etree.ElementTree.SubElement(
-        src_node,
-        'DstRect',
-        xOff=str(dst_x),
-        yOff=str(dst_y),
-        xSize=str(tile.width),
-        ySize=str(tile.height),
-    )
-
-    if meta.nodata_val is not None:
-        xml.etree.ElementTree.SubElement(
-            src_node,
-            'NODATA',
-        ).text = str(meta.nodata_val)
-
-
-def _gdal_dtype_name(dtype: str | typing.Any) -> str:
-    '''Map rasterio/numpy data type name to canonical GDAL data type name.'''
-    gdal_dtype_map = {
-        'uint8': 'Byte',
-        'int8': 'Int8',
-        'uint16': 'UInt16',
-        'int16': 'Int16',
-        'uint32': 'UInt32',
-        'int32': 'Int32',
-        'float32': 'Float32',
-        'float64': 'Float64',
-    }
-    s = str(dtype).lower()
-    return gdal_dtype_map.get(s, s.capitalize())
+    raster_utils.write_vrt(root, output_path)
