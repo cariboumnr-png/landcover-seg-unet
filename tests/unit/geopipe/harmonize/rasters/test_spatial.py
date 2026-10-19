@@ -26,7 +26,7 @@ import numpy
 import rasterio
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.harmonize.rasters.spatial as spatial
+import landseg.geopipe.harmonize.rasters.warp as warp
 
 
 # ----- `warp_to_grid` tests
@@ -55,7 +55,7 @@ def test_warp_sentinel2_to_grid(dummy_geotiff_factory, tmp_path):
     layout = geo_core.GridLayout(spec)
 
     out_path = tmp_path / 'warped_s2.vrt'
-    spatial.warp_to_grid(
+    warp.warp_to_grid(
         input_path=s2_path,
         output_path=out_path,
         world_grid=layout,
@@ -101,7 +101,7 @@ def test_warp_categorical_labels_preserves_integer_values(
     layout = geo_core.GridLayout(spec)
 
     out_path = tmp_path / 'warped_labels.vrt'
-    spatial.warp_to_grid(
+    warp.warp_to_grid(
         input_path=label_path,
         output_path=out_path,
         world_grid=layout,

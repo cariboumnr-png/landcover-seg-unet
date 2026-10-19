@@ -34,12 +34,13 @@ from __future__ import annotations
 import pathlib
 # third-party imports
 import rasterio
+import rasterio.crs
 import rasterio.enums
 import rasterio.shutil
+import rasterio.transform
 import rasterio.vrt
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.harmonize.rasters.utils as raster_utils
 
 
 # ----- public functions
@@ -73,7 +74,7 @@ def warp_to_grid(
     out_path = pathlib.Path(output_path).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    resample_alg = raster_utils.resolve_resampling_algorithm(
+    resample_alg = resolve_resampling_algorithm(
         resampling_method,
         is_categorical
     )
@@ -102,3 +103,69 @@ def warp_to_grid(
                 rasterio.shutil.copy(vrt, output_path, driver='VRT')
 
     return out_path
+
+
+def write_warped_vrt( # pylint: disable=too-many-arguments
+    *,
+    src: rasterio.DatasetReader,
+    output_path: pathlib.Path | str,
+    crs: rasterio.crs.CRS,
+    transform: rasterio.transform.Affine,
+    width: int,
+    height: int,
+    resampling: rasterio.enums.Resampling = rasterio.enums.Resampling.bilinear,
+    nodata: float | int | None = None,
+) -> pathlib.Path:
+    '''
+    Write a virtual warped raster (VRT) to disk.
+
+    Args:
+        src:
+            Open source dataset reader.
+        output_path:
+            Target destination path for the warped .vrt file.
+        crs:
+            Target coordinate reference system.
+        transform:
+            Target affine transform.
+        width:
+            Target width in pixels.
+        height:
+            Target height in pixels.
+        resampling:
+            Resampling algorithm enum.
+        nodata:
+            Optional nodata value.
+
+    Returns:
+        pathlib.Path:
+            Resolved absolute path to the created warped VRT file.
+    '''
+    out_p = pathlib.Path(output_path).resolve()
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    with rasterio.vrt.WarpedVRT(
+        src,
+        crs=crs,
+        transform=transform,
+        width=width,
+        height=height,
+        resampling=resampling,
+        nodata=nodata,
+    ) as warped:
+        rasterio.shutil.copy(warped, out_p, driver='VRT')
+    return out_p
+
+
+def resolve_resampling_algorithm(
+    method_name: str,
+    is_categorical: bool,
+) -> rasterio.enums.Resampling:
+    '''Resolve rasterio resampling algorithm enum.'''
+    if is_categorical or method_name == 'nearest':
+        return rasterio.enums.Resampling.nearest
+    if method_name == 'cubic':
+        return rasterio.enums.Resampling.cubic
+    try:
+        return rasterio.enums.Resampling[method_name.lower()]
+    except KeyError:
+        return rasterio.enums.Resampling.bilinear

@@ -43,7 +43,8 @@ import rasterio.enums
 import rasterio.transform
 import rasterio.warp
 # local imports
-import landseg.geopipe.harmonize.rasters.utils as raster_utils
+import landseg.geopipe.harmonize.rasters.vrt as vrt
+import landseg.geopipe.harmonize.rasters.warp as warp
 
 
 # ----- private dataclasses
@@ -183,7 +184,7 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
         dst_crs=dst_crs,
         res_x=res_x,
         res_y=res_y,
-        resample_alg=raster_utils.resolve_resampling_algorithm(
+        resample_alg=warp.resolve_resampling_algorithm(
             resampling_method,
             is_categorical,
         ),
@@ -363,7 +364,7 @@ def _prepare_single_tile(
 
         if needs_warp:
             vrt_file = ctx.cache_dir / f'warped_{idx:04d}_{path.stem}.vrt'
-            raster_utils.write_warped_vrt(
+            warp.write_warped_vrt(
                 src=src,
                 output_path=vrt_file,
                 crs=ctx.dst_crs,
@@ -428,7 +429,7 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
 ) -> None:
     '''Construct master GDAL VRT XML connecting all mosaic tiles.'''
     layout = _calculate_mosaic_layout(tiles, res_x, res_y)
-    root = raster_utils.create_vrt_root(
+    root = vrt.create_vrt_root(
         width=layout.width,
         height=layout.height,
         crs=dst_crs,
@@ -441,7 +442,7 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
             if meta.descriptions and meta.descriptions[band_idx - 1]
             else f'band_{band_idx}'
         )
-        band_node = raster_utils.add_vrt_band(
+        band_node = vrt.add_vrt_band(
             root=root,
             band_idx=band_idx,
             dtype=meta.dtypes[band_idx - 1],
@@ -453,7 +454,7 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
             dst_x = int(round((t.min_x - layout.min_x) / layout.res_x))
             dst_y = int(round((layout.max_y - t.max_y) / layout.res_y))
 
-            raster_utils.add_vrt_source(
+            vrt.add_vrt_source(
                 band_node=band_node,
                 source_path=t.vrt_path,
                 source_band=band_idx,
@@ -467,4 +468,4 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
                 output_dir=output_path.parent,
             )
 
-    raster_utils.write_vrt(root, output_path)
+    vrt.write_vrt(root, output_path)

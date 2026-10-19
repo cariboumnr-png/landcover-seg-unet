@@ -39,7 +39,7 @@ import xml.etree.ElementTree
 import rasterio
 import rasterio.crs
 # local imports
-import landseg.geopipe.harmonize.rasters.utils as raster_utils
+import landseg.geopipe.harmonize.rasters.vrt as vrt
 
 
 # ----- public functions
@@ -132,7 +132,7 @@ def _build_stacked_vrt_xml(
         raise ValueError('source_paths must not be empty')
 
     width, height, crs, transform = _get_reference_grid(source_paths[0])
-    root = raster_utils.create_vrt_root(width, height, crs, transform)
+    root = vrt.create_vrt_root(width, height, crs, transform)
 
     merged_schemes: dict[str, typing.Any] = {}
     band_idx = 1
@@ -155,7 +155,7 @@ def _build_stacked_vrt_xml(
                     else src.nodata
                 )
 
-                band_node = raster_utils.add_vrt_band(
+                band_node = vrt.add_vrt_band(
                     root=root,
                     band_idx=band_idx,
                     dtype=src.dtypes[src_band - 1],
@@ -169,7 +169,7 @@ def _build_stacked_vrt_xml(
                     raster_type=raster_type,
                 )
 
-                raster_utils.add_vrt_source(
+                vrt.add_vrt_source(
                     band_node=band_node,
                     source_path=path,
                     source_band=src_band,
@@ -183,7 +183,7 @@ def _build_stacked_vrt_xml(
     if raster_type == 'feature':
         _add_dataset_schemes(root, merged_schemes)
 
-    raster_utils.write_vrt(root, output_path)
+    vrt.write_vrt(root, output_path)
 
 
 def _get_reference_grid(
