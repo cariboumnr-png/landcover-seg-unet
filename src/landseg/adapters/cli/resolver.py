@@ -91,29 +91,43 @@ def resolve_configs(
     # get command from config
     cmd = omegaconf.OmegaConf.select(config, 'command', default=None)
 
-    # resolve sectional recipes
-    targets: list[str] = []
-    root_dpath = pathlib.Path(__file__).resolve().parents[4]
-    if cmd == 'default' or cmd is None:
-        pass
-    elif cmd == 'preflight':
-        target = omegaconf.OmegaConf.select(config, 'execution.preflight_target')
-        if target is None or target == 'all':
-            targets = SECTION_RECIPES
-        else:
-            targets.append(target)
+    # resolve recipes (custom external recipe override or tracked recipes)
+    recipe_fpath = omegaconf.OmegaConf.select(
+        config, 'execution.recipe_fpath', default=None
+    )
+    if recipe_fpath:
+        custom_path = pathlib.Path(recipe_fpath)
+        if not custom_path.exists():
+            raise FileNotFoundError(
+                f'Specified recipe config not found: {recipe_fpath}'
+            )
+        custom_recipe = omegaconf.OmegaConf.load(custom_path)
+        assert isinstance(custom_recipe, omegaconf.DictConfig)
+        config_list.append(custom_recipe)
     else:
-        targets.append(cmd)
+        # resolve sectional recipes
+        targets: list[str] = []
+        root_dpath = pathlib.Path(__file__).resolve().parents[4]
+        if cmd == 'default' or cmd is None:
+            pass
+        elif cmd == 'preflight':
+            target = omegaconf.OmegaConf.select(config, 'execution.preflight_target')
+            if target is None or target == 'all':
+                targets = SECTION_RECIPES
+            else:
+                targets.append(target)
+        else:
+            targets.append(cmd)
 
-    for t in targets:
-        recipe_cfg = _resolve_recipe_config(t, root_dpath)
-        config_list.append(recipe_cfg)
-
-    # resolve end-to-end recipes
-    if e2e_override and cmd in E2E_RECIPES:
-        for t in E2E_RECIPES:
+        for t in targets:
             recipe_cfg = _resolve_recipe_config(t, root_dpath)
             config_list.append(recipe_cfg)
+
+        # resolve end-to-end recipes
+        if e2e_override and cmd in E2E_RECIPES:
+            for t in E2E_RECIPES:
+                recipe_cfg = _resolve_recipe_config(t, root_dpath)
+                config_list.append(recipe_cfg)
 
     # add dev settings (optional and untracked)
     dev = omegaconf.OmegaConf.select(config, 'execution.dev_cfg', default=None)

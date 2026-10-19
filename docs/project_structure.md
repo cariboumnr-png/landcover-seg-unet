@@ -66,8 +66,7 @@ src/landseg/
 |   |   `-- configurators/        API helpers for ingest, prepare, and train flows
 |   `-- cli/
 |       |-- cli.py                Hydra-driven CLI implementation
-|       |-- resolver.py           CLI config resolution helpers
-|       `-- translate.py          User config translation layer
+|       `-- resolver.py           CLI config resolution helpers
 |
 |-- artifacts/
 |   |-- checkpoint.py             Checkpoint save/load helpers

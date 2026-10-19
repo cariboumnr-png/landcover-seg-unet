@@ -100,9 +100,11 @@ located directly in `configs/`:
 - Composite lifecycles (`configs/end_to_end/`): `e2e_intake.yaml`
   (continuous intake) and `e2e_experiment.yaml` (full 5-stage lifecycle
   replacing legacy `user.yaml`).
-- **Translation Layer Retirement**: (tentative) Recipes directly mirror the
+- **Translation Layer Retirement**: Recipes directly mirror the
   structured OmegaConf schema without requiring intermediate translation
-  dictionaries.
+  dictionaries; the legacy translation layer (`translate.py`) has been
+  retired, and custom recipe paths are supported via
+  `execution.recipe_fpath`.
 
 ---
 

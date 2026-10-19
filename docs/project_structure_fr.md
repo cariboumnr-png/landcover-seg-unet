@@ -66,8 +66,7 @@ src/landseg/
 |   |   `-- configurators/        API helpers pour ingest, prepare et train
 |   `-- cli/
 |       |-- cli.py                Implementation CLI pilotee par Hydra
-|       |-- resolver.py           Helpers de resolution de config CLI
-|       `-- translate.py          Couche de traduction de config utilisateur
+|       `-- resolver.py           Helpers de resolution de config CLI
 |
 |-- artifacts/
 |   |-- checkpoint.py             Sauvegarde/chargement de checkpoints

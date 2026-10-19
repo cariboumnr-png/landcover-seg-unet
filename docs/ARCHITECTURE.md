@@ -155,8 +155,10 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     hierarchy ([`RootConfig`](../src/landseg/configs/schema/root.py)), strictly isomorphic and isolated from
     CLI/notebook ergonomics.
   - **Hydra Trees (`configs.hydra`)**: Modular YAML composition defaults.
-  - **User CLI Surface (`adapters.cli`)**: Flat, pipeline-oriented inputs
-    (`configs/user.yaml`) dynamically translated into structured Hydra configs.
+  - **User CLI Surface (`adapters.cli`)**: Task-specific, modular recipes
+    (`configs/*.yaml`) resolved directly into structured Hydra configs
+    without intermediate translation layers; supports external recipe paths
+    via `execution.recipe_fpath`.
   - **Programmatic API Surface (`adapters.api`)**: Notebook-first configurators
     with typed, programmatically safe builder methods.
 

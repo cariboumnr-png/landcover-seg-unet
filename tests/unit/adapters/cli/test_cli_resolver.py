@@ -24,6 +24,8 @@
 Unit tests for `landseg.adapters.cli.resolver`.
 '''
 
+# standard imports
+import pathlib
 # third-party imports
 import omegaconf
 import pytest
@@ -138,3 +140,95 @@ def test_resolve_configs_missing_recipe():
         resolver_mod.resolve_configs(
             config=cfg_dict,
         )
+
+
+def test_resolve_configs_custom_recipe_fpath(tmp_path):
+    '''
+    Given: A custom recipe file path passed via `execution.recipe_fpath`.
+    When: Calling `resolve_configs` with the custom recipe path.
+    Then: Load overrides from custom recipe instead of default.
+    '''
+    mock_ref = tmp_path / 'mock_ref.tif'
+    mock_ref.write_text('dummy')
+
+    custom_recipe = tmp_path / 'custom_grid.yaml'
+    custom_recipe.write_text(
+        'data:\n'
+        '  world_grid:\n'
+        f'    ref_fpath: {mock_ref.as_posix()}\n'
+        '    tile_size: [512, 512]\n'
+        '    tile_stride: [256, 256]\n'
+    )
+
+    cfg_dict = omegaconf.OmegaConf.create({
+        'command': 'world-grid',
+        'execution': {
+            'recipe_fpath': str(custom_recipe),
+        },
+    })
+
+    root = resolver_mod.resolve_configs(config=cfg_dict)
+
+    assert root.data.world_grid.tile_size == [512, 512]
+    assert root.data.world_grid.tile_stride == [256, 256]
+
+
+def test_resolve_configs_custom_recipe_fpath_missing():
+    '''
+    Given: An `execution.recipe_fpath` pointing to a missing file.
+    When: Calling `resolve_configs`.
+    Then: Raise FileNotFoundError indicating specified recipe is missing.
+    '''
+    cfg_dict = omegaconf.OmegaConf.create({
+        'command': 'world-grid',
+        'execution': {
+            'recipe_fpath': './non_existent_recipe.yaml',
+        },
+    })
+
+    with pytest.raises(
+        FileNotFoundError, match='Specified recipe config not found'
+    ):
+        resolver_mod.resolve_configs(config=cfg_dict)
+
+
+@pytest.mark.parametrize(
+    'cmd',
+    [
+        'world-grid',
+        'data-harmonize',
+        'data-ingest',
+        'data-prepare',
+        'diagnose-overfit',
+        'model-evaluate',
+        'model-train',
+        'batch-ingest',
+        'study-analysis',
+        'study-sweep',
+        'e2e-intake',
+        'e2e-experiment',
+    ],
+)
+def test_all_tracked_recipes_resolve_and_validate(cmd: str):
+    '''
+    Given: Each tracked command in sectional and end-to-end recipes.
+    When: Calling `resolve_configs` for the command.
+    Then: The configuration resolves cleanly and validates without error.
+    '''
+    ckpt_dir = pathlib.Path('./experiment/results/checkpoints')
+    ckpt_file = ckpt_dir / 'best_model.pth'
+    created = False
+    if cmd == 'model-evaluate' and not ckpt_file.exists():
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+        ckpt_file.write_text('dummy')
+        created = True
+    try:
+        cfg_dict = omegaconf.OmegaConf.create({'command': cmd})
+        root = resolver_mod.resolve_configs(config=cfg_dict)
+
+        assert root.execution.cli_mode is True
+        assert root.command == cmd
+    finally:
+        if created and ckpt_file.exists():
+            ckpt_file.unlink()
+

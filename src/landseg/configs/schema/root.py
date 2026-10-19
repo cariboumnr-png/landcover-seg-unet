@@ -50,6 +50,7 @@ class ExecutionContext(base.BaseConfigSection):
     preflight_target: str | None = None
     preflight_strict_mode: bool = False
     dev_cfg: str | None = None # developer-only override config
+    recipe_fpath: str | None = None # external recipe file path override
     cli_mode: bool = False # indicates whether execution initiated via CLI
 
     @property
