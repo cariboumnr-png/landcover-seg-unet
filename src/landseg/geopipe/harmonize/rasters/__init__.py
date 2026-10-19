@@ -38,13 +38,12 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
+    'ProcessedRasters',
     # functions
-    'add_band_description_to_vrt',
-    'add_tag_to_vrt',
     'build_vrt_mosaic',
-    'stack_rasters',
+    'raster_processor',
     'unify_nodata_mask',
-    'warp_to_grid',
 ]
 
 
@@ -53,43 +52,33 @@ if typing.TYPE_CHECKING:
     from .mask import (
         unify_nodata_mask,
     )
-    from .vrt import (
-        add_band_description_to_vrt,
-        add_tag_to_vrt,
-    )
     from .mosaic import (
         build_vrt_mosaic
     )
-    from .warp import (
-        warp_to_grid,
-    )
-    from .stack import (
-        stack_rasters,
+    from .processor import (
+        ProcessedRasters,
+        raster_processor,
     )
 
 
 def __getattr__(name: str):
-    if name in {'unify_nodata_mask'}:
+    if name in {
+        'unify_nodata_mask'
+    }:
         obj = importlib.import_module('.mask', __package__)
         return getattr(obj, name)
 
-    if name in {'build_vrt_mosaic'}:
+    if name in {
+        'build_vrt_mosaic'
+    }:
         obj = importlib.import_module('.mosaic', __package__)
         return getattr(obj, name)
 
     if name in {
-        'add_band_description_to_vrt',
-        'add_tag_to_vrt',
+        'ProcessedRasters',
+        'raster_processor',
     }:
-        obj = importlib.import_module('.vrt', __package__)
-        return getattr(obj, name)
-
-    if name in {'warp_to_grid'}:
-        obj = importlib.import_module('.warp', __package__)
-        return getattr(obj, name)
-
-    if name in {'stack_rasters'}:
-        obj = importlib.import_module('.stack', __package__)
+        obj = importlib.import_module('.processor', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
