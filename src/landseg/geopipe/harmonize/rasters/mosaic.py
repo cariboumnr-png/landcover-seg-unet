@@ -183,7 +183,7 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
         dst_crs=dst_crs,
         res_x=res_x,
         res_y=res_y,
-        resample_alg=_resolve_resampling_algorithm(
+        resample_alg=raster_utils.resolve_resampling_algorithm(
             resampling_method,
             is_categorical,
         ),
@@ -283,21 +283,6 @@ def _determine_target_resolution(
                 res_ys.append(abs((top - bottom) / h))
 
     return (min(res_xs), min(res_ys))
-
-
-def _resolve_resampling_algorithm(
-    method_name: str,
-    is_categorical: bool,
-) -> rasterio.enums.Resampling:
-    '''Resolve rasterio resampling algorithm enum.'''
-    if is_categorical or method_name == 'nearest':
-        return rasterio.enums.Resampling.nearest
-    if method_name == 'cubic':
-        return rasterio.enums.Resampling.cubic
-    try:
-        return rasterio.enums.Resampling[method_name.lower()]
-    except KeyError:
-        return rasterio.enums.Resampling.bilinear
 
 
 def _resolve_nodata_value(

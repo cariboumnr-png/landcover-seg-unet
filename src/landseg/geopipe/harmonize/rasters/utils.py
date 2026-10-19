@@ -344,3 +344,18 @@ def write_warped_vrt( # pylint: disable=too-many-arguments
     ) as warped:
         rasterio.shutil.copy(warped, out_p, driver='VRT')
     return out_p
+
+
+def resolve_resampling_algorithm(
+    method_name: str,
+    is_categorical: bool,
+) -> rasterio.enums.Resampling:
+    '''Resolve rasterio resampling algorithm enum.'''
+    if is_categorical or method_name == 'nearest':
+        return rasterio.enums.Resampling.nearest
+    if method_name == 'cubic':
+        return rasterio.enums.Resampling.cubic
+    try:
+        return rasterio.enums.Resampling[method_name.lower()]
+    except KeyError:
+        return rasterio.enums.Resampling.bilinear

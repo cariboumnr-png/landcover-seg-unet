@@ -137,8 +137,8 @@ def _harmonize_sources(
             input_path=path,
             output_path=out_vrt,
             world_grid=world_grid,
-            is_categorical=is_cat,
             resampling_method=resampling,
+            is_categorical=is_cat,
         )
         # band mapping is now required
         harmonize_rasters.add_band_description_to_vrt(warped, mfst['band_mapping'])

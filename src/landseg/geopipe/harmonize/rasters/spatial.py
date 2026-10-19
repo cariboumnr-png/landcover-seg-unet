@@ -39,6 +39,7 @@ import rasterio.shutil
 import rasterio.vrt
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.harmonize.rasters.utils as raster_utils
 
 
 # ----- public functions
@@ -47,8 +48,8 @@ def warp_to_grid(
     input_path: pathlib.Path,
     output_path: pathlib.Path,
     world_grid: geo_core.GridLayout,
+    resampling_method: str,
     is_categorical: bool = False,
-    resampling_method: str | None = None,
 ) -> pathlib.Path:
     '''
     Reproject and snap an input raster to target grid as a VRT.
@@ -72,12 +73,10 @@ def warp_to_grid(
     out_path = pathlib.Path(output_path).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if is_categorical or resampling_method == 'nearest':
-        resample_alg = rasterio.enums.Resampling.nearest
-    elif resampling_method == 'cubic':
-        resample_alg = rasterio.enums.Resampling.cubic
-    else:
-        resample_alg = rasterio.enums.Resampling.bilinear
+    resample_alg = raster_utils.resolve_resampling_algorithm(
+        resampling_method,
+        is_categorical
+    )
 
     data_type = 'uint8' if is_categorical else 'float32' # current canon dtype
 
