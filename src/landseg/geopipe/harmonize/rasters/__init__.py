@@ -25,11 +25,10 @@ Top-level namespace for `landseg.geopipe.harmonize.rasters`.
 Exposes raster warping, stacking, masking, and metadata manipulation APIs.
 
 Public APIs:
-    - `warp_to_grid`: Reproject and snap input raster to grid as a VRT.
-    - `stack_rasters`: Stack feature and label rasters into composite VRTs.
+    - `ProcessedRasters`: Container for processed raster paths dictionaries.
+    - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
+    - `raster_processor`: Harmonize compiled raster sources onto grid.
     - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
-    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
-    - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
 '''
 
 # standard imports

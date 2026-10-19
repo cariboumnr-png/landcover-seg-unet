@@ -26,7 +26,8 @@ This module provides functions to reproject, resample, and snap input
 rasters to a canonical world grid layout as GDAL Virtual Rasters (VRT).
 
 Public APIs:
-    - `warp_to_grid`: Reproject and snap input raster to grid as a VRT.
+    - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
+    - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
 
 # standard imports

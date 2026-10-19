@@ -61,7 +61,7 @@ class _ParsedManifestEntry:
 
 
 # ----- public functions
-def raster_processor(
+def raster_processor(  # pylint: disable=too-many-arguments, too-many-locals
     mfst_entries: list[manifest.ManifestEntry],
     output_dir: pathlib.Path,
     *,

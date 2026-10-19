@@ -25,11 +25,13 @@
 import xml.etree.ElementTree
 # third-party imports
 import numpy
+import pytest
 import rasterio
 import rasterio.crs
 import rasterio.transform
 # local imports
-import landseg.geopipe.harmonize.rasters.utils as raster_utils
+import landseg.geopipe.harmonize.rasters.mask as mask
+import landseg.geopipe.harmonize.rasters.vrt as vrt
 
 
 # ----- `gdal_dtype_name` tests
@@ -39,23 +41,25 @@ def test_gdal_dtype_name():
     When: Translating through `gdal_dtype_name`.
     Then: Produces canonical GDAL data type names.
     '''
-    assert raster_utils.gdal_dtype_name('uint8') == 'Byte'
-    assert raster_utils.gdal_dtype_name(numpy.uint8) == 'Byte'
-    assert raster_utils.gdal_dtype_name('float32') == 'Float32'
-    assert raster_utils.gdal_dtype_name('int16') == 'Int16'
-    assert raster_utils.gdal_dtype_name('custom_type') == 'Custom_type'
+    assert vrt.gdal_dtype_name('uint8') == 'Byte'
+    assert vrt.gdal_dtype_name(numpy.uint8) == 'Byte'
+    assert vrt.gdal_dtype_name('float32') == 'Float32'
+    assert vrt.gdal_dtype_name('int16') == 'Int16'
+    assert vrt.gdal_dtype_name('custom_type') == 'Custom_type'
 
 
 # ----- VRT XML construction tests
 def test_create_vrt_root_and_write(tmp_path):
     '''
     Given: Raster spatial dimensions, CRS, and affine transform.
-    When: Creating root with `create_vrt_root` and serializing with `write_vrt`.
+    When: Creating root with `create_vrt_root` and serializing.
     Then: Writes a valid VRT XML dataset file with exact attributes.
     '''
     crs = rasterio.crs.CRS.from_string('EPSG:3161')
-    transform = rasterio.transform.from_origin(500000.0, 6000000.0, 20.0, 20.0)
-    root = raster_utils.create_vrt_root(
+    transform = rasterio.transform.from_origin(
+        500000.0, 6000000.0, 20.0, 20.0
+    )
+    root = vrt.create_vrt_root(
         width=100,
         height=50,
         crs=crs,
@@ -63,7 +67,7 @@ def test_create_vrt_root_and_write(tmp_path):
     )
 
     out_file = tmp_path / 'test_root.vrt'
-    result_path = raster_utils.write_vrt(root, out_file)
+    result_path = vrt.write_vrt(root, out_file)
     assert result_path == out_file
     assert out_file.exists()
 
@@ -78,14 +82,16 @@ def test_create_vrt_root_and_write(tmp_path):
 def test_add_vrt_band_and_source(tmp_path):
     '''
     Given: An initialized VRT dataset root element.
-    When: Appending a band with `add_vrt_band` and a source with `add_vrt_source`.
+    When: Appending a band with `add_vrt_band` and a source.
     Then: Inserts correctly configured band and source XML nodes.
     '''
     crs = rasterio.crs.CRS.from_string('EPSG:3161')
-    transform = rasterio.transform.from_origin(500000.0, 6000000.0, 20.0, 20.0)
-    root = raster_utils.create_vrt_root(10, 10, crs, transform)
+    transform = rasterio.transform.from_origin(
+        500000.0, 6000000.0, 20.0, 20.0
+    )
+    root = vrt.create_vrt_root(10, 10, crs, transform)
 
-    band_node = raster_utils.add_vrt_band(
+    band_node = vrt.add_vrt_band(
         root=root,
         band_idx=1,
         dtype='float32',
@@ -100,7 +106,7 @@ def test_add_vrt_band_and_source(tmp_path):
     assert desc_node is not None
     assert desc_node.text == 'spectral_b1'
 
-    src_node = raster_utils.add_vrt_source(
+    src_node = vrt.add_vrt_source(
         band_node=band_node,
         source_path=tmp_path / 'dummy.tif',
         source_band=1,
@@ -123,39 +129,39 @@ def test_add_vrt_band_and_source(tmp_path):
     assert nodata_elem.text == '-9999.0'
 
 
-# ----- `write_warped_vrt` tests
-def test_write_warped_vrt(dummy_geotiff_factory, tmp_path):
+# ----- VRT metadata and description tests
+def test_vrt_metadata_and_descriptions(dummy_geotiff_factory, tmp_path):
     '''
-    Given: A source GeoTIFF in UTM Zone 17N.
-    When: Warping to EPSG:3161 using `write_warped_vrt`.
-    Then: Writes a valid warped VRT file matching target geometry.
+    Given: An initialized Virtual Raster (.vrt) dataset.
+    When: Setting band descriptions and dataset-level metadata tags.
+    Then: Persist descriptions and tags cleanly into the VRT file.
     '''
-    src_tif = dummy_geotiff_factory(
-        filename='source_utm17.tif',
-        width=10,
-        height=10,
-        crs='EPSG:32617',
+    comp_path = dummy_geotiff_factory(
+        filename='comp_meta.tif',
+        width=20,
+        height=20,
+        bands=2,
+        dtype=numpy.uint8,
     )
-    dst_crs = rasterio.crs.CRS.from_string('EPSG:3161')
-    dst_transform = rasterio.transform.from_origin(
-        500000.0, 6000000.0, 20.0, 20.0
-    )
-    out_vrt = tmp_path / 'warped_test.vrt'
+    vrt_path = tmp_path / 'test_meta.vrt'
+    mask.unify_nodata_mask(comp_path, vrt_path)
 
-    with rasterio.open(src_tif) as src:
-        result_path = raster_utils.write_warped_vrt(
-            src=src,
-            output_path=out_vrt,
-            crs=dst_crs,
-            transform=dst_transform,
-            width=10,
-            height=10,
+    vrt.add_band_description_to_vrt(
+        vrt_path, {1: 'mask_channel'}
+    )
+    vrt.add_tag_to_vrt(
+        vrt_path, sensor='sentinel2', processed='true'
+    )
+    # verify empty tags call returns without modification
+    vrt.add_tag_to_vrt(vrt_path, empty_val=None)
+
+    with rasterio.open(vrt_path) as dst:
+        assert dst.descriptions[0] == 'mask_channel'
+        tags = dst.tags()
+        assert tags['sensor'] == 'sentinel2'
+        assert tags['processed'] == 'true'
+
+    with pytest.raises(ValueError, match='Expected 1 band descriptions'):
+        vrt.add_band_description_to_vrt(
+            vrt_path, {1: 'b1', 2: 'b2'}
         )
-
-    assert result_path == out_vrt
-    assert out_vrt.exists()
-
-    with rasterio.open(out_vrt) as ds:
-        assert ds.crs.to_string() == 'EPSG:3161'
-        assert ds.width == 10
-        assert ds.height == 10

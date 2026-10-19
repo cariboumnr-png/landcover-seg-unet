@@ -23,13 +23,13 @@
 
 # third-party imports
 import numpy
-import pytest
 import rasterio
 # local imports
-import landseg.geopipe.harmonize.rasters as harmonize_rasters
+import landseg.geopipe.harmonize.rasters.mask as mask
+import landseg.geopipe.harmonize.rasters.stack as stack
 
 
-# ----- test cases
+# ----- `stack_rasters` tests
 def test_stack_rasters(dummy_geotiff_factory, tmp_path):
     '''
     Given: A 10-band optical TIFF and a 1-band DEM TIFF aligned in EPSG:3161.
@@ -41,18 +41,18 @@ def test_stack_rasters(dummy_geotiff_factory, tmp_path):
         width=20,
         height=20,
         bands=10,
-        dtype=numpy.uint16
+        dtype=numpy.uint16,
     )
     dem_path = dummy_geotiff_factory(
         filename='aligned_dem.tif',
         width=20,
         height=20,
         bands=1,
-        dtype=numpy.float32
+        dtype=numpy.float32,
     )
 
     feature_paths = [opt_path, dem_path]
-    gen = harmonize_rasters.stack_rasters(feature_paths, [], tmp_path)
+    gen = stack.stack_rasters(feature_paths, [], tmp_path)
     res = {}
     try:
         while True:
@@ -70,6 +70,7 @@ def test_stack_rasters(dummy_geotiff_factory, tmp_path):
         assert dst.height == 20
 
 
+# ----- `unify_nodata_mask` tests
 def test_unify_nodata_mask(dummy_geotiff_factory, tmp_path):
     '''
     Given: A multi-band composite GeoTIFF with nodata flags.
@@ -81,11 +82,11 @@ def test_unify_nodata_mask(dummy_geotiff_factory, tmp_path):
         width=20,
         height=20,
         bands=3,
-        dtype=numpy.uint8
+        dtype=numpy.uint8,
     )
 
     out_mask = tmp_path / 'valid_mask.vrt'
-    harmonize_rasters.unify_nodata_mask(comp_path, out_mask)
+    mask.unify_nodata_mask(comp_path, out_mask)
 
     with rasterio.open(out_mask) as dst:
         assert dst.count == 1
@@ -105,52 +106,14 @@ def test_unify_nodata_mask_gtiff_output(dummy_geotiff_factory, tmp_path):
         width=20,
         height=20,
         bands=2,
-        dtype=numpy.uint8
+        dtype=numpy.uint8,
     )
 
     out_mask = tmp_path / 'valid_mask.tif'
-    harmonize_rasters.unify_nodata_mask(comp_path, out_mask)
+    mask.unify_nodata_mask(comp_path, out_mask)
 
     with rasterio.open(out_mask) as dst:
         assert dst.count == 1
         assert dst.driver == 'GTiff'
         assert dst.width == 20
         assert dst.height == 20
-
-
-def test_vrt_metadata_and_descriptions(dummy_geotiff_factory, tmp_path):
-    '''
-    Given: An initialized Virtual Raster (.vrt) dataset.
-    When: Setting band descriptions and dataset-level metadata tags.
-    Then: Persist descriptions and tags cleanly into the VRT file.
-    '''
-    comp_path = dummy_geotiff_factory(
-        filename='comp_meta.tif',
-        width=20,
-        height=20,
-        bands=2,
-        dtype=numpy.uint8,
-    )
-    vrt_path = tmp_path / 'test_meta.vrt'
-    harmonize_rasters.unify_nodata_mask(comp_path, vrt_path)
-
-    # attach descriptions
-    harmonize_rasters.add_band_description_to_vrt(
-        vrt_path, {1: 'mask_channel'}
-    )
-    # attach tags
-    harmonize_rasters.add_tag_to_vrt(
-        vrt_path, sensor='sentinel2', processed='true'
-    )
-
-    with rasterio.open(vrt_path) as dst:
-        assert dst.descriptions[0] == 'mask_channel'
-        tags = dst.tags()
-        assert tags['sensor'] == 'sentinel2'
-        assert tags['processed'] == 'true'
-
-    # band count mismatch raises ValueError
-    with pytest.raises(ValueError, match='Expected 1 band descriptions'):
-        harmonize_rasters.add_band_description_to_vrt(
-            vrt_path, {1: 'b1', 2: 'b2'}
-        )

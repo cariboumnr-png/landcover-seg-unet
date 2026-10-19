@@ -27,12 +27,13 @@ XML definitions, attaching bands and sources, mapping data types, and
 materializing virtual warped raster definitions.
 
 Public APIs:
+    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
+    - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
     - `add_vrt_band`: Append a VRTRasterBand element to VRT dataset.
     - `add_vrt_source`: Attach a SimpleSource or ComplexSource element.
     - `create_vrt_root`: Create root XML element for a VRT dataset.
     - `gdal_dtype_name`: Map Python/rasterio dtype to canonical GDAL name.
     - `write_vrt`: Serialize and write indented VRT XML to disk.
-    - `write_warped_vrt`: Write a virtual warped raster (.vrt) to disk.
 '''
 
 # standard imports
