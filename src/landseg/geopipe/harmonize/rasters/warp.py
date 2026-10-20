@@ -83,6 +83,8 @@ def write_warped_vrt( # pylint: disable=too-many-arguments
     '''
     out_p = pathlib.Path(output_path).resolve()
     out_p.parent.mkdir(parents=True, exist_ok=True)
+    effective_nodata = src.nodata if nodata is None else nodata
+
     with rasterio.vrt.WarpedVRT(
         src,
         crs=crs,
@@ -90,7 +92,7 @@ def write_warped_vrt( # pylint: disable=too-many-arguments
         width=width,
         height=height,
         resampling=resampling,
-        nodata=nodata,
+        nodata=effective_nodata,
         dtype=dtype,
     ) as warped:
         rasterio.shutil.copy(warped, out_p, driver='VRT')

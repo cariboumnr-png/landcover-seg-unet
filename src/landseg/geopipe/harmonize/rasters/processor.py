@@ -101,6 +101,7 @@ def raster_processor(  # pylint: disable=too-many-arguments, too-many-locals
                 height=dst_height,
                 width=dst_width,
                 resampling=parsed.resampling_method,
+                nodata=src.nodata
             )
 
         match parsed.raster_type:
