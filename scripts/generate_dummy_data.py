@@ -67,7 +67,11 @@ def main() -> None:
                 sys.exit(0)
 
     print('-' * 10)
-    testing.generate_dummy_data(out_dir)
+    testing.generate_pre_harmonization_data(out_dir)
+    print('-' * 10)
+    testing.generate_pre_mosaic_data(out_dir)
+    print('-' * 10)
+    print('\nDummy data generation completed successfully!')
 
 
 if __name__ == '__main__':

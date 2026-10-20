@@ -33,32 +33,52 @@ import typing
 
 __all__ = [
     # classes
+    'PreHarmonizationDummyPaths',
+    'PreMosaickingDummyPaths',
     'TIFFConfig',
-    'TIFFPaths',
     # functions
     'create_dummy_geotiff',
-    'generate_dummy_data',
+    'generate_pre_harmonization_data',
+    'generate_pre_mosaic_data',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dummy_data import (
+    from .pre_harmonize import (
+        PreHarmonizationDummyPaths,
+        generate_pre_harmonization_data,
+    )
+    from .pre_mosaic import (
+        PreMosaickingDummyPaths,
+        generate_pre_mosaic_data,
+    )
+    from .tiff import(
         TIFFConfig,
-        TIFFPaths,
         create_dummy_geotiff,
-        generate_dummy_data,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'TIFFConfig',
-        'TIFFPaths',
-        'create_dummy_geotiff',
-        'generate_dummy_data',
+        'PreHarmonizationDummyPaths',
+        'generate_pre_harmonization_data',
     }:
-        obj = importlib.import_module('.dummy_data', __package__)
+        obj = importlib.import_module('.pre_harmonize', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'PreMosaickingDummyPaths',
+        'generate_pre_mosaic_data',
+    }:
+        obj = importlib.import_module('.pre_mosaic', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'TIFFConfig',
+        'create_dummy_geotiff',
+    }:
+        obj = importlib.import_module('.tiff', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

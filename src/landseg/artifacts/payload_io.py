@@ -41,6 +41,7 @@ Public APIs:
 '''
 
 # standard imports
+from __future__ import annotations
 import pathlib
 import typing
 # local imports

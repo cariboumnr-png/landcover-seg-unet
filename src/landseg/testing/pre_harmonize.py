@@ -35,22 +35,13 @@ import numpy
 import rasterio
 import rasterio.transform
 import rasterio.warp
+# local imports
+import landseg.testing.tiff as tiff
 
 
-# ----- public dataclass
-@dataclasses.dataclass
-class TIFFConfig:
-    '''Container for creating a dummy GeoTIFF file via `rasterio`.'''
-    shape: tuple[int, int]
-    bands: int
-    crs: str
-    transform: rasterio.transform.Affine
-    dtype: typing.Any
-    nodata: int | float
-
-
-@dataclasses.dataclass
-class TIFFPaths:
+# ----- private dataclass
+@dataclasses.dataclass(frozen=True)
+class PreHarmonizationDummyPaths:
     '''Container for dummy TIFF file paths.'''
     root: str | pathlib.Path
 
@@ -108,41 +99,7 @@ class TIFFPaths:
 
 
 # ----- public function
-def create_dummy_geotiff(
-    fpath: str | pathlib.Path,
-    *,
-    config: TIFFConfig,
-    data_gen_func: typing.Callable[[tuple[int, int], int], numpy.ndarray],
-) -> None:
-    '''Write a multi-band GeoTIFF with coordinate metadata.
-
-    Args:
-        fpath:
-            Output file path.
-        config:
-            TIFFConfig with shape, bands, crs, transform, dtype, nodata.
-        data_gen_func:
-            Callback generating data per band.
-    '''
-    pathlib.Path(fpath).parent.mkdir(parents=True, exist_ok=True)
-    with rasterio.open(
-        fpath,
-        'w',
-        driver='GTiff',
-        height=config.shape[0],
-        width=config.shape[1],
-        count=config.bands,
-        dtype=config.dtype,
-        crs=config.crs,
-        transform=config.transform,
-        nodata=config.nodata,
-    ) as dst:
-        for b in range(1, config.bands + 1):
-            band_data = data_gen_func(config.shape, b)
-            dst.write(band_data, b)
-
-
-def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
+def generate_pre_harmonization_data(input_root: str | pathlib.Path) -> None:
     '''Generate the full dummy dataset under input root.
 
     Args:
@@ -151,7 +108,7 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     '''
     print('Generating dummy geospatial data for landseg pipeline...')
     pathlib.Path(input_root).mkdir(parents=True, exist_ok=True)
-    paths = TIFFPaths(input_root)
+    paths = PreHarmonizationDummyPaths(input_root)
 
     canonical_crs = 'EPSG:3161'
     # global transform (canonical CRS)
@@ -163,9 +120,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     # shape: global
     # transform: global
     print(f'Creating extent reference: {paths.extent}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.extent,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=global_shape,
             bands=1,
             crs=canonical_crs,
@@ -180,9 +137,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     # shape: (256x256)
     # transform: global (so it covers exactly the top-left block)
     print(f'Creating test AOI reference: {paths.test_aoi}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.test_aoi,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=(256, 256),
             bands=1,
             crs=canonical_crs,
@@ -200,9 +157,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     # shape: global
     # transform: global
     print(f'Creating domain knowledge [mock_geology]: {paths.domain_1}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.domain_1,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=global_shape,
             bands=1,
             crs=canonical_crs,
@@ -230,9 +187,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     })
 
     print(f'Creating domain knowledge [mock_soil]: {paths.domain_2}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.domain_2,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=global_shape,
             bands=1,
             crs=canonical_crs,
@@ -273,9 +230,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     raw_transform = _get_transform(raw_origin[0][0], raw_origin[1][0], 10.0)
 
     print(f'Creating raw feature [Sentinel-2]: {paths.sentinel2}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.sentinel2,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=raw_shape,
             bands=10,
             crs=raw_crs,
@@ -315,9 +272,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     })
 
     print(f'Creating raw feature [DEM]: {paths.dem}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.dem,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=raw_shape,
             bands=1,
             crs=raw_crs,
@@ -325,7 +282,7 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
             dtype=numpy.float32,
             nodata=-9999.9,
         ),
-        data_gen_func=lambda s, _: _gen_image_data(s, 1),
+        data_gen_func=lambda s, _: tiff.gen_image_data(s, 1),
     )
     data_configs.append({
         'name': 'dem',
@@ -339,9 +296,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     })
 
     print(f'Creating raw label [Landcover]: {paths.landcover}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.landcover,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=raw_shape,
             bands=1,
             crs=raw_crs,
@@ -349,7 +306,7 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
             dtype=numpy.uint8,
             nodata=255,
         ),
-        data_gen_func=_gen_label_data,
+        data_gen_func=tiff.gen_label_data,
     )
     data_configs.append({
         'name': 'landcover',
@@ -380,9 +337,9 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     })
 
     print(f'Creating raw label [Leadspc]: {paths.leadspc}')
-    create_dummy_geotiff(
+    tiff.create_dummy_geotiff(
         paths.leadspc,
-        config=TIFFConfig(
+        config=tiff.TIFFConfig(
             shape=raw_shape,
             bands=1,
             crs=raw_crs,
@@ -390,7 +347,7 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
             dtype=numpy.uint8,
             nodata=255,
         ),
-        data_gen_func=_gen_label_data,
+        data_gen_func=tiff.gen_label_data,
     )
     data_configs.append({
         'name': 'leadspc',
@@ -419,8 +376,6 @@ def generate_dummy_data(input_root: str | pathlib.Path) -> TIFFPaths:
     })
 
     _write_jsons(data_configs, paths.manifest)
-    print('\nDummy data generation completed successfully!')
-    return paths
 
 
 # ----- private functions
@@ -451,19 +406,3 @@ def _write_jsons(
         })
     with open(manifest, 'w', encoding='utf-8') as f:
         json.dump(manifest_list, f, indent=4)
-
-
-def _gen_image_data(shape: tuple[int, int], band_idx: int) -> numpy.ndarray:
-    '''Generate dummy image band or terrain elevation data.'''
-    if band_idx == 1:
-        x = numpy.linspace(100.0, 300.0, shape[1])
-        return numpy.tile(x, (shape[0], 1)).astype(numpy.float32)
-    return numpy.random.randint(
-        100, 1000, size=shape, dtype=numpy.uint16
-    )
-
-
-def _gen_label_data(shape: tuple[int, int], _: int) -> numpy.ndarray:
-    '''Generate dummy label data with ignore index.'''
-    labels = numpy.random.choice([1, 2, 255], size=shape, p=[0.45, 0.45, 0.10])
-    return labels.astype(numpy.uint8)

@@ -43,7 +43,7 @@ def ensure_canonical_dummy_data():
     Equivalent to running `python scripts/generate_dummy_data.py --yes`.
     '''
     in_dir = ROOT_DIR / 'experiment' / 'input'
-    paths = testing.TIFFPaths(root=in_dir)
+    paths = testing.PreHarmonizationDummyPaths(root=in_dir)
     if not paths.all_paths_exist:
-        testing.generate_dummy_data(in_dir)
+        testing.generate_pre_harmonization_data(in_dir)
     return paths

@@ -98,7 +98,7 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
         assert norm['name'] == mfst_entry.get('name')
         path = mfst_entry.get('path')
         assert path
-        assert norm['path'] == pathlib.Path(path)
+        assert norm['path'].resolve() == pathlib.Path(path)
 
     # return a list of entries
     return compiled
