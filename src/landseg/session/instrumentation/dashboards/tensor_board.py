@@ -24,6 +24,7 @@ Tensorboard tracker
 '''
 
 # standard imports
+import pathlib
 import typing
 # third-party imports
 import torch.utils.tensorboard as tensorboard
@@ -39,7 +40,7 @@ if typing.TYPE_CHECKING:
 class TensorBoardTracker(base.BaseTracker):
     '''Tensorboard tracker class.'''
 
-    def __init__(self, uri: str):
+    def __init__(self, uri: pathlib.Path):
         super().__init__(uri, None)
         self.writer = tensorboard.SummaryWriter(log_dir=self.uri)
 

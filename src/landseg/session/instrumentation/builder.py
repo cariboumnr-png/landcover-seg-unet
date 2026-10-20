@@ -31,6 +31,7 @@ instrumentation.
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.session.instrumentation.callbacks.base as base
@@ -44,7 +45,7 @@ import landseg.utils as utils
 # ----- public functions
 def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
-    uri: str | None = None,
+    uri: pathlib.Path | None = None,
     artifact_path: str | None = None,
     label_color_map: dict[str, list[int]] | None = None,
     logger: utils.Logger | None = None,

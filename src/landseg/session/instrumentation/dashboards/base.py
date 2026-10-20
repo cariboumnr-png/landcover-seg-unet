@@ -38,8 +38,12 @@ if typing.TYPE_CHECKING:
 # ----- public classes
 class BaseTracker(abc.ABC):
     '''Interface of the base tracker.'''
-    def __init__(self, uri: str, artifact_path: str | None = None):
-        self.uri = pathlib.Path(uri).absolute().as_uri() # safe URI generation
+    def __init__(
+        self,
+        uri: pathlib.Path,
+        artifact_path: str | None = None
+    ):
+        self.uri = uri.absolute().as_uri() # safe URI generation
         self.artifact_path = artifact_path
 
     @abc.abstractmethod

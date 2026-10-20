@@ -24,6 +24,7 @@ Minimal MLFlow tracker
 '''
 
 # standard imports
+import pathlib
 import typing
 # third-party imports
 import mlflow
@@ -39,7 +40,7 @@ if typing.TYPE_CHECKING:
 class MLFlowTracker(base.BaseTracker):
     '''Minimal MLflow tracker for experiment logging.'''
 
-    def __init__(self, uri: str, artifact_path: str):
+    def __init__(self, uri: pathlib.Path, artifact_path: str):
         super().__init__(uri, artifact_path)
 
         mlflow.set_tracking_uri(self.uri)
