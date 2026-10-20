@@ -31,9 +31,21 @@ model configuration objects without runtime dependency on
 specific implementations or frameworks like Hydra.
 '''
 
-from __future__ import annotations
 # standard imports
 import typing
+
+
+class DomainProjectionConfig(typing.TypedDict):
+    use_mlp: typing.NotRequired[bool]
+    hidden_dim: typing.NotRequired[int | None]
+    num_hidden_layers: typing.NotRequired[int]
+    dropout: typing.NotRequired[float]
+    activation: typing.NotRequired[str]
+
+
+class DomainConditionerAdapterConfig(typing.TypedDict):
+    hidden_dim: typing.NotRequired[int] # currently for FiLM
+
 
 class DomainTargetConfig(typing.Protocol):
     @property
@@ -50,13 +62,3 @@ class DomainTargetConfig(typing.Protocol):
     def vec_proj_config(self) -> DomainProjectionConfig: ...
     @property
     def conditioner_config(self) -> DomainConditionerAdapterConfig: ...
-
-class DomainProjectionConfig(typing.TypedDict):
-    use_mlp: typing.NotRequired[bool]
-    hidden_dim: typing.NotRequired[int | None]
-    num_hidden_layers: typing.NotRequired[int]
-    dropout: typing.NotRequired[float]
-    activation: typing.NotRequired[str]
-
-class DomainConditionerAdapterConfig(typing.TypedDict):
-    hidden_dim: typing.NotRequired[int] # currently for FiLM

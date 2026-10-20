@@ -30,9 +30,6 @@ Public APIs:
     - `name_xy`: convert canonical block name to (x, y) coords.
 '''
 
-# standard imports
-from __future__ import annotations
-
 
 # ----- public functions
 def xy_name(coords: tuple[int, int]) -> str:

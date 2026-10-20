@@ -37,7 +37,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import pathlib
 import typing

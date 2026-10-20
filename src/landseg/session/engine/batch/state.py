@@ -37,7 +37,6 @@ serve as the single source of truth for runtime behavior and results.
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import typing
 # third-party imports

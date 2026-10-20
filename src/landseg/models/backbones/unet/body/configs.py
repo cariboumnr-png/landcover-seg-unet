@@ -24,7 +24,6 @@
 '''Backbone components configurations.'''
 
 # standard imports
-from __future__ import annotations
 import typing
 # local imports
 import landseg.models.backbones.unet.components as components

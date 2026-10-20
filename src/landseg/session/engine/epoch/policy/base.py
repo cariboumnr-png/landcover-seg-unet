@@ -32,7 +32,6 @@ execution mechanics to a shared execution core.
 '''
 
 # standard imports
-from __future__ import annotations
 import copy
 import dataclasses
 # local imports

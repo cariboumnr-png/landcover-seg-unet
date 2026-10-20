@@ -24,7 +24,6 @@ Resolution helper for knowledge base assets and profiles.
 '''
 
 # standard imports
-from __future__ import annotations
 import pathlib
 # third-party imports
 import torch

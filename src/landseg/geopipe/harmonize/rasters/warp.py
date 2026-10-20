@@ -31,7 +31,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import pathlib
 # third-party imports
 import rasterio

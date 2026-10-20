@@ -31,9 +31,7 @@ import pathlib
 import typing
 # local imports
 import landseg.artifacts.paths as paths
-
-if typing.TYPE_CHECKING:
-    import landseg.configs as configs
+import landseg.configs as configs
 
 
 # ----- `ArtifactPaths` definition

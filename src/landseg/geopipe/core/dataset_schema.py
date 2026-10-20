@@ -33,8 +33,7 @@ Public APIs:
 from __future__ import annotations
 import typing
 # typing imports
-if typing.TYPE_CHECKING:
-    import landseg.geopipe.core as geo_core
+import landseg.geopipe.core as geo_core
 
 
 SCHEMA_ID = 'data_schema/v1.1'

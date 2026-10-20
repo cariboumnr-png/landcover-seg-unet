@@ -32,7 +32,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import hashlib
 import json
 import pathlib

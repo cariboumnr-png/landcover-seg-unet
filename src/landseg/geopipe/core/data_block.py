@@ -32,7 +32,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import dataclasses
 import json
 import pathlib
@@ -40,8 +39,7 @@ import typing
 # third-party imports
 import numpy
 # typing imports
-if typing.TYPE_CHECKING:
-    import landseg.geopipe.core as geo_core
+import landseg.geopipe.core as geo_core
 
 
 # ----- public types

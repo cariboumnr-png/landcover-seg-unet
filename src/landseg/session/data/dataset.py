@@ -62,8 +62,8 @@ Notes:
 '''
 
 
-from __future__ import annotations
 # standard imports
+from __future__ import annotations
 import collections
 import dataclasses
 import pathlib

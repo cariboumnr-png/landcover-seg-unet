@@ -39,10 +39,10 @@ from __future__ import annotations
 import typing
 # local imports
 import landseg.core as core
+import landseg.session.contracts as contracts
 
 if typing.TYPE_CHECKING:
     import torch.optim
-    import landseg.session.contracts as contracts
 
 
 # ----- typing aliases

@@ -30,7 +30,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import ast
 import pathlib
 import typing

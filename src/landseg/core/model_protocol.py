@@ -46,14 +46,12 @@ enabling decoupled development and interchangeability of model backends.
 '''
 
 # standard imports
-from __future__ import annotations
 import typing
 
 if typing.TYPE_CHECKING:
     import torch
     import torch.nn
 
-    # aliases
     Tensor: typing.TypeAlias = torch.Tensor
 
 # ---------------------------------Public Type---------------------------------

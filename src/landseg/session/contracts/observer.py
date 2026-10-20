@@ -51,7 +51,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import typing
 # local imports
 import landseg.core as core
