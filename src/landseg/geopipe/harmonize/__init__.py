@@ -30,6 +30,7 @@ Public APIs:
     - `HarmonizationContext`: Execution context for harmonization.
     - `HarmonizationLogger`: Logger tracking ETL progress and summary.
     - `build_harmonization_context`: Load reference context from report.
+    - `build_vrt_mosaic`: Assemble rasters into a warped VRT mosaic.
     - `run_data_harmonization`: pipeline runner.
 '''
 
@@ -44,6 +45,7 @@ __all__ = [
     'HarmonizationLogger',
     # functions
     'build_harmonization_context',
+    'build_vrt_mosaic',
     'run_data_harmonization',
 ]
 
@@ -60,6 +62,9 @@ if typing.TYPE_CHECKING:
     from .pipeline import (
         run_data_harmonization,
     )
+    from .rasters import (
+        build_vrt_mosaic,
+    )
 
 
 def __getattr__(name: str):
@@ -69,6 +74,10 @@ def __getattr__(name: str):
 
     if name in {'HarmonizationLogger'}:
         obj = importlib.import_module('.logger', __package__)
+        return getattr(obj, name)
+
+    if name in {'build_vrt_mosaic'}:
+        obj = importlib.import_module('.rasters', __package__)
         return getattr(obj, name)
 
     if name in {'run_data_harmonization'}:

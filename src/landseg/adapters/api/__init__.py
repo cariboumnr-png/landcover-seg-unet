@@ -24,6 +24,19 @@ Top-level namespace for `landseg.adapters.api`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `BatchIngestConfigurator`: Configurator for batch ingestion.
+    - `DataHarmonizationConfigurator`: Configurator for data harmonization.
+    - `DataIngestionConfigurator`: Configurator for data ingestion.
+    - `DataPreparationConfigurator`: Configurator for data preparation.
+    - `StudySweepConfigurator`: Configurator for study sweeps.
+    - `TrainingSessionConfigurator`: Configurator for training sessions.
+    - `WorldGridConfigurator`: Configurator for world grid generation.
+    - `run`: Run execution pipeline with resolved configuration.
+    - `run_experiment`: Run full experiment lifecycle.
+    - `run_intake`: Run continuous intake workflow.
+    - `run_preflight`: Run pre-flight diagnostic validation checks.
 '''
 
 # standard imports

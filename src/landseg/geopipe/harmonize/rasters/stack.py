@@ -38,6 +38,8 @@ import xml.etree.ElementTree
 # third-party imports
 import rasterio
 import rasterio.crs
+# local imports
+import landseg.geopipe.harmonize.rasters.vrt as vrt
 
 
 # ----- public functions
@@ -130,8 +132,7 @@ def _build_stacked_vrt_xml(
         raise ValueError('source_paths must not be empty')
 
     width, height, crs, transform = _get_reference_grid(source_paths[0])
-
-    root = _create_vrt_root(width, height, crs, transform)
+    root = vrt.create_vrt_root(width, height, crs, transform)
 
     merged_schemes: dict[str, typing.Any] = {}
     band_idx = 1
@@ -147,40 +148,34 @@ def _build_stacked_vrt_xml(
                 )
 
             for src_band in range(1, src.count + 1):
-
-                dtype = _gdal_dtype_name(src.dtypes[src_band - 1])
-
-                band_node = xml.etree.ElementTree.SubElement(
-                    root,
-                    'VRTRasterBand',
-                    dataType=dtype,
-                    band=str(band_idx),
+                nodata_val = (
+                    src.nodatavals[src_band - 1]
+                    if src.nodatavals
+                    and src.nodatavals[src_band - 1] is not None
+                    else src.nodata
                 )
 
-                _add_band_description(
-                    band_node=band_node,
+                band_node = vrt.add_vrt_band(
+                    root=root,
+                    band_idx=band_idx,
+                    dtype=src.dtypes[src_band - 1],
+                    nodata=nodata_val,
                     description=src.descriptions[src_band - 1],
-                    output_band=band_idx
                 )
 
                 _add_band_metadata(
                     band_node=band_node,
                     src=src,
-                    raster_type=raster_type
+                    raster_type=raster_type,
                 )
 
-                _add_nodata(
+                vrt.add_vrt_source(
                     band_node=band_node,
-                    src=src,
-                    src_band=src_band
-                )
-
-                _add_source(
-                    band_node=band_node,
-                    src=src,
                     source_path=path,
                     source_band=src_band,
-                    dtype=dtype
+                    width=src.width,
+                    height=src.height,
+                    dtype=src.dtypes[src_band - 1],
                 )
 
                 band_idx += 1
@@ -188,13 +183,7 @@ def _build_stacked_vrt_xml(
     if raster_type == 'feature':
         _add_dataset_schemes(root, merged_schemes)
 
-    # write
-    xml.etree.ElementTree.indent(root, space='  ', level=0)
-    xml.etree.ElementTree.ElementTree(root).write(
-        output_path,
-        encoding='utf-8',
-        xml_declaration=True,
-    )
+    vrt.write_vrt(root, output_path)
 
 
 def _get_reference_grid(
@@ -223,59 +212,6 @@ def _validate_source(
         raise ValueError(f'Source raster has a different CRS: {path}')
 
 
-def _create_vrt_root(
-    width: int,
-    height: int,
-    crs: rasterio.crs.CRS,
-    transform: rasterio.Affine,
-) -> xml.etree.ElementTree.Element:
-    '''Create root XML element for VRT dataset with CRS and GeoTransform.'''
-    transform_txt = (
-        f'{transform.c}, {transform.a}, {transform.b}, '
-        f'{transform.f}, {transform.d}, {transform.e}'
-    )
-
-    root = xml.etree.ElementTree.Element(
-        'VRTDataset',
-        rasterXSize=str(width),
-        rasterYSize=str(height),
-    )
-    xml.etree.ElementTree.SubElement(root, 'SRS').text = crs.to_wkt()
-    xml.etree.ElementTree.SubElement(root, 'GeoTransform').text = transform_txt
-
-    return root
-
-
-def _gdal_dtype_name(dtype) -> str:
-    '''Map rasterio/numpy data type name to canonical GDAL data type name.'''
-    gdal_dtype_map = {
-        'uint8': 'Byte',
-        'int8': 'Int8',
-        'uint16': 'UInt16',
-        'int16': 'Int16',
-        'uint32': 'UInt32',
-        'int32': 'Int32',
-        'float32': 'Float32',
-        'float64': 'Float64',
-    }
-    s = str(dtype).lower()
-    return gdal_dtype_map.get(s, s.capitalize())
-
-
-def _add_band_description(
-    *,
-    band_node: xml.etree.ElementTree.Element,
-    description: str | None,
-    output_band: int,
-) -> None:
-    '''Attach band description XML node to VRT band node.'''
-    if description and description.strip():
-        name = description.strip()
-    else:
-        name = f'band_{output_band}'
-    xml.etree.ElementTree.SubElement(band_node, 'Description').text = name
-
-
 def _add_band_metadata(
     *,
     band_node: xml.etree.ElementTree.Element,
@@ -299,27 +235,6 @@ def _add_band_metadata(
             'MDI',
             key=str(key),
         ).text = str(value)
-
-
-def _add_nodata(
-    *,
-    band_node: xml.etree.ElementTree.Element,
-    src: rasterio.DatasetReader,
-    src_band: int,
-) -> None:
-    '''Attach NoDataValue XML element to VRT band node if defined.'''
-    nodata_val = (
-        src.nodatavals[src_band - 1]
-        if src.nodatavals
-        and src.nodatavals[src_band - 1] is not None
-        else src.nodata
-    )
-
-    if nodata_val is not None:
-        xml.etree.ElementTree.SubElement(
-            band_node,
-            'NoDataValue',
-        ).text = str(nodata_val)
 
 
 def _merge_feature_schemes(
@@ -378,37 +293,3 @@ def _add_dataset_schemes(
         'MDI',
         key='schemes',
     ).text = str(schemes)
-
-
-def _add_source(
-    *,
-    band_node: xml.etree.ElementTree.Element,
-    src: rasterio.DatasetReader,
-    source_path: str,
-    source_band: int,
-    dtype: str,
-) -> None:
-    '''Attach SimpleSource XML node for source band to VRT band node.'''
-    source_node = xml.etree.ElementTree.SubElement(
-        band_node,
-        'SimpleSource',
-    )
-
-    xml.etree.ElementTree.SubElement(
-        source_node,
-        'SourceFilename',
-        relativeToVRT='0',
-    ).text = source_path
-
-    xml.etree.ElementTree.SubElement(
-        source_node,
-        'SourceBand',
-    ).text = str(source_band)
-
-    xml.etree.ElementTree.SubElement(
-        source_node,
-        'SourceProperties',
-        RasterXSize=str(src.width),
-        RasterYSize=str(src.height),
-        DataType=dtype,
-    )

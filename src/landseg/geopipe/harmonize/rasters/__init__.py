@@ -25,11 +25,10 @@ Top-level namespace for `landseg.geopipe.harmonize.rasters`.
 Exposes raster warping, stacking, masking, and metadata manipulation APIs.
 
 Public APIs:
-    - `warp_to_grid`: Reproject and snap input raster to grid as a VRT.
-    - `stack_rasters`: Stack feature and label rasters into composite VRTs.
+    - `ProcessedRasters`: Container for processed raster paths dictionaries.
+    - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
+    - `raster_processor`: Harmonize compiled raster sources onto grid.
     - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
-    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
-    - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
 '''
 
 # standard imports
@@ -38,12 +37,12 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
+    'ProcessedRasters',
     # functions
-    'add_band_description_to_vrt',
-    'add_tag_to_vrt',
-    'stack_rasters',
+    'build_vrt_mosaic',
+    'raster_processor',
     'unify_nodata_mask',
-    'warp_to_grid',
 ]
 
 
@@ -52,36 +51,33 @@ if typing.TYPE_CHECKING:
     from .mask import (
         unify_nodata_mask,
     )
-    from .metadata import (
-        add_band_description_to_vrt,
-        add_tag_to_vrt,
+    from .mosaic import (
+        build_vrt_mosaic
     )
-    from .spatial import (
-        warp_to_grid,
-    )
-    from .stack import (
-        stack_rasters,
+    from .processor import (
+        ProcessedRasters,
+        raster_processor,
     )
 
 
 def __getattr__(name: str):
-    if name in {'unify_nodata_mask'}:
+    if name in {
+        'unify_nodata_mask'
+    }:
         obj = importlib.import_module('.mask', __package__)
         return getattr(obj, name)
 
     if name in {
-        'add_band_description_to_vrt',
-        'add_tag_to_vrt',
+        'build_vrt_mosaic'
     }:
-        obj = importlib.import_module('.metadata', __package__)
+        obj = importlib.import_module('.mosaic', __package__)
         return getattr(obj, name)
 
-    if name in {'warp_to_grid'}:
-        obj = importlib.import_module('.spatial', __package__)
-        return getattr(obj, name)
-
-    if name in {'stack_rasters'}:
-        obj = importlib.import_module('.stack', __package__)
+    if name in {
+        'ProcessedRasters',
+        'raster_processor',
+    }:
+        obj = importlib.import_module('.processor', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

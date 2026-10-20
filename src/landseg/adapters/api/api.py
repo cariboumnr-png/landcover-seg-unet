@@ -20,7 +20,13 @@
 # =========================================================================== #
 
 '''
-Programmatic API entry
+Programmatic API entry.
+
+Public APIs:
+    - `run`: Run execution pipeline with resolved configuration.
+    - `run_experiment`: Run full experiment lifecycle.
+    - `run_intake`: Run continuous intake workflow.
+    - `run_preflight`: Run pre-flight diagnostic validation checks.
 '''
 
 # standard imports
