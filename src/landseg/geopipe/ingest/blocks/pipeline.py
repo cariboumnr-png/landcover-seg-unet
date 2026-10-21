@@ -175,7 +175,7 @@ def run_blocks_building(
 
     stats = block_building_result.running_stats
 
-    logger.set_data_blocks_report({
+    logger.set_data_blocks({
         'image_filepath': str(inputs.image_fpath.resolve()),
         'label_filepath': (
             str(inputs.label_fpath.resolve())

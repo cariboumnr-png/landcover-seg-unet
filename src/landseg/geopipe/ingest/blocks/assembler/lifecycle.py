@@ -305,10 +305,7 @@ def _prep_block_windows(
         ):
             valid_coords.remove(coord)
 
-    return {
-        c: output_dir / f'{geo_utils.xy_name(c)}.npz'
-        for c in valid_coords
-    }
+    return {c: output_dir / f'{geo_utils.xy_name(c)}.npz' for c in valid_coords}
 
 
 def _structural_validation(

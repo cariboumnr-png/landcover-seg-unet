@@ -108,23 +108,17 @@ class IngestionLogger(utils.Logger):
             self.summary['harmonization_run_uid'] = run_uid
             self.summary['harmonization_run_id'] = run_id
 
-    def add_domain_report(self, report: contracts.DomainMapReport) -> None:
+    def add_domain(self, report: contracts.DomainMapReport) -> None:
         '''Append a domain layer map report to summary.'''
         if self.summary is not None:
             self.summary['domain_maps'].append(report)
 
-    def set_data_blocks_report(
-        self,
-        report: contracts.DataBlocksReport
-    ) -> None:
+    def set_data_blocks(self, report: contracts.DataBlocksReport) -> None:
         '''Record the data blocks report to summary.'''
         if self.summary is not None:
             self.summary['data_blocks'] = report
 
-    def set_summary_status(
-        self,
-        status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
-    ) -> None:
+    def set_status(self, status: contracts.StatusLiteral) -> None:
         '''Update the overall run summary status.'''
         if self.summary is not None:
             self.summary['status'] = status

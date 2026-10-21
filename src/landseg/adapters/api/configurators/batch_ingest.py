@@ -34,9 +34,6 @@ import landseg.adapters.api.configurators.data_ingest as data_ingest
 class BatchIngestConfigurator(data_ingest.DataIngestionConfigurator):
     '''Configure multi-batch data ingestion workflow.'''
 
-    def __init__(
-        self,
-        experiment_root: str,
-    ):
+    def __init__(self, experiment_root: str):
         super().__init__(experiment_root)
         self._cfg.command = 'batch-ingest'

@@ -98,10 +98,7 @@ class DatasetCatalog(collections.abc.Mapping[tuple[int, int], DatasetBlockMeta])
         return len(self._data)
 
     @classmethod
-    def from_dict(
-        cls,
-        source: dict[str, DatasetBlockMeta]
-    ) -> DatasetCatalog:
+    def from_dict(cls, source: dict[str, DatasetBlockMeta]) -> DatasetCatalog:
         '''
         Construct a DatasetCatalog from a dictionary representation.
 

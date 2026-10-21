@@ -107,10 +107,10 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
         status = 'SUCCESS' if results['overfit_reached'] else 'FAILED'
 
         logger.set_results(results)
-        logger.set_summary_status(status)
+        logger.set_status(status)
 
     except Exception as e:
-        logger.set_summary_status('FAILED')
+        logger.set_status('FAILED')
         logger.error(f'Overfit pipeline failed: {e}', exc_info=True)
         raise e
 

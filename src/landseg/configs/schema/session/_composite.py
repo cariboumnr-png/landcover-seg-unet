@@ -41,6 +41,12 @@ Evaluation = evaluation_sec.EvaluationConfig
 Orchestration = orchestration_sec.OrchestrationConfig
 
 
+# ----- public types
+SessionMode = typing.Literal['continuous', 'curriculum']
+TrainingMode = typing.Literal['train', 'evaluate']
+
+
+# ----- public dataclasses
 @dataclasses.dataclass
 class SessionConfig(base.BaseConfigSection):
     dataloader: DataLoader = field(default_factory=DataLoader)
@@ -76,14 +82,11 @@ class SessionConfig(base.BaseConfigSection):
         return self.engine.engine_tasks
 
     @property
-    def training_mode(self) -> typing.Literal['continuous', 'curriculum']:
+    def training_mode(self) -> SessionMode:
         '''Typed training mode.'''
-        return typing.cast(typing.Literal['continuous', 'curriculum'], self.mode)
+        return typing.cast(SessionMode, self.mode)
 
-    def validate(
-        self,
-        mode: typing.Literal['train', 'evaluate'] = 'train',
-    ):
+    def validate(self, mode: TrainingMode = 'train') -> None:
         self.dataloader.validate()
         self.engine.validate()
 

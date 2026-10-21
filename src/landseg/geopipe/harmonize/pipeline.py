@@ -47,7 +47,7 @@ def run_data_harmonization(
 
     # early exit
     if context.collided_run_uid is not None:
-        logger.set_summary_status('SKIPPED')
+        logger.set_status('SKIPPED')
         logger.info(
             f'[COMPLETE] Harmonization run with the same inputs and configs '
             f'already done (run uid: {context.collided_run_uid}), skipped'

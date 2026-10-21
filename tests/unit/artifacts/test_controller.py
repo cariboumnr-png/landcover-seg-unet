@@ -116,7 +116,7 @@ def test_csv_persist_fetch_and_hash(tmp_path):
     assert list(loaded['b']) == ['x', 'y']
 
     # load_csv_or_fail factory
-    ctrl_fail = ctrl_mod.Controller.load_csv_or_fail(csv_path)
+    ctrl_fail = ctrl_mod.Controller.load_csv_strict(csv_path)
     loaded_fail = ctrl_fail.fetch()
     assert loaded_fail is not None
 
@@ -147,7 +147,7 @@ def test_pt_persist_fetch_and_hash(tmp_path):
     assert torch.allclose(loaded, tensor_in)
 
     # load_pt_or_fail factory
-    ctrl_fail = ctrl_mod.Controller.load_pt_or_fail(pt_path)
+    ctrl_fail = ctrl_mod.Controller.load_pt_strict(pt_path)
     loaded_fail = ctrl_fail.fetch()
     assert loaded_fail is not None
     assert torch.allclose(loaded_fail, tensor_in)
@@ -178,7 +178,7 @@ def test_lifecycle_policies_fetch(tmp_path):
     json_path = str(tmp_path / 'policy_test.json')
 
     # LOAD_OR_FAIL on missing file
-    ctrl_fail = ctrl_mod.Controller.load_json_or_fail(json_path)
+    ctrl_fail = ctrl_mod.Controller.load_json_strict(json_path)
     with pytest.raises(ctrl_mod.ArtifactError, match='Required artifact is missing'):
         ctrl_fail.fetch()
 

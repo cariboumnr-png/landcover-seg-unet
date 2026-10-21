@@ -148,10 +148,7 @@ def main(argv: list[str] | None = None) -> None:
         if len(args.target_resolution) == 1:
             target_res = args.target_resolution[0]
         elif len(args.target_resolution) == 2:
-            target_res = (
-                args.target_resolution[0],
-                args.target_resolution[1],
-            )
+            target_res = (args.target_resolution[0], args.target_resolution[1])
         else:
             print(
                 'Error: --target-resolution requires 1 or 2 values.',

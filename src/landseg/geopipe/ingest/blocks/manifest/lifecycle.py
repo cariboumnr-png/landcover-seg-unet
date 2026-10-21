@@ -177,10 +177,8 @@ def _catalog_status(
         _catalog = geo_core.DatasetCatalog() # empty catalog
 
     # get filenames from all current npz files in blks_dir
-    current = [
-        p.name for p in blocks_dir.iterdir()
-        if p.name.endswith('npz')
-    ]
+    current = [p.name for p in blocks_dir.iterdir() if p.name.endswith('npz')]
+
     if not current:
         raise FileNotFoundError('No block files found')
 
@@ -188,9 +186,7 @@ def _catalog_status(
     updated = [f'{geo_utils.xy_name(c)}.npz' for c in updated_coords]
 
     # determine status
-    cataloged = [
-        pathlib.Path(c['file_path']).name for c in _catalog.values()
-    ]
+    cataloged = [pathlib.Path(c['file_path']).name for c in _catalog.values()]
     catalog_status = {
         (True, False): 2,   # catalog present, no new blocks
         (True, True): 3,    # catalog present, has new blocks

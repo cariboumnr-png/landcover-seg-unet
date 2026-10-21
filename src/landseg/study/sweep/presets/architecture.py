@@ -159,8 +159,6 @@ def obj_conditioning(
 
     # reconstruct list of strs from mapping
     # e.g., 'film_concat' -> ['film', 'concat']
-    trial_cfg.set_model_conditioners(
-        choice_map[selected]
-    )
+    trial_cfg.set_model_conditioners(choice_map[selected])
 
     return trial_cfg

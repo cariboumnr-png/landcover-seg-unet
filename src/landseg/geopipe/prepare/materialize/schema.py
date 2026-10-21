@@ -108,7 +108,7 @@ def build_schema(
         }
 
         # checksum the artifacts
-        load = artifacts.Controller.load_json_or_fail
+        load = artifacts.Controller.load_json_strict
         checksums = {
             'block_source': load(paths.splits_source_blocks).sha256,
             'block_prepared': load(paths.splits_prepared_blocks).sha256,
@@ -117,15 +117,15 @@ def build_schema(
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl.load_json_or_fail(paths.splits_prepared_blocks)
+        ctrl = PartitionCtrl.load_json_strict(paths.splits_prepared_blocks)
         block_splits = ctrl.fetch()
 
         # read label stats
-        ctrl = LabelStatsCtrl.load_json_or_fail(paths.label_stats)
+        ctrl = LabelStatsCtrl.load_json_strict(paths.label_stats)
         label_stats = ctrl.fetch()
 
         # read image stats
-        ctrl = ImageStatsCtrl.load_json_or_fail(paths.image_stats)
+        ctrl = ImageStatsCtrl.load_json_strict(paths.image_stats)
         image_stats = ctrl.fetch()
 
         # target heads reclass hierarchy
@@ -171,4 +171,4 @@ def build_schema(
         'schema_filepath': str(paths.schema.resolve()),
         'classes_mapped': list(schema['label_stats'].keys()),
     }
-    logger.set_schema_report(report)
+    logger.set_schema(report)

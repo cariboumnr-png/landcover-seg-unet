@@ -66,11 +66,11 @@ class ModelTraining(base.SessionPipeline):
             self.timer['exec'] = t
 
             self.logger.info(f'[COMPLETE] Training session (D_{t:.2f}s)')
-            self.logger.set_summary_status('SUCCESS')
+            self.logger.set_status('SUCCESS')
             self.logger.set_results(self._summarize_results(final))
 
         except Exception as e:
-            self.logger.set_summary_status('FAILED')
+            self.logger.set_status('FAILED')
             self.logger.error(f'Training pipeline failed: {e}', exc_info=True)
             raise e
 

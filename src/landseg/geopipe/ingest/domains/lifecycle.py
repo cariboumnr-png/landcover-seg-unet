@@ -143,7 +143,7 @@ def prepare_domain_maps(
                 'explained_variance': float(meta['explained_variance']),
             }
         }
-        logger.add_domain_report(report)
+        logger.add_domain(report)
 
 
 # ----- private helpers

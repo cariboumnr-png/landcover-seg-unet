@@ -59,7 +59,7 @@ class DataHarmonization(base.GeoPipeline):
             self.logger.info('[COMPLETE] Data harmonization')
 
         except Exception as e:
-            self.logger.set_summary_status('FAILED')
+            self.logger.set_status('FAILED')
             self.logger.error(f'Data harmonization failed: {e}')
             raise
 

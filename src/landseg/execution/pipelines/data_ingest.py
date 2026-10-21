@@ -76,7 +76,7 @@ class DataIngestion(base.GeoPipeline):
             )
 
         except Exception as e:
-            self.logger.set_summary_status('FAILED')
+            self.logger.set_status('FAILED')
             self.logger.exception(f'Ingestion pipeline failed: {e}')
             raise e
 

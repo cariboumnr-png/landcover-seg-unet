@@ -46,7 +46,7 @@ def raw_dataset(
     try:
         manifest_fp = config.data.harmonization.dataset_manifest
         dirp = pathlib.Path(manifest_fp).parent
-        ctrl = artifacts.Controller[list].load_json_or_fail(manifest_fp)
+        ctrl = artifacts.Controller[list].load_json_strict(manifest_fp)
         ctrl.hash(overwrite=False) # hash upon first open
 
         manifest = ctrl.fetch()

@@ -32,10 +32,7 @@ import landseg.adapters.api.configurators as configurators
 class WorldGridConfigurator(configurators.BaseConfigurator):
     '''Configure canonical world grid generation and persistence.'''
 
-    def __init__(
-        self,
-        experiment_root: str,
-    ):
+    def __init__(self, experiment_root: str):
         super().__init__(experiment_root, 'world-grid')
 
     def set_grid(

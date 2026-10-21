@@ -56,7 +56,7 @@ def resolve_similarity_matrix(
     '''
     kp = artifacts.KnowledgePaths(root=knowledge_root)
     matrix_path = kp.similarity_matrix_fpath(profile)
-    ctrl = artifacts.Controller[torch.Tensor].load_pt_or_fail(matrix_path)
+    ctrl = artifacts.Controller[torch.Tensor].load_pt_strict(matrix_path)
     tensor = ctrl.fetch()
     return tensor
 
@@ -82,6 +82,6 @@ def resolve_profile_metadata(
     '''
     kp = artifacts.KnowledgePaths(root=knowledge_root)
     meta_path = kp.metadata_fpath(profile)
-    ctrl = MetaController.load_json_or_fail(meta_path)
+    ctrl = MetaController.load_json_strict(meta_path)
     meta = ctrl.fetch()
     return meta

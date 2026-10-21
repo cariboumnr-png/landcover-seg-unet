@@ -28,13 +28,14 @@ import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
 
+
+CollisionPolicy = typing.Literal['skip', 'overwrite', 'error']
+
+
 class DataIngestionConfigurator(configurators.BaseConfigurator):
     '''Configure data ingestion.'''
 
-    def __init__(
-        self,
-        experiment_root: str,
-    ):
+    def __init__(self, experiment_root: str):
         super().__init__(experiment_root, 'data-ingest')
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:
@@ -42,12 +43,9 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         self._cfg.data.ingestion.rebuild = rebuild
         return self
 
-    def set_harmonization_run(
-        self,
-        target_run: int | str | None = None
-    ) -> typing.Self:
+    def set_harmonization_run(self, target: int | str | None = None) -> typing.Self:
         '''Set targeted harmonization run index, folder name, or path.'''
-        self._cfg.data.ingestion.harmonization_run = target_run
+        self._cfg.data.ingestion.harmonization_run = target
         return self
 
     def set_feature_engineering(
@@ -70,10 +68,7 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         self._cfg.data.ingestion.datablocks.add_spectral = add_spectral
         return self
 
-    def set_collision_policy(
-        self,
-        policy: typing.Literal['skip', 'overwrite', 'error'],
-    ) -> typing.Self:
+    def set_collision_policy(self, policy: CollisionPolicy) -> typing.Self:
         '''Set collision policy for overlapping data blocks.'''
         self._cfg.data.ingestion.datablocks.collision_policy = policy
         return self

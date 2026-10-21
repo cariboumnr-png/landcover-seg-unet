@@ -41,6 +41,8 @@ import typing
 
 
 # ----- public types
+StatusLiteral = typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+
 class HarmonizationPipelineConfig(typing.Protocol):
     '''Shape of the harmonization pipeline configurations.'''
     @property
@@ -57,7 +59,7 @@ class HarmonizationRunRecord(typing.TypedDict):
     run_id: str
     run_folder: str
     source_dataset_manifest: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    status: StatusLiteral
     timestamp: str
     fingerprint: str
 
@@ -68,7 +70,7 @@ class HarmonizationReportSchema(typing.TypedDict):
     run_id: str
     timestamp: str
     fingerprint: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    status: StatusLiteral
     provenance: dict[str, ProvenanceRecord]
     harmonized_sources: dict[str, str]
     finalized_rasters: dict[str, str]

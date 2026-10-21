@@ -108,7 +108,7 @@ def test_data_ingestion_configurator(tmp_path):
     cfg_builder.set_rebuild(
         rebuild=True
     ).set_harmonization_run(
-        target_run=1
+        target=1
     ).set_feature_engineering(
         add_topo=['slope', 'tpi'],
         add_spectral=['ndvi', 'ndmi'],

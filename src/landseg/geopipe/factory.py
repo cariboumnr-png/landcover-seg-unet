@@ -97,11 +97,11 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_ctrl = DatasetSchemaCtrl.load_json_or_fail
+    data_ctrl = DatasetSchemaCtrl.load_json_strict
     data_schema = data_ctrl(data_schema_fpath).fetch()
 
     # prepared schema
-    prepared_ctrl = PreparedSchemaCtrl.load_json_or_fail
+    prepared_ctrl = PreparedSchemaCtrl.load_json_strict
     prepared_schema = prepared_ctrl(prepared_schema_fpath).fetch()
 
     # return specs

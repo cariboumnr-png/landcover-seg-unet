@@ -123,9 +123,7 @@ def run_preflight(
     )
 
 
-def run_intake(
-    config: configs.RootConfig | None = None,
-) -> typing.Any:
+def run_intake(config: configs.RootConfig | None = None) -> typing.Any:
     '''
     Run continuous end-to-end data intake (harmonize + ingest).
 
@@ -142,9 +140,7 @@ def run_intake(
     return run(cfg)
 
 
-def run_experiment(
-    config: configs.RootConfig | None = None,
-) -> typing.Any:
+def run_experiment(config: configs.RootConfig | None = None) -> typing.Any:
     '''
     Run full lifecycle experiment (grid, harmonize, ingest, prepare, train).
 

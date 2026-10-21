@@ -52,10 +52,7 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
     pipeline = pipelines.DataHarmonization(config)
-    with pytest.raises(
-        RuntimeError,
-        match='Upstream pipeline "world-grid"'
-    ):
+    with pytest.raises(RuntimeError, match='Upstream pipeline "world-grid"'):
         pipeline._validate()
 
 

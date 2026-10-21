@@ -113,8 +113,7 @@ def _format_cm_table(
     # each row corresponds to a ground-truth class
     for i, name in enumerate(class_names):
         row = [f'**{name}**']
-        row += [str(cm[i, j].item())
-                for j in range(len(class_names))]
+        row += [str(cm[i, j].item()) for j in range(len(class_names))]
         rows.append('| ' + ' | '.join(row) + ' |')
     return '\n'.join(rows)
 

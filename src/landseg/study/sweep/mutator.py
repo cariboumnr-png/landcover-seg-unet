@@ -77,10 +77,7 @@ class TrialMutator: # pylint: disable=too-many-public-methods
         '''Set engine learning rate scheduler arguments.'''
         self.config.session.engine_optim.sched_args = sched_args
 
-    def set_optimizer_grad_clip_norm(
-        self,
-        grad_clip_norm: float | None,
-    ) -> None:
+    def set_grad_clip_norm(self, grad_clip_norm: float | None) -> None:
         '''Set engine gradient clipping max norm.'''
         self.config.session.engine_optim.grad_clip_norm = grad_clip_norm
 

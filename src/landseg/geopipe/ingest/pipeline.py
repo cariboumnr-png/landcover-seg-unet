@@ -56,7 +56,7 @@ def run_data_ingestion(
 
     # early exit
     if context.collided_run_uid is not None:
-        logger.set_summary_status('SKIPPED')
+        logger.set_status('SKIPPED')
         logger.info(
             f'[COMPLETE] Ingestion run with the same inputs and configs '
             f'already done (run uid: {context.collided_run_uid}), skipped'

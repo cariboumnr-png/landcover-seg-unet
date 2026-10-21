@@ -90,12 +90,12 @@ def build_preparation_context(
             metadata.
     '''
     # load artifacts
-    windows = DictCtrl.load_json_or_fail(windows_fpath).fetch()
-    schema = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
-    catalog = CatalogCtrl.load_json_or_fail(catalog_fpath).fetch()
+    windows = DictCtrl.load_json_strict(windows_fpath).fetch()
+    schema = DatasetSchemaCtrl.load_json_strict(schema_fpath).fetch()
+    catalog = CatalogCtrl.load_json_strict(catalog_fpath).fetch()
     test_catalog = None
     if config.datasetview.test_catalog is not None:
-        test_catalog = CatalogCtrl.load_json_or_fail(config.datasetview.test_catalog).fetch()
+        test_catalog = CatalogCtrl.load_json_strict(config.datasetview.test_catalog).fetch()
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']

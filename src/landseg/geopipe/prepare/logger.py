@@ -71,34 +71,22 @@ class PreparationLogger(utils.Logger):
             'schema': None
         }
 
-    def set_data_partition_report(
-        self,
-        report: contracts.DataPartitionReport
-    ) -> None:
+    def set_data_partition(self, report: contracts.DataPartitionReport) -> None:
         '''Record the data partition report to summary.'''
         if self.summary is not None:
             self.summary['data_partition'] = report
 
-    def set_normalization_report(
-        self,
-        report: contracts.NormalizationReport
-    ) -> None:
+    def set_normalization(self, report: contracts.NormalizationReport) -> None:
         '''Record the normalization report to summary.'''
         if self.summary is not None:
             self.summary['normalization'] = report
 
-    def set_schema_report(
-        self,
-        report: contracts.SchemaReport
-    ) -> None:
+    def set_schema(self, report: contracts.SchemaReport) -> None:
         '''Record the schema generation report to summary.'''
         if self.summary is not None:
             self.summary['schema'] = report
 
-    def set_summary_status(
-        self,
-        status: typing.Literal['SUCCESS', 'FAILED']
-    ) -> None:
+    def set_status(self, status: typing.Literal['SUCCESS', 'FAILED']) -> None:
         '''Update the overall run summary status.'''
         if self.summary is not None:
             self.summary['status'] = status

@@ -67,20 +67,18 @@ class TargetHeadsContext:
     num_classes: dict[str, int]
     class_names: dict[str, list[str]]
     ignore_classes: dict[str, list[int]]
-    resolved_reclass: dict[str, _ResolvedTargetReclass | None]
+    resolved_reclass: dict[str, _ResolvedReclass | None]
 
 
 # ----- private dataclasses
 @dataclasses.dataclass(frozen=True)
-class _ResolvedTargetReclass:
+class _ResolvedReclass:
     '''Canonical zero-based reclassification mapping.'''
     groups: dict[int, tuple[int, ...]]
     names: dict[int, str]
 
     @classmethod
-    def from_scheme(
-        cls, scheme: geo_core.LabelScheme
-    ) -> _ResolvedTargetReclass:
+    def from_scheme(cls, scheme: geo_core.LabelScheme) -> _ResolvedReclass:
         '''Build canonical 0-based reclassification from user scheme.'''
         reclass = scheme['reclass']
         names = scheme.get('reclass_name', {})
@@ -112,7 +110,7 @@ class _TargetTopology:
 
     def to_context(
         self,
-        resolved_reclass: dict[str, _ResolvedTargetReclass | None],
+        resolved_reclass: dict[str, _ResolvedReclass | None],
     ) -> TargetHeadsContext:
         '''Convert accumulated topology into TargetHeadsContext.'''
         return TargetHeadsContext(
@@ -221,7 +219,7 @@ def resolve_target_heads(
     label_schemes = data_schema['dataset']['label_schemes']
     labels_info = data_schema['labels']
 
-    resolved_reclass: dict[str, _ResolvedTargetReclass | None] = {}
+    resolved_reclass: dict[str, _ResolvedReclass | None] = {}
     topo = _TargetTopology()
 
     for name in label_name_map.keys():
@@ -242,7 +240,7 @@ def resolve_target_heads(
             continue
 
         # 3. canonical reclass & multi-head topology
-        resolved_reclass[name] = _ResolvedTargetReclass.from_scheme(scheme)
+        resolved_reclass[name] = _ResolvedReclass.from_scheme(scheme)
         primary_ignore = base_ignore[0] if base_ignore else 255
         _add_reclass_heads(
             name,

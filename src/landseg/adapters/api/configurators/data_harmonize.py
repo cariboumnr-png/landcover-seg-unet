@@ -32,16 +32,10 @@ import landseg.adapters.api.configurators as configurators
 class DataHarmonizationConfigurator(configurators.BaseConfigurator):
     '''Configure data harmonization ETL.'''
 
-    def __init__(
-        self,
-        experiment_root: str,
-    ):
+    def __init__(self, experiment_root: str):
         super().__init__(experiment_root, 'data-harmonize')
 
-    def set_dataset_manifest(
-        self,
-        dataset_manifest: str,
-    ) -> typing.Self:
+    def set_dataset_manifest(self, dataset_manifest: str) -> typing.Self:
         '''Set dataset metadata manifest path.'''
         self._cfg.data.harmonization.dataset_manifest = dataset_manifest
         return self

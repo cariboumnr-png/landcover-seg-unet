@@ -39,6 +39,9 @@ from __future__ import annotations
 import collections.abc
 import typing
 
+# ----- aliases
+Coord = tuple[int, int]
+
 
 # ----- public types
 class DomainPayload(typing.TypedDict):
@@ -114,7 +117,7 @@ class DomainTile(typing.TypedDict):
 
 
 # ----- public classes
-class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
+class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
     '''
     Mapping from world-grid tile coordinates to per-tile domain features.
 
@@ -153,17 +156,17 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             'pca_axes_n': 0,
             'explained_variance': 0.0,
         }
-        self._data: dict[tuple[int, int], DomainTile] = {}
+        self._data: dict[Coord, DomainTile] = {}
 
     # ----- container protocol
-    def __getitem__(self, idx: tuple[int, int]) -> DomainTile:
+    def __getitem__(self, idx: Coord) -> DomainTile:
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
             or not all(isinstance(v, int) for v in idx)):
             raise TypeError('Index must be (x, y) in pixels as integers.')
         return self._data[idx]
 
-    def __iter__(self) -> collections.abc.Iterator[tuple[int, int]]:
+    def __iter__(self) -> collections.abc.Iterator[Coord]:
         return iter(self._data)
 
     def __len__(self) -> int:
@@ -207,7 +210,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
             DomainTileMap:
                 populated DomainTileMap instance.
         '''
-        def _xy_tuple(inputs: str) -> tuple[int, int]:
+        def _xy_tuple(inputs: str) -> Coord:
             '''Parse coordinate tuple from coordinate string.'''
             output = tuple(int(x.strip()) for x in inputs.split(','))
             assert len(output) == 2
@@ -222,9 +225,7 @@ class DomainTileMap(collections.abc.Mapping[tuple[int, int], DomainTile]):
         return obj
 
     @classmethod
-    def from_dict(
-        cls, tiles: dict[tuple[int, int], DomainTile]
-    ) -> DomainTileMap:
+    def from_dict(cls, tiles: dict[Coord, DomainTile]) -> DomainTileMap:
         '''
         Construct a DomainTileMap from an in-memory dictionary.
 

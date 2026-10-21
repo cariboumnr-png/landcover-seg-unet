@@ -50,6 +50,7 @@ import typing
 
 # ----- public types
 CollisionPolicyType = typing.Literal['skip', 'overwrite', 'error']
+StatusLiteral = typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
 
 
 class IngestionPipelineConfig(typing.Protocol):
@@ -86,7 +87,7 @@ class CollisionRecord(typing.TypedDict):
     grid_coord: list[int]
     incumbent_ingest_run: str | None
     incumbent_harmonize_run: str | None
-    action_taken: typing.Literal['skipped', 'overwritten', 'error']
+    action_taken: CollisionPolicyType
 
 
 class RunCollisionManifest(typing.TypedDict):
@@ -116,7 +117,7 @@ class IngestionRunRecord(typing.TypedDict):
     run_id: str
     harmonization_run_uid: str
     harmonization_run_id: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    status: StatusLiteral
     timestamp: str
     fingerprint: str
     run_folder: str
@@ -130,7 +131,7 @@ class IngestReportSchema(typing.TypedDict):
     harmonization_run_id: str
     timestamp: str
     fingerprint: str
-    status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
+    status: StatusLiteral
     domain_maps: list[DomainMapReport]
     data_blocks: DataBlocksReport | None
 

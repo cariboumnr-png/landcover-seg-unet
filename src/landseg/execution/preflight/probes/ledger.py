@@ -117,7 +117,7 @@ def pending_harmonization(
 
     harmonization_runs_mfst = artifact_paths.data_harmonization.runs_manifest
     try:
-        ctrl = RunManifestCtrl.load_json_or_fail(harmonization_runs_mfst)
+        ctrl = RunManifestCtrl.load_json_strict(harmonization_runs_mfst)
         harmonization_runs = ctrl.fetch()
     except artifacts.ArtifactError:
         return schema.ProbeResult(
@@ -183,7 +183,7 @@ def pending_ingestion(
     ingestions_mfst = artifact_paths.data_ingestion.runs_manifest
 
     try:
-        ctrl = RunManifestCtrl.load_json_or_fail(harmonizations_mfst)
+        ctrl = RunManifestCtrl.load_json_strict(harmonizations_mfst)
         harmonization_runs = ctrl.fetch()
         good_harmonization_runs = {
             k: v for k, v in harmonization_runs.items()
@@ -205,7 +205,7 @@ def pending_ingestion(
         )
 
     try:
-        ctrl = RunManifestCtrl.load_json_or_fail(ingestions_mfst)
+        ctrl = RunManifestCtrl.load_json_strict(ingestions_mfst)
         ingestion_runs = ctrl.fetch()
         good_ingestion_runs = {
             k: v for k, v in ingestion_runs.items()
@@ -303,7 +303,7 @@ def prepared_blocks_state(
 
     schema_path = artifact_paths.data_preparation.schema
     try:
-        ctrl = artifacts.Controller[dict].load_json_or_fail(schema_path)
+        ctrl = artifacts.Controller[dict].load_json_strict(schema_path)
         prep_schema = ctrl.fetch()
     except artifacts.ArtifactError:
         prep_schema = None

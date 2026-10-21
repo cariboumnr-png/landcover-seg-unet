@@ -75,11 +75,7 @@ class BaseConfigurator:
                 self._cfg.session.validate()
         return self._cfg
 
-    def preflight(
-        self,
-        *,
-        strict: bool = False,
-    ) -> typing.Any:
+    def preflight(self,strict: bool = False) -> typing.Any:
         '''Run pre-flight diagnostic validation for configured command.'''
         return api.run_preflight(self._cfg, self._cfg.command, strict=strict)
 

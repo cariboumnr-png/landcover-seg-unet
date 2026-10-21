@@ -70,7 +70,7 @@ class DataPreparation(base.GeoPipeline):
             )
 
         except Exception as e:
-            self.logger.set_summary_status('FAILED')
+            self.logger.set_status('FAILED')
             self.logger.error(f'Preparation pipeline failed: {e}', exc_info=True)
             raise e
 

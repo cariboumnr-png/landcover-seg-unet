@@ -76,10 +76,7 @@ class RootConfig(base.BaseConfigSection):
     study: StudyConfig = field(default_factory=StudyConfig)
     command: str = 'default'
 
-    def validate(
-        self,
-        command: str | None = None,
-    ) -> None:
+    def validate(self, command: str | None = None) -> None:
         '''Validate the entire configuration structure.'''
         command = self.command if command is None else command
         try:

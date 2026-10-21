@@ -98,29 +98,23 @@ class Controller(typing.Generic[T]):
 
     # ----- alternative constructors
     @classmethod
-    def load_json_or_fail(
-        cls, fp: str | pathlib.Path
-    ) -> 'LoadOrFailController[T]':
+    def load_json_strict(cls, fp: str | pathlib.Path) -> 'ControllerStrict[T]':
         '''Factory for a JSON controller that reads or fails.'''
-        return LoadOrFailController(fp)
+        return ControllerStrict(fp)
 
     @classmethod
-    def load_csv_or_fail(
-        cls, fp: str | pathlib.Path
-    ) -> 'LoadOrFailController[T]':
+    def load_csv_strict(cls, fp: str | pathlib.Path) -> 'ControllerStrict[T]':
         '''Factory for a CSV controller that reads or fails.'''
-        return LoadOrFailController(fp)
+        return ControllerStrict(fp)
 
     @classmethod
-    def load_pt_or_fail(
-        cls, fp: str | pathlib.Path
-    ) -> 'LoadOrFailController[T]':
+    def load_pt_strict(cls, fp: str | pathlib.Path) -> 'ControllerStrict[T]':
         '''Factory for a PyTorch PT controller that reads or fails.'''
-        return LoadOrFailController(fp)
+        return ControllerStrict(fp)
 
     # ----- public method
     @typing.overload
-    def fetch(self: LoadOrFailController[T]) -> T:...
+    def fetch(self: ControllerStrict[T]) -> T:...
 
     @typing.overload
     def fetch(self) -> T | None:...
@@ -358,7 +352,7 @@ class Controller(typing.Generic[T]):
         numpy.savez_compressed(fp, keys=keys, values=values)
 
 
-class LoadOrFailController(Controller[T]):
+class ControllerStrict(Controller[T]):
     '''"Load or fail" specialized Controller subclass.'''
     def __init__(self, file_path: str | pathlib.Path):
         super().__init__(file_path, artifacts.LifecyclePolicy.LOAD_OR_FAIL)

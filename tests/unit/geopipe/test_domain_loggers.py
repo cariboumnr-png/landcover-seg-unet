@@ -60,7 +60,7 @@ def test_grid_logger_lifecycle(tmp_path):
     grid_fp = tmp_path / 'grid.json'
 
     logger.set_grid_report(world_grid, grid_fp)
-    logger.set_summary_status('SUCCESS')
+    logger.set_status('SUCCESS')
     logger.close()
 
     assert report_fp.exists()
@@ -145,7 +145,7 @@ def test_harmonization_logger_update_runs_manifest(tmp_path):
         enable_file_log=False,
     )
     logger_2.init_summary(run_id='run_0002')
-    logger_2.set_summary_status('FAILED')
+    logger_2.set_status('FAILED')
     uid_2 = logger_2.run_uid
 
     logger_2.update_runs_manifest(
@@ -193,7 +193,7 @@ def test_ingestion_logger_lifecycle(tmp_path):
         'duration_sec': 1.5,
         'stats': None,
     }
-    logger.add_domain_report(domain_rep)
+    logger.add_domain(domain_rep)
 
     blocks_rep: contracts.DataBlocksReport = {
         'image_filepath': '/path/img.tif',
@@ -202,7 +202,7 @@ def test_ingestion_logger_lifecycle(tmp_path):
         'stats': None,
         'manifest': None,
     }
-    logger.set_data_blocks_report(blocks_rep)
+    logger.set_data_blocks(blocks_rep)
     logger.close()
 
     assert report_fp.exists()
@@ -254,7 +254,7 @@ def test_ingestion_logger_update_runs_manifest(tmp_path):
         run_uid='harm_ref_456',
         run_id='run_0002',
     )
-    logger_2.set_summary_status('FAILED')
+    logger_2.set_status('FAILED')
     uid_2 = logger_2.run_uid
 
     logger_2.update_runs_manifest(manifest_fp, run_dir_2)
@@ -285,7 +285,7 @@ def test_preparation_logger_lifecycle(tmp_path):
         'status': 'created',
         'duration_sec': 1.0,
     }
-    logger.set_data_partition_report(partition_rep)
+    logger.set_data_partition(partition_rep)
 
     norm_rep: contracts.NormalizationReport = {
         'status': 'created',
@@ -294,7 +294,7 @@ def test_preparation_logger_lifecycle(tmp_path):
         'rebuild': True,
         'stats_filepath': '/path/stats.json',
     }
-    logger.set_normalization_report(norm_rep)
+    logger.set_normalization(norm_rep)
 
     schema_rep: contracts.SchemaReport = {
         'status': 'created',
@@ -302,7 +302,7 @@ def test_preparation_logger_lifecycle(tmp_path):
         'schema_filepath': '/path/schema.json',
         'classes_mapped': ['landcover', 'landcover_group'],
     }
-    logger.set_schema_report(schema_rep)
+    logger.set_schema(schema_rep)
     logger.close()
 
     assert report_fp.exists()

@@ -189,18 +189,12 @@ class UNetPPP(body.UNetBackbone):
             antialias=True,
         )
 
-    def encode(
-        self,
-        x: torch.Tensor,
-    ) -> tuple[torch.Tensor, ...]:
+    def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Run encoder path and return multi-scale feature hierarchy.'''
 
         return self.downs(x)
 
-    def decode(
-        self,
-        xs: tuple[torch.Tensor, ...],
-    ) -> torch.Tensor:
+    def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
         '''UNet3+ full-scale feature aggregation decoder.'''
 
         x1, x2, x3, x4, x5 = xs
@@ -235,13 +229,8 @@ class UNetPPP(body.UNetBackbone):
             Resize projected feature i to decoder scale j.
             '''
             key = (i, j)
-
             if key not in cache:
-                cache[key] = self._resize(
-                    projs[i],
-                    sizes[j],
-                )
-
+                cache[key] = self._resize(projs[i], sizes[j])
             return cache[key]
 
         # ------------------------------------------------------------------ #
@@ -294,10 +283,7 @@ class UNetPPP(body.UNetBackbone):
 
         return d1
 
-    def forward(
-        self,
-        x: torch.Tensor,
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''Compute UNet3+ feature map.'''
 
         xs = self.encode(x)

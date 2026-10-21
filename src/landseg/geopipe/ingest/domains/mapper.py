@@ -106,10 +106,7 @@ def _read_raster(
         index_base = int(raw_index_base) if raw_index_base is not None else 1
 
     # read through all windows via multiprocessing
-    jobs = [
-        (_read, (k, v, fpath, grid.tile_size), {})
-        for k, v in grid.items()
-    ]
+    jobs = [(_read, (k, v, fpath, grid.tile_size), {}) for k, v in grid.items()]
     results: list[tuple[tuple[int, int], numpy.typing.NDArray]]
     results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
     all_tiles = [(_, t) for (_, t) in results if t.size > 0] # filter empty arrays

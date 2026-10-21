@@ -88,9 +88,7 @@ def checkpoint_ready(
             details={'checkpoint': checkpoint_path},
         )
 
-    size_mb = (
-        pathlib.Path(checkpoint_path).stat().st_size / (1024 ** 2)
-    )
+    size_mb = pathlib.Path(checkpoint_path).stat().st_size / (1024 ** 2)
     return schema.ProbeResult(
         pid=pid or 'checkpoint_exists',
         category='Model',

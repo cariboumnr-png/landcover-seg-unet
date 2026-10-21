@@ -62,11 +62,7 @@ class ConcatAdapter(torch.nn.Module):
         ValueError: If payload dimensions do not match `concat_dim`.
     '''
 
-    def __init__(
-        self,
-        *,
-        concat_dim: int,
-    ) -> None:
+    def __init__(self, *, concat_dim: int) -> None:
         '''
         Initialize the concatenation adapter with output dimension.
 

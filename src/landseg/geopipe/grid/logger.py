@@ -94,10 +94,7 @@ class GridLogger(utils.Logger):
             self.summary['grid'] = grid_report
             self.summary['total_tiles'] = len(world_grid)
 
-    def set_summary_status(
-        self,
-        status: typing.Literal['SUCCESS', 'FAILED']
-    ) -> None:
+    def set_status(self, status: typing.Literal['SUCCESS', 'FAILED']) -> None:
         '''Update the execution status of the pipeline run.'''
         if self.summary is not None:
             self.summary['status'] = status

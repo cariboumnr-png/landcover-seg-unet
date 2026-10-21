@@ -33,12 +33,15 @@ import landseg.utils as utils
 
 
 # ----- public types
+SessionStatusLiteral = typing.Literal['RUNNING', 'SUCCESS', 'FAILED']
+
+
 class SessionSummary(typing.TypedDict):
     '''Typed session summary dictionary.'''
     run_id: str
     pipeline: str
     started_at: str
-    status: typing.Literal['RUNNING', 'SUCCESS', 'FAILED']
+    status: SessionStatusLiteral
     completed_at: str | None
     inputs: typing.Mapping[str, object]   # liberal dicts for now
     results: typing.Mapping[str, object]  # liberal dicts for now
@@ -87,10 +90,7 @@ class SessionLogger(utils.Logger):
             assert isinstance(self.summary['results'], dict) # for typing
             self.summary['results'].update(**results)
 
-    def set_summary_status(
-        self,
-        status: typing.Literal['RUNNING', 'SUCCESS', 'FAILED']
-    ) -> None:
+    def set_status(self, status: SessionStatusLiteral) -> None:
         '''Update the overall run summary status.'''
         if self.summary is not None:
             self.summary['status'] = status

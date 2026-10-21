@@ -58,7 +58,7 @@ class WorldGridGeneration(base.GeoPipeline):
             self.logger.info(f'Total Tiles: {len(world_grid)}')
 
         except Exception as err:
-            self.logger.set_summary_status('FAILED')
+            self.logger.set_status('FAILED')
             self.logger.error(f'World grid execution failed: {err}')
             raise
 

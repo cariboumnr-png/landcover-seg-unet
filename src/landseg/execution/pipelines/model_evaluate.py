@@ -67,11 +67,11 @@ class ModelEvaluation(base.SessionPipeline):
             output_ctrl.persist(metrics)
 
             # update summary
-            self.logger.set_summary_status('SUCCESS')
+            self.logger.set_status('SUCCESS')
             self.logger.set_results({'final': results.target_metrics})
 
         except Exception as e:
-            self.logger.set_summary_status('FAILED')
+            self.logger.set_status('FAILED')
             self.logger.error(f'Evaluation pipeline failed: {e}', exc_info=True)
             raise e
 

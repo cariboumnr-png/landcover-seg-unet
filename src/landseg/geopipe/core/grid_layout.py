@@ -423,6 +423,6 @@ def read_report(fp: pathlib.Path) -> tuple[str, grid_contracts.WorldGridReport]:
         tuple[str, grid_contracts.WorldGridReport]:
             Tuple of (status, world grid summary report).
     '''
-    ctrl = GridReportCtrl.load_json_or_fail(fp)
+    ctrl = GridReportCtrl.load_json_strict(fp)
     report = ctrl.fetch()
     return report['status'], report['grid']

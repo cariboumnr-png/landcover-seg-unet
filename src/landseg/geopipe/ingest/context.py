@@ -178,7 +178,7 @@ def build_ingestion_context(
     # parse targeted harmonization run
     harmonization_artifact_paths.get_run_folder(harmonization_record['run_id'])
     report_path = harmonization_artifact_paths.report
-    report = HarmonizationReportCtrl.load_json_or_fail(report_path).fetch()
+    report = HarmonizationReportCtrl.load_json_strict(report_path).fetch()
 
     # fetch world grid
     raw_grid = report.get('grid_fpath')
@@ -283,7 +283,7 @@ def _resolve_harmonization_runs(
         )
 
     try:
-        manifest_data = HarmonizationManifestCtrl.load_json_or_fail(
+        manifest_data = HarmonizationManifestCtrl.load_json_strict(
             manifest_fpath
         ).fetch()
     except artifacts.ArtifactError as exc:
@@ -386,7 +386,7 @@ def _resolve_ingestion_runs(manifest_fpath: pathlib.Path) -> set[str]:
         return set()
 
     try:
-        manifest_data = IngestionManifestCtrl.load_json_or_fail(
+        manifest_data = IngestionManifestCtrl.load_json_strict(
             manifest_fpath
         ).fetch()
     except artifacts.ArtifactError:
@@ -426,7 +426,7 @@ def verify_pool_grid_compatibility(
         return
 
     try:
-        schema_dict = DatasetSchemaCtrl.load_json_or_fail(schema_fpath).fetch()
+        schema_dict = DatasetSchemaCtrl.load_json_strict(schema_fpath).fetch()
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError(
             f'Failed to read dataset schema at {schema_fpath}: {exc}'

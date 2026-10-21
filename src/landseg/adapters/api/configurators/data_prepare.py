@@ -31,10 +31,7 @@ import landseg.adapters.api.configurators as configurators
 class DataPreparationConfigurator(configurators.BaseConfigurator):
     '''Configure data preparation.'''
 
-    def __init__(
-        self,
-        experiment_root: str,
-    ):
+    def __init__(self, experiment_root: str):
         super().__init__(experiment_root, 'data-prepare')
 
     def set_partition(
@@ -73,10 +70,7 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         self._cfg.data.preparation.datasetview.features = features or {}
         return self
 
-    def set_targets(
-        self,
-        targets: dict[str, str | dict[str, typing.Any]] | None
-    ) -> typing.Self:
+    def set_targets(self, targets: dict[str, typing.Any] | None) -> typing.Self:
         '''
         Set target reclassification schemes or inline mappings.
 

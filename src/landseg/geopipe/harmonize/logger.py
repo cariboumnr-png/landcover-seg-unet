@@ -125,24 +125,21 @@ class HarmonizationLogger(utils.Logger):
             )
 
     def set_grid_reference(
-        self, grid_id: str, grid_fpath: pathlib.Path
+        self,
+        grid_id: str,
+        grid_fpath: pathlib.Path
     ) -> None:
         '''Record world grid identifier and artifact file path.'''
         if self.summary is not None:
             self.summary['grid_id'] = grid_id
-            self.summary['grid_fpath'] = str(
-                pathlib.Path(grid_fpath).resolve()
-            )
+            self.summary['grid_fpath'] = str(pathlib.Path(grid_fpath).resolve())
 
     def set_identity(self, fingerprint: str) -> None:
         '''Record fingerprint of the inputs and configs of this run.'''
         if self.summary is not None:
             self.summary['fingerprint'] = fingerprint
 
-    def set_summary_status(
-        self,
-        status: typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
-    ) -> None:
+    def set_status(self, status: contracts.StatusLiteral) -> None:
         '''Update the overall run summary status.'''
         if self.summary is not None:
             self.summary['status'] = status

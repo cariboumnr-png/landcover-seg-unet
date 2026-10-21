@@ -101,7 +101,7 @@ def run_materialize_blocks(
     start_time = time.perf_counter()
 
     # load source blocks file lists
-    ctrl = PartitionCtrl.load_json_or_fail(paths.splits_source_blocks)
+    ctrl = PartitionCtrl.load_json_strict(paths.splits_source_blocks)
     src = ctrl.fetch()
 
     # get source by split
@@ -167,7 +167,7 @@ def run_materialize_blocks(
         'rebuild': False,
         'stats_filepath': str(paths.image_stats.resolve()),
     }
-    logger.set_normalization_report(report)
+    logger.set_normalization(report)
 
 
 # ----- private helpers

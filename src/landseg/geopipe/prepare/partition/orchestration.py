@@ -81,9 +81,7 @@ class PartitionConfig:
         '''Return True if any AOI boundaries are specified.'''
         if self.aoi is None:
             return False
-        return bool(
-            self.aoi.train_aoi or self.aoi.val_aoi or self.aoi.test_aoi
-        )
+        return bool(self.aoi.train_aoi or self.aoi.val_aoi or self.aoi.test_aoi)
 
     @property
     def has_hydration(self) -> bool:

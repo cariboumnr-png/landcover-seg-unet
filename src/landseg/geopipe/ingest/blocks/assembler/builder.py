@@ -385,9 +385,7 @@ def _canonicalize_single_head(
     manifest['label_entropy'][name] = float(_Calc.entropy(counts))
 
     if 'class_name' in spec and spec['class_name']:
-        manifest['label_cls_names'][name] = list(
-            spec['class_name'].values()
-        )
+        manifest['label_cls_names'][name] = list(spec['class_name'].values())
     if 'color_map' in spec and spec['color_map']:
         manifest['label_cls_clr_map'][name] = spec['color_map']
     if 'taxonomy' in spec and spec['taxonomy']:

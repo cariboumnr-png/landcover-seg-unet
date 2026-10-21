@@ -153,7 +153,7 @@ def run_datablocks_partition(
         'status': status,
         'duration_sec': duration
     }
-    logger.set_data_partition_report(report)
+    logger.set_data_partition(report)
 
 
 # ----- private helpers

@@ -306,10 +306,7 @@ def _prepare_source_tiles(
     ctx: _WarpContext,
 ) -> list[_TileGeometry]:
     '''Reproject and snap all source tiles to a uniform coordinate grid.'''
-    return [
-        _prepare_single_tile(idx, p, ctx)
-        for idx, p in enumerate(inputs)
-    ]
+    return [_prepare_single_tile(idx, p, ctx) for idx, p in enumerate(inputs)]
 
 
 def _calculate_tile_bounds(

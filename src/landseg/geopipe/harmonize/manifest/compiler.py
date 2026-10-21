@@ -67,7 +67,7 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             List of normalized manifest entries.
     '''
     # load JSON via artifact controller
-    ctrl = ManifestCtrl.load_json_or_fail(fp)
+    ctrl = ManifestCtrl.load_json_strict(fp)
     ctrl.hash(overwrite=False) # hash once
     mfst = ctrl.fetch()
 
@@ -82,7 +82,7 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = ManifestEntryCtrl.load_json_or_fail(mfst_entry_path)
+            _ctrl = ManifestEntryCtrl.load_json_strict(mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
             entry = _ctrl.fetch()
         except (TypeError, ValueError) as e:

@@ -84,12 +84,12 @@ def _build_runner(cfg: configs.RootConfig) -> tuple[pathlib.Path, StepRunner]:
             yield from runner.run()
 
         except Exception as e:
-            logger.set_summary_status('FAILED')
+            logger.set_status('FAILED')
             logger.error(f'Trial execution failed: {e}', exc_info=True)
             raise e
 
         finally:
-            logger.set_summary_status('SUCCESS')
+            logger.set_status('SUCCESS')
             logger.log_sep()
             logger.close() # summary dict will be persisted
 
