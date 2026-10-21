@@ -61,12 +61,28 @@ COMMANDS = [
     'diagnose-overfit',
     'model-evaluate',
     'model-train',
-    'batch-ingest',
     'e2e-intake',
     'e2e-experiment',
-    'end-to-end-intake',
-    'end-to-end-experiment',
     'preflight',
     'study-analysis',
     'study-sweep'
 ]
+
+SECTION_RECIPES = [
+    'world-grid',
+    'data-harmonize',
+    'data-ingest',
+    'data-prepare',
+    'diagnose-overfit',
+    'model-evaluate',
+    'model-train',
+    'study-analysis',
+    'study-sweep'
+]
+
+E2E_RECIPES = [
+    'e2e-intake',
+    'e2e-experiment',
+]
+
+RECIPES = SECTION_RECIPES + E2E_RECIPES

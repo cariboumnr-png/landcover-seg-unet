@@ -40,7 +40,6 @@ import landseg.execution.workflows as workflows
     ('model-train', pipelines, 'ModelTraining', True),
     ('model-evaluate', pipelines, 'ModelEvaluation', True),
     ('diagnose-overfit', workflows, 'execute_diagnose_overfit', False),
-    ('batch-ingest', workflows, 'execute_batch_ingest', False),
     ('e2e-intake', workflows, 'execute_e2e_intake', False),
     ('e2e-experiment', workflows, 'execute_e2e_experiment', False),
     ('study-analysis', workflows, 'execute_study_analysis', False),

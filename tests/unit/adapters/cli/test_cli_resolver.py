@@ -142,16 +142,16 @@ def test_resolve_configs_missing_recipe():
         )
 
 
-def test_resolve_configs_custom_recipe_fpath(tmp_path):
+def test_resolve_configs_custom_recipe_dir(tmp_path):
     '''
-    Given: A custom recipe file path passed via `execution.recipe_fpath`.
-    When: Calling `resolve_configs` with the custom recipe path.
+    Given: A custom recipe directory passed via `execution.recipe_dir`.
+    When: Calling `resolve_configs` with the custom recipe directory.
     Then: Load overrides from custom recipe instead of default.
     '''
     mock_ref = tmp_path / 'mock_ref.tif'
     mock_ref.write_text('dummy')
 
-    custom_recipe = tmp_path / 'custom_grid.yaml'
+    custom_recipe = tmp_path / 'world_grid.yaml'
     custom_recipe.write_text(
         'data:\n'
         '  world_grid:\n'
@@ -163,7 +163,7 @@ def test_resolve_configs_custom_recipe_fpath(tmp_path):
     cfg_dict = omegaconf.OmegaConf.create({
         'command': 'world-grid',
         'execution': {
-            'recipe_fpath': str(custom_recipe),
+            'recipe_dir': str(tmp_path),
         },
     })
 
@@ -173,21 +173,21 @@ def test_resolve_configs_custom_recipe_fpath(tmp_path):
     assert root.data.world_grid.tile_stride == [256, 256]
 
 
-def test_resolve_configs_custom_recipe_fpath_missing():
+def test_resolve_configs_custom_recipe_dir_missing(tmp_path):
     '''
-    Given: An `execution.recipe_fpath` pointing to a missing file.
+    Given: An `execution.recipe_dir` missing the required recipe file.
     When: Calling `resolve_configs`.
-    Then: Raise FileNotFoundError indicating specified recipe is missing.
+    Then: Raise FileNotFoundError indicating recipe is missing.
     '''
     cfg_dict = omegaconf.OmegaConf.create({
         'command': 'world-grid',
         'execution': {
-            'recipe_fpath': './non_existent_recipe.yaml',
+            'recipe_dir': str(tmp_path / 'non_existent_dir'),
         },
     })
 
     with pytest.raises(
-        FileNotFoundError, match='Specified recipe config not found'
+        FileNotFoundError, match='Tracked recipe not found for command'
     ):
         resolver_mod.resolve_configs(config=cfg_dict)
 
@@ -202,7 +202,6 @@ def test_resolve_configs_custom_recipe_fpath_missing():
         'diagnose-overfit',
         'model-evaluate',
         'model-train',
-        'batch-ingest',
         'study-analysis',
         'study-sweep',
         'e2e-intake',

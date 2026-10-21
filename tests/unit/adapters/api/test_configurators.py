@@ -214,7 +214,7 @@ def test_batch_ingest_configurator(tmp_path):
     '''
     Given: Parameters for multi-batch ingestion workflow.
     When: Chaining methods on `BatchIngestConfigurator`.
-    Then: Correctly set command name to 'batch-ingest' and validate.
+    Then: Correctly set command name to 'data-ingest' and validate.
     '''
     cfg_builder = configurators.BatchIngestConfigurator(
         experiment_root=str(tmp_path),
@@ -222,7 +222,7 @@ def test_batch_ingest_configurator(tmp_path):
     cfg_builder.set_rebuild(True).set_collision_policy('skip')
 
     root = cfg_builder.running_root_config
-    assert root.command == 'batch-ingest'
+    assert root.command == 'data-ingest'
     assert root.data.ingestion.rebuild is True
     assert root.data.ingestion.datablocks.collision_policy == 'skip'
 

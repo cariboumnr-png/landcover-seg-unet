@@ -36,4 +36,4 @@ class BatchIngestConfigurator(data_ingest.DataIngestionConfigurator):
 
     def __init__(self, experiment_root: str):
         super().__init__(experiment_root)
-        self._cfg.command = 'batch-ingest'
+        self._cfg.command = 'data-ingest'
