@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.harmonize.rasters`.
+Top-level namespace for `landseg.geopipe.rasters`.
 
 Exposes raster warping, stacking, masking, and metadata manipulation APIs.
 

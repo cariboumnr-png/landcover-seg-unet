@@ -29,39 +29,39 @@ import pathlib
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.harmonize.manifest.taxonomy as taxonomy
+import landseg.knowledge.taxonomy as taxonomy
 
 
-# ----- `get_available_profiles` tests
-def test_get_available_profiles_finds_registered_profiles():
+# ----- `_get_profiles` tests
+def test_get_profiles_finds_registered_profiles():
     '''
     Given: The canonical knowledge base directory.
-    When: `get_available_profiles` is called.
+    When: `_get_profiles` is called.
     Then: Return list containing registered profiles.
     '''
-    profiles = taxonomy.get_profiles(pathlib.Path('knowledge'))
+    profiles = taxonomy._get_profiles(pathlib.Path('knowledge'))
     assert 'ontario_tree_species_grouped_profiles' in profiles
     assert 'ontario_tree_species_profiles' in profiles
 
 
-def test_get_available_profiles_nonexistent_dir(tmp_path):
+def test_get_profiles_nonexistent_dir(tmp_path):
     '''
     Given: A non-existent root path.
-    When: `get_available_profiles` is called.
+    When: `_get_profiles` is called.
     Then: Return an empty list without raising.
     '''
     empty_root = tmp_path / 'nonexistent'
-    profiles = taxonomy.get_profiles(empty_root)
+    profiles = taxonomy._get_profiles(empty_root)
     assert profiles == []
 
 
-def test_get_available_profiles_none_dir():
+def test_get_profiles_none_dir():
     '''
     Given: None as knowledge_root.
-    When: `get_available_profiles` is called.
+    When: `_get_profiles` is called.
     Then: Return an empty list without raising.
     '''
-    profiles = taxonomy.get_profiles(None)
+    profiles = taxonomy._get_profiles(None)
     assert profiles == []
 
 

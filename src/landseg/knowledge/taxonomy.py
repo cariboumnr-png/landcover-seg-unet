@@ -27,7 +27,6 @@ mappings against canonical knowledge base profiles and resolves target
 integer classes to deterministic embedding matrix indices.
 
 Public APIs:
-    - `get_available_profiles`: Return registered taxonomy profile names.
     - `validate_specs`: Validate taxonomy specs against knowledge base.
 '''
 
@@ -36,42 +35,14 @@ import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.knowledge as knowledge
+import landseg.knowledge.embeddings as emb
 
 
 # ----- typing aliases
-SpeciesMetaCtrl = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata]
+SpeciesMetaCtrl = artifacts.Controller[emb.SpeciesEmbeddingsMetadata]
 
 
 # ----- public functions
-def get_profiles(
-    knowledge_root: pathlib.Path | str | None = None
-) -> list[str]:
-    '''
-    Return list of registered taxonomy profile names in knowledge base.
-
-    Args:
-        knowledge_root:
-            Root directory of the knowledge base.
-
-    Returns:
-        list[str]:
-            List of profile directory names containing species metadata.
-    '''
-    if knowledge_root is None:
-        return []
-    emb_dir = pathlib.Path(knowledge_root) / 'embeddings'
-    if not emb_dir.is_dir():
-        return []
-    profiles: list[str] = []
-    for sub in emb_dir.iterdir():
-        if sub.is_dir():
-            meta_path = sub / 'species_metadata.json'
-            if meta_path.is_file():
-                profiles.append(sub.name)
-    return sorted(profiles)
-
-
 def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
@@ -133,10 +104,26 @@ def validate_specs(
 
 
 # ----- private helpers
+def _get_profiles(knowledge_root: pathlib.Path | str | None) -> list[str]:
+    '''Return list of registered taxonomy profile names.'''
+    if knowledge_root is None:
+        return []
+    emb_dir = pathlib.Path(knowledge_root) / 'embeddings'
+    if not emb_dir.is_dir():
+        return []
+    profiles: list[str] = []
+    for sub in emb_dir.iterdir():
+        if sub.is_dir():
+            meta_path = sub / 'species_metadata.json'
+            if meta_path.is_file():
+                profiles.append(sub.name)
+    return sorted(profiles)
+
+
 def _resolve_taxonomy_metadata(
     profile: str,
     root: pathlib.Path | str | None = None,
-) -> dict[str, knowledge.SpeciesEntry]:
+) -> dict[str, emb.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths: list[pathlib.Path] = []
     if root is not None:
@@ -154,7 +141,7 @@ def _resolve_taxonomy_metadata(
             break
 
     if meta_path is None:
-        available = get_profiles(root)
+        available = _get_profiles(root)
         avail_str = (
             ', '.join(f"'{a}'" for a in available) if available else 'none'
         )

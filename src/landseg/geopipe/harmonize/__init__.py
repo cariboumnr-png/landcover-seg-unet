@@ -22,9 +22,8 @@
 '''
 Top-level namespace for `landseg.geopipe.harmonize`.
 
-Exposes raster harmonization, manifest compilation, taxonomy resolution,
-and logging APIs via lazy resolution to keep import order simple and
-circular-free.
+Exposes raster harmonization, manifest compilation, and logging APIs
+via lazy resolution to keep import order simple and circular-free.
 
 Public APIs:
     - `HarmonizationContext`: Execution context for harmonization.

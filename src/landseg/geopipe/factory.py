@@ -45,6 +45,7 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 
+
 # ----- typing aliases
 DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
 DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
@@ -197,11 +198,28 @@ def _get_heads(
         k: dict(v)
         for k, v in data_schema['labels'].get('label_taxonomy', {}).items()
     }
+    class_names = data_schema['labels'].get('label_class_names', {})
     sim_matrices: dict[str, torch.Tensor] = {}
     if knowledge_paths is not None and knowledge_paths.root.exists():
         for hname, tax_dict in taxonomy.items():
             if isinstance(tax_dict, dict) and 'profile' in tax_dict:
                 profile = tax_dict['profile']
+                cls_list = class_names.get(hname)
+                num_cls = len(counts[hname])
+                if cls_list and len(cls_list) == num_cls:
+                    mapping = {
+                        str(i): c for i, c in enumerate(cls_list, 1)
+                    }
+                    try:
+                        resolved = knowledge.validate_specs(
+                            profile,
+                            mapping,
+                            num_cls,
+                            knowledge_root=knowledge_paths.root,
+                        )
+                        taxonomy[hname] = dict(resolved)
+                    except (ValueError, FileNotFoundError):
+                        pass
                 try:
                     sim_matrices[hname] = knowledge.resolve_similarity_matrix(
                         profile,

@@ -37,11 +37,10 @@ import typing
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest.schema as schema
-import landseg.geopipe.harmonize.manifest.taxonomy as taxonomy
 
 
 # ----- public classes
-class ManifestEntryNormalizer: # TODO this class needs to know knowledge base path
+class ManifestEntryNormalizer:
     '''
     Normalize and validate a single dataset manifest entry.
 
@@ -160,11 +159,7 @@ class ManifestEntryNormalizer: # TODO this class needs to know knowledge base pa
 
             taxa = _require_dict(taxa)
             profile = _require_string(taxa.get('profile'))
-            try:
-                taxa_specs = taxonomy.validate_specs(profile, cls, num_cls)
-                _specs['taxonomy'] = taxa_specs
-            except ValueError:
-                pass
+            _specs['taxonomy'] = {'profile': profile}
 
         return _specs
 

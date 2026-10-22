@@ -141,17 +141,39 @@ def _prepare_dataspecs(
     counts = block.manifest['label_count']
     cc = {k: [1] * len(counts[k]) for k in counts if k != 'original'}
 
-    tax = block.manifest.get('label_taxonomy', {})
+    tax: dict[str, dict[str, typing.Any]] = {
+        k: dict(v)
+        for k, v in block.manifest.get('label_taxonomy', {}).items()
+    }
+    cls_names = block.manifest.get('label_cls_names', {})
     sim_matrices: dict[str, torch.Tensor] = {}
-    for hname, tax_dict in tax.items():
-        if isinstance(tax_dict, dict) and 'profile' in tax_dict:
-            profile = tax_dict['profile']
-            try:
-                sim_matrices[hname] = knowledge.resolve_similarity_matrix(
-                    profile
-                )
-            except (FileNotFoundError, artifacts.ArtifactError):
-                pass
+    kdir = config.execution.knowledge_dir
+    kroot = pathlib.Path(kdir) if kdir else None
+    if kroot is not None and kroot.exists():
+        for hname, tax_dict in tax.items():
+            if isinstance(tax_dict, dict) and 'profile' in tax_dict:
+                profile = tax_dict['profile']
+                cls_list = cls_names.get(hname)
+                num_cls = len(counts[hname])
+                if cls_list and len(cls_list) == num_cls:
+                    mapping = {str(i): c for i, c in enumerate(cls_list, 1)}
+                    try:
+                        resolved = knowledge.validate_specs(
+                            profile,
+                            mapping,
+                            num_cls,
+                            knowledge_root=kroot,
+                        )
+                        tax[hname] = dict(resolved)
+                    except (ValueError, FileNotFoundError):
+                        pass
+                try:
+                    sim_matrices[hname] = knowledge.resolve_similarity_matrix(
+                        profile,
+                        knowledge_root=kroot,
+                    )
+                except (FileNotFoundError, artifacts.ArtifactError):
+                    pass
 
     return core.DataSpecs(
         name='overfit_single_block',
@@ -174,13 +196,9 @@ def _prepare_dataspecs(
         heads=core.Heads(
             class_counts=cc,  # neutral
             logits_adjust={k: [1.0] * len(v) for k, v in cc.items()},
-            head_parent={
-                k: None for k in block.manifest['label_band_map']
-            },
-            head_parent_cls={
-                k: None for k in block.manifest['label_band_map']
-            },
-            taxonomy=tax, # type: ignore
+            head_parent={k: None for k in block.manifest['label_band_map']},
+            head_parent_cls={k: None for k in block.manifest['label_band_map']},
+            taxonomy=tax,
             similarity_matrices=sim_matrices,
         ),
         splits=core.Splits(
@@ -216,9 +234,7 @@ def _create_block(
         hm_record,
     )
     if not context.has_data:
-        raise ValueError(
-            'Harmonized feature/label rasters not found in report'
-        )
+        raise ValueError('Harmonized feature/label rasters not found in report')
 
     # map raster windows onto world grid
     logger.info('Mapping image unto the world grid')

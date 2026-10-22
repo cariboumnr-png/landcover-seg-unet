@@ -20,12 +20,12 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.geopipe.harmonize.rasters`.
+Top-level namespace for `landseg.geopipe.harmonize.processor`.
 
-Exposes raster warping, stacking, masking, and metadata manipulation APIs.
+Exposes raster harmonization orchestration onto the canonical world grid.
 
 Public APIs:
-    - `ProcessedRasters`: Container for processed raster paths dictionaries.
+    - `HarmonizedRasters`: Container for processed raster paths dictionaries.
     - `harmonizer`: Harmonize compiled raster sources onto grid.
 '''
 
