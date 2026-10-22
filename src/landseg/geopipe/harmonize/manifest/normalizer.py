@@ -143,9 +143,9 @@ class ManifestEntryNormalizer:
         }
 
         # add optional fields
-        class_name = specs.get('class_name')
-        if class_name is not None:
-            _specs['class_name'] = _require_dict_w_str_values(class_name)
+        cls = specs.get('class_name')
+        if cls is not None:
+            _specs['class_name'] = _require_dict_w_str_values(cls)
 
         color_map = specs.get('color_map')
         if color_map is not None:
@@ -155,13 +155,16 @@ class ManifestEntryNormalizer:
 
         taxa = specs.get('taxonomy')
         if taxa is not None:
-            if not class_name:
+            if not cls:
                 raise ValueError('Class names not provided for lookup')
 
             taxa = _require_dict(taxa)
             profile = _require_string(taxa.get('profile'))
-            taxa_specs = taxonomy.validate_specs(profile, class_name, num_cls)
-            _specs['taxonomy'] = taxa_specs
+            try:
+                taxa_specs = taxonomy.validate_specs(profile, cls, num_cls)
+                _specs['taxonomy'] = taxa_specs
+            except ValueError:
+                pass
 
         return _specs
 
