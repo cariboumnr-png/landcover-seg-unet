@@ -209,24 +209,6 @@ def test_training_session_configurator(tmp_path):
     assert root.data.specification.domain_ids_name == 'sample_domain_1'
 
 
-# ----- `BatchIngestConfigurator` tests
-def test_batch_ingest_configurator(tmp_path):
-    '''
-    Given: Parameters for multi-batch ingestion workflow.
-    When: Chaining methods on `BatchIngestConfigurator`.
-    Then: Correctly set command name to 'data-ingest' and validate.
-    '''
-    cfg_builder = configurators.BatchIngestConfigurator(
-        experiment_root=str(tmp_path),
-    )
-    cfg_builder.set_rebuild(True).set_collision_policy('skip')
-
-    root = cfg_builder.running_root_config
-    assert root.command == 'data-ingest'
-    assert root.data.ingestion.rebuild is True
-    assert root.data.ingestion.datablocks.collision_policy == 'skip'
-
-
 # ----- `BaseConfigurator.preflight` tests
 def test_configurator_preflight(mocker, tmp_path):
     '''

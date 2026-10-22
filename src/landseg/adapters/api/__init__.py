@@ -26,7 +26,6 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 
 Public APIs:
-    - `BatchIngestConfigurator`: Configurator for batch ingestion.
     - `DataHarmonizationConfigurator`: Configurator for data harmonization.
     - `DataIngestionConfigurator`: Configurator for data ingestion.
     - `DataPreparationConfigurator`: Configurator for data preparation.
@@ -46,7 +45,6 @@ import typing
 
 __all__ = [
     # classes
-    'BatchIngestConfigurator',
     'DataHarmonizationConfigurator',
     'DataIngestionConfigurator',
     'DataPreparationConfigurator',
@@ -70,7 +68,6 @@ if typing.TYPE_CHECKING:
         run_preflight,
     )
     from .configurators import (
-        BatchIngestConfigurator,
         DataHarmonizationConfigurator,
         DataIngestionConfigurator,
         DataPreparationConfigurator,
@@ -91,7 +88,6 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'BatchIngestConfigurator',
         'DataHarmonizationConfigurator',
         'DataIngestionConfigurator',
         'DataPreparationConfigurator',
