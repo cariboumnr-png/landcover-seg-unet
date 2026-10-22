@@ -198,14 +198,17 @@ def _get_heads(
         for k, v in data_schema['labels'].get('label_taxonomy', {}).items()
     }
     sim_matrices: dict[str, torch.Tensor] = {}
-    kp = knowledge_paths or artifacts.KnowledgePaths()
-    for hname, tax_dict in taxonomy.items():
-        if isinstance(tax_dict, dict) and 'profile' in tax_dict:
-            profile = tax_dict['profile']
-            sim_matrices[hname] = knowledge.resolve_similarity_matrix(
-                profile,
-                knowledge_root=kp.root,
-            )
+    if knowledge_paths is not None and knowledge_paths.root.exists():
+        for hname, tax_dict in taxonomy.items():
+            if isinstance(tax_dict, dict) and 'profile' in tax_dict:
+                profile = tax_dict['profile']
+                try:
+                    sim_matrices[hname] = knowledge.resolve_similarity_matrix(
+                        profile,
+                        knowledge_root=knowledge_paths.root,
+                    )
+                except (FileNotFoundError, artifacts.ArtifactError):
+                    pass
 
     head_parent: dict[str, str | None]
     head_parent_cls: dict[str, int | None]

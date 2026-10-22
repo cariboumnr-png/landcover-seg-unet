@@ -44,7 +44,7 @@ class ArtifactPaths:
     ingestion_root: pathlib.Path | None = None
     preparation_root: pathlib.Path | None = None
     session_root: pathlib.Path | None = None
-    knowledge_root: pathlib.Path = pathlib.Path('knowledge')
+    knowledge_root: pathlib.Path | None = None
 
     def __post_init__(self):
         self.root = pathlib.Path(self.root)
@@ -58,7 +58,8 @@ class ArtifactPaths:
             self.preparation_root = pathlib.Path(self.preparation_root)
         if self.session_root is not None:
             self.session_root = pathlib.Path(self.session_root)
-        self.knowledge_root = pathlib.Path(self.knowledge_root)
+        if self.knowledge_root is not None:
+            self.knowledge_root = pathlib.Path(self.knowledge_root)
 
     @classmethod
     def from_config(cls, config: 'configs.RootConfig') -> typing.Self:
@@ -90,6 +91,11 @@ class ArtifactPaths:
                 if config.session.output_dpath
                 else None
             ),
+            knowledge_root=(
+                pathlib.Path(config.execution.knowledge_dir)
+                if config.execution.knowledge_dir
+                else None
+            ),
         )
 
     @property
@@ -118,5 +124,7 @@ class ArtifactPaths:
         return paths.SessionPaths(root=r)
 
     @property
-    def knowledge(self) -> paths.KnowledgePaths:
+    def knowledge(self) -> paths.KnowledgePaths | None:
+        if self.knowledge_root is None:
+            return None
         return paths.KnowledgePaths(self.knowledge_root)

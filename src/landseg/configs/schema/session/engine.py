@@ -120,7 +120,7 @@ class TVLoss(base.BaseConfigSection):
 @dataclasses.dataclass
 class EcologicalLoss(base.BaseConfigSection):
     weight: float = 0.0
-    profile: str | None = 'ontario_tree_species_grouped_profiles'
+    profile: str | None = None
 
     def validate(self) -> None:
         self.require_attr_type_range('weight', float, (0.0, None))

@@ -21,6 +21,7 @@ execution:
   verbosity: select # 'full', 'select', 'silent'
   exp_root: ./experiment
   recipe_dir: ./configs
+  knowledge_dir: ${oc.env:LANDSEG_KNOWLEDGE_DIR, null}
   dev_cfg: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
   preflight_target: null
   preflight_strict_mode: false

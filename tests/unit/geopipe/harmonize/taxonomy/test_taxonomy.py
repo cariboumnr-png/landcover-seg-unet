@@ -55,6 +55,16 @@ def test_get_available_profiles_nonexistent_dir(tmp_path):
     assert profiles == []
 
 
+def test_get_available_profiles_none_dir():
+    '''
+    Given: None as knowledge_root.
+    When: `get_available_profiles` is called.
+    Then: Return an empty list without raising.
+    '''
+    profiles = taxonomy.get_profiles(None)
+    assert profiles == []
+
+
 # ----- `resolve_taxonomy_metadata` tests
 def test_resolve_taxonomy_metadata_success():
     '''
@@ -141,4 +151,21 @@ def test_validate_specs_count_mismatch():
             species_mapping,
             num_cls=2,
             knowledge_root=pathlib.Path('knowledge'),
+        )
+
+
+def test_validate_specs_none_knowledge_root():
+    '''
+    Given: No knowledge_root provided.
+    When: `validate_specs` is called.
+    Then: Raise ValueError explaining knowledge_dir is not configured.
+    '''
+    with pytest.raises(
+        ValueError, match='execution.knowledge_dir is not configured'
+    ):
+        taxonomy.validate_specs(
+            'ontario_tree_species_grouped_profiles',
+            {'1': 'SB_BLACK_SPRUCE'},
+            num_cls=1,
+            knowledge_root=None,
         )

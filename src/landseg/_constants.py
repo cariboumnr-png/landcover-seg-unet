@@ -40,10 +40,6 @@ def _get_device_name() -> str:
 # ----- constants
 PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
 
-REPO_ROOT = PACKAGE_ROOT.parents[1]
-
-KNOWLEDGE_ROOT = REPO_ROOT / 'knowledge'
-
 DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 DEVICE_NAME: str = _get_device_name()

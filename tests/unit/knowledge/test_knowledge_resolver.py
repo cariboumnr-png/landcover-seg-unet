@@ -65,6 +65,18 @@ def test_resolve_similarity_matrix_missing(tmp_path):
         )
 
 
+def test_resolve_similarity_matrix_none_root():
+    '''
+    Given: No knowledge_root provided.
+    When: `resolve_similarity_matrix` is called.
+    Then: Raise `FileNotFoundError`.
+    '''
+    with pytest.raises(
+        FileNotFoundError, match='Knowledge root not configured'
+    ):
+        knowledge.resolve_similarity_matrix(profile='any')
+
+
 # ----- `resolve_profile_metadata` tests
 def test_resolve_profile_metadata(tmp_path):
     '''
@@ -85,3 +97,15 @@ def test_resolve_profile_metadata(tmp_path):
     )
     assert loaded['num_classes'] == 5
     assert loaded['model_name'] == 'test_model'
+
+
+def test_resolve_profile_metadata_none_root():
+    '''
+    Given: No knowledge_root provided.
+    When: `resolve_profile_metadata` is called.
+    Then: Raise `FileNotFoundError`.
+    '''
+    with pytest.raises(
+        FileNotFoundError, match='Knowledge root not configured'
+    ):
+        knowledge.resolve_profile_metadata(profile='any')

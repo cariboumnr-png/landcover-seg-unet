@@ -32,16 +32,21 @@ Public APIs:
 '''
 
 # standard imports
-import json
 import pathlib
 # local imports
-import landseg._constants as c
+import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
 
+# ----- typing aliases
+SpeciesMetaCtrl = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata]
+
+
 # ----- public functions
-def get_profiles(knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT) -> list[str]:
+def get_profiles(
+    knowledge_root: pathlib.Path | str | None = None
+) -> list[str]:
     '''
     Return list of registered taxonomy profile names in knowledge base.
 
@@ -53,6 +58,8 @@ def get_profiles(knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT) -> list[str]:
         list[str]:
             List of profile directory names containing species metadata.
     '''
+    if knowledge_root is None:
+        return []
     emb_dir = pathlib.Path(knowledge_root) / 'embeddings'
     if not emb_dir.is_dir():
         return []
@@ -69,7 +76,7 @@ def validate_specs(
     profile: str,
     species_mapping: dict[str, str],
     num_cls: int,
-    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
+    knowledge_root: pathlib.Path | str | None = None,
 ) -> geo_core.TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
@@ -88,6 +95,11 @@ def validate_specs(
         geo_core.TaxonomySpec:
             Resolved taxonomy specification dictionary.
     '''
+    if knowledge_root is None:
+        raise ValueError(
+            f'Dataset manifest requests taxonomy validation for '
+            f'"{profile}", but execution.knowledge_dir is not configured.'
+        )
     if len(species_mapping) != num_cls:
         raise ValueError(
             f'Taxonomy declares {len(species_mapping)} classes, but the label '
@@ -123,14 +135,18 @@ def validate_specs(
 # ----- private helpers
 def _resolve_taxonomy_metadata(
     profile: str,
-    root: pathlib.Path = c.KNOWLEDGE_ROOT,
+    root: pathlib.Path | str | None = None,
 ) -> dict[str, knowledge.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
-    candidate_paths = [
-        pathlib.Path(root) / 'embeddings' / profile / 'species_metadata.json',
+    candidate_paths: list[pathlib.Path] = []
+    if root is not None:
+        candidate_paths.append(
+            pathlib.Path(root) / 'embeddings' / profile / 'species_metadata.json'
+        )
+    candidate_paths.extend([
         pathlib.Path(profile) / 'species_metadata.json',
         pathlib.Path(profile),
-    ]
+    ])
     meta_path: pathlib.Path | None = None
     for p in candidate_paths:
         if p.is_file():
@@ -147,9 +163,8 @@ def _resolve_taxonomy_metadata(
             f'Available profiles: [{avail_str}].'
         )
 
-    meta: knowledge.SpeciesEmbeddingsMetadata
-    with open(meta_path, 'r', encoding='utf-8') as f:
-        meta = json.load(f)
+    ctrl = SpeciesMetaCtrl.load_json_strict(meta_path)
+    meta = ctrl.fetch()
 
     classes_meta = meta.get('classes', [])
     if not classes_meta:

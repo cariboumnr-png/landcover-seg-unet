@@ -28,7 +28,6 @@ import pathlib
 # third-party imports
 import torch
 # local imports
-import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.knowledge as knowledge
 
@@ -37,7 +36,7 @@ MetaController = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata]
 
 def resolve_similarity_matrix(
     profile: str,
-    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
+    knowledge_root: pathlib.Path | str | None = None,
 ) -> torch.Tensor:
     '''
     Resolve and load precomputed species similarity matrix for a profile.
@@ -50,11 +49,16 @@ def resolve_similarity_matrix(
         PyTorch tensor [N, N] containing pairwise cosine similarities.
 
     Raises:
-        FileNotFoundError: If the similarity matrix artifact is missing.
+        FileNotFoundError: If knowledge_root is None or artifact missing.
         artifacts.ArtifactError: If hash validation fails or the file
             is corrupted.
     '''
-    kp = artifacts.KnowledgePaths(root=knowledge_root)
+    if knowledge_root is None:
+        raise FileNotFoundError(
+            f'Knowledge root not configured; cannot resolve matrix for '
+            f'"{profile}"'
+        )
+    kp = artifacts.KnowledgePaths(root=pathlib.Path(knowledge_root))
     matrix_path = kp.similarity_matrix_fpath(profile)
     ctrl = artifacts.Controller[torch.Tensor].load_pt_strict(matrix_path)
     tensor = ctrl.fetch()
@@ -63,7 +67,7 @@ def resolve_similarity_matrix(
 
 def resolve_profile_metadata(
     profile: str,
-    knowledge_root: pathlib.Path = c.KNOWLEDGE_ROOT,
+    knowledge_root: pathlib.Path | str | None = None,
 ) -> knowledge.SpeciesEmbeddingsMetadata:
     '''
     Resolve and load species embeddings metadata for a profile.
@@ -76,11 +80,16 @@ def resolve_profile_metadata(
         Metadata dictionary including class codes, names, and dimensions.
 
     Raises:
-        FileNotFoundError: If the metadata artifact is missing.
+        FileNotFoundError: If knowledge_root is None or artifact missing.
         artifacts.ArtifactError: If hash validation fails or the file
             is corrupted.
     '''
-    kp = artifacts.KnowledgePaths(root=knowledge_root)
+    if knowledge_root is None:
+        raise FileNotFoundError(
+            f'Knowledge root not configured; cannot resolve metadata for '
+            f'"{profile}"'
+        )
+    kp = artifacts.KnowledgePaths(root=pathlib.Path(knowledge_root))
     meta_path = kp.metadata_fpath(profile)
     ctrl = MetaController.load_json_strict(meta_path)
     meta = ctrl.fetch()
