@@ -29,7 +29,7 @@ import pathlib
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.harmonize.taxonomy.taxonomy as taxonomy
+import landseg.geopipe.harmonize.manifest.taxonomy as taxonomy
 
 
 # ----- `get_available_profiles` tests

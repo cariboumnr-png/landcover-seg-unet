@@ -37,11 +37,11 @@ import typing
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest.schema as schema
-import landseg.geopipe.harmonize.taxonomy as taxonomy
+import landseg.geopipe.harmonize.manifest.taxonomy as taxonomy
 
 
 # ----- public classes
-class ManifestEntryNormalizer:
+class ManifestEntryNormalizer: # TODO this class needs to know knowledge base path
     '''
     Normalize and validate a single dataset manifest entry.
 

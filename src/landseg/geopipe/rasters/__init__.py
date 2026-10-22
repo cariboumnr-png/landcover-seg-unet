@@ -25,12 +25,13 @@ Top-level namespace for `landseg.geopipe.harmonize.rasters`.
 Exposes raster warping, stacking, masking, and metadata manipulation APIs.
 
 Public APIs:
-    - 'add_band_description_to_vrt': Add band description labels to VRT.
-    - 'add_tag_to_vrt': Add metadata tags to a VRT raster file.
+    - `add_band_description_to_vrt`: Add band description labels to VRT.
+    - `add_tag_to_vrt`: Add metadata tags to a VRT raster file.
     - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
-    - 'resolve_resampling_algorithm': Resolve rasterio resampling enum.
+    - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
+    - `stack_rasters`: Stack spatially aligned rasters into a VRT.
     - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
-    - 'write_warped_vrt': Write a virtual warped raster (VRT) to disk.
+    - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
 
 # standard imports
@@ -45,6 +46,7 @@ __all__ = [
     'add_tag_to_vrt',
     'build_vrt_mosaic',
     'resolve_resampling_algorithm',
+    'stack_rasters',
     'unify_nodata_mask',
     'write_warped_vrt',
 ]
@@ -57,6 +59,9 @@ if typing.TYPE_CHECKING:
     )
     from .mosaic import (
         build_vrt_mosaic
+    )
+    from .stack import (
+        stack_rasters
     )
     from .vrt import(
         add_tag_to_vrt,
@@ -79,6 +84,12 @@ def __getattr__(name: str):
         'build_vrt_mosaic'
     }:
         obj = importlib.import_module('.mosaic', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'stack_rasters'
+    }:
+        obj = importlib.import_module('.stack', __package__)
         return getattr(obj, name)
 
     if name in {
