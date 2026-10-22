@@ -36,14 +36,13 @@ import rasterio.enums
 import rasterio.transform
 # local imports
 import landseg.geopipe.harmonize.manifest as manifest
-import landseg.geopipe.harmonize.rasters.stack as stack
-import landseg.geopipe.harmonize.rasters.warp as warp
-import landseg.geopipe.harmonize.rasters.vrt as vrt
+import landseg.geopipe.harmonize.processor.composition as composition
+import landseg.geopipe.rasters as rasters
 
 
 # ----- public dataclasses
 @dataclasses.dataclass
-class ProcessedRasters:
+class HarmonizedRasters:
     '''Container for processed raster paths dictionaries.'''
     provenance: dict[str, pathlib.Path] = dataclasses.field(default_factory=dict)
     harmonized: dict[str, pathlib.Path] = dataclasses.field(default_factory=dict)
@@ -61,7 +60,7 @@ class _ParsedManifestEntry:
 
 
 # ----- public functions
-def raster_processor(  # pylint: disable=too-many-arguments, too-many-locals
+def harmonizer(  # pylint: disable=too-many-arguments, too-many-locals
     mfst_entries: list[manifest.ManifestEntry],
     output_dir: pathlib.Path,
     *,
@@ -71,11 +70,11 @@ def raster_processor(  # pylint: disable=too-many-arguments, too-many-locals
     dst_height: int,
     categorical_resampling: str,
     continuous_resampling: str,
-) -> typing.Generator[str, None, ProcessedRasters]:
+) -> typing.Generator[str, None, HarmonizedRasters]:
     '''Harmonize all compiled raster sources onto the canonical grid.'''
     features: list[pathlib.Path] = []
     labels: list[pathlib.Path] = []
-    processed = ProcessedRasters()
+    processed = HarmonizedRasters()
 
     for mfst in mfst_entries:
 
@@ -88,12 +87,12 @@ def raster_processor(  # pylint: disable=too-many-arguments, too-many-locals
 
         yield (
             f'Harmonizing raster {parsed.file_path} -> {out_vrt} '
-            f'(resampling: {parsed.resampling_method})'
+            f'(resampling: {parsed.resampling_method.name})'
         )
 
         # warp and write
         with rasterio.open(parsed.file_path) as src:
-            warped = warp.write_warped_vrt(
+            warped = rasters.write_warped_vrt(
                 src=src,
                 output_path=out_vrt,
                 crs=dst_crs,
@@ -118,10 +117,10 @@ def raster_processor(  # pylint: disable=too-many-arguments, too-many-locals
         processed.provenance[parsed.tagged_name] = parsed.file_path.resolve()
         processed.harmonized[parsed.tagged_name] = warped.resolve()
 
-        vrt.add_band_description_to_vrt(warped, parsed.raster_band_mapping)
+        rasters.add_band_description_to_vrt(warped, parsed.raster_band_mapping)
 
     processed.finalized.update(
-        **(yield from stack.stack_rasters(features, labels, output_dir))
+        **(yield from composition.compose_rasters(features, labels, output_dir))
     )
 
     return processed
@@ -141,7 +140,7 @@ def _parse_manifest(
         tagged_name=f'{mfst['category']}_{mfst["name"]}',
         raster_type=mfst['category'],
         raster_band_mapping=mfst['band_mapping'],
-        resampling_method=warp.resolve_resampling_algorithm(resampling, is_cat)
+        resampling_method=rasters.resolve_resampling_algorithm(resampling, is_cat)
     )
 
 
@@ -155,7 +154,7 @@ def _tag_domain_metadata(
         return
 
     if 'index_base' in cat_specs:
-        vrt.add_tag_to_vrt(warped, index_base=cat_specs['index_base'])
+        rasters.add_tag_to_vrt(warped, index_base=cat_specs['index_base'])
 
 
 def _tag_feature_metadata(
@@ -165,7 +164,7 @@ def _tag_feature_metadata(
     '''Attach feature schemes metadata tags to VRT file.'''
     schemes = mfst.get('schemes')
     if schemes:
-        vrt.add_tag_to_vrt(warped, schemes={mfst['name']: schemes})
+        rasters.add_tag_to_vrt(warped, schemes={mfst['name']: schemes})
 
 
 def _tag_label_metadata(
@@ -178,7 +177,7 @@ def _tag_label_metadata(
         raise ValueError('Missing categorical specs for label raster')
 
     schemes = mfst.get('schemes')
-    vrt.add_tag_to_vrt(
+    rasters.add_tag_to_vrt(
         warped,
         index_base=cat_specs['index_base'],
         num_cls=cat_specs['num_cls'],

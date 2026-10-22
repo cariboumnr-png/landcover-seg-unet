@@ -43,8 +43,8 @@ import rasterio.enums
 import rasterio.transform
 import rasterio.warp
 # local imports
-import landseg.geopipe.harmonize.rasters.vrt as vrt
-import landseg.geopipe.harmonize.rasters.warp as warp
+import landseg.geopipe.rasters.vrt as vrt
+import landseg.geopipe.rasters.warp as warp
 
 
 # ----- private dataclasses

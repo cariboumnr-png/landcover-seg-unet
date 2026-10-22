@@ -25,8 +25,8 @@
 import numpy
 import rasterio
 # local imports
-import landseg.geopipe.harmonize.rasters.mask as mask
-import landseg.geopipe.harmonize.rasters.stack as stack
+import landseg.geopipe.rasters.mask as mask
+import landseg.geopipe.rasters.stack as stack
 
 
 # ----- `stack_rasters` tests
@@ -51,16 +51,8 @@ def test_stack_rasters(dummy_geotiff_factory, tmp_path):
         dtype=numpy.float32,
     )
 
-    feature_paths = [opt_path, dem_path]
-    gen = stack.stack_rasters(feature_paths, [], tmp_path)
-    res = {}
-    try:
-        while True:
-            next(gen)
-    except StopIteration as e:
-        res = e.value
+    out_composite = stack.stack_rasters([opt_path, dem_path], tmp_path)
 
-    out_composite = res.get('features')
     assert out_composite is not None
 
     with rasterio.open(out_composite) as dst:

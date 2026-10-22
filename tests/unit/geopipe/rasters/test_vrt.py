@@ -30,8 +30,8 @@ import rasterio
 import rasterio.crs
 import rasterio.transform
 # local imports
-import landseg.geopipe.harmonize.rasters.mask as mask
-import landseg.geopipe.harmonize.rasters.vrt as vrt
+import landseg.geopipe.rasters.mask as mask
+import landseg.geopipe.rasters.vrt as vrt
 
 
 # ----- `gdal_dtype_name` tests

@@ -26,9 +26,7 @@ Exposes raster warping, stacking, masking, and metadata manipulation APIs.
 
 Public APIs:
     - `ProcessedRasters`: Container for processed raster paths dictionaries.
-    - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
-    - `raster_processor`: Harmonize compiled raster sources onto grid.
-    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `harmonizer`: Harmonize compiled raster sources onto grid.
 '''
 
 # standard imports
@@ -38,44 +36,24 @@ import typing
 
 __all__ = [
     # classes
-    'ProcessedRasters',
+    'HarmonizedRasters',
     # functions
-    'build_vrt_mosaic',
-    'raster_processor',
-    'unify_nodata_mask',
+    'harmonizer',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .mask import (
-        unify_nodata_mask,
-    )
-    from .mosaic import (
-        build_vrt_mosaic
-    )
     from .processor import (
-        ProcessedRasters,
-        raster_processor,
+        HarmonizedRasters,
+        harmonizer,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'unify_nodata_mask'
-    }:
-        obj = importlib.import_module('.mask', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'build_vrt_mosaic'
-    }:
-        obj = importlib.import_module('.mosaic', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'ProcessedRasters',
-        'raster_processor',
+        'HarmonizedRasters',
+        'harmonizer',
     }:
         obj = importlib.import_module('.processor', __package__)
         return getattr(obj, name)
