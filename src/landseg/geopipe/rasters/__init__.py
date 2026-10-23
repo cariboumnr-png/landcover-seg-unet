@@ -41,6 +41,8 @@ import typing
 
 __all__ = [
     # types
+    'Affine',
+    'BoundingBox',
     'DatasetReader',
     'Window',
     # classes
@@ -63,6 +65,8 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from ._types import (
+        Affine,
+        BoundingBox,
         DatasetReader,
         Window,
     )
@@ -94,6 +98,8 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
+        'Affine',
+        'BoundingBox',
         'DatasetReader',
         'Window',
     }:

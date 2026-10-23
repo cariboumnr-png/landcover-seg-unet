@@ -35,11 +35,10 @@ Public APIs:
 import copy
 import dataclasses
 import pathlib
-# third-party imports
-import rasterio
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.mapper.geometry as geometry
+import landseg.geopipe.rasters as rasters
 
 
 # ----- public dataclasses
@@ -137,7 +136,7 @@ def _crop(
 
 def _get_windows(
     world_grid: geo_core.GridLayout,
-    transform: rasterio.Affine | None,
+    transform: rasters.Affine | None,
     inside_idx: list[tuple[int, int]]
 ) -> geo_core.RasterWindowDict:
     '''Return window dict for tiles inside the target area.'''

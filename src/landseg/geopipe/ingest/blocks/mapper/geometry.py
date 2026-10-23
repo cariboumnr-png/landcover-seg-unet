@@ -33,15 +33,12 @@ Public APIs:
 '''
 
 # standard imports
+import dataclasses
 import math
 import pathlib
 import typing
-# third-party imports
-import rasterio
-import rasterio.coords
 # local imports
-import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
+import landseg.geopipe.rasters as rasters
 
 
 # ----- public types
@@ -53,8 +50,18 @@ class GeometrySummary(typing.TypedDict):
     label_bbox: tuple[float, ...] | None
     same_bbox: bool | None
     inter_bbox: tuple[float, ...]
-    image_transform: rasterio.Affine
-    label_transform: rasterio.Affine | None
+    image_transform: rasters.Affine
+    label_transform: rasters.Affine | None
+
+
+# ----- private dataclasses
+@dataclasses.dataclass
+class _OverlapBoundingBox:
+    '''Container for overlapping bounding boxes.'''
+    image_bbox: rasters.BoundingBox
+    label_bbox: rasters.BoundingBox | None
+    same_bbox: bool | None
+    inter_bbox: rasters.BoundingBox
 
 
 # ----- public functions
@@ -86,39 +93,31 @@ def validate_geometry(
             If image is missing, CRSs disagree, pixel sizes differ,
             or rasters do not share overlapping spatial extent.
     '''
-    # init a meta dict
-    summary = {}
-
-    # execute pipeline
-    with geo_utils.open_rasters(image_fpath, label_fpath) as (_img, _lbl):
+    with rasters.read_rasters(image_fpath, label_fpath) as (img, lbl):
         # make sure at least image is present
-        if _img is None:
+        if img is None:
             raise ValueError('A valid image raster is required')
-        # assign raster handlers
-        img: geo_core.RasterReader = _img
-        lbl: geo_core.RasterReader | None = _lbl
-        # get transforms
-        summary['image_transform'] = img.transform
-        if lbl is not None:
-            summary['label_transform'] = lbl.transform
-        else:
-            summary['label_transform'] = None
-        # check if both rasters have the same projection system
-        summary['crs'] = _check_raster_proj(img, lbl)
-        # check if both rasters have the same squared pixels
-        summary['pixel_size'] = _check_raster_pixels(img, lbl)
+
         # get the overlapping extent from the input rasters
         bbox = _compute_overlap_extent(img, lbl)
-        summary.update(**bbox)
 
-    # return a summary
-    return typing.cast(GeometrySummary, summary)
+        summary: GeometrySummary = {
+            'crs': _check_raster_proj(img, lbl),
+            'pixel_size': _check_raster_pixels(img, lbl),
+            'image_bbox': bbox.image_bbox,
+            'label_bbox': bbox.label_bbox,
+            'same_bbox': bbox.same_bbox,
+            'inter_bbox': bbox.inter_bbox,
+            'image_transform': img.transform,
+            'label_transform': lbl.transform if lbl else None,
+        }
+    return summary
 
 
 # ----- private helpers
 def _check_raster_proj(
-    img: geo_core.RasterReader,
-    lbl: geo_core.RasterReader | None,
+    img: rasters.DatasetReader,
+    lbl: rasters.DatasetReader | None,
 ) -> str:
     '''Check if the input rasters have matching coordinate systems.'''
     # if both image and label provided
@@ -144,8 +143,8 @@ def _check_raster_proj(
 
 
 def _check_raster_pixels(
-    img: geo_core.RasterReader,
-    lbl: geo_core.RasterReader | None,
+    img: rasters.DatasetReader,
+    lbl: rasters.DatasetReader | None,
 ) -> tuple[float, float]:
     '''Check if the input rasters have matching pixel sizes.'''
     # if both image and label provided
@@ -175,9 +174,9 @@ def _check_raster_pixels(
 
 
 def _compute_overlap_extent(
-    img: geo_core.RasterReader,
-    lbl: geo_core.RasterReader | None,
-) -> dict[str, typing.Any]:
+    img: rasters.DatasetReader,
+    lbl: rasters.DatasetReader | None,
+) -> _OverlapBoundingBox:
     '''Compute overlapping spatial extent between input rasters.'''
     # if both image and label provided
     if lbl is not None:
@@ -196,21 +195,21 @@ def _compute_overlap_extent(
             raise ValueError('Input rasters must have overlapping extents')
 
         # get the overlapping extent if no error and retrun a summary
-        bb = rasterio.coords.BoundingBox(lft, btm, rgt, top)
-        return {
-            'image_bbox': b1,
-            'label_bbox': b2,
-            'same_bbox': b1 == b2,
-            'inter_bbox': bb
-        }
+        bb = rasters.BoundingBox(lft, btm, rgt, top)
+        return _OverlapBoundingBox(
+            image_bbox=b1,
+            label_bbox=b2,
+            same_bbox=b1 == b2,
+            inter_bbox=bb,
+        )
 
     # or only image provided, retrun summary from image bounds
-    return {
-        'image_bbox': img.bounds,
-        'label_bbox': None,
-        'same_bbox': None,
-        'inter_bbox': img.bounds
-    }
+    return _OverlapBoundingBox(
+        image_bbox=img.bounds,
+        label_bbox=None,
+        same_bbox=None,
+        inter_bbox=img.bounds
+    )
 
 
 def _is_close(p1: tuple[float, float], p2: tuple[float, float]) -> bool:

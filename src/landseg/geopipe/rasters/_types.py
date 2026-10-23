@@ -21,14 +21,23 @@
 
 '''`rasterio` types and aliases.'''
 
+# standard imports
 import typing
 # third-party imports
 import rasterio
+import rasterio.coords
 import rasterio.io
+import rasterio.transform
 import rasterio.windows
 
 
 # ----- typing aliases
+Affine: typing.TypeAlias = rasterio.transform.Affine
+'''Raster transform affine.'''
+
+BoundingBox: typing.TypeAlias = rasterio.coords.BoundingBox
+'''Raster bound box.'''
+
 DatasetReader: typing.TypeAlias = rasterio.io.DatasetReader
 '''Dataset reader handle for opened raster files.'''
 

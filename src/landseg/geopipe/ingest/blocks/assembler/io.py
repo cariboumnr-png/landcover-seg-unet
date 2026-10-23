@@ -38,6 +38,7 @@ Public APIs:
 '''
 
 # standard imports
+from __future__ import annotations
 import ast
 import dataclasses
 import json
@@ -45,13 +46,12 @@ import pathlib
 import typing
 import zipfile
 import zlib
-# third-party imports
-import numpy
-import rasterio
-import rasterio.errors
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
+import landseg.geopipe.rasters as rasters
+
+if typing.TYPE_CHECKING:
+    import numpy.typing
 
 
 # ----- public dataclasses
@@ -59,21 +59,21 @@ import landseg.geopipe.utils as geo_utils
 class RasterReadInput:
     '''Specifications of parameters needed to read raster windows.'''
     image_fpath: pathlib.Path
-    image_window: geo_core.RasterWindow
+    image_window: rasters.Window
     image_band_map: dict[str, int]
     image_dem_pad_px: int
     label_fpath: pathlib.Path | None
-    label_window: geo_core.RasterWindow | None
+    label_window: rasters.Window | None
     label_specs: dict[str, geo_core.CategoricalSpec] | None
 
 
 @dataclasses.dataclass(frozen=True)
 class RasterReadOutput:
     '''Container holding loaded raster data arrays and metadata.'''
-    image_array: numpy.ndarray
-    image_padded_dem: numpy.ndarray | None
+    image_array: numpy.typing.NDArray
+    image_padded_dem: numpy.typing.NDArray | None
     image_nodata: float
-    label_array: numpy.ndarray | None
+    label_array: numpy.typing.NDArray | None
     label_nodata: int | None
 
 
@@ -90,14 +90,7 @@ def read_band_map(fpath: pathlib.Path) -> dict[str, int]:
         dict[str, int]:
             Mapping from lowercase band description to zero-based index.
     '''
-    try:
-        with rasterio.open(fpath) as src:
-            descriptions = src.descriptions
-    except rasterio.errors.RasterioError:
-        return {}
-
-    if not descriptions:
-        return {}
+    descriptions = rasters.get_info(fpath).descriptions
 
     names: list[str] = []
 
@@ -132,38 +125,32 @@ def read_label_specs(
     if fpath is None:
         return {}
 
-    try:
-        with rasterio.open(fpath) as src:
-            descriptions = src.descriptions
-            common_tags = src.tags() if src.count == 1 else {}
+    raster_info = rasters.get_info(fpath)
 
-            specs = {}
+    descriptions = raster_info.descriptions
+    dataset_tags = raster_info.tags if raster_info.count == 1 else {}
+    # include dataset-level tags if raster is 1-band
 
-            for index, description in enumerate(descriptions, start=1):
-                tags = {**common_tags, **src.tags(index)}
-                # required keys
-                spec = {
-                    key: _parse_vrt_tag(tags[key])
-                    for key in ('num_cls', 'ignore_cls', 'index_base')
-                }
-                # optional keys
-                for key in ('class_name', 'color_map', 'taxonomy'):
-                    if key in tags:
-                        value = _parse_vrt_tag(tags[key])
-                        if value:
-                            spec[key] = value
+    specs = {}
 
-                name = (
-                    description.strip()
-                    if description and description.strip()
-                    else f'band_{index}'
-                )
-                specs[name] = spec
+    for i, desc in enumerate(descriptions):
+        tags = {**dataset_tags, **raster_info.band_tags[i]}
+        # required keys
+        spec = {
+            key: _parse_vrt_tag(tags[key])
+            for key in ('num_cls', 'ignore_cls', 'index_base')
+        }
+        # optional keys
+        for key in ('class_name', 'color_map', 'taxonomy'):
+            if key in tags:
+                value = _parse_vrt_tag(tags[key])
+                if value:
+                    spec[key] = value
 
-            return specs
+        name = desc.strip() if desc and desc.strip() else f'band_{i}'
+        specs[name] = spec
 
-    except rasterio.errors.RasterioError as e:
-        raise ValueError(f'Unable to read label specs from {fpath}') from e
+    return specs
 
 
 def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
@@ -178,8 +165,6 @@ def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
         dict[str, typing.Any]:
             Extracted schemes dictionary.
     '''
-    if fpath is None:
-        return {}
 
     def _merge_dict(target: dict, source: dict) -> None:
         for k, v in source.items():
@@ -188,28 +173,27 @@ def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
             else:
                 target[k] = v
 
-    try:
-        with rasterio.open(fpath) as src:
-            all_schemes: dict[str, typing.Any] = {}
-            # check dataset-level tags
-            dataset_tags = src.tags()
-            if 'schemes' in dataset_tags:
-                val = _parse_vrt_tag(dataset_tags['schemes'])
-                if isinstance(val, dict):
-                    _merge_dict(all_schemes, val)
-
-            # check per-band tags (for composite stacked VRTs)
-            for b in src.indexes:
-                band_tags = src.tags(b)
-                if 'schemes' in band_tags:
-                    val = _parse_vrt_tag(band_tags['schemes'])
-                    if isinstance(val, dict):
-                        _merge_dict(all_schemes, val)
-
-            return all_schemes
-    except (rasterio.errors.RasterioError, ValueError, SyntaxError):
+    if fpath is None:
         return {}
 
+    raster_info = rasters.get_info(fpath)
+    all_schemes: dict[str, typing.Any] = {}
+
+    # check dataset-level tags
+    dataset_tags = raster_info.tags
+    if 'schemes' in dataset_tags:
+        val = _parse_vrt_tag(dataset_tags['schemes'])
+        if isinstance(val, dict):
+            _merge_dict(all_schemes, val)
+
+    # check per-band tags (for composite stacked VRTs)
+    for band_tags in raster_info.band_tags:
+        if 'schemes' in band_tags:
+            val = _parse_vrt_tag(band_tags['schemes'])
+            if isinstance(val, dict):
+                _merge_dict(all_schemes, val)
+
+    return all_schemes
 
 def check_npz_integrity(
     coord: tuple[int, int],
@@ -249,42 +233,38 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
         RasterReadOutput:
             Container holding read arrays, padded DEM, and nodata values.
     '''
-    with geo_utils.open_rasters(
-        inputs.image_fpath, inputs.label_fpath
-    ) as (img, lbl):
+    padded_dem = None
+    lbl_arr = None
+    lbl_nodata = None
 
-        # a valid image array is required
-        assert img, f'Invalid image source: {inputs.image_fpath}'
-        if len(set(img.dtypes)) > 1:
-            bands = [
-                img.read(b, window=inputs.image_window, boundless=True).astype(
-                    numpy.float32, copy=False
-                )
-                for b in range(1, img.count + 1)
-            ]
-            img_arr = numpy.stack(bands, axis=0)
-        else:
-            img_arr = img.read(window=inputs.image_window, boundless=True)
-        image_nodata = img.nodata
+    with rasters.read_raster(inputs.image_fpath) as image_reader:
+        img_nodata = image_reader.nodata
 
-        # read padded DEM if 'dem' is in band map
-        padded_dem = None
+        img_arr = rasters.read_window(
+            image_reader,
+            inputs.image_window,
+            edge_mode='boundless',
+        ).astype('float32', copy=False)
+
         if 'dem' in inputs.image_band_map:
             dem_band = inputs.image_band_map['dem'] # 0-based
-            padded_dem = _read_w_pad(
-                img,
+            padded_dem = rasters.read_window(
+                image_reader,
                 inputs.image_window,
-                dem_band + 1, # convert to 1-based for rasterio read
-                inputs.image_dem_pad_px
-            )
+                indexes=dem_band + 1, # convert to 1-based for rasterio read
+                edge_mode='reflect',
+                padding=inputs.image_dem_pad_px,
+            ).astype('float32', copy=False)
 
-        # load label array if provided
-        lbl_arr = None
-        label_nodata = None
-        if lbl is not None and inputs.label_window is not None:
-            lbl_arr = lbl.read(window=inputs.label_window, boundless=True)
-            assert isinstance(lbl_arr, numpy.ndarray)
-            label_nodata = lbl.nodata
+
+    if inputs.label_fpath is not None and inputs.label_window is not None:
+        with rasters.read_raster(inputs.label_fpath) as label_reader:
+            lbl_nodata = label_reader.nodata
+
+            lbl_arr = rasters.read_window(
+                label_reader,
+                inputs.label_window,
+            ).astype('uint8', copy=False)
 
             if inputs.label_specs is not None:
                 expected_bands = len(inputs.label_specs)
@@ -294,13 +274,13 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
                         f'on axis 0: {lbl_arr.shape[0]} != {expected_bands}'
                     )
 
-        return RasterReadOutput(
-            image_array=img_arr,
-            image_padded_dem=padded_dem,
-            image_nodata=image_nodata,
-            label_array=lbl_arr,
-            label_nodata=label_nodata
-        )
+    return RasterReadOutput(
+        image_array=img_arr,
+        image_padded_dem=padded_dem,
+        image_nodata=img_nodata,
+        label_array=lbl_arr,
+        label_nodata=lbl_nodata
+    )
 
 
 # ----- private helpers
@@ -310,38 +290,3 @@ def _parse_vrt_tag(value: str) -> object:
         return json.loads(value)
     except json.JSONDecodeError:
         return ast.literal_eval(value)
-
-
-def _read_w_pad(
-    img: geo_core.RasterReader,
-    window: geo_core.RasterWindow,
-    dem_band: int,
-    pad: int
-) -> numpy.ndarray:
-    '''Read the DEM band around 'window' with reflection padding.'''
-    # expand window within the original raster
-    nw_x = max(window.col_off - pad, 0)
-    nw_y = max(window.row_off - pad, 0)
-    se_x = min(window.col_off + window.width + pad, img.width)
-    se_y = min(window.row_off + window.height + pad, img.height)
-    try:
-        _window = geo_core.RasterWindow(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
-    except ValueError as e:
-        raise ValueError(
-            f'Error reading DEM with pad ({pad}), padded raster window: '
-            f'{nw_x}, {nw_y}, {se_x - nw_x}, {se_y - nw_y}'
-        ) from e
-
-    # get required padding on each side - no padding if within raster bound
-    pad_top = max(0, pad - window.row_off)
-    pad_left = max(0, pad - window.col_off)
-    pad_bottom = max(0, (window.row_off + window.height + pad) - img.height)
-    pad_right = max(0, (window.col_off + window.width + pad) - img.width)
-
-    # pad the expanded array accordingly controlled by pad_width and return
-    expanded_padded = numpy.pad(
-        img.read(dem_band, window=_window),                 # array
-        ((pad_top, pad_bottom), (pad_left, pad_right)),     # pad_width
-        'reflect'                                           # mode
-    )
-    return expanded_padded
