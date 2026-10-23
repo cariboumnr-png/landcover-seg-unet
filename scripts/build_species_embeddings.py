@@ -26,6 +26,7 @@ profiles.
 
 # standard imports
 import argparse
+import pathlib
 # local imports
 import landseg.knowledge as knowledge
 
@@ -68,7 +69,7 @@ def main() -> None:
     args = parser.parse_args()
 
     knowledge.generate_embeddings_and_matrix(
-        csv_path=args.csv_path,
+        csv_path=pathlib.Path(args.csv_path),
         knowledge_root=args.knowledge_root,
         model_name=args.model_name,
         normalize=not args.no_normalize,

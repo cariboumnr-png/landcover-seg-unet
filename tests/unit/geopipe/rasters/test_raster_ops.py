@@ -51,7 +51,8 @@ def test_stack_rasters(dummy_geotiff_factory, tmp_path):
         dtype=numpy.float32,
     )
 
-    out_composite = stack.stack_rasters([opt_path, dem_path], tmp_path)
+    out_vrt = tmp_path / 'composite.vrt'
+    out_composite = stack.stack_rasters([opt_path, dem_path], out_vrt)
 
     assert out_composite is not None
 
