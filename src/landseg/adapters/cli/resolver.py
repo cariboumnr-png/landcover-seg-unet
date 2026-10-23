@@ -89,7 +89,6 @@ def resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
 
     # construct and cast config dataclass
     root = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg))
-    root.execution.cli_mode = True
 
     # validate and return
     root.validate(targets)

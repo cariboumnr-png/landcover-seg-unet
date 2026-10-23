@@ -50,11 +50,10 @@ class ExecutionContext(base.BaseConfigSection):
     verbosity: str | int | None = 'full'
     exp_root: str = './experiment'
     recipe_dir: str = './configs' # external recipe directory path override
-    knowledge_dir: str | None = None # external knowledge directory override
+    knowledge_dir: str = './knowledge' # external knowledge directory override
     dev_cfg: str | None = None # developer-only override config
     preflight_target: str | None = None
     preflight_strict_mode: bool = False
-    cli_mode: bool = False # indicates whether execution initiated via CLI
 
     @property
     def console_level(self) -> int | None:
