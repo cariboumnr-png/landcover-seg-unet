@@ -67,6 +67,23 @@ class DatasetInfo: # pylint: disable=too-many-instance-attributes
     tags: dict[str, str]
     band_tags: tuple[dict[str, str], ...]
 
+    @property
+    def band_map(self) -> dict[str, int]:
+        '''Return lower-case band-description to 0-based index mapping.'''
+        names: list[str] = []
+
+        for index, description in enumerate(self.descriptions):
+            if description and description.strip():
+                name = description.strip().lower()
+            else:
+                name = f'band_{index + 1}'
+            names.append(name)
+
+        if len(set(names)) != len(names):
+            return {}
+
+        return {name: index for index, name in enumerate(names)}
+
 
 # ----- public functions
 def get_info(source: pathlib.Path | t.DatasetReader) -> DatasetInfo:

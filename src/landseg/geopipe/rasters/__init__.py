@@ -37,6 +37,9 @@ Public APIs:
     - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
     - `get_info`: Retrieve structured dataset info from a raster.
     - `is_same_crs`: Compare two coordinate reference systems for equality.
+    - `parse_vrt_tag`: Decode serialized JSON or literal VRT tag value.
+    - `read_band_map`: Return lower-case band-description to index mapping.
+    - `read_composite_band_tags`: Collect composite per-band metadata tags.
     - `read_raster`: Context manager yielding an open dataset reader.
     - `read_rasters`: Context manager yielding multiple dataset readers.
     - `read_window`: Read array window with boundless or reflect padding.
@@ -68,6 +71,7 @@ __all__ = [
     'build_vrt_mosaic',
     'get_info',
     'is_same_crs',
+    'parse_vrt_tag',
     'read_raster',
     'read_rasters',
     'read_window',
@@ -108,6 +112,7 @@ if typing.TYPE_CHECKING:
     from .vrt import(
         add_tag_to_vrt,
         add_band_description_to_vrt,
+        parse_vrt_tag,
     )
     from .warp import (
         is_same_crs,
@@ -160,6 +165,7 @@ def __getattr__(name: str):
     if name in {
         'add_tag_to_vrt',
         'add_band_description_to_vrt',
+        'parse_vrt_tag',
     }:
         obj = importlib.import_module('.vrt', __package__)
         return getattr(obj, name)
