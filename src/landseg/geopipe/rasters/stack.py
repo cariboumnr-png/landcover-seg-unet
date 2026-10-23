@@ -57,8 +57,8 @@ def stack_rasters(
     source_paths: list[pathlib.Path],
     output_path: pathlib.Path,
     *,
-    band_tags: list[dict[str, typing.Any] | None] | None = None,
-    dataset_tags: dict[str, typing.Any] | None = None,
+    band_tags: list[dict[str, str]] | None = None,
+    dataset_tags: dict[str, str] | None = None,
 ) -> pathlib.Path:
     '''
     Stack bands from spatially aligned rasters into a VRT.
@@ -158,8 +158,8 @@ def _get_spatial_reference(source_path: pathlib.Path) -> _SpatialReference:
 
 def _validate_band_tags(
     source_paths: list[pathlib.Path],
-    band_tags: list[dict[str, typing.Any] | None] | None,
-) -> list[dict[str, typing.Any] | None]:
+    band_tags: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
     '''Return the total number of bands across all sources.'''
     total = 0
     for source_path in source_paths:
@@ -167,7 +167,7 @@ def _validate_band_tags(
             total += source.count
 
     if band_tags is None:
-        return [None] * total
+        return [{}] * total
 
     if len(band_tags) != total:
         raise ValueError(

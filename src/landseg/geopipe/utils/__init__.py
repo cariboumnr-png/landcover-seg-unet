@@ -27,7 +27,6 @@ and circular-free.
 
 Public APIs:
     - `name_xy`: Convert block name string to (x, y) coordinate tuple.
-    - `open_rasters`: Context manager yielding opened raster readers.
     - `xy_name`: Convert (x, y) coordinate tuple to block name string.
     - `check_run_collision`: Search runs manifest for matching run.
     - `compute_fingerprint`: Deterministic SHA-256 hash of payload.

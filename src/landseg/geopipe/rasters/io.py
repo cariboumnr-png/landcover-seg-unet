@@ -20,13 +20,18 @@
 # =========================================================================== #
 
 '''
-Context manager utility for opening raster datasets.
+I/O utilities for opening raster datasets and reading windowed arrays.
 
-This module provides utilities to open multiple rasterio datasets safely
-within a managed exit stack context.
+This module provides routines to inspect raster datasets, open readers
+safely within exit stack contexts, and read windowed numpy arrays with
+bounds checking and reflection padding.
 
 Public APIs:
-    - `open_rasters`: Context manager yielding opened raster readers.
+    - `DatasetInfo`: Metadata container for raster dataset properties.
+    - `get_info`: Extract comprehensive metadata container for a raster.
+    - `read_raster`: Context manager opening a single raster dataset.
+    - `read_rasters`: Context manager opening multiple raster datasets.
+    - `read_window`: Read windowed raster array with optional padding.
 '''
 
 # standard imports
