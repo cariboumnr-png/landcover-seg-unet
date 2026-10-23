@@ -37,11 +37,10 @@ Public APIs:
 import dataclasses
 import pathlib
 # third-party imports
-import rasterio
-import rasterio.transform
 import rasterio.warp
 # local imports
 import landseg.geopipe.prepare as prepare
+import landseg.geopipe.rasters as rasters
 
 
 # ----- public dataclasses
@@ -61,7 +60,7 @@ def intersect_aoi_raster(
     *,
     block_size: tuple[int, int],
     canvas_crs: str,
-    canvas_transform: rasterio.transform.Affine,
+    canvas_transform: rasters.Affine,
     min_overlap: float = 0.5,
 ) -> list[tuple[int, int]]:
     '''
@@ -105,7 +104,7 @@ def resolve_aoi_partitions(
     test_aoi: pathlib.Path | None = None,
     block_size: tuple[int, int],
     crs: str,
-    transform: rasterio.transform.Affine,
+    transform: rasters.Affine,
     min_overlap: float = 0.5,
     logger: prepare.PreparationLogger | None = None,
 ) -> AoiSplitsResult:
@@ -204,9 +203,9 @@ def _load_aoi_bounds(
     if not aoi_path.exists():
         raise FileNotFoundError(f'AOI raster file not found: {aoi_path}')
 
-    with rasterio.open(aoi_path) as src:
-        aoi_crs = src.crs.to_string() if src.crs else canvas_crs
-        left, bottom, right, top = src.bounds
+    raster_info = rasters.get_info(aoi_path)
+    aoi_crs = str(raster_info.crs) if raster_info.crs else canvas_crs
+    left, bottom, right, top = raster_info.bounds
 
     if aoi_crs != canvas_crs:
         left, bottom, right, top = rasterio.warp.transform_bounds(
@@ -219,7 +218,7 @@ def _load_aoi_bounds(
 def _check_overlap(
     row_col: tuple[int, int],
     block_size: tuple[int, int],
-    transform: rasterio.transform.Affine,
+    transform: rasters.Affine,
     aoi_bounds: tuple[float, float, float, float],
     min_overlap: float,
 ) -> bool:
