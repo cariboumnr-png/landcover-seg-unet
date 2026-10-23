@@ -124,7 +124,7 @@ def _check_raster_proj(
     if lbl is not None:
         # get projection names, raster.crs might return differently
         try:
-            crs_1 = img.crs.to_string().split('"')[1]
+            crs_1 = img.crs.to_string().split('"')[1] # TODO
             crs_2 = lbl.crs.to_string().split('"')[1]
         except IndexError:
             crs_1 = img.crs

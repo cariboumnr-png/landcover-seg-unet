@@ -43,7 +43,6 @@ __all__ = [
     'compute_fingerprint',
     'find_run_collision',
     'name_xy',
-    'open_rasters',
     'xy_name',
 ]
 
@@ -53,9 +52,6 @@ if typing.TYPE_CHECKING:
     from .coords_str import (
         name_xy,
         xy_name,
-    )
-    from .raster_context import (
-        open_rasters,
     )
     from .run_collision import (
         find_run_collision,
@@ -69,10 +65,6 @@ def __getattr__(name: str):
         'xy_name',
     }:
         obj = importlib.import_module('.coords_str', __package__)
-        return getattr(obj, name)
-
-    if name in {'open_rasters'}:
-        obj = importlib.import_module('.raster_context', __package__)
         return getattr(obj, name)
 
     if name in {
