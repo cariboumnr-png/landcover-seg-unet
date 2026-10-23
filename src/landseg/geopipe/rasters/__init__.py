@@ -40,8 +40,16 @@ import importlib
 import typing
 
 __all__ = [
+    # types
+    'DatasetReader',
+    'Window',
     # classes
+    'DatasetInfo',
     # functions
+    'get_info',
+    'read_raster',
+    'read_rasters',
+    'read_window',
     'add_band_description_to_vrt',
     'add_tag_to_vrt',
     'build_vrt_mosaic',
@@ -54,6 +62,17 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from ._types import (
+        DatasetReader,
+        Window,
+    )
+    from .io import (
+        DatasetInfo,
+        get_info,
+        read_raster,
+        read_rasters,
+        read_window,
+    )
     from .mask import (
         unify_nodata_mask,
     )
@@ -74,6 +93,23 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'DatasetReader',
+        'Window',
+    }:
+        obj = importlib.import_module('._types', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'DatasetInfo',
+        'get_info',
+        'read_raster',
+        'read_rasters',
+        'read_window',
+    }:
+        obj = importlib.import_module('.io', __package__)
+        return getattr(obj, name)
+
     if name in {
         'unify_nodata_mask'
     }:
