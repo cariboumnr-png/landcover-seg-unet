@@ -30,7 +30,6 @@ Public APIs:
 '''
 
 # standard imports
-import ast
 import pathlib
 import typing
 # local imports
@@ -75,7 +74,7 @@ def compose_rasters(
         stacked.update({'features': features_fpaths[0]})
     else:
         out_path = output_dir / 'harmonized_features_STACKED.vrt'
-        dataset_meta = _collect_feature_metadata(features_fpaths)
+        dataset_meta = _read_feature_metadata(features_fpaths)
         rasters.stack_rasters(features_fpaths, out_path, dataset_tags=dataset_meta)
         stacked.update({'features': out_path})
         yield f'Feature rasters stacked to {out_path} (n={n})'
@@ -88,7 +87,7 @@ def compose_rasters(
         stacked.update({'labels': labels_fpaths[0]})
     else:
         out_path = output_dir / 'harmonized_labels_STACKED.vrt'
-        bands_meta = _collect_label_band_metadata(labels_fpaths)
+        bands_meta = _read_label_band_metadata(labels_fpaths)
         rasters.stack_rasters(labels_fpaths, out_path, band_tags=bands_meta)
         stacked.update({'labels': out_path})
         yield f'Label rasters stacked to {out_path} (n={n})'
@@ -97,67 +96,52 @@ def compose_rasters(
 
 
 # ----- private helpers
-def _collect_feature_metadata(
-    source_paths: list[pathlib.Path]
-) -> dict[str, typing.Any]:
+def _read_feature_metadata(paths: list[pathlib.Path]) -> dict[str, typing.Any]:
     '''Collect and merge feature-scheme metadata (dataset tags).'''
     merged_schema: dict[str, typing.Any] = {}
-    for source_path in source_paths:
-        with rasters.read_raster(source_path) as source:
-            _merge_feature_schemes(merged_schema, source.tags().get('schemes'))
-    if not merged_schema:
-        return {'schemes': None}
+    for path in paths:
+        tags = rasters.get_info(path).tags
+        schemes_as_str = tags.get('schemes')
+
+        if schemes_as_str is None:
+            continue
+
+        schemes_dict = rasters.parse_vrt_tag(schemes_as_str)
+        if not isinstance(schemes_dict, dict):
+            continue
+
+        for key, val in schemes_dict.items():
+            if isinstance(val, dict):
+                target = merged_schema.setdefault(key, {})
+                for scheme_name, bands in val.items():
+                    existing = target.get(scheme_name)
+                    if existing is not None and existing != bands:
+                        raise ValueError(
+                            f'Conflicting definitions for feature scheme '
+                            f'"{scheme_name}" under raster "{key}": '
+                            f'{existing!r} != {bands!r}'
+                        )
+                    target[scheme_name] = bands
+            elif isinstance(val, list):
+                existing = merged_schema.get(key)
+                if existing is not None and existing != val:
+                    raise ValueError(
+                        f'Conflicting definitions for feature scheme "{key}": '
+                        f'{existing!r} != {val!r}'
+                    )
+                merged_schema[key] = val
+
     return {'schemes': merged_schema}
 
 
-def _collect_label_band_metadata(
-    source_paths: list[pathlib.Path],
-) -> list[dict[str, str] | None]:
+def _read_label_band_metadata(paths: list[pathlib.Path]) -> list[dict[str, str]]:
     '''Convert label dataset metadata into composite band metadata.'''
-    metadata: list[dict[str, str] | None] = []
-    for source_path in source_paths:
-        with rasters.read_raster(source_path) as source:
+    metadata: list[dict[str, str]] = []
+    for path in paths:
+        with rasters.read_raster(path) as source:
             dataset_tags = source.tags()
             for band_index in source.indexes:
                 # band's own tags take precedence over dataset-level tags.
                 tags = {**dataset_tags, **source.tags(band_index)}
-                metadata.append(tags or None)
+                metadata.append(tags)
     return metadata
-
-
-def _merge_feature_schemes(
-    merged: dict[str, typing.Any],
-    schemes_as_str: str | None,
-) -> None:
-    '''Merge feature schemes dictionary into the target schemes map.'''
-    if schemes_as_str is None:
-        return
-
-    try:
-        schemes_dict = ast.literal_eval(schemes_as_str)
-    except (ValueError, SyntaxError):
-        return
-
-    if not isinstance(schemes_dict, dict):
-        return
-
-    for key, val in schemes_dict.items():
-        if isinstance(val, dict):
-            target = merged.setdefault(key, {})
-            for scheme_name, bands in val.items():
-                existing = target.get(scheme_name)
-                if existing is not None and existing != bands:
-                    raise ValueError(
-                        f'Conflicting definitions for feature scheme '
-                        f'"{scheme_name}" under raster "{key}": '
-                        f'{existing!r} != {bands!r}'
-                    )
-                target[scheme_name] = bands
-        elif isinstance(val, list):
-            existing = merged.get(key)
-            if existing is not None and existing != val:
-                raise ValueError(
-                    f'Conflicting definitions for feature scheme "{key}": '
-                    f'{existing!r} != {val!r}'
-                )
-            merged[key] = val

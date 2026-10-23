@@ -39,9 +39,7 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import ast
 import dataclasses
-import json
 import pathlib
 import typing
 import zipfile
@@ -90,22 +88,8 @@ def read_band_map(fpath: pathlib.Path) -> dict[str, int]:
         dict[str, int]:
             Mapping from lowercase band description to zero-based index.
     '''
-    descriptions = rasters.get_info(fpath).descriptions
-
-    names: list[str] = []
-
-    for index, description in enumerate(descriptions):
-        if description and description.strip():
-            name = description.strip().lower()
-        else:
-            name = f'band_{index + 1}'
-
-        names.append(name)
-
-    if len(set(names)) != len(names):
-        return {}
-
-    return {name: index for index, name in enumerate(names)}
+    raster_info = rasters.get_info(fpath)
+    return raster_info.band_map
 
 
 def read_label_specs(
@@ -137,13 +121,13 @@ def read_label_specs(
         tags = {**dataset_tags, **raster_info.band_tags[i]}
         # required keys
         spec = {
-            key: _parse_vrt_tag(tags[key])
+            key: rasters.parse_vrt_tag(tags[key])
             for key in ('num_cls', 'ignore_cls', 'index_base')
         }
         # optional keys
         for key in ('class_name', 'color_map', 'taxonomy'):
             if key in tags:
-                value = _parse_vrt_tag(tags[key])
+                value = rasters.parse_vrt_tag(tags[key])
                 if value:
                     spec[key] = value
 
@@ -182,14 +166,14 @@ def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
     # check dataset-level tags
     dataset_tags = raster_info.tags
     if 'schemes' in dataset_tags:
-        val = _parse_vrt_tag(dataset_tags['schemes'])
+        val = rasters.parse_vrt_tag(dataset_tags['schemes'])
         if isinstance(val, dict):
             _merge_dict(all_schemes, val)
 
     # check per-band tags (for composite stacked VRTs)
     for band_tags in raster_info.band_tags:
         if 'schemes' in band_tags:
-            val = _parse_vrt_tag(band_tags['schemes'])
+            val = rasters.parse_vrt_tag(band_tags['schemes'])
             if isinstance(val, dict):
                 _merge_dict(all_schemes, val)
 
@@ -281,12 +265,3 @@ def read_block_raster_data(inputs: RasterReadInput) -> RasterReadOutput:
         label_array=lbl_arr,
         label_nodata=lbl_nodata
     )
-
-
-# ----- private helpers
-def _parse_vrt_tag(value: str) -> object:
-    '''Decode GDAL metadata serialized as JSON or a Python literal.'''
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError:
-        return ast.literal_eval(value)

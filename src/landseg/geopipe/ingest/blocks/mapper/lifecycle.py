@@ -110,9 +110,7 @@ def _canonicalize(mapped_windows: geo_core.RasterWindowDict) -> list[list[int]]:
     '''Create a canonical serialization for mapped windows.'''
     canon: list[list[int]] = []
     for k, w in sorted(mapped_windows.items()):
-        canon.append(
-            [k[0], k[1], w.col_off, w.row_off, w.width, w.height]
-        )
+        canon.append([k[0], k[1], w.col_off, w.row_off, w.width, w.height])
     return canon
 
 
