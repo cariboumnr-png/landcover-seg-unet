@@ -28,7 +28,7 @@ import rasterio.crs
 import rasterio.enums
 import rasterio.transform
 # local imports
-import landseg.geopipe.harmonize.rasters.warp as warp
+import landseg.geopipe.rasters.warp as warp
 
 
 # ----- `resolve_resampling_algorithm` tests

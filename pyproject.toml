@@ -31,7 +31,7 @@ where = ["src"]
 include = ["landseg*"]
 
 [tool.setuptools.package-data]
-landseg = ["configs/**/*.yaml", "configs/*.yaml"]
+landseg = ["configs/**/*.yaml", "configs/*.yaml", "py.typed"]
 
 [project.optional-dependencies]
 test = [

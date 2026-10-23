@@ -144,10 +144,7 @@ def test_data_harmonize_pipeline_failure(tmp_path, mocker):
     )
 
     pipeline = pipelines.DataHarmonization(config)
-    with pytest.raises(
-        RuntimeError,
-        match='Harmonization failed unexpectedly'
-    ):
+    with pytest.raises(RuntimeError, match='Harmonization failed unexpectedly'):
         pipeline.run()
 
     report_fpath = harm_dpath / 'run_0001' / 'report.json'

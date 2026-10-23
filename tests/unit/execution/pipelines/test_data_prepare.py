@@ -52,10 +52,7 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
     pipeline = pipelines.DataPreparation(config)
-    with pytest.raises(
-        RuntimeError,
-        match='Upstream pipeline "data-ingest"'
-    ):
+    with pytest.raises(RuntimeError, match='Upstream pipeline "data-ingest"'):
         pipeline.run()
 
 

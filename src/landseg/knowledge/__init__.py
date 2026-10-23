@@ -36,6 +36,7 @@ __all__ = [
     'generate_embeddings_and_matrix',
     'resolve_profile_metadata',
     'resolve_similarity_matrix',
+    'validate_specs',
     # typing
     'SpeciesEmbeddingsMetadata',
     'SpeciesEntry',
@@ -53,6 +54,9 @@ if typing.TYPE_CHECKING:
         resolve_profile_metadata,
         resolve_similarity_matrix,
     )
+    from .taxonomy import (
+        validate_specs,
+    )
 
 
 def __getattr__(name: str):
@@ -69,6 +73,12 @@ def __getattr__(name: str):
         'resolve_similarity_matrix',
     }:
         obj = importlib.import_module('.resolver', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'validate_specs',
+    }:
+        obj = importlib.import_module('.taxonomy', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

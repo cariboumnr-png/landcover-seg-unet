@@ -1,5 +1,5 @@
 # =========================================================================== #
-#            Copyright © His Majesty the King in right of Ontario,            #
+#           Copyright © His Majesty the King in right of Ontario,           #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -20,20 +20,42 @@
 # =========================================================================== #
 
 '''
-Multi-batch ingestion workflow configurator.
+Top-level namespace for `landseg.geopipe.harmonize.processor`.
+
+Exposes raster harmonization orchestration onto the canonical world grid.
 
 Public APIs:
-    - `BatchIngestConfigurator`: Configure multi-batch ingestion workflows.
+    - `HarmonizedRasters`: Container for processed raster paths dictionaries.
+    - `harmonizer`: Harmonize compiled raster sources onto grid.
 '''
 
-# local imports
-import landseg.adapters.api.configurators.data_ingest as data_ingest
+# standard imports
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # classes
+    'HarmonizedRasters',
+    # functions
+    'harmonizer',
+]
 
 
-# ----- public classes
-class BatchIngestConfigurator(data_ingest.DataIngestionConfigurator):
-    '''Configure multi-batch data ingestion workflow.'''
+# for static check
+if typing.TYPE_CHECKING:
+    from .processor import (
+        HarmonizedRasters,
+        harmonizer,
+    )
 
-    def __init__(self, experiment_root: str):
-        super().__init__(experiment_root)
-        self._cfg.command = 'batch-ingest'
+
+def __getattr__(name: str):
+    if name in {
+        'HarmonizedRasters',
+        'harmonizer',
+    }:
+        obj = importlib.import_module('.processor', __package__)
+        return getattr(obj, name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

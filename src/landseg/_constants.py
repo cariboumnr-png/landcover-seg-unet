@@ -40,10 +40,6 @@ def _get_device_name() -> str:
 # ----- constants
 PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
 
-REPO_ROOT = PACKAGE_ROOT.parents[1]
-
-KNOWLEDGE_ROOT = REPO_ROOT / 'knowledge'
-
 DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 DEVICE_NAME: str = _get_device_name()
@@ -61,12 +57,28 @@ COMMANDS = [
     'diagnose-overfit',
     'model-evaluate',
     'model-train',
-    'batch-ingest',
     'e2e-intake',
     'e2e-experiment',
-    'end-to-end-intake',
-    'end-to-end-experiment',
     'preflight',
     'study-analysis',
     'study-sweep'
 ]
+
+SECTION_RECIPES = [
+    'world-grid',
+    'data-harmonize',
+    'data-ingest',
+    'data-prepare',
+    'diagnose-overfit',
+    'model-evaluate',
+    'model-train',
+    'study-analysis',
+    'study-sweep'
+]
+
+E2E_RECIPES = [
+    'e2e-intake',
+    'e2e-experiment',
+]
+
+RECIPES = SECTION_RECIPES + E2E_RECIPES

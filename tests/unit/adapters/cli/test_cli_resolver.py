@@ -50,31 +50,19 @@ def test_resolve_configs_base(tmp_path):
 
     cfg_dict = omegaconf.OmegaConf.create({
         'data': {
-            'harmonization': {
-                'dataset_manifest': str(cfg_json),
-            },
-            'world_grid': {
-                'mode': 'ref',
-                'ref_fpath': str(dev_img),
-            },
+            'harmonization': {'dataset_manifest': str(cfg_json)},
+            'world_grid': {'mode': 'ref', 'ref_fpath': str(dev_img)},
         },
 
         'session': {
             'orchestration': {
-                'curriculum': {
-                    'single': {
-                        'phases': [{'num_epochs': 5}],
-                    },
-                },
+                'curriculum': {'single': {'phases': [{'num_epochs': 5}]}},
             },
         },
     })
 
-    root = resolver_mod.resolve_configs(
-        config=cfg_dict,
-    )
+    root = resolver_mod.resolve_configs(config=cfg_dict)
 
-    assert root.execution.cli_mode is True
     assert root.session.orchestration.single_phase.num_epochs == 5
 
 def test_resolve_configs_overfit_recipe_applied():
@@ -83,13 +71,9 @@ def test_resolve_configs_overfit_recipe_applied():
     When: Calling `resolve_configs` with task command.
     Then: Automatically discover and apply the overfit recipe overrides.
     '''
-    cfg_dict = omegaconf.OmegaConf.create({
-        'command': 'diagnose-overfit',
-    })
+    cfg_dict = omegaconf.OmegaConf.create({'command': 'diagnose-overfit'})
 
-    root = resolver_mod.resolve_configs(
-        config=cfg_dict,
-    )
+    root = resolver_mod.resolve_configs(config=cfg_dict)
 
     assert root.command == 'diagnose-overfit'
     assert root.session.engine_exec.use_amp is False
@@ -103,13 +87,9 @@ def test_resolve_configs_command_recipe_applied():
     When: Calling `resolve_configs` with command.
     Then: Load configs directly from `data_harmonize.yaml`.
     '''
-    cfg_dict = omegaconf.OmegaConf.create({
-        'command': 'data-harmonize',
-    })
+    cfg_dict = omegaconf.OmegaConf.create({'command': 'data-harmonize'})
 
-    root = resolver_mod.resolve_configs(
-        config=cfg_dict,
-    )
+    root = resolver_mod.resolve_configs(config=cfg_dict)
 
     assert root.command == 'data-harmonize'
     assert root.data.world_grid.output_dpath == (
@@ -130,28 +110,24 @@ def test_resolve_configs_missing_recipe():
         `use_additional_settings=True`.
     Then: Raise a FileNotFoundError indicating missing tracked recipe.
     '''
-    cfg_dict = omegaconf.OmegaConf.create({
-        'command': 'non-existent-cmd',
-    })
+    cfg_dict = omegaconf.OmegaConf.create({'command': 'non-existent-cmd'})
 
     with pytest.raises(
         FileNotFoundError, match='Tracked recipe not found for command'
     ):
-        resolver_mod.resolve_configs(
-            config=cfg_dict,
-        )
+        resolver_mod.resolve_configs(config=cfg_dict)
 
 
-def test_resolve_configs_custom_recipe_fpath(tmp_path):
+def test_resolve_configs_custom_recipe_dir(tmp_path):
     '''
-    Given: A custom recipe file path passed via `execution.recipe_fpath`.
-    When: Calling `resolve_configs` with the custom recipe path.
+    Given: A custom recipe directory passed via `execution.recipe_dir`.
+    When: Calling `resolve_configs` with the custom recipe directory.
     Then: Load overrides from custom recipe instead of default.
     '''
     mock_ref = tmp_path / 'mock_ref.tif'
     mock_ref.write_text('dummy')
 
-    custom_recipe = tmp_path / 'custom_grid.yaml'
+    custom_recipe = tmp_path / 'world_grid.yaml'
     custom_recipe.write_text(
         'data:\n'
         '  world_grid:\n'
@@ -162,9 +138,7 @@ def test_resolve_configs_custom_recipe_fpath(tmp_path):
 
     cfg_dict = omegaconf.OmegaConf.create({
         'command': 'world-grid',
-        'execution': {
-            'recipe_fpath': str(custom_recipe),
-        },
+        'execution': {'recipe_dir': str(tmp_path)},
     })
 
     root = resolver_mod.resolve_configs(config=cfg_dict)
@@ -173,21 +147,19 @@ def test_resolve_configs_custom_recipe_fpath(tmp_path):
     assert root.data.world_grid.tile_stride == [256, 256]
 
 
-def test_resolve_configs_custom_recipe_fpath_missing():
+def test_resolve_configs_custom_recipe_dir_missing(tmp_path):
     '''
-    Given: An `execution.recipe_fpath` pointing to a missing file.
+    Given: An `execution.recipe_dir` missing the required recipe file.
     When: Calling `resolve_configs`.
-    Then: Raise FileNotFoundError indicating specified recipe is missing.
+    Then: Raise FileNotFoundError indicating recipe is missing.
     '''
     cfg_dict = omegaconf.OmegaConf.create({
         'command': 'world-grid',
-        'execution': {
-            'recipe_fpath': './non_existent_recipe.yaml',
-        },
+        'execution': {'recipe_dir': str(tmp_path / 'non_existent_dir')},
     })
 
     with pytest.raises(
-        FileNotFoundError, match='Specified recipe config not found'
+        FileNotFoundError, match='Tracked recipe not found for command'
     ):
         resolver_mod.resolve_configs(config=cfg_dict)
 
@@ -202,7 +174,6 @@ def test_resolve_configs_custom_recipe_fpath_missing():
         'diagnose-overfit',
         'model-evaluate',
         'model-train',
-        'batch-ingest',
         'study-analysis',
         'study-sweep',
         'e2e-intake',
@@ -226,9 +197,7 @@ def test_all_tracked_recipes_resolve_and_validate(cmd: str):
         cfg_dict = omegaconf.OmegaConf.create({'command': cmd})
         root = resolver_mod.resolve_configs(config=cfg_dict)
 
-        assert root.execution.cli_mode is True
         assert root.command == cmd
     finally:
         if created and ckpt_file.exists():
             ckpt_file.unlink()
-

@@ -83,7 +83,7 @@ def run_preflight(
             new `RootConfig` instance.
         target:
             Optional pipeline or workflow target name (e.g.,
-            `'model-train'`, `'batch-ingest'`, or `'all'`).
+            `'model-train'`, `'data-ingest'`, or `'all'`).
         strict:
             If specified, overrides
             `config.execution.preflight_strict_mode`.

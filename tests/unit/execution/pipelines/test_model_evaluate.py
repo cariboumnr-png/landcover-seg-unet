@@ -103,10 +103,7 @@ def test_evaluate_validate_missing_prep_report(tmp_path):
         omegaconf.OmegaConf.to_object(schema)
     )
     pipeline = eval_pipeline.ModelEvaluation(config)
-    with pytest.raises(
-        RuntimeError,
-        match='Upstream pipeline "data-prepare"'
-    ):
+    with pytest.raises(RuntimeError, match='Upstream pipeline "data-prepare"'):
         pipeline._validate()
 
 

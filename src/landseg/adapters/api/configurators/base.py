@@ -59,7 +59,7 @@ class BaseConfigurator:
                 self._cfg.data.world_grid.validate()
             case 'data-harmonize':
                 self._cfg.data.harmonization.validate()
-            case 'data-ingest' | 'batch-ingest':
+            case 'data-ingest':
                 self._cfg.data.ingestion.validate()
             case 'data-prepare':
                 self._cfg.data.preparation.validate()
@@ -69,7 +69,8 @@ class BaseConfigurator:
             case (
                 'model-train' |
                 'diagnose-overfit' |
-                'study-sweep' | 'study-analysis'
+                'study-sweep' |
+                'study-analysis'
             ):
                 self._cfg.models.validate()
                 self._cfg.session.validate()

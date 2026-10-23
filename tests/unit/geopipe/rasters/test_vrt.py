@@ -30,8 +30,8 @@ import rasterio
 import rasterio.crs
 import rasterio.transform
 # local imports
-import landseg.geopipe.harmonize.rasters.mask as mask
-import landseg.geopipe.harmonize.rasters.vrt as vrt
+import landseg.geopipe.rasters.mask as mask
+import landseg.geopipe.rasters.vrt as vrt
 
 
 # ----- `gdal_dtype_name` tests
@@ -146,12 +146,8 @@ def test_vrt_metadata_and_descriptions(dummy_geotiff_factory, tmp_path):
     vrt_path = tmp_path / 'test_meta.vrt'
     mask.unify_nodata_mask(comp_path, vrt_path)
 
-    vrt.add_band_description_to_vrt(
-        vrt_path, {1: 'mask_channel'}
-    )
-    vrt.add_tag_to_vrt(
-        vrt_path, sensor='sentinel2', processed='true'
-    )
+    vrt.add_band_description_to_vrt(vrt_path, {1: 'mask_channel'})
+    vrt.add_tag_to_vrt(vrt_path, sensor='sentinel2', processed='true')
     # verify empty tags call returns without modification
     vrt.add_tag_to_vrt(vrt_path, empty_val=None)
 
@@ -162,6 +158,4 @@ def test_vrt_metadata_and_descriptions(dummy_geotiff_factory, tmp_path):
         assert tags['processed'] == 'true'
 
     with pytest.raises(ValueError, match='Expected 1 band descriptions'):
-        vrt.add_band_description_to_vrt(
-            vrt_path, {1: 'b1', 2: 'b2'}
-        )
+        vrt.add_band_description_to_vrt(vrt_path, {1: 'b1', 2: 'b2'})

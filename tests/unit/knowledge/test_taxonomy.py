@@ -29,29 +29,39 @@ import pathlib
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.harmonize.taxonomy.taxonomy as taxonomy
+import landseg.knowledge.taxonomy as taxonomy
 
 
-# ----- `get_available_profiles` tests
-def test_get_available_profiles_finds_registered_profiles():
+# ----- `_get_profiles` tests
+def test_get_profiles_finds_registered_profiles():
     '''
     Given: The canonical knowledge base directory.
-    When: `get_available_profiles` is called.
+    When: `_get_profiles` is called.
     Then: Return list containing registered profiles.
     '''
-    profiles = taxonomy.get_profiles(pathlib.Path('knowledge'))
+    profiles = taxonomy._get_profiles(pathlib.Path('knowledge'))
     assert 'ontario_tree_species_grouped_profiles' in profiles
     assert 'ontario_tree_species_profiles' in profiles
 
 
-def test_get_available_profiles_nonexistent_dir(tmp_path):
+def test_get_profiles_nonexistent_dir(tmp_path):
     '''
     Given: A non-existent root path.
-    When: `get_available_profiles` is called.
+    When: `_get_profiles` is called.
     Then: Return an empty list without raising.
     '''
     empty_root = tmp_path / 'nonexistent'
-    profiles = taxonomy.get_profiles(empty_root)
+    profiles = taxonomy._get_profiles(empty_root)
+    assert profiles == []
+
+
+def test_get_profiles_none_dir():
+    '''
+    Given: None as knowledge_root.
+    When: `_get_profiles` is called.
+    Then: Return an empty list without raising.
+    '''
+    profiles = taxonomy._get_profiles(None)
     assert profiles == []
 
 
@@ -132,13 +142,28 @@ def test_validate_specs_count_mismatch():
     When: `validate_specs` is called.
     Then: Raise ValueError with count mismatch explanation.
     '''
-    species_mapping = {
-        '1': 'SB_BLACK_SPRUCE',
-    }
+    species_mapping = {'1': 'SB_BLACK_SPRUCE'}
     with pytest.raises(ValueError, match='Taxonomy declares 1 classes'):
         taxonomy.validate_specs(
             'ontario_tree_species_grouped_profiles',
             species_mapping,
             num_cls=2,
             knowledge_root=pathlib.Path('knowledge'),
+        )
+
+
+def test_validate_specs_none_knowledge_root():
+    '''
+    Given: No knowledge_root provided.
+    When: `validate_specs` is called.
+    Then: Raise ValueError explaining knowledge_dir is not configured.
+    '''
+    with pytest.raises(
+        ValueError, match='execution.knowledge_dir is not configured'
+    ):
+        taxonomy.validate_specs(
+            'ontario_tree_species_grouped_profiles',
+            {'1': 'SB_BLACK_SPRUCE'},
+            num_cls=1,
+            knowledge_root=None,
         )

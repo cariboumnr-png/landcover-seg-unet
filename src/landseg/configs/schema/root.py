@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=too-many-branches
+
 '''
 This module mirrors the Hydra/YAML config tree using Python dataclasses,
 suitable for OmegaConf structured configs.
@@ -47,11 +49,11 @@ class ExecutionContext(base.BaseConfigSection):
     '''Mutable execution context.'''
     verbosity: str | int | None = 'full'
     exp_root: str = './experiment'
+    recipe_dir: str = './configs' # external recipe directory path override
+    knowledge_dir: str = './knowledge' # external knowledge directory override
+    dev_cfg: str | None = None # developer-only override config
     preflight_target: str | None = None
     preflight_strict_mode: bool = False
-    dev_cfg: str | None = None # developer-only override config
-    recipe_fpath: str | None = None # external recipe file path override
-    cli_mode: bool = False # indicates whether execution initiated via CLI
 
     @property
     def console_level(self) -> int | None:
@@ -76,46 +78,76 @@ class RootConfig(base.BaseConfigSection):
     study: StudyConfig = field(default_factory=StudyConfig)
     command: str = 'default'
 
-    def validate(self, command: str | None = None) -> None:
+    def validate(self, command: str | list[str] | None = None) -> None:
         '''Validate the entire configuration structure.'''
-        command = self.command if command is None else command
-        try:
-            self.require_type_range(command, 'command', str, c.COMMANDS)
-        except ValueError as e:
-            raise base.ConfigValidationError(
-                f'Failed to validate command: {command}'
-            ) from e
-        match command:
-            case 'default' | 'preflight':
-                pass
-            case 'world-grid':
-                self.data.world_grid.validate()
-            case 'data-harmonize':
-                self.data.harmonization.validate()
-            case 'data-ingest' | 'batch-ingest':
-                self.data.ingestion.validate()
-            case 'data-prepare':
-                self.data.preparation.validate()
-            case 'model-train':
-                self.models.validate()
-                self.session.validate(mode='train')
-            case 'diagnose-overfit':
-                self.models.validate()
-                self.session.dataloader.validate()
-                self.session.engine.validate()
-            case 'model-evaluate':
-                self.models.validate()
-                self.session.validate(mode='evaluate')
-            case 'study-sweep':
-                self.models.validate()
-                self.session.validate(mode='train')
-                self.study.validate()
-            case 'study-analysis':
-                self.study.sweep.validate()
-            case 'e2e-intake' | 'end-to-end-intake':
-                self.data.harmonization.validate()
-                self.data.ingestion.validate()
-            case 'e2e-experiment' | 'end-to-end-experiment':
-                self.data.validate()
-                self.models.validate()
-                self.session.validate(mode='train')
+        to_validate = self.command if command is None else command
+        need_to_validate = self.commands_to_validate(
+            to_validate,
+            self.execution.preflight_target
+        )
+
+        for cmd in need_to_validate:
+            try:
+                self.require_type_range(cmd, 'command', str, c.COMMANDS)
+            except Exception as e:
+                raise base.ConfigValidationError from e
+
+            match cmd:
+                case 'world-grid':
+                    self.data.world_grid.validate()
+                case 'data-harmonize':
+                    self.data.harmonization.validate()
+                case 'data-ingest':
+                    self.data.ingestion.validate()
+                case 'data-prepare':
+                    self.data.preparation.validate()
+                case 'model-train':
+                    self.models.validate()
+                    self.session.validate(mode='train')
+                case 'diagnose-overfit':
+                    self.models.validate()
+                    self.session.dataloader.validate()
+                    self.session.engine.validate()
+                case 'model-evaluate':
+                    self.models.validate()
+                    self.session.validate(mode='evaluate')
+                case 'study-sweep':
+                    self.models.validate()
+                    self.session.validate(mode='train')
+                    self.study.validate()
+                case 'study-analysis':
+                    self.study.sweep.validate()
+                case 'e2e-intake':
+                    self.data.harmonization.validate()
+                    self.data.ingestion.validate()
+                case 'e2e-experiment':
+                    self.data.validate()
+                    self.models.validate()
+                    self.session.validate(mode='train')
+
+    @staticmethod
+    def commands_to_validate(
+        command: str | list[str] | None,
+        preflight_target: str | None,
+    ) -> list[str]:
+        '''Return a list of commands to be validated.'''
+        if not command or command == 'default':
+            return []
+
+        if isinstance(command, list):
+            return command
+
+        if command == 'preflight':
+            target = preflight_target
+            if target is None or target == 'all':
+                targets = list(c.SECTION_RECIPES) # validate all sections
+            else:
+                if target not in c.SECTION_RECIPES:
+                    raise KeyError(
+                        f'Target "{target}" not supported for preflight; '
+                        f'allowed: {c.SECTION_RECIPES}'
+                    )
+                targets = [target] # only validate select section
+            return targets
+
+        return [command]

@@ -49,7 +49,7 @@ from __future__ import annotations
 import typing
 
 # ----- public types
-CollisionPolicyType = typing.Literal['skip', 'overwrite', 'error']
+CollisionPolicyType = typing.Literal['skipped', 'overwritten', 'error']
 StatusLiteral = typing.Literal['SUCCESS', 'FAILED', 'SKIPPED']
 
 

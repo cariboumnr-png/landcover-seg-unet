@@ -57,10 +57,7 @@ def test_train_validate_missing_preparation_report(tmp_path):
         omegaconf.OmegaConf.to_object(schema)
     )
     pipeline = train_pipeline.ModelTraining(config)
-    with pytest.raises(
-        RuntimeError,
-        match='Upstream pipeline "data-prepare"'
-    ):
+    with pytest.raises(RuntimeError, match='Upstream pipeline "data-prepare"'):
         pipeline.run()
 
 

@@ -203,9 +203,7 @@ def test_build_data_block_label_canonicalize_zero_based_index():
     Then: Shift base layer to canonical 1-based indexing (1, 2, 3, 4)
         and map names correctly.
     '''
-    zero_based_array = numpy.repeat([0, 1, 2, 3], 16384).reshape(
-        (1, 256, 256)
-    )
+    zero_based_array = numpy.repeat([0, 1, 2, 3], 16384).reshape((1, 256, 256))
     zero_based_specs: dict[str, geo_core.CategoricalSpec] = {
         'base': {
             'num_cls': 4,

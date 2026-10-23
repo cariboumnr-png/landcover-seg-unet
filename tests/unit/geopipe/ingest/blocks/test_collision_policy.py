@@ -54,10 +54,7 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    inputs1 = blocks.BlockBuildingInputs(
-        image_fpath=img,
-        label_fpath=lbl,
-    )
+    inputs1 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config1 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -98,10 +95,7 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    inputs2 = blocks.BlockBuildingInputs(
-        image_fpath=img,
-        label_fpath=lbl,
-    )
+    inputs2 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config2 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -171,10 +165,7 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    inputs1 = blocks.BlockBuildingInputs(
-        image_fpath=img,
-        label_fpath=lbl,
-    )
+    inputs1 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config1 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -205,10 +196,7 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    inputs2 = blocks.BlockBuildingInputs(
-        image_fpath=img,
-        label_fpath=lbl,
-    )
+    inputs2 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config2 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -366,9 +354,7 @@ def _create_test_setup(tmp_path, dummy_geotiff_factory):
     )
     with rasterio.open(lbl, 'r+') as dataset:
         dataset.set_band_description(1, 'land_cover')
-        dataset.update_tags(
-            1, num_cls=2, ignore_cls='[255]', index_base=1
-        )
+        dataset.update_tags(1, num_cls=2, ignore_cls='[255]', index_base=1)
 
     world_grid = grid_builder.build_grid(
         mode='ref',

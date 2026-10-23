@@ -19,7 +19,9 @@ command: default
 # execution options
 execution:
   verbosity: select # 'full', 'select', 'silent'
-  exp_root: ./experiment
+  exp_root: ${oc.env:LANDSEG_EXPERIMENT_ROOT, './experiment'}
+  recipe_dir: ${oc.env:LANDSEG_RECIPE_DIR, './configs'}
+  knowledge_dir: ${oc.env:LANDSEG_KNOWLEDGE_DIR, './knowledge'}
   dev_cfg: ${oc.env:AUX_SETTINGS_PATH, null} # dev only
   preflight_target: null
   preflight_strict_mode: false

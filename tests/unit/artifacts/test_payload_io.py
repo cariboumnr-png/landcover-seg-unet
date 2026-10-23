@@ -168,9 +168,7 @@ def test_payload_controller_load_or_fail_success(tmp_path):
             schema_id='v1_item',
         )
     )
-    assert isinstance(
-        ctrl_json_fail, payload_mod.LoadOrFailPayloadController
-    )
+    assert isinstance(ctrl_json_fail, payload_mod.LoadOrFailPayloadController)
     assert ctrl_json_fail.load() == loaded
 
 

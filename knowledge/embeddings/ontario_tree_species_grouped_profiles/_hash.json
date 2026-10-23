@@ -1,6 +1,7 @@
 {
-    "root": "./knowledge/embeddings\\ontario_tree_species_grouped_profiles",
+    "root": "knowledge\\embeddings\\ontario_tree_species_grouped_profiles",
     "species_embeddings.pt": "c63dfcb10dd0ca2da32ae78f1f2bbd7d3716135f11477c15edd250e5c900e4e1",
-    "species_similarity_matrix.csv": "862662ebeadad9485ddd536fe7a0b2bc93313790c6eeb8cd4bd1bc2c678cb2d4",
-    "species_similarity_matrix.pt": "ea33b72c1196b374e8fc1861af39c8d739dde8132d9a614932dbf27829eec476"
+    "species_similarity_matrix.pt": "ea33b72c1196b374e8fc1861af39c8d739dde8132d9a614932dbf27829eec476",
+    "species_metadata.json": "1095f596012324953948406d34f96afaa3e7797b07a927245a52f2074e59666b",
+    "species_similarity_matrix.csv": "862662ebeadad9485ddd536fe7a0b2bc93313790c6eeb8cd4bd1bc2c678cb2d4"
 }

@@ -51,13 +51,13 @@ def execute_command(root_config: configs.RootConfig) -> typing.Any:
         case 'diagnose-overfit':
             workflows.execute_diagnose_overfit(root_config)
 
-        case 'data-ingest' | 'batch-ingest':
+        case 'data-ingest':
             workflows.execute_batch_ingest(root_config)
 
-        case 'e2e-intake' | 'end-to-end-intake':
+        case 'e2e-intake':
             workflows.execute_e2e_intake(root_config)
 
-        case 'e2e-experiment' | 'end-to-end-experiment':
+        case 'e2e-experiment':
             workflows.execute_e2e_experiment(root_config)
 
         case 'study-analysis':

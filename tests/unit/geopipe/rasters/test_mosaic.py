@@ -30,7 +30,7 @@ import pytest
 import rasterio
 import rasterio.transform
 # local imports
-import landseg.geopipe.harmonize.rasters.mosaic as mosaic
+import landseg.geopipe.rasters.mosaic as mosaic
 
 
 # ----- `build_vrt_mosaic` input validation tests

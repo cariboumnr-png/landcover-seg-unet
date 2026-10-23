@@ -50,11 +50,7 @@ def _discover_lazy_modules() -> list[types.ModuleType]:
 LAZY_MODULES = _discover_lazy_modules()
 
 
-@pytest.mark.parametrize(
-    'module',
-    LAZY_MODULES,
-    ids=lambda m: m.__name__
-)
+@pytest.mark.parametrize('module', LAZY_MODULES, ids=lambda m: m.__name__)
 def test_package_lazy_imports(module: types.ModuleType):
     '''
     Given: Package module in `landseg` implementing lazy `__getattr__`.

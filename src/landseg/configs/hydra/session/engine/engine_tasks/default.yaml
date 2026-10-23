@@ -23,7 +23,7 @@ loss_configs:
     weight: 1e-4
   ecological:
     weight: 0.0
-    profile: 'ontario_tree_species_grouped_profiles'
+    profile: null
 
 # multi task (multihead) learning related
 mtl_constraints: []

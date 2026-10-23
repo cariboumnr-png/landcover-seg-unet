@@ -301,3 +301,6 @@ def test_artifact_paths_knowledge_integration():
     art = paths_mod.ArtifactPaths(knowledge_root=pathlib.Path('/data/knowledge'))
     assert isinstance(art.knowledge, paths_mod.KnowledgePaths)
     assert art.knowledge.root == pathlib.Path('/data/knowledge')
+
+    art_default = paths_mod.ArtifactPaths()
+    assert art_default.knowledge is None

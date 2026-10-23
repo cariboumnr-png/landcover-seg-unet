@@ -30,7 +30,8 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.harmonize.context as harmonize_context
 import landseg.geopipe.harmonize.logger as harmonize_logger
-import landseg.geopipe.harmonize.rasters as harmonize_rasters
+import landseg.geopipe.harmonize.processor as harmonize_processor
+import landseg.geopipe.rasters as rasters
 
 
 # ----- public functions
@@ -57,7 +58,7 @@ def run_data_harmonization(
     # set up generator and run for each source
     logger.info(f'[START] Harmonizing data onto grid: {context.grid.affine_identity}')
 
-    processor = harmonize_rasters.raster_processor(
+    processor = harmonize_processor.harmonizer(
         context.compiled_dataset_manifest,
         artifacts_paths.effective_run_folder,
         dst_crs=context.grid.crs,
@@ -68,7 +69,7 @@ def run_data_harmonization(
         continuous_resampling=config.resampling_continuous,
     )
 
-    processed: harmonize_rasters.ProcessedRasters
+    processed: harmonize_processor.HarmonizedRasters
     while True:
         try:
             log_message = next(processor)
@@ -82,7 +83,7 @@ def run_data_harmonization(
     if feature_raster:
         mask_path = artifacts_paths.valid_mask_raster
         logger.info(f'Generating valid mask raster: {mask_path}')
-        harmonize_rasters.unify_nodata_mask(feature_raster, mask_path)
+        rasters.unify_nodata_mask(feature_raster, mask_path)
         logger.set_valid_mask_raster(mask_path)
 
     # log processed file paths
