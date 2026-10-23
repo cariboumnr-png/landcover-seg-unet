@@ -26,6 +26,8 @@ import typing
 # third-party imports
 import rasterio
 import rasterio.coords
+import rasterio.crs
+import rasterio.enums
 import rasterio.io
 import rasterio.transform
 import rasterio.windows
@@ -38,8 +40,14 @@ Affine: typing.TypeAlias = rasterio.transform.Affine
 BoundingBox: typing.TypeAlias = rasterio.coords.BoundingBox
 '''Raster bound box.'''
 
+CRS: typing.TypeAlias = rasterio.crs.CRS
+'''Raster Coordinate Reference System.'''
+
 DatasetReader: typing.TypeAlias = rasterio.io.DatasetReader
 '''Dataset reader handle for opened raster files.'''
+
+Resampling: typing.TypeAlias = rasterio.enums.Resampling
+'''Raster resampling algorithms.'''
 
 Window: typing.TypeAlias = rasterio.windows.Window
 '''Pixel window offset and slice for raster reads and writes.'''

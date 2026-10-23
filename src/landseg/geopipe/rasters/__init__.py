@@ -25,11 +25,24 @@ Top-level namespace for `landseg.geopipe.rasters`.
 Exposes raster warping, stacking, masking, and metadata manipulation APIs.
 
 Public APIs:
+    - `Affine`: Type alias for raster Affine transform.
+    - `BoundingBox`: Type alias for raster bounding box.
+    - `CRS`: Type alias for raster coordinate reference system.
+    - `DatasetInfo`: Container for structural raster dataset info.
+    - `DatasetReader`: Type alias for opened raster reader.
+    - `Resampling`: Type alias for raster resampling algorithms.
+    - `Window`: Type alias for pixel window offset and dimensions.
     - `add_band_description_to_vrt`: Add band description labels to VRT.
     - `add_tag_to_vrt`: Add metadata tags to a VRT raster file.
     - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
+    - `get_info`: Retrieve structured dataset info from a raster.
+    - `is_same_crs`: Compare two coordinate reference systems for equality.
+    - `read_raster`: Context manager yielding an open dataset reader.
+    - `read_rasters`: Context manager yielding multiple dataset readers.
+    - `read_window`: Read array window with boundless or reflect padding.
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
     - `stack_rasters`: Stack spatially aligned rasters into a VRT.
+    - `transform_bounds`: Transform bounding coordinates between CRS.
     - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
@@ -43,20 +56,24 @@ __all__ = [
     # types
     'Affine',
     'BoundingBox',
+    'CRS',
     'DatasetReader',
+    'Resampling',
     'Window',
     # classes
     'DatasetInfo',
     # functions
-    'get_info',
-    'read_raster',
-    'read_rasters',
-    'read_window',
     'add_band_description_to_vrt',
     'add_tag_to_vrt',
     'build_vrt_mosaic',
+    'get_info',
+    'is_same_crs',
+    'read_raster',
+    'read_rasters',
+    'read_window',
     'resolve_resampling_algorithm',
     'stack_rasters',
+    'transform_bounds',
     'unify_nodata_mask',
     'write_warped_vrt',
 ]
@@ -67,7 +84,9 @@ if typing.TYPE_CHECKING:
     from ._types import (
         Affine,
         BoundingBox,
+        CRS,
         DatasetReader,
+        Resampling,
         Window,
     )
     from .io import (
@@ -91,7 +110,9 @@ if typing.TYPE_CHECKING:
         add_band_description_to_vrt,
     )
     from .warp import (
+        is_same_crs,
         resolve_resampling_algorithm,
+        transform_bounds,
         write_warped_vrt,
     )
 
@@ -100,7 +121,9 @@ def __getattr__(name: str):
     if name in {
         'Affine',
         'BoundingBox',
+        'CRS',
         'DatasetReader',
+        'Resampling',
         'Window',
     }:
         obj = importlib.import_module('._types', __package__)
@@ -142,7 +165,9 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
+        'is_same_crs',
         'resolve_resampling_algorithm',
+        'transform_bounds',
         'write_warped_vrt',
     }:
         obj = importlib.import_module('.warp', __package__)

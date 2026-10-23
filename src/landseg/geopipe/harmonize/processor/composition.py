@@ -33,8 +33,6 @@ Public APIs:
 import ast
 import pathlib
 import typing
-# third-party imports
-import rasterio
 # local imports
 import landseg.geopipe.rasters as rasters
 
@@ -105,7 +103,7 @@ def _collect_feature_metadata(
     '''Collect and merge feature-scheme metadata (dataset tags).'''
     merged_schema: dict[str, typing.Any] = {}
     for source_path in source_paths:
-        with rasterio.open(source_path) as source:
+        with rasters.read_raster(source_path) as source:
             _merge_feature_schemes(merged_schema, source.tags().get('schemes'))
     if not merged_schema:
         return {'schemes': None}
@@ -118,7 +116,7 @@ def _collect_label_band_metadata(
     '''Convert label dataset metadata into composite band metadata.'''
     metadata: list[dict[str, str] | None] = []
     for source_path in source_paths:
-        with rasterio.open(source_path) as source:
+        with rasters.read_raster(source_path) as source:
             dataset_tags = source.tags()
             for band_index in source.indexes:
                 # band's own tags take precedence over dataset-level tags.

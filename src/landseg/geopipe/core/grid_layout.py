@@ -311,7 +311,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
         # if a raster reader handler is provided:
         if isinstance(src, rasters.DatasetReader):
             # check target raster CRS
-            assert self.crs == src.crs.to_string().split('"')[1] # TODO
+            assert rasters.is_same_crs(self.crs, src.crs)
             transform = src.transform
         # else src is already an Affine transform
         else:

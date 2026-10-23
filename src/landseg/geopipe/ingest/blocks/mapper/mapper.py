@@ -89,7 +89,7 @@ def map_rasters(
     # alignment to the world grid and check CRS match
     grid_crs = world_grid.crs
     data_crs = geom['crs']
-    if grid_crs != data_crs:
+    if not rasters.is_same_crs(grid_crs, data_crs):
         raise ValueError(f'Data CRS [{data_crs}] != world CRS [{grid_crs}]')
 
     # focus on tiles inside the intersected extent

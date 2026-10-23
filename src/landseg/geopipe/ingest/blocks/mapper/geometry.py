@@ -120,26 +120,16 @@ def _check_raster_proj(
     lbl: rasters.DatasetReader | None,
 ) -> str:
     '''Check if the input rasters have matching coordinate systems.'''
-    # if both image and label provided
+    if img.crs is None:
+        raise ValueError('A valid image raster with CRS is required')
     if lbl is not None:
-        # get projection names, raster.crs might return differently
-        try:
-            crs_1 = img.crs.to_string().split('"')[1] # TODO
-            crs_2 = lbl.crs.to_string().split('"')[1]
-        except IndexError:
-            crs_1 = img.crs
-            crs_2 = lbl.crs
-
-        # check if the projection systems are the same
-        if crs_1 != crs_2:
-            raise ValueError(f'CRS does not match img!=lbl: {crs_1}!={crs_2}')
-        return crs_1
-    # or only image provided
-    try:
-        crs_1 = img.crs.to_string().split('"')[1]
-    except IndexError:
-        crs_1 = img.crs
-    return crs_1
+        if lbl.crs is None:
+            raise ValueError('A valid label raster with CRS is required')
+        if not rasters.is_same_crs(img.crs, lbl.crs):
+            raise ValueError(
+                f'CRS does not match img!=lbl: {img.crs}!={lbl.crs}'
+            )
+    return str(img.crs)
 
 
 def _check_raster_pixels(

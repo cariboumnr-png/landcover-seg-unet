@@ -36,8 +36,6 @@ Public APIs:
 # standard imports
 import dataclasses
 import pathlib
-# third-party imports
-import rasterio.warp
 # local imports
 import landseg.geopipe.prepare as prepare
 import landseg.geopipe.rasters as rasters
@@ -207,8 +205,8 @@ def _load_aoi_bounds(
     aoi_crs = str(raster_info.crs) if raster_info.crs else canvas_crs
     left, bottom, right, top = raster_info.bounds
 
-    if aoi_crs != canvas_crs:
-        left, bottom, right, top = rasterio.warp.transform_bounds(
+    if not rasters.is_same_crs(aoi_crs, canvas_crs):
+        left, bottom, right, top = rasters.transform_bounds(
             aoi_crs, canvas_crs, left, bottom, right, top
         )
 
