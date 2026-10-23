@@ -65,10 +65,7 @@ def test_sweep_pipeline(tmp_path, monkeypatch):
 
     result = sweep_pipeline.execute_study_sweep(config)
 
-    assert result == {
-        'best_value': 0.92,
-        'best_params': {'lr': 0.01},
-    }
+    assert result == {'best_value': 0.92, 'best_params': {'lr': 0.01}}
 
 
 def test_runner_builder(tmp_path):

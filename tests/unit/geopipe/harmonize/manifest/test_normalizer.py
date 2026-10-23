@@ -87,9 +87,7 @@ def test_normalize_features_entry_invalid_scheme_band():
         'path': '/path/to/s2.tif',
         'band_mapping': {1: 'blue', 2: 'green', 3: 'red'},
         'category': 'features',
-        'schemes': {
-            'rgb_swir': ['blue', 'green', 'swir1'],
-        },
+        'schemes': {'rgb_swir': ['blue', 'green', 'swir1']},
     }
     normalizer = Normalizer(raw_entry)
     with pytest.raises(ValueError, match='not in band_mapping'):
@@ -319,9 +317,7 @@ def test_normalize_categorical_specs_with_taxonomy():
             'num_cls': 2,
             'ignore_cls': [255],
             'class_name': {'1': 'SB_BLACK_SPRUCE', '2': 'PJ_JACK_PINE'},
-            'taxonomy': {
-                'profile': 'ontario_tree_species_grouped_profiles',
-            },
+            'taxonomy': {'profile': 'ontario_tree_species_grouped_profiles'},
         },
     }
     normalizer = Normalizer(raw_entry)
@@ -347,9 +343,7 @@ def test_normalize_categorical_specs_taxonomy_missing_class_name():
             'index_base': 1,
             'num_cls': 2,
             'ignore_cls': [255],
-            'taxonomy': {
-                'profile': 'ontario_tree_species_grouped_profiles',
-            },
+            'taxonomy': {'profile': 'ontario_tree_species_grouped_profiles'},
         },
     }
     normalizer = Normalizer(raw_entry)

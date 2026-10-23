@@ -142,9 +142,7 @@ def test_validate_specs_count_mismatch():
     When: `validate_specs` is called.
     Then: Raise ValueError with count mismatch explanation.
     '''
-    species_mapping = {
-        '1': 'SB_BLACK_SPRUCE',
-    }
+    species_mapping = {'1': 'SB_BLACK_SPRUCE'}
     with pytest.raises(ValueError, match='Taxonomy declares 1 classes'):
         taxonomy.validate_specs(
             'ontario_tree_species_grouped_profiles',

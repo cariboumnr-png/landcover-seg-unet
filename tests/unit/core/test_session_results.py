@@ -350,10 +350,7 @@ def test_track_metrics_iou_uses_requested_heads():
     When: Requesting tracking on specific head names.
     Then: Extract score for the target heads.
     '''
-    metrics = _make_head_metrics(
-        head1={'mean': 0.5},
-        head2={'mean': 0.8}
-    )
+    metrics = _make_head_metrics(head1={'mean': 0.5}, head2={'mean': 0.8})
     result = session_results._track_metrics(
         metrics,
         metric_name='iou',
@@ -369,14 +366,8 @@ def test_track_metrics_iou_defaults_to_mean():
     When: Running tracking with no specified heads map.
     Then: Default to mean head imetrics.
     '''
-    metrics = _make_head_metrics(
-        head1={'mean': 0.4},
-        head2={'mean': 0.8}
-    )
-    result = session_results._track_metrics(
-        metrics,
-        metric_name='iou',
-    )
+    metrics = _make_head_metrics(head1={'mean': 0.4}, head2={'mean': 0.8})
+    result = session_results._track_metrics(metrics, metric_name='iou')
 
     assert result == pytest.approx(0.6)
 
@@ -419,10 +410,7 @@ def test_track_metrics_invalid_metric_name():
     '''
     metrics = {}
     with pytest.raises(ValueError, match='Invalid metric name'):
-        session_results._track_metrics(
-            metrics,
-            metric_name='accuracy',
-        )
+        session_results._track_metrics(metrics, metric_name='accuracy')
 
 
 # ----- `_get_mean_iou`(...)
@@ -456,10 +444,7 @@ def test_get_mean_iou_multiple_heads_unweighted():
     When: Running _get_mean_iou.
     Then: Return the flat average of the head scores.
     '''
-    metrics = _make_head_metrics(
-        head1={'mean': 0.5},
-        head2={'mean': 0.7}
-    )
+    metrics = _make_head_metrics(head1={'mean': 0.5}, head2={'mean': 0.7})
     result = session_results._get_mean_iou(metrics, None)
 
     assert result == pytest.approx(0.6)
@@ -471,10 +456,7 @@ def test_get_mean_iou_weighted():
     When: Running _get_mean_iou.
     Then: Return the weighted average score.
     '''
-    metrics = _make_head_metrics(
-        head1={'mean': 0.5},
-        head2={'mean': 0.8}
-    )
+    metrics = _make_head_metrics(head1={'mean': 0.5}, head2={'mean': 0.8})
     weights = {'head1': 1.0, 'head2': 3.0}
     result = session_results._get_mean_iou(metrics, weights)
     expected = (1.0 * 0.5 + 3.0 * 0.8) / 4.0
@@ -488,10 +470,7 @@ def test_get_mean_iou_missing_weight_defaults_to_one():
     When: Running _get_mean_iou.
     Then: Default missing weights to a factor of 1.0.
     '''
-    metrics = _make_head_metrics(
-        head1={'mean': 0.5},
-        head2={'mean': 0.9}
-    )
+    metrics = _make_head_metrics(head1={'mean': 0.5}, head2={'mean': 0.9})
     weights = {'head1': 2.0}
     result = session_results._get_mean_iou(metrics, weights)
     expected = (2.0 * 0.5 + 1.0 * 0.9) / 3.0
