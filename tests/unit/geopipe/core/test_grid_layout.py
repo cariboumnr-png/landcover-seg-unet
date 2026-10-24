@@ -27,7 +27,6 @@ import pytest
 import rasterio.windows
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core.coords as coords
 import landseg.geopipe.core.grid_layout as grid_layout
 
@@ -249,39 +248,6 @@ def test_gridlayout_from_fpath(tmp_path):
 
     from_func = grid_layout.GridLayout.from_fpath(grid_fp)
     assert from_func.gid == layout.gid
-
-
-def test_grid_report_helpers(tmp_path):
-    '''
-    Given: An output directory and a serialized grid report JSON.
-    When: `get_grid_report_fpath` and `read_grid_report` are called.
-    Then: Resolve report path and extract WorldGridReport payload.
-    '''
-    expected_fp = tmp_path / 'grid_report.json'
-
-    grid_report: contracts.WorldGridReport = {
-        'grid_fpath': '/path/to/grid.json',
-        'grid_id': 'ontario_grid',
-        'crs': 'EPSG:3161',
-        'pixel_size': (10.0, 10.0),
-        'tile_size': (512, 512),
-        'tile_overlap': (64, 64),
-    }
-    report_data: contracts.GridReportSchema = {
-        'run_id': 'world-grid',
-        'timestamp': '2026-09-18T00:00:00',
-        'status': 'SUCCESS',
-        'grid': grid_report,
-        'total_tiles': 42,
-    }
-    artifacts.Controller[contracts.GridReportSchema](
-        expected_fp
-    ).persist(report_data)
-
-    status, loaded = grid_layout.read_report(expected_fp)
-    assert status == 'SUCCESS'
-    assert loaded['grid_id'] == 'ontario_grid'
-    assert loaded['grid_fpath'] == '/path/to/grid.json'
 
 
 # ----- `coords` helpers tests

@@ -33,7 +33,6 @@ Public APIs:
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
     - `name_xy`: Convert block name string to (x, y) coordinate tuple.
-    - `read_grid_report`: Read grid report JSON and extract summary.
     - `xy_name`: Convert (x, y) coordinate tuple to block name string.
     - `CategoricalSpec`: TypedDict for categorical raster specs.
     - `DataBlockManifest`: TypedDict for block serialization manifest.
@@ -66,7 +65,6 @@ __all__ = [
     'GridSpec',
     # functions
     'name_xy',
-    'read_report',
     'xy_name',
     # typing
     'CategoricalSpec',
@@ -119,7 +117,6 @@ if typing.TYPE_CHECKING:
         GridPayload,
         GridSpec,
         RasterWindowDict,
-        read_report,
     )
 
 
@@ -175,7 +172,6 @@ def __getattr__(name: str):
         'GridPayload',
         'GridSpec',
         'RasterWindowDict',
-        'read_report',
     }:
         obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)

@@ -48,15 +48,12 @@ import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.contracts.grid as grid_contracts
 import landseg.geopipe.rasters as rasters
 
 
 # ----- typing aliases
 RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], rasters.Window]
 '''Mapping of pixel-origin coordinates to raster windows.'''
-
-GridReportCtrl = artifacts.Controller[grid_contracts.GridReportSchema]
 
 
 # ----- public types
@@ -396,21 +393,3 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
                 window = rasters.Window(x, y, tw, th) # type: ignore
                 self._data[(x, y)] = window
         self._extent = row_px, col_px
-
-
-# ----- public functions
-def read_report(fp: pathlib.Path) -> tuple[str, grid_contracts.WorldGridReport]:
-    '''
-    Read a grid execution report and extract world grid summary.
-
-    Args:
-        fp:
-            File path to the grid report JSON artifact.
-
-    Returns:
-        tuple[str, grid_contracts.WorldGridReport]:
-            Tuple of (status, world grid summary report).
-    '''
-    ctrl = GridReportCtrl.load_json_strict(fp)
-    report = ctrl.fetch()
-    return report['status'], report['grid']

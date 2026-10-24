@@ -64,8 +64,11 @@ def test_grid_logger_lifecycle(tmp_path):
     logger.close()
 
     assert report_fp.exists()
-    status, loaded = geo_core.read_report(report_fp)
-    assert status == 'SUCCESS'
+    report = artifacts.Controller[contracts.GridReportSchema].load_json_strict(
+        report_fp
+    ).fetch()
+    assert report['status'] == 'SUCCESS'
+    loaded = report['grid']
     assert loaded['grid_id'] == world_grid.gid
     assert loaded['crs'] == 'EPSG:32617'
     assert tuple(loaded['tile_size']) == (256, 256)

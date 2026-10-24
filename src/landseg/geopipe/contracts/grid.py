@@ -28,7 +28,7 @@ This module provides schemas for serializing world grid metadata and
 pipeline run reports.
 
 Public APIs:
-    = `WorldGridPrepConfig`: Protocol for pipeline configs.
+    - `WorldGridPrepConfig`: Protocol for pipeline configs.
     - `WorldGridReport`: TypedDict for world grid summary report.
     - `GridReportSchema`: TypedDict for overall grid pipeline report.
 '''

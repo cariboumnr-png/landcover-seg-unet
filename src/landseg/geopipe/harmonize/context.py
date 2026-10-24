@@ -40,6 +40,9 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest as manifest
 
 
+# ----- typing aliases
+GridReportCtrl = artifacts.Controller[contracts.GridReportSchema]
+
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class HarmonizationContext:
@@ -71,8 +74,8 @@ def build_harmonization_context(
             grid reference metadata.
     '''
     # fetch world grid
-    _, grid_report = geo_core.read_report(grid_report_path)
-    grid_fpath = pathlib.Path(grid_report['grid_fpath'])
+    grid_report = GridReportCtrl.load_json_strict(grid_report_path).fetch()
+    grid_fpath = pathlib.Path(grid_report['grid']['grid_fpath'])
     world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 
     # compile dataset manifest JOSN
@@ -97,7 +100,7 @@ def build_harmonization_context(
 
     return HarmonizationContext(
         grid=world_grid,
-        grid_id=grid_report['grid_id'],
+        grid_id=grid_report['grid']['grid_id'],
         grid_fpath=grid_fpath,
         compiled_dataset_manifest=compiled,
         current_run_identity=fingerprint,
