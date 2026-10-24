@@ -206,8 +206,8 @@ def _load_aoi_bounds(
     left, bottom, right, top = raster_info.bounds
 
     if not rasters.is_same_crs(aoi_crs, canvas_crs):
-        left, bottom, right, top = rasters.transform_bounds(
-            aoi_crs, canvas_crs, left, bottom, right, top
+        left, bottom, right, top = rasters.reproject_bounds(
+            raster_info.bounds, aoi_crs, canvas_crs
         )
 
     return (left, bottom, right, top)

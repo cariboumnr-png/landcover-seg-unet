@@ -37,7 +37,6 @@ import dataclasses
 import pathlib
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.blocks.mapper.geometry as geometry
 import landseg.geopipe.rasters as rasters
 
 
@@ -81,54 +80,68 @@ def map_rasters(
 
     Raises:
         ValueError:
-            If raster CRS does not match the target world grid CRS.
+            If image is missing, CRSs disagree, pixel sizes differ,
+            spatial extents do not overlap, or raster CRS does not
+            match the target world grid CRS.
     '''
-    # get geometry summary
-    geom = geometry.validate_geometry(image_fpath, label_fpath)
+    with rasters.read_rasters(image_fpath, label_fpath) as (img, lbl):
+        # make sure at least image is present
+        if img is None:
+            raise ValueError('A valid image raster is required')
+        if img.crs is None:
+            raise ValueError('A valid image raster with CRS is required')
+        if lbl is not None and lbl.crs is None:
+            raise ValueError('A valid label raster with CRS is required')
 
-    # alignment to the world grid and check CRS match
-    grid_crs = world_grid.crs
-    data_crs = geom['crs']
-    if not rasters.is_same_crs(grid_crs, data_crs):
-        raise ValueError(f'Data CRS [{data_crs}] != world CRS [{grid_crs}]')
+        # check crs match and alignment with world grid
+        data_crs = rasters.check_raster_crs(img.crs, lbl.crs if lbl else None)
+        if not rasters.is_same_crs(world_grid.crs, data_crs):
+            raise ValueError(
+                f'Data CRS [{data_crs}] != world CRS [{world_grid.crs}]'
+            )
 
-    # focus on tiles inside the intersected extent
-    inside = _crop(world_grid, geom)
+        # verify resolution match and compute overlapping extent
+        pixel_size = rasters.check_raster_resolution(
+            img.transform, lbl.transform if lbl else None
+        )
+        inter_bbox = rasters.compute_overlap_bounds(
+            img.bounds, lbl.bounds if lbl else None
+        )
 
-    # get image and optionally label reading windows
-    return MappedRasterWindows(
-        image=_get_windows(world_grid, geom['image_transform'], inside),
-        label=_get_windows(world_grid, geom['label_transform'], inside),
-        grid_id=world_grid.gid,
-        tile_shape=world_grid.tile_size,
-        tile_overlap=world_grid.tile_overlap,
-    )
+        # focus on tiles inside the intersected extent
+        inside = _crop(world_grid, pixel_size, inter_bbox)
+
+        # get image and optionally label reading windows
+        return MappedRasterWindows(
+            image=_get_windows(world_grid, img.transform, inside),
+            label=_get_windows(
+                world_grid, lbl.transform if lbl else None, inside
+            ),
+            grid_id=world_grid.gid,
+            tile_shape=world_grid.tile_size,
+            tile_overlap=world_grid.tile_overlap,
+        )
 
 
 # ----- private helpers
 def _crop(
     world_grid: geo_core.GridLayout,
-    geom_summary: geometry.GeometrySummary,
+    pixel_size: tuple[float, float],
+    inter_bbox: rasters.BoundingBox,
 ) -> list[tuple[int, int]]:
     '''Return grid tile indices that intersect the raster extent.'''
-    # prep return list
     inside: list[tuple[int, int]] = []
-    # get world origin
     gx, gy = world_grid.origin
-    # get pixel size and bbox
-    px, py = geom_summary['pixel_size'] # in CRS units per pixel
-    l, b, r, t = geom_summary['inter_bbox'] # in CRS units
-    # get tile size to CRS units
-    tile_x = world_grid.tile_size[1] * px
-    tile_y = world_grid.tile_size[0] * py
-    # iterate through world grid
-    for (x, y) in world_grid.keys(): # keys (x, y) are in pixels
-        # unify comparisons to be between CRS coordinates
+    px, py = pixel_size
+    min_x = inter_bbox.left - world_grid.tile_size[1] * px
+    max_y = inter_bbox.top + world_grid.tile_size[0] * py
+
+    for (x, y) in world_grid.keys():  # keys (x, y) are in pixels
         if (
-            gx + x * px < r and             # right side of tile < R
-            gy - y * py > b and             # bottom side of tile > B
-            gx + x * px > l - tile_x and    # left side of tile > L
-            gy - y * py < t + tile_y        # top side of tile < T
+            gx + x * px < inter_bbox.right and
+            gy - y * py > inter_bbox.bottom and
+            gx + x * px > min_x and
+            gy - y * py < max_y
         ):
             inside.append((x, y))
     return inside
