@@ -75,8 +75,6 @@ __all__ = [
     'GridMeta',
     'GridPayload',
     'LabelScheme',
-    'RasterReader',
-    'RasterWindow',
     'RasterWindowDict',
     'TaxonomySpec',
 ]
@@ -112,8 +110,6 @@ if typing.TYPE_CHECKING:
         GridMeta,
         GridPayload,
         GridSpec,
-        RasterReader,
-        RasterWindow,
         RasterWindowDict,
         read_report,
     )
@@ -163,8 +159,6 @@ def __getattr__(name: str):
         'GridMeta',
         'GridPayload',
         'GridSpec',
-        'RasterReader',
-        'RasterWindow',
         'RasterWindowDict',
         'read_report',
     }:

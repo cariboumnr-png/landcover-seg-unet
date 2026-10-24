@@ -37,12 +37,10 @@ import math
 import pathlib
 import typing
 # third-party imports
-import rasterio
-import rasterio.crs
-import rasterio.enums
-import rasterio.transform
 import rasterio.warp
 # local imports
+import landseg.geopipe.rasters._types as t
+import landseg.geopipe.rasters.io as io
 import landseg.geopipe.rasters.vrt as vrt
 import landseg.geopipe.rasters.warp as warp
 
@@ -61,10 +59,10 @@ class _TileGeometry:
 @dataclasses.dataclass(frozen=True)
 class _WarpContext:
     '''Context parameters for virtual tile warping and snapping.'''
-    dst_crs: rasterio.crs.CRS
+    dst_crs: t.CRS
     res_x: float
     res_y: float
-    resample_alg: rasterio.enums.Resampling
+    resample_alg: t.Resampling
     nodata_val: float | int | None
     cache_dir: pathlib.Path
 
@@ -87,7 +85,7 @@ class _MosaicLayout:
     height: int
     res_x: float
     res_y: float
-    transform: rasterio.transform.Affine
+    transform: t.Affine
 
 
 # ----- public functions
@@ -95,7 +93,7 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
     *,
     input_paths: typing.Sequence[pathlib.Path | str],
     output_path: pathlib.Path | str,
-    target_crs: str | rasterio.crs.CRS = 'EPSG:3161',
+    target_crs: str | t.CRS = 'EPSG:3161',
     target_resolution: float | tuple[float, float] | None = None,
     resampling_method: str = 'bilinear',
     is_categorical: bool = False,
@@ -153,12 +151,12 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
     dst_crs = (
-        rasterio.crs.CRS.from_user_input(target_crs)
+        t.CRS.from_user_input(target_crs)
         if isinstance(target_crs, str)
         else target_crs
     )
 
-    ref_info = _read_reference_info(resolved_inputs[0])
+    ref_info = io.get_info(resolved_inputs[0])
     for p in resolved_inputs[1:]:
         _validate_source_compatibility(ref_info, p)
 
@@ -170,7 +168,7 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
 
     final_nodata = _resolve_nodata_value(
         nodata,
-        ref_info['nodata'],
+        ref_info.nodata,
         is_categorical,
     )
 
@@ -195,9 +193,9 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
     tiles = _prepare_source_tiles(resolved_inputs, warp_ctx)
 
     meta = _MosaicMetadata(
-        band_count=ref_info['count'],
-        dtypes=ref_info['dtypes'],
-        descriptions=ref_info['descriptions'],
+        band_count=ref_info.count,
+        dtypes=ref_info.dtypes,
+        descriptions=ref_info.descriptions,
         nodata_val=final_nodata,
     )
 
@@ -215,40 +213,27 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
 
 
 # ----- private helpers
-def _read_reference_info(path: pathlib.Path) -> dict[str, typing.Any]:
-    '''Read structural reference metadata from the first raster.'''
-    with rasterio.open(path) as src:
-        return {
-            'count': src.count,
-            'dtypes': src.dtypes,
-            'descriptions': src.descriptions,
-            'nodata': src.nodata,
-            'crs': src.crs,
-            'res': src.res,
-        }
-
-
 def _validate_source_compatibility(
-    ref_info: dict[str, typing.Any],
+    ref_info: io.DatasetInfo,
     path: pathlib.Path,
 ) -> None:
     '''Validate that secondary source matches band count and types.'''
-    with rasterio.open(path) as src:
-        if src.count != ref_info['count']:
-            raise ValueError(
-                f'Band count mismatch for {path}: expected '
-                f"{ref_info['count']}, found {src.count}"
-            )
-        if src.dtypes != ref_info['dtypes']:
-            raise ValueError(
-                f'Data types mismatch for {path}: expected '
-                f"{ref_info['dtypes']}, found {src.dtypes}"
-            )
+    info = io.get_info(path)
+    if info.count != ref_info.count:
+        raise ValueError(
+            f'Band count mismatch for {path}: expected '
+            f'{ref_info.count}, found {info.count}'
+        )
+    if info.dtypes != ref_info.dtypes:
+        raise ValueError(
+            f'Data types mismatch for {path}: expected '
+            f'{ref_info.dtypes}, found {info.dtypes}'
+        )
 
 
 def _determine_target_resolution(
     inputs: list[pathlib.Path],
-    dst_crs: rasterio.crs.CRS,
+    dst_crs: t.CRS,
     target_res: float | tuple[float, float] | None,
 ) -> tuple[float, float]:
     '''Resolve pixel resolution in target CRS coordinate units.'''
@@ -261,27 +246,20 @@ def _determine_target_resolution(
     res_ys: list[float] = []
 
     for p in inputs:
-        with rasterio.open(p) as src:
-            if src.crs == dst_crs:
-                res_xs.append(abs(src.res[0]))
-                res_ys.append(abs(src.res[1]))
-            else:
-                _, w, h = rasterio.warp.calculate_default_transform(
-                    src.crs,
-                    dst_crs,
-                    src.width,
-                    src.height,
-                    *src.bounds,
-                )
-                left, bottom, right, top = (
-                    rasterio.warp.transform_bounds(
-                        src.crs,
-                        dst_crs,
-                        *src.bounds,
-                    )
-                )
-                res_xs.append(abs((right - left) / w))
-                res_ys.append(abs((top - bottom) / h))
+        info = io.get_info(p)
+        if info.crs == dst_crs:
+            res_xs.append(abs(info.res[0]))
+            res_ys.append(abs(info.res[1]))
+        else:
+            affine, _, _ = rasterio.warp.calculate_default_transform(
+                info.crs,
+                dst_crs,
+                info.width,
+                info.height,
+                *info.bounds,
+            )
+            res_xs.append(abs(affine.a))
+            res_ys.append(abs(affine.e))
 
     return (min(res_xs), min(res_ys))
 
@@ -310,9 +288,9 @@ def _prepare_source_tiles(
 
 
 def _calculate_tile_bounds(
-    src: rasterio.DatasetReader,
+    src: t.DatasetReader,
     ctx: _WarpContext,
-) -> tuple[float, float, int, int, rasterio.transform.Affine]:
+) -> tuple[float, float, int, int, t.Affine]:
     '''Calculate snapped tile bounds and transform in target CRS.'''
     left, bottom, right, top = (
         src.bounds
@@ -333,8 +311,8 @@ def _calculate_tile_bounds(
     height = int(round((max_y - min_y) / ctx.res_y))
 
     tile_transform = (
-        rasterio.transform.Affine.translation(min_x, max_y)
-        * rasterio.transform.Affine.scale(ctx.res_x, -ctx.res_y)
+        t.Affine.translation(min_x, max_y)
+        * t.Affine.scale(ctx.res_x, -ctx.res_y)
     )
 
     return (min_x, max_y, width, height, tile_transform)
@@ -346,7 +324,7 @@ def _prepare_single_tile(
     ctx: _WarpContext,
 ) -> _TileGeometry:
     '''Reproject and snap a single raster tile to target grid.'''
-    with rasterio.open(path) as src:
+    with io.read_raster(path) as src:
         min_x, max_y, width, height, tile_transform = (
             _calculate_tile_bounds(src, ctx)
         )
@@ -390,17 +368,17 @@ def _calculate_mosaic_layout(
     res_y: float,
 ) -> _MosaicLayout:
     '''Calculate total bounds and transform for the mosaic dataset.'''
-    min_x = min(t.min_x for t in tiles)
-    max_y = max(t.max_y for t in tiles)
-    max_x = max(t.min_x + t.width * res_x for t in tiles)
-    min_y = min(t.max_y - t.height * res_y for t in tiles)
+    min_x = min(tile.min_x for tile in tiles)
+    max_y = max(tile.max_y for tile in tiles)
+    max_x = max(tile.min_x + tile.width * res_x for tile in tiles)
+    min_y = min(tile.max_y - tile.height * res_y for tile in tiles)
 
     width = int(round((max_x - min_x) / res_x))
     height = int(round((max_y - min_y) / res_y))
 
     transform = (
-        rasterio.transform.Affine.translation(min_x, max_y)
-        * rasterio.transform.Affine.scale(res_x, -res_y)
+        t.Affine.translation(min_x, max_y)
+        * t.Affine.scale(res_x, -res_y)
     )
 
     return _MosaicLayout(
@@ -418,7 +396,7 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
     *,
     tiles: list[_TileGeometry],
     output_path: pathlib.Path,
-    dst_crs: rasterio.crs.CRS,
+    dst_crs: t.CRS,
     res_x: float,
     res_y: float,
     meta: _MosaicMetadata,
@@ -447,19 +425,19 @@ def _build_mosaic_vrt_xml( # pylint: disable=too-many-arguments
             description=desc,
         )
 
-        for t in tiles:
-            dst_x = int(round((t.min_x - layout.min_x) / layout.res_x))
-            dst_y = int(round((layout.max_y - t.max_y) / layout.res_y))
+        for tile in tiles:
+            dst_x = int(round((tile.min_x - layout.min_x) / layout.res_x))
+            dst_y = int(round((layout.max_y - tile.max_y) / layout.res_y))
 
             vrt.add_vrt_source(
                 band_node=band_node,
-                source_path=t.vrt_path,
+                source_path=tile.vrt_path,
                 source_band=band_idx,
-                width=t.width,
-                height=t.height,
+                width=tile.width,
+                height=tile.height,
                 dtype=meta.dtypes[band_idx - 1],
-                dst_rect=(dst_x, dst_y, t.width, t.height),
-                src_rect=(0, 0, t.width, t.height),
+                dst_rect=(dst_x, dst_y, tile.width, tile.height),
+                src_rect=(0, 0, tile.width, tile.height),
                 nodata=meta.nodata_val,
                 relative_paths=relative_paths,
                 output_dir=output_path.parent,

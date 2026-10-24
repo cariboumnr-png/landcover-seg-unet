@@ -30,26 +30,13 @@ Public APIs:
 '''
 
 # standard imports
-import dataclasses
 import pathlib
 import typing
 import xml.etree.ElementTree
-# third-party imports
-import rasterio
-import rasterio.crs
-import rasterio.transform
 # local imports
+import landseg.geopipe.rasters._types as t
+import landseg.geopipe.rasters.io as io
 import landseg.geopipe.rasters.vrt as vrt
-
-
-# ----- private dataclasses
-@dataclasses.dataclass
-class _SpatialReference:
-    '''Spatial grid against which stack sources are validated.'''
-    width: int
-    height: int
-    crs: rasterio.crs.CRS
-    transform: rasterio.transform.Affine
 
 
 # ----- public functions
@@ -57,8 +44,8 @@ def stack_rasters(
     source_paths: list[pathlib.Path],
     output_path: pathlib.Path,
     *,
-    band_tags: list[dict[str, typing.Any] | None] | None = None,
-    dataset_tags: dict[str, typing.Any] | None = None,
+    band_tags: list[dict[str, str]] | None = None,
+    dataset_tags: dict[str, str] | None = None,
 ) -> pathlib.Path:
     '''
     Stack bands from spatially aligned rasters into a VRT.
@@ -101,7 +88,7 @@ def stack_rasters(
 
     band_idx = 1
     for path in source_paths:
-        with rasterio.open(path) as src:
+        with io.read_raster(path) as src:
 
             _validate_source(src, path, ref)
 
@@ -143,31 +130,23 @@ def stack_rasters(
 
 
 # ----- private helpers
-def _get_spatial_reference(source_path: pathlib.Path) -> _SpatialReference:
+def _get_spatial_reference(source_path: pathlib.Path) -> io.DatasetInfo:
     '''Read raster and retrieve spatial reference.'''
-    with rasterio.open(source_path) as source:
-        if source.crs is None:
-            raise ValueError(f'Source raster has no CRS: {source_path}')
-        return _SpatialReference(
-            width=source.width,
-            height=source.height,
-            crs=source.crs,
-            transform=source.transform,
-        )
+    info = io.get_info(source_path)
+    if info.crs is None:
+        raise ValueError(f'Source raster has no CRS: {source_path}')
+    return info
 
 
 def _validate_band_tags(
     source_paths: list[pathlib.Path],
-    band_tags: list[dict[str, typing.Any] | None] | None,
-) -> list[dict[str, typing.Any] | None]:
+    band_tags: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
     '''Return the total number of bands across all sources.'''
-    total = 0
-    for source_path in source_paths:
-        with rasterio.open(source_path) as source:
-            total += source.count
+    total = sum(io.get_info(source_path).count for source_path in source_paths)
 
     if band_tags is None:
-        return [None] * total
+        return [{}] * total
 
     if len(band_tags) != total:
         raise ValueError(
@@ -179,9 +158,9 @@ def _validate_band_tags(
 
 
 def _validate_source(
-    src: rasterio.DatasetReader,
+    src: t.DatasetReader,
     path: pathlib.Path,
-    ref: _SpatialReference,
+    ref: io.DatasetInfo,
 ) -> None:
     '''Validate that source raster matches reference dimensions and CRS.'''
     if src.width != ref.width or src.height != ref.height:

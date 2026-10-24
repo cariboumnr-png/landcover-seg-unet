@@ -46,24 +46,14 @@ import dataclasses
 import math
 import pathlib
 import typing
-# third-party imports
-import rasterio
-import rasterio.crs
-import rasterio.io
-import rasterio.windows
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.grid as grid_contracts
+import landseg.geopipe.rasters as rasters
 
 
 # ----- typing aliases
-RasterReader: typing.TypeAlias = rasterio.io.DatasetReader
-'''Dataset reader handle for opened raster files.'''
-
-RasterWindow: typing.TypeAlias = rasterio.windows.Window
-'''Pixel window offset and slice for raster reads and writes.'''
-
-RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], RasterWindow]
+RasterWindowDict: typing.TypeAlias = dict[tuple[int, int], rasters.Window]
 '''Mapping of pixel-origin coordinates to raster windows.'''
 
 GridReportCtrl = artifacts.Controller[grid_contracts.GridReportSchema]
@@ -113,7 +103,7 @@ class GridSpec:
 
 
 # ----- public classes
-class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
+class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
     '''
     Raster-agnostic grid layout represented as tile windows.
 
@@ -146,7 +136,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         self._generate()
 
     # ----- container protocol
-    def __getitem__(self, idx: tuple[int, int]) -> RasterWindow:
+    def __getitem__(self, idx: tuple[int, int]) -> rasters.Window:
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
             or not all(isinstance(v, int) for v in idx)):
@@ -158,7 +148,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         # get components for raster window
         xoff, yoff = base.col_off - dx, base.row_off - dy
         width, height = base.width, base.height
-        return RasterWindow(xoff, yoff, width, height) # type: ignore
+        return rasters.Window(xoff, yoff, width, height) # type: ignore
 
     def __iter__(self) -> collections.abc.Iterator[tuple[int, int]]:
         return iter(self._data)
@@ -223,9 +213,9 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         return self._extent[1]
 
     @property
-    def transform(self) -> rasterio.Affine:
+    def transform(self) -> rasters.Affine:
         '''Return the affine transform for the grid.'''
-        return rasterio.Affine(
+        return rasters.Affine(
             self._spec.pixel_size[0],
             0.0,
             self._spec.origin[0],
@@ -262,7 +252,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         parsed: RasterWindowDict = {}
         for c in payload['data']:
             x, y, col_off, row_off, w, h = c
-            window = RasterWindow(col_off, row_off, w, h) # type: ignore
+            window = rasters.Window(col_off, row_off, w, h) # type: ignore
             parsed[(x, y)] = window
 
         # create empty GridLayout instance
@@ -309,7 +299,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
         return cls.from_payload(payload)
 
     # ----- public method
-    def offset_from(self, src: RasterReader | rasterio.Affine) -> None:
+    def offset_from(self, src: rasters.DatasetReader | rasters.Affine) -> None:
         '''
         Compute pixel offset to align the grid with a raster.
 
@@ -319,11 +309,9 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 the raster's spatial reference.
         '''
         # if a raster reader handler is provided:
-        if isinstance(src, RasterReader):
+        if isinstance(src, rasters.DatasetReader):
             # check target raster CRS
-            grid_crs = rasterio.crs.CRS.from_user_input(self.crs)
-            inpt_crs = rasterio.crs.CRS.from_user_input(src.crs)
-            assert grid_crs == inpt_crs
+            assert rasters.is_same_crs(self.crs, src.crs)
             transform = src.transform
         # else src is already an Affine transform
         else:
@@ -405,7 +393,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], RasterWindow]):
                 th = min(spec.tile_size[0], row_px - y) # at the last row
                 tw = min(spec.tile_size[1], col_px - x) # at the last col
                 # set up the window and update the result dict
-                window = RasterWindow(x, y, tw, th) # type: ignore
+                window = rasters.Window(x, y, tw, th) # type: ignore
                 self._data[(x, y)] = window
         self._extent = row_px, col_px
 

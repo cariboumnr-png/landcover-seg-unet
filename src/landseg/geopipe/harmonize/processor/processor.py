@@ -29,11 +29,6 @@ Data harmonization pipeline command implementation.
 import dataclasses
 import pathlib
 import typing
-# third-party imports
-import rasterio
-import rasterio.crs
-import rasterio.enums
-import rasterio.transform
 # local imports
 import landseg.geopipe.harmonize.manifest as manifest
 import landseg.geopipe.harmonize.processor.composition as composition
@@ -56,7 +51,7 @@ class _ParsedManifestEntry:
     tagged_name: str
     raster_type: str
     raster_band_mapping: dict[int, str]
-    resampling_method: rasterio.enums.Resampling
+    resampling_method: rasters.Resampling
 
 
 # ----- public functions
@@ -64,8 +59,8 @@ def harmonizer(  # pylint: disable=too-many-arguments, too-many-locals
     mfst_entries: list[manifest.ManifestEntry],
     output_dir: pathlib.Path,
     *,
-    dst_crs: rasterio.crs.CRS,
-    dst_transform: rasterio.transform.Affine,
+    dst_crs: rasters.CRS,
+    dst_transform: rasters.Affine,
     dst_width: int,
     dst_height: int,
     categorical_resampling: str,
@@ -91,17 +86,15 @@ def harmonizer(  # pylint: disable=too-many-arguments, too-many-locals
         )
 
         # warp and write
-        with rasterio.open(parsed.file_path) as src:
-            warped = rasters.write_warped_vrt(
-                src=src,
-                output_path=out_vrt,
-                crs=dst_crs,
-                transform=dst_transform,
-                height=dst_height,
-                width=dst_width,
-                resampling=parsed.resampling_method,
-                nodata=src.nodata
-            )
+        warped = rasters.write_warped_vrt(
+            src=parsed.file_path,
+            output_path=out_vrt,
+            crs=dst_crs,
+            transform=dst_transform,
+            height=dst_height,
+            width=dst_width,
+            resampling=parsed.resampling_method,
+        )
 
         match parsed.raster_type:
             case 'domains' | 'domain':

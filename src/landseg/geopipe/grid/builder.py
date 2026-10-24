@@ -38,7 +38,7 @@ import pathlib
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
+import landseg.geopipe.rasters as rasters
 
 
 # ----- Public dataclasses
@@ -79,22 +79,17 @@ def build_grid(
         if not (ref_fpath and ref_fpath.exists()):
             raise ValueError(f'Invalid reference raster: {ref_fpath}')
 
-        with geo_utils.open_rasters(ref_fpath) as (src,):
-            assert src
-            # get transform - pixel size
-            transform = src.transform
-            px, py = transform.a, abs(transform.e)
-            # get bounding box - origin and extent
-            l, b, r, t = src.bounds
-            # assign to gridspec
-            grid_spec = geo_core.GridSpec(
-                crs=str(src.crs),
-                origin=(l, t),             # left, top as x, y
-                pixel_size=(px, py),       # pixel size in x, y
-                tile_size=tile_size,
-                tile_stride=tile_stride,
-                grid_extent=(t - b, r - l) # top-bottom as H, right-left as W
-            )
+        raster_info = rasters.get_info(ref_fpath)
+        l, b, r, t = raster_info.bounds
+
+        grid_spec = geo_core.GridSpec(
+            crs=str(raster_info.crs),
+            origin=(l, t),                  # left, top as x, y
+            pixel_size=raster_info.res,     # pixel size in x, y
+            tile_size=tile_size,
+            tile_stride=tile_stride,
+            grid_extent=(t - b, r - l)      # top-bottom as H, right-left as W
+        )
 
     # manually define the extent
     elif mode == 'manual':

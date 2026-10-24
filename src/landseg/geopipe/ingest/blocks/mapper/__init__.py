@@ -22,8 +22,8 @@
 '''
 Top-level namespace for `landseg.geopipe.ingest.blocks.mapper`.
 
-Exposes raster-to-grid mapping, geometry validation, and window caching
-utilities via lazy module resolution.
+Exposes raster-to-grid mapping and window caching utilities via lazy
+module resolution.
 
 Public APIs:
     - `map_rasters_to_grid`: Maps rasters onto grid with caching.

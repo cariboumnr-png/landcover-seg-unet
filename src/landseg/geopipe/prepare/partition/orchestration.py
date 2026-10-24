@@ -37,13 +37,11 @@ Public APIs:
 # standard imports
 import dataclasses
 import pathlib
-# third-party imports
-import rasterio
-import rasterio.transform
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.partition.operations as operations
+import landseg.geopipe.rasters as rasters
 
 
 # ----- public dataclasses
@@ -54,7 +52,7 @@ class AOIConfig:
     val_aoi: pathlib.Path | None = None
     test_aoi: pathlib.Path | None = None
     canvas_crs: str = 'EPSG:3161'
-    canvas_transform: rasterio.transform.Affine | None = None
+    canvas_transform: rasters.Affine | None = None
     min_overlap: float = 0.5
 
 
@@ -220,7 +218,7 @@ def _split_by_aoi(
         test_aoi=config.aoi.test_aoi,
         block_size=(config.block_spec[0], config.block_spec[1]),
         crs=config.aoi.canvas_crs,
-        transform=config.aoi.canvas_transform or rasterio.transform.Affine.identity(),
+        transform=config.aoi.canvas_transform or rasters.Affine.identity(),
         min_overlap=config.aoi.min_overlap,
         logger=logger,
     )

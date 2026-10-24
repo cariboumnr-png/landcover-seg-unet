@@ -37,6 +37,7 @@ import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
+import landseg.geopipe.rasters as rasters
 
 
 # ----- typing aliases
@@ -109,9 +110,7 @@ def _canonicalize(mapped_windows: geo_core.RasterWindowDict) -> list[list[int]]:
     '''Create a canonical serialization for mapped windows.'''
     canon: list[list[int]] = []
     for k, w in sorted(mapped_windows.items()):
-        canon.append(
-            [k[0], k[1], w.col_off, w.row_off, w.width, w.height]
-        )
+        canon.append([k[0], k[1], w.col_off, w.row_off, w.width, w.height])
     return canon
 
 
@@ -120,6 +119,6 @@ def _parse(payload: list[list[int]]) -> geo_core.RasterWindowDict:
     parsed: geo_core.RasterWindowDict = {}
     for c in payload:
         x, y, col_off, row_off, w, h = c
-        window = geo_core.RasterWindow(col_off, row_off, w, h) # type: ignore
+        window = rasters.Window(col_off, row_off, w, h) # type: ignore
         parsed[(x, y)] = window
     return parsed

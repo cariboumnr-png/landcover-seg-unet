@@ -19,52 +19,35 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Context manager utility for opening raster datasets.
-
-This module provides utilities to open multiple rasterio datasets safely
-within a managed exit stack context.
-
-Public APIs:
-    - `open_rasters`: Context manager yielding opened raster readers.
-'''
+'''`rasterio` types and aliases.'''
 
 # standard imports
-import contextlib
-import pathlib
 import typing
 # third-party imports
 import rasterio
+import rasterio.coords
+import rasterio.crs
+import rasterio.enums
 import rasterio.io
+import rasterio.transform
+import rasterio.windows
 
 
-# ----- public functions
-@contextlib.contextmanager
-def open_rasters(
-    *rasters: str | pathlib.Path | None,
-) -> typing.Iterator[tuple[rasterio.io.DatasetReader | None, ...]]:
-    '''
-    Open multiple rasters safely and yield a tuple of dataset readers.
+# ----- typing aliases
+Affine: typing.TypeAlias = rasterio.transform.Affine
+'''Raster transform affine.'''
 
-    Args:
-        *rasters:
-            Variable number of raster file paths or None values.
+BoundingBox: typing.TypeAlias = rasterio.coords.BoundingBox
+'''Raster bound box.'''
 
-    Yields:
-        tuple[alias.RasterReader | None, ...]:
-            Tuple of opened dataset readers or None.
-    '''
-    with contextlib.ExitStack() as stack:
-        opened_rasters: list[rasterio.io.DatasetReader | None] = []
+CRS: typing.TypeAlias = rasterio.crs.CRS
+'''Raster Coordinate Reference System.'''
 
-        for raster in rasters:
-            if raster is not None:
-                assert pathlib.Path(raster).exists(), (
-                    f'Raster not found: {raster}'
-                )
-                opened_raster = stack.enter_context(rasterio.open(raster))
-                opened_rasters.append(opened_raster)
-            else:
-                opened_rasters.append(None)
+DatasetReader: typing.TypeAlias = rasterio.io.DatasetReader
+'''Dataset reader handle for opened raster files.'''
 
-        yield tuple(opened_rasters)
+Resampling: typing.TypeAlias = rasterio.enums.Resampling
+'''Raster resampling algorithms.'''
+
+Window: typing.TypeAlias = rasterio.windows.Window
+'''Pixel window offset and slice for raster reads and writes.'''

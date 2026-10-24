@@ -26,6 +26,7 @@ This module provides functions to reproject, resample, and snap input
 rasters to a canonical world grid layout as GDAL Virtual Rasters (VRT).
 
 Public APIs:
+    - `is_same_crs`: Compare two coordinate reference systems for equality.
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
@@ -36,21 +37,39 @@ import pathlib
 import rasterio
 import rasterio.crs
 import rasterio.enums
+import rasterio.errors
 import rasterio.shutil
-import rasterio.transform
 import rasterio.vrt
+# local imports
+import landseg.geopipe.rasters._types as t
+import landseg.geopipe.rasters.io as io
 
 
 # ----- public functions
+def is_same_crs(
+    crs1: t.CRS | str | None,
+    crs2: t.CRS | str | None,
+) -> bool:
+    '''Compare two coordinate reference systems for equality.'''
+    if crs1 is None or crs2 is None:
+        return crs1 == crs2
+    try:
+        c1 = rasterio.crs.CRS.from_user_input(crs1)
+        c2 = rasterio.crs.CRS.from_user_input(crs2)
+        return c1 == c2
+    except (rasterio.errors.CRSError, ValueError):
+        return str(crs1).strip() == str(crs2).strip()
+
+
 def write_warped_vrt( # pylint: disable=too-many-arguments
     *,
-    src: rasterio.DatasetReader,
+    src: pathlib.Path | str | t.DatasetReader,
     output_path: pathlib.Path | str,
-    crs: rasterio.crs.CRS,
-    transform: rasterio.transform.Affine,
+    crs: t.CRS,
+    transform: t.Affine,
     width: int,
     height: int,
-    resampling: rasterio.enums.Resampling,
+    resampling: t.Resampling,
     nodata: float | int | None = None,
     dtype: str | None = None,
 ) -> pathlib.Path:
@@ -59,7 +78,7 @@ def write_warped_vrt( # pylint: disable=too-many-arguments
 
     Args:
         src:
-            Open source dataset reader.
+            Open source dataset reader or path to raster file.
         output_path:
             Target destination path for the warped .vrt file.
         crs:
@@ -83,10 +102,66 @@ def write_warped_vrt( # pylint: disable=too-many-arguments
     '''
     out_p = pathlib.Path(output_path).resolve()
     out_p.parent.mkdir(parents=True, exist_ok=True)
-    effective_nodata = src.nodata if nodata is None else nodata
 
+    if isinstance(src, (str, pathlib.Path)):
+        with io.read_raster(src) as reader:
+            return _write_warped_vrt(
+                reader=reader,
+                out_p=out_p,
+                crs=crs,
+                transform=transform,
+                width=width,
+                height=height,
+                resampling=resampling,
+                nodata=nodata,
+                dtype=dtype,
+            )
+
+    return _write_warped_vrt(
+        reader=src,
+        out_p=out_p,
+        crs=crs,
+        transform=transform,
+        width=width,
+        height=height,
+        resampling=resampling,
+        nodata=nodata,
+        dtype=dtype,
+    )
+
+
+def resolve_resampling_algorithm(
+    method_name: str,
+    is_categorical: bool,
+) -> t.Resampling:
+    '''Resolve rasterio resampling algorithm enum.'''
+    if is_categorical or method_name == 'nearest':
+        return rasterio.enums.Resampling.nearest
+    if method_name == 'cubic':
+        return rasterio.enums.Resampling.cubic
+    try:
+        return rasterio.enums.Resampling[method_name.lower()]
+    except KeyError:
+        return rasterio.enums.Resampling.bilinear
+
+
+# ----- private helpers
+def _write_warped_vrt( # pylint: disable=too-many-arguments
+    *,
+    reader: t.DatasetReader,
+    out_p: pathlib.Path,
+    crs: t.CRS,
+    transform: t.Affine,
+    width: int,
+    height: int,
+    resampling: t.Resampling,
+    nodata: float | int | None,
+    dtype: str | None,
+) -> pathlib.Path:
+    '''Warp an open reader to disk as a VRT file.'''
+    effective_nodata = reader.nodata if nodata is None else nodata
     with rasterio.vrt.WarpedVRT(
-        src,
+        reader,
         crs=crs,
         transform=transform,
         width=width,
@@ -97,18 +172,3 @@ def write_warped_vrt( # pylint: disable=too-many-arguments
     ) as warped:
         rasterio.shutil.copy(warped, out_p, driver='VRT')
     return out_p
-
-
-def resolve_resampling_algorithm(
-    method_name: str,
-    is_categorical: bool,
-) -> rasterio.enums.Resampling:
-    '''Resolve rasterio resampling algorithm enum.'''
-    if is_categorical or method_name == 'nearest':
-        return rasterio.enums.Resampling.nearest
-    if method_name == 'cubic':
-        return rasterio.enums.Resampling.cubic
-    try:
-        return rasterio.enums.Resampling[method_name.lower()]
-    except KeyError:
-        return rasterio.enums.Resampling.bilinear

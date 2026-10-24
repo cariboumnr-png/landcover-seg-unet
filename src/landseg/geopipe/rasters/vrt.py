@@ -37,6 +37,8 @@ Public APIs:
 '''
 
 # standard imports
+import ast
+import json
 import os
 import pathlib
 import typing
@@ -334,3 +336,14 @@ def add_tag_to_vrt(
         return
     with rasterio.open(vrt_fpath, 'r+') as vrt:
         vrt.update_tags(**tags)
+
+
+def parse_vrt_tag(value: str) -> typing.Any:
+    '''Decode GDAL metadata serialized as JSON or a Python literal.'''
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        try:
+            return ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            return value

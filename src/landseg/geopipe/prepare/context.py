@@ -33,14 +33,11 @@ Public APIs:
 # standard imports
 import dataclasses
 import pathlib
-# third-party imports
-import rasterio
-import rasterio.errors
-import rasterio.transform
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.rasters as rasters
 
 
 # ----- typing aliases
@@ -61,7 +58,7 @@ class PreparationContext:
     val_aoi: pathlib.Path | None
     test_aoi: pathlib.Path | None
     canvas_crs: str
-    canvas_transform: rasterio.transform.Affine
+    canvas_transform: rasters.Affine
 
 
 # ----- public functions
@@ -99,14 +96,7 @@ def build_preparation_context(
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
-    try:
-        with rasterio.open(image_paths[0]) as src:
-            if src.crs is None:
-                raise ValueError(f'Raster has no CRS: {image_paths[0]}')
-            canvas_crs = src.crs.to_string()
-            canvas_transform = src.transform
-    except rasterio.errors.RasterioError as e:
-        raise ValueError(f'Error reading image: {image_paths[0]}') from e
+    image_raster_info = rasters.get_info(pathlib.Path(image_paths[0]))
 
     # block specs from windows
     block_size: list[int] | None = windows.get('tile_shape')
@@ -127,6 +117,6 @@ def build_preparation_context(
         train_aoi=pathlib.Path(partition.train_aoi) if partition.train_aoi else None,
         val_aoi=pathlib.Path(partition.val_aoi) if partition.val_aoi else None,
         test_aoi=pathlib.Path(partition.test_aoi) if partition.test_aoi else None,
-        canvas_crs=canvas_crs,
-        canvas_transform=canvas_transform,
+        canvas_crs=str(image_raster_info.crs),
+        canvas_transform=image_raster_info.transform,
     )

@@ -38,7 +38,7 @@ import numpy
 import numpy.typing
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
+import landseg.geopipe.rasters as rasters
 import landseg.utils as utils
 
 
@@ -90,8 +90,7 @@ def _read_raster(
 ) -> tuple[RasterTileDict, int, int]:
     '''Read a raster over all grid windows using parallel executor.'''
     # open domain raster
-    with geo_utils.open_rasters(fpath) as (src,):
-        assert src
+    with rasters.read_raster(fpath) as src:
         grid.offset_from(src)
 
         dtype = numpy.dtype(src.dtypes[0])
@@ -115,7 +114,7 @@ def _read_raster(
 
 def _read(
     raster_window_id: tuple[int, int],
-    raster_window: geo_core.RasterWindow,
+    raster_window: rasters.Window,
     raster_fpath: pathlib.Path,
     expected_h_w: tuple[int, int],
 ) -> tuple[tuple[int, int], numpy.typing.NDArray]:
@@ -125,8 +124,7 @@ def _read(
         return raster_window_id, numpy.array([])
 
     # read raster at window and return
-    with geo_utils.open_rasters(raster_fpath) as (src,):
-        assert src, f'Invalid domain raster source: {raster_fpath}'
+    with rasters.read_raster(raster_fpath) as src:
         arr = src.read(1, window=raster_window, boundless=True) # [1, H, W]
         arr = arr.astype(numpy.int16, copy=False) # avoids OOM
         return raster_window_id, arr
