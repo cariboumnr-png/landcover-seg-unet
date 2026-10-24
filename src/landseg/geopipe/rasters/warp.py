@@ -28,7 +28,6 @@ rasters to a canonical world grid layout as GDAL Virtual Rasters (VRT).
 Public APIs:
     - `is_same_crs`: Compare two coordinate reference systems for equality.
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
-    - `transform_bounds`: Transform bounding coordinates between CRS.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
 
@@ -41,7 +40,6 @@ import rasterio.enums
 import rasterio.errors
 import rasterio.shutil
 import rasterio.vrt
-import rasterio.warp
 # local imports
 import landseg.geopipe.rasters._types as t
 import landseg.geopipe.rasters.io as io
@@ -61,43 +59,6 @@ def is_same_crs(
         return c1 == c2
     except (rasterio.errors.CRSError, ValueError):
         return str(crs1).strip() == str(crs2).strip()
-
-
-def transform_bounds( # pylint: disable=too-many-arguments
-    src_crs: t.CRS | str,
-    dst_crs: t.CRS | str,
-    left: float,
-    bottom: float,
-    right: float,
-    top: float,
-    densify_pts: int = 21,
-) -> tuple[float, float, float, float]:
-    '''
-    Transform bounding coordinates from source CRS to destination CRS.
-
-    Args:
-        src_crs:
-            Source coordinate reference system.
-        dst_crs:
-            Destination coordinate reference system.
-        left:
-            Left bounding coordinate.
-        bottom:
-            Bottom bounding coordinate.
-        right:
-            Right bounding coordinate.
-        top:
-            Top bounding coordinate.
-        densify_pts:
-            Number of points used to densify each edge during transform.
-
-    Returns:
-        tuple[float, float, float, float]:
-            Reprojected bounding coordinates (left, bottom, right, top).
-    '''
-    return rasterio.warp.transform_bounds(
-        src_crs, dst_crs, left, bottom, right, top, densify_pts=densify_pts
-    )
 
 
 def write_warped_vrt( # pylint: disable=too-many-arguments

@@ -184,3 +184,49 @@ def test_write_warped_vrt_nodata_and_dtype(dummy_geotiff_factory, tmp_path):
     with rasterio.open(out_path) as dst:
         assert dst.nodata == -9999.0
         assert dst.dtypes[0] == 'float32'
+
+
+def test_write_warped_vrt_from_path(dummy_geotiff_factory, tmp_path):
+    '''
+    Given: A path to a source GeoTIFF.
+    When: Calling `write_warped_vrt` with a Path instead of DatasetReader.
+    Then: Automatically open, warp, and produce valid warped VRT.
+    '''
+    src_path = dummy_geotiff_factory(
+        filename='path_src.tif',
+        width=10,
+        height=10,
+        bands=1,
+    )
+    dst_crs = rasterio.crs.CRS.from_string('EPSG:3161')
+    dst_transform = rasterio.transform.from_origin(
+        500000.0, 6000000.0, 20.0, 20.0
+    )
+    out_path = tmp_path / 'warped_from_path.vrt'
+
+    res = warp.write_warped_vrt(
+        src=src_path,
+        output_path=out_path,
+        crs=dst_crs,
+        transform=dst_transform,
+        width=10,
+        height=10,
+        resampling=rasterio.enums.Resampling.nearest,
+    )
+    assert res == out_path
+    assert out_path.exists()
+
+
+# ----- `is_same_crs` tests
+def test_is_same_crs():
+    '''
+    Given: Identical, differing, or None CRS inputs.
+    When: Checking equivalence through `is_same_crs`.
+    Then: Return boolean reflecting CRS equivalence.
+    '''
+    assert warp.is_same_crs('EPSG:3161', 'EPSG:3161')
+    assert not warp.is_same_crs('EPSG:3161', 'EPSG:4326')
+    assert warp.is_same_crs(None, None)
+    assert not warp.is_same_crs('EPSG:3161', None)
+    assert not warp.is_same_crs(None, 'EPSG:3161')
+    assert warp.is_same_crs('custom_crs', 'custom_crs')

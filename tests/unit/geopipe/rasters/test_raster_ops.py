@@ -23,6 +23,7 @@
 
 # third-party imports
 import numpy
+import pytest
 import rasterio
 # local imports
 import landseg.geopipe.rasters.mask as mask
@@ -61,6 +62,91 @@ def test_stack_rasters(dummy_geotiff_factory, tmp_path):
         assert dst.crs.to_string() == 'EPSG:3161'
         assert dst.width == 20
         assert dst.height == 20
+
+
+def test_stack_rasters_empty_raises(tmp_path):
+    '''
+    Given: An empty list of source paths.
+    When: Invoking `stack_rasters`.
+    Then: Raise ValueError.
+    '''
+    with pytest.raises(ValueError, match='source_paths list cannot be empty'):
+        stack.stack_rasters([], tmp_path / 'empty.vrt')
+
+
+def test_stack_rasters_mismatched_dimensions_raises(
+    dummy_geotiff_factory, tmp_path
+):
+    '''
+    Given: Rasters with differing dimensions.
+    When: Invoking `stack_rasters`.
+    Then: Raise ValueError.
+    '''
+    p1 = dummy_geotiff_factory(filename='s1.tif', width=10, height=10)
+    p2 = dummy_geotiff_factory(filename='s2.tif', width=20, height=20)
+
+    with pytest.raises(ValueError, match='different dimensions'):
+        stack.stack_rasters([p1, p2], tmp_path / 'dim.vrt')
+
+
+def test_stack_rasters_mismatched_crs_raises(
+    dummy_geotiff_factory, tmp_path
+):
+    '''
+    Given: Rasters with differing CRS definitions.
+    When: Invoking `stack_rasters`.
+    Then: Raise ValueError.
+    '''
+    p1 = dummy_geotiff_factory(
+        filename='c1.tif', width=10, height=10, crs='EPSG:3161'
+    )
+    p2 = dummy_geotiff_factory(
+        filename='c2.tif', width=10, height=10, crs='EPSG:4326'
+    )
+
+    with pytest.raises(ValueError, match='different CRS'):
+        stack.stack_rasters([p1, p2], tmp_path / 'crs.vrt')
+
+
+def test_stack_rasters_band_tags_mismatch_raises(
+    dummy_geotiff_factory, tmp_path
+):
+    '''
+    Given: Band tags count that does not match total source bands.
+    When: Invoking `stack_rasters`.
+    Then: Raise ValueError.
+    '''
+    p1 = dummy_geotiff_factory(filename='bt1.tif', width=10, height=10, bands=2)
+
+    with pytest.raises(ValueError, match='band_tags length must equal'):
+        stack.stack_rasters(
+            [p1],
+            tmp_path / 'tags_err.vrt',
+            band_tags=[{'name': 'only_one'}],
+        )
+
+
+def test_stack_rasters_with_metadata(dummy_geotiff_factory, tmp_path):
+    '''
+    Given: Source raster with custom band and dataset metadata tags.
+    When: Invoking `stack_rasters`.
+    Then: Produces composite with attached XML metadata tags.
+    '''
+    p1 = dummy_geotiff_factory(
+        filename='meta_src.tif', width=10, height=10, bands=2
+    )
+    out_vrt = tmp_path / 'meta.vrt'
+    stack.stack_rasters(
+        [p1],
+        out_vrt,
+        band_tags=[{'channel': 'blue'}, {'channel': 'green'}],
+        dataset_tags={'sensor': 'custom_sensor'},
+    )
+
+    with rasterio.open(out_vrt) as src:
+        assert src.tags().get('sensor') == 'custom_sensor'
+        assert src.tags(1).get('channel') == 'blue'
+        assert src.tags(2).get('channel') == 'green'
 
 
 # ----- `unify_nodata_mask` tests

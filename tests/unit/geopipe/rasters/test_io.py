@@ -112,6 +112,56 @@ def test_get_info_and_band_map(dummy_geotiff_factory):
     assert info.band_map == {'red': 0, 'green': 1}
 
 
+def test_get_info_from_reader(dummy_geotiff_factory):
+    '''
+    Given: An already-opened DatasetReader instance.
+    When: Passing the reader to `get_info`.
+    Then: Return a `DatasetInfo` without re-opening from disk.
+    '''
+    path = dummy_geotiff_factory(
+        filename='reader_info.tif',
+        width=12,
+        height=14,
+        bands=1,
+    )
+    with rasters.read_raster(path) as reader:
+        info = rasters.get_info(reader)
+        assert info.width == 12
+        assert info.height == 14
+        assert info.count == 1
+
+
+def test_band_map_fallback_and_duplicates(dummy_geotiff_factory):
+    '''
+    Given: Rasters with empty descriptions or duplicate descriptions.
+    When: Accessing `band_map` property.
+    Then: Fall back to band_N names or return empty dict on duplicates.
+    '''
+    # empty descriptions fallback
+    p1 = dummy_geotiff_factory(
+        filename='no_desc.tif',
+        width=5,
+        height=5,
+        bands=2,
+    )
+    info1 = rasters.get_info(p1)
+    assert info1.band_map == {'band_1': 0, 'band_2': 1}
+
+    # duplicate descriptions return empty dict
+    p2 = dummy_geotiff_factory(
+        filename='dup_desc.tif',
+        width=5,
+        height=5,
+        bands=2,
+    )
+    with rasterio.open(p2, 'r+') as src:
+        src.set_band_description(1, 'BLUE')
+        src.set_band_description(2, 'BLUE')
+
+    info2 = rasters.get_info(p2)
+    assert info2.band_map == {}
+
+
 # ----- `read_window` tests
 def test_read_window(dummy_geotiff_factory):
     '''
@@ -123,5 +173,79 @@ def test_read_window(dummy_geotiff_factory):
         filename='win.tif', width=20, height=20, bands=3, dtype=numpy.uint8
     )
     with rasters.read_raster(r) as src:
-        arr = rasters.read_window(src, rasters.Window(2, 2, 8, 8))
+        arr = rasters.read_window(src, rasters.Window(2, 2, 8, 8)) # type: ignore
         assert arr.shape == (3, 8, 8)
+
+
+def test_read_window_single_band_index(dummy_geotiff_factory):
+    '''
+    Given: A multi-band GeoTIFF file.
+    When: Calling `read_window` with a single integer band index.
+    Then: Return 2D numpy array of shape (height, width).
+    '''
+    r = dummy_geotiff_factory(
+        filename='win_single.tif',
+        width=20,
+        height=20,
+        bands=3,
+        dtype=numpy.uint8,
+    )
+    with rasters.read_raster(r) as src:
+        arr = rasters.read_window(
+            src,
+            rasters.Window(2, 2, 8, 8), # type: ignore
+            indexes=1
+        )
+        assert arr.shape == (8, 8)
+
+
+def test_read_window_reflect_padding(dummy_geotiff_factory):
+    '''
+    Given: A GeoTIFF file and a boundary window requiring padding.
+    When: Calling `read_window` with `edge_mode='reflect'`.
+    Then: Return padded array with expected dimensions.
+    '''
+    r = dummy_geotiff_factory(
+        filename='win_pad.tif',
+        width=20,
+        height=20,
+        bands=2,
+        dtype=numpy.float32,
+    )
+    with rasters.read_raster(r) as src:
+        # window at top-left corner (0, 0) with padding=2
+        arr = rasters.read_window(
+            src,
+            rasters.Window(0, 0, 5, 5), # type: ignore
+            padding=2,
+            edge_mode='reflect',
+        )
+        assert arr.shape == (2, 9, 9)
+
+        # single-band 2D reflect padding
+        arr_single = rasters.read_window(
+            src,
+            rasters.Window(0, 0, 5, 5), # type: ignore
+            indexes=1,
+            padding=2,
+            edge_mode='reflect',
+        )
+        assert arr_single.shape == (9, 9)
+
+
+def test_read_window_invalid_edge_mode_raises(dummy_geotiff_factory):
+    '''
+    Given: A GeoTIFF file.
+    When: Calling `read_window` with an unsupported edge mode.
+    Then: Raise ValueError.
+    '''
+    r = dummy_geotiff_factory(
+        filename='win_err.tif', width=10, height=10, bands=1
+    )
+    with rasters.read_raster(r) as src:
+        with pytest.raises(ValueError, match='Invalid edge mode'):
+            rasters.read_window(
+                src,
+                rasters.Window(0, 0, 5, 5), # type: ignore
+                edge_mode='unsupported' # type: ignore
+            )
