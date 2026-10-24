@@ -40,7 +40,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.mapper as mapper
-import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 import landseg.models as models
 import landseg.session as session
@@ -256,7 +255,7 @@ def _create_block(
 
     # construct `RasterReadInput` mapping for mapped windows
     inputs_map = {
-        geo_utils.xy_name(coord): assembler.RasterReadInput(
+        geo_core.xy_name(coord): assembler.RasterReadInput(
             image_fpath=context.features,
             image_window=mapped.image[coord],
             image_band_map=image_band_map,

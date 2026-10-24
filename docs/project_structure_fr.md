@@ -92,6 +92,7 @@ src/landseg/
 |-- artifacts/
 |   |-- checkpoint.py             Sauvegarde/chargement de checkpoints
 |   |-- controller.py             Resolve/build/rebuild selon les politiques
+|   |-- ledger.py                 Calcul d'empreintes et detection de collisions
 |   |-- paths/                    Chemins canoniques des artefacts
 |   |-- payload_io.py             Persistance des payloads et metadonnees
 |   `-- policy.py                 Regles de cycle de vie des artefacts
@@ -140,7 +141,7 @@ src/landseg/
 |
 |-- geopipe/
 |   |-- contracts/                Schémas centraux de rapports et de transfert
-|   |-- core/                     Abstractions clés, catalogues et grille monde
+|   |-- core/                     Abstractions clés, catalogues, coords et grille monde
 |   |-- grid/                     Construction, cycle de vie et logger de grille
 |   |-- harmonize/                Reprojection, composition du processeur et manifeste
 |   |   |-- manifest/             Schéma de manifeste, normaliseur, compilateur
@@ -170,8 +171,7 @@ src/landseg/
 |   |   |-- stack.py              Empilement multi-canaux de rasters
 |   |   |-- vrt.py                Écriture de rasters virtuels et analyse de balises VRT
 |   |   `-- warp.py               Reprojection, distorsion et transformations de limites
-|   |-- factory.py                Factory des DataSpecs
-|   `-- utils/                    Chaînes de coordonnées et gestion des collisions
+|   `-- factory.py                Factory des DataSpecs
 |
 |-- knowledge/
 |   |-- embeddings.py             Tenseurs de plongements Sentence Transformer et matrices de similarité

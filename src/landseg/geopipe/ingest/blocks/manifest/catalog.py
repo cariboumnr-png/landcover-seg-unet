@@ -37,7 +37,6 @@ import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
 
 
 # ----- public functions
@@ -100,7 +99,7 @@ def build_catalog(
     for fp in input_block_fpaths:
         ctrl = artifacts.Controller(fp) # with no policy here
         meta = geo_core.DataBlock.load(fp).manifest
-        row, col = geo_utils.name_xy(meta['block_name'])
+        row, col = geo_core.name_xy(meta['block_name'])
         entry: geo_core.DatasetBlockMeta = {
             'block_name': meta['block_name'],
             'file_path': str(fp.resolve()),

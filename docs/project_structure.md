@@ -92,6 +92,7 @@ src/landseg/
 |-- artifacts/
 |   |-- checkpoint.py             Checkpoint save/load helpers
 |   |-- controller.py             Policy-driven artifact resolve/build/rebuild logic
+|   |-- ledger.py                 Fingerprint calculation and run collision detection
 |   |-- paths/                    Canonical artifact path definitions
 |   |-- payload_io.py             Structured payload and metadata persistence
 |   `-- policy.py                 Artifact lifecycle rules
@@ -140,7 +141,7 @@ src/landseg/
 |
 |-- geopipe/
 |   |-- contracts/                Central pipeline summary and report schemas
-|   |-- core/                     Core abstractions, catalogs, and grid layout
+|   |-- core/                     Core abstractions, catalogs, coords, and grid layout
 |   |-- grid/                     World grid construction, lifecycle, and logger
 |   |-- harmonize/                Reprojection, processor composition, and manifest
 |   |   |-- manifest/             Manifest schema, normalizer, and compiler
@@ -170,8 +171,7 @@ src/landseg/
 |   |   |-- stack.py              Multi-channel raster stacking
 |   |   |-- vrt.py                Virtual raster writing and VRT tag parsing
 |   |   `-- warp.py               Reprojection, warping, and bounds transforms
-|   |-- factory.py                DataSpecs factory
-|   `-- utils/                    Coordinate strings and collision helpers
+|   `-- factory.py                DataSpecs factory
 |
 |-- knowledge/
 |   |-- embeddings.py             Sentence Transformer embedding tensors and similarity matrices

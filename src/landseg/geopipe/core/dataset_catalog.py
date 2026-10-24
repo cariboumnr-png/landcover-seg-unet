@@ -37,6 +37,8 @@ import collections.abc
 import json
 import re
 import typing
+# local imports
+import landseg.geopipe.core.coords as coords
 
 
 # ----- public types
@@ -113,14 +115,8 @@ class DatasetCatalog(collections.abc.Mapping[tuple[int, int], DatasetBlockMeta])
             DatasetCatalog:
                 a populated DatasetCatalog instance.
         '''
-        def _name_xy(name: str) -> tuple[int, int]:
-            # e.g.,  row_000034_col_000012 -> (12, 34)
-            split = name.split('_')
-            y_str, x_str = split[1], split[3]
-            return int(x_str), int(y_str)
-
         obj = cls.__new__(cls)
-        obj._data = {_name_xy(k): v for k, v in source.items()}
+        obj._data = {coords.name_xy(k): v for k, v in source.items()}
         return obj
 
     def to_json_payload(self) -> str:
@@ -134,13 +130,8 @@ class DatasetCatalog(collections.abc.Mapping[tuple[int, int], DatasetBlockMeta])
             str:
                 formatted JSON string payload.
         '''
-        def _xy_name(coords: tuple[int, int]) -> str:
-            '''Format coordinate tuple as row/col string.'''
-            x, y = coords
-            return f'row_{y:06d}_col_{x:06d}'
-
         # sort self._data and start the line
-        data = {_xy_name(k): v for k, v in self._data.items()}
+        data = {coords.xy_name(k): v for k, v in self._data.items()}
 
         # raw json and custom formatting before return
         raw_json = json.dumps(data, indent=4)

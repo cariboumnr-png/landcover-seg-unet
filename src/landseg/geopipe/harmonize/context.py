@@ -34,10 +34,10 @@ Public APIs:
 import dataclasses
 import pathlib
 # local imports
+import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest as manifest
-import landseg.geopipe.utils as geo_utils
 
 
 # ----- public dataclasses
@@ -80,7 +80,7 @@ def build_harmonization_context(
     compiled = manifest.compile_dataset_manifest(mfst_path)
 
     # identify/collision check
-    grid_identity = geo_utils.compute_fingerprint(world_grid.affine_identity)
+    grid_identity = artifacts.compute_fingerprint(world_grid.affine_identity)
     identity = {
         'inputs': compiled,
         'grid': {
@@ -92,8 +92,8 @@ def build_harmonization_context(
             'continuous_resampling': config.resampling_continuous,
         }
     }
-    fingerprint = geo_utils.compute_fingerprint(identity)
-    collided = geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
+    fingerprint = artifacts.compute_fingerprint(identity)
+    collided = artifacts.find_run_collision(fingerprint, runs_manifest_fpath)
 
     return HarmonizationContext(
         grid=world_grid,

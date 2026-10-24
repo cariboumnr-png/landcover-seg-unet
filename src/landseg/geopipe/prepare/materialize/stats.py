@@ -37,7 +37,6 @@ import math
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
 
 
 # ----- public functions
@@ -62,7 +61,7 @@ def count_label(
     parsed_id: set[tuple[int, int]] = set()
     for id_str in selected_block_id:
         try:
-            coord = geo_utils.name_xy(id_str)
+            coord = geo_core.name_xy(id_str)
             parsed_id.add(coord)
         except (IndexError, ValueError) as e:
             raise ValueError(f'Invalid block coord string: {id_str}') from e

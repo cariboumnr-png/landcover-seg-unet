@@ -19,11 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for `landseg.geopipe.utils.run_collision`.'''
+'''Unit tests for artifact ledger hashing and run collisions.'''
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.utils as geo_utils
+import landseg.artifacts.ledger as ledger
 
 
 # ----- `compute_fingerprint` tests
@@ -37,9 +37,9 @@ def test_compute_fingerprint_deterministic():
     payload_b = {'a': 1, 'b': 2, 'nested': {'x': 10, 'y': 20}}
     payload_c = {'a': 1, 'b': 3}
 
-    fp_a = geo_utils.compute_fingerprint(payload_a)
-    fp_b = geo_utils.compute_fingerprint(payload_b)
-    fp_c = geo_utils.compute_fingerprint(payload_c)
+    fp_a = ledger.compute_fingerprint(payload_a)
+    fp_b = ledger.compute_fingerprint(payload_b)
+    fp_c = ledger.compute_fingerprint(payload_c)
 
     assert isinstance(fp_a, str)
     assert len(fp_a) == 64
@@ -55,7 +55,7 @@ def test_find_run_collision_missing_manifest(tmp_path):
     Then: Return None cleanly without error.
     '''
     missing_fp = tmp_path / 'nonexistent_manifest.json'
-    result = geo_utils.find_run_collision('any_hash', missing_fp)
+    result = ledger.find_run_collision('any_hash', missing_fp)
     assert result is None
 
 
@@ -86,23 +86,23 @@ def test_find_run_collision_status_filtering(tmp_path):
     artifacts.Controller[dict](manifest_fp).persist(manifest_data)
 
     # successful run matches
-    found = geo_utils.find_run_collision('hash_success', manifest_fp)
+    found = ledger.find_run_collision('hash_success', manifest_fp)
     assert found == 'run_success'
 
     # failed run is ignored under default success_status='SUCCESS'
-    found_failed = geo_utils.find_run_collision('hash_failed', manifest_fp)
+    found_failed = ledger.find_run_collision('hash_failed', manifest_fp)
     assert found_failed is None
 
     # skipped run is ignored under default success_status='SUCCESS'
-    found_skipped = geo_utils.find_run_collision('hash_skipped', manifest_fp)
+    found_skipped = ledger.find_run_collision('hash_skipped', manifest_fp)
     assert found_skipped is None
 
     # non-existent hash returns None
-    found_none = geo_utils.find_run_collision('unknown_hash', manifest_fp)
+    found_none = ledger.find_run_collision('unknown_hash', manifest_fp)
     assert found_none is None
 
     # custom success_status matches target status
-    found_custom = geo_utils.find_run_collision(
+    found_custom = ledger.find_run_collision(
         'hash_skipped', manifest_fp, success_status='SKIPPED'
     )
     assert found_custom == 'run_skipped'

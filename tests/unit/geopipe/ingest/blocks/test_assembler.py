@@ -35,7 +35,6 @@ import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
 import landseg.geopipe.rasters as rasters
-import landseg.geopipe.utils as geo_utils
 
 
 # ----- integrity checks
@@ -298,7 +297,7 @@ def test_build_blocks_orchestrator(
     assert result.label_color_map is None
 
     for coord in image_windows:
-        name = geo_utils.xy_name(coord)
+        name = geo_core.xy_name(coord)
         assert os.path.exists(os.path.join(out_dir, f'{name}.npz'))
 
 

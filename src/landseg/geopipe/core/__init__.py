@@ -32,7 +32,9 @@ Public APIs:
     - `DomainTileMap`: Mapping of valid spatial domain tiles.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
+    - `name_xy`: Convert block name string to (x, y) coordinate tuple.
     - `read_grid_report`: Read grid report JSON and extract summary.
+    - `xy_name`: Convert (x, y) coordinate tuple to block name string.
     - `CategoricalSpec`: TypedDict for categorical raster specs.
     - `DataBlockManifest`: TypedDict for block serialization manifest.
     - `DatasetBlockMeta`: TypedDict for individual block entry.
@@ -63,7 +65,9 @@ __all__ = [
     'GridLayout',
     'GridSpec',
     # functions
+    'name_xy',
     'read_report',
+    'xy_name',
     # typing
     'CategoricalSpec',
     'DataBlockManifest',
@@ -86,6 +90,10 @@ if typing.TYPE_CHECKING:
         CategoricalSpec,
         LabelScheme,
         TaxonomySpec,
+    )
+    from .coords import (
+        name_xy,
+        xy_name,
     )
     from .data_block import (
         DataBlock,
@@ -122,6 +130,13 @@ def __getattr__(name: str):
         'TaxonomySpec',
     }:
         obj = importlib.import_module('.categorical', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'name_xy',
+        'xy_name',
+    }:
+        obj = importlib.import_module('.coords', __package__)
         return getattr(obj, name)
 
     if name in {

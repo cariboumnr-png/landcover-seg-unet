@@ -44,7 +44,6 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
 
 
 # ----- typing aliases
@@ -202,7 +201,7 @@ def build_ingestion_context(
     labels = pathlib.Path(labels_raw) if labels_raw else None
 
     # identify/collision check
-    grid_identity = geo_utils.compute_fingerprint(world_grid.block_identity)
+    grid_identity = artifacts.compute_fingerprint(world_grid.block_identity)
     config_dict = (
         {
             'datablocks': {
@@ -235,9 +234,9 @@ def build_ingestion_context(
         },
         'config': config_dict,
     }
-    fingerprint = geo_utils.compute_fingerprint(identity)
+    fingerprint = artifacts.compute_fingerprint(identity)
     collided = (
-        geo_utils.find_run_collision(fingerprint, runs_manifest_fpath)
+        artifacts.find_run_collision(fingerprint, runs_manifest_fpath)
         if runs_manifest_fpath is not None
         else None
     )

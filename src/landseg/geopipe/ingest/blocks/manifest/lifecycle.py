@@ -43,7 +43,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.manifest.catalog as catalog
 import landseg.geopipe.ingest.blocks.manifest.schema as schema
-import landseg.geopipe.utils as geo_utils
 
 
 # ----- typing aliases
@@ -183,7 +182,7 @@ def _catalog_status(
         raise FileNotFoundError('No block files found')
 
     # get filenames from the updated coordinates (parse from coords)
-    updated = [f'{geo_utils.xy_name(c)}.npz' for c in updated_coords]
+    updated = [f'{geo_core.xy_name(c)}.npz' for c in updated_coords]
 
     # determine status
     cataloged = [pathlib.Path(c['file_path']).name for c in _catalog.values()]

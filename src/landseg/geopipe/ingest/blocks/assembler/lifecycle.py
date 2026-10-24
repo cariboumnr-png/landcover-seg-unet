@@ -48,7 +48,6 @@ import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
-import landseg.geopipe.utils as geo_utils
 import landseg.utils as utils
 
 
@@ -305,7 +304,7 @@ def _prep_block_windows(
         ):
             valid_coords.remove(coord)
 
-    return {c: output_dir / f'{geo_utils.xy_name(c)}.npz' for c in valid_coords}
+    return {c: output_dir / f'{geo_core.xy_name(c)}.npz' for c in valid_coords}
 
 
 def _structural_validation(
@@ -344,7 +343,7 @@ def _structural_validation(
         raise artifacts.ArtifactError(
             f'Intra-pool block collision detected for '
             f'{len(collided_coords)} blocks under collision policy '
-            f'"error": {[geo_utils.xy_name(c) for c in collided_coords[:5]]}'
+            f'"error": {[geo_core.xy_name(c) for c in collided_coords[:5]]}'
         )
 
     match artifacts_policy:
@@ -366,7 +365,7 @@ def _structural_validation(
     for c in sorted(collided_coords):
         meta = incumbent_catalog.get(c, {}) if incumbent_catalog else {}
         collided.append({
-            'block_name': geo_utils.xy_name(c),
+            'block_name': geo_core.xy_name(c),
             'grid_coord': [c[1], c[0]],
             'incumbent_ingest_run': meta.get('ingest_run_id'),
             'incumbent_harmonize_run':  meta.get('harmonize_run_id'),
@@ -392,7 +391,7 @@ def _create_missing_blocks(
     creation_jobs = []
     for c in coords_todo:
 
-        name = geo_utils.xy_name(c)
+        name = geo_core.xy_name(c)
         block_inputs = io.RasterReadInput(
             image_fpath=inputs.image_fpath,
             image_window=context.image[c],

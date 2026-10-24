@@ -28,8 +28,8 @@ import rasterio.windows
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
+import landseg.geopipe.core.coords as coords
 import landseg.geopipe.core.grid_layout as grid_layout
-import landseg.geopipe.utils.coords_str as coords_str
 
 
 # ----- `GridSpec` tests
@@ -284,14 +284,14 @@ def test_grid_report_helpers(tmp_path):
     assert loaded['grid_fpath'] == '/path/to/grid.json'
 
 
-# ----- `coords_str` helpers tests
-def test_coords_str_roundtrip():
+# ----- `coords` helpers tests
+def test_coords_roundtrip():
     '''
     Given: A tuple of (x, y) coordinates and canonical block names.
     When: Converting via `xy_name` and back via `name_xy`.
     Then: Formats as zero-padded string and reconstructs coordinates.
     '''
-    assert coords_str.xy_name((12, 34)) == 'row_000034_col_000012'
-    assert coords_str.xy_name((0, 0)) == 'row_000000_col_000000'
-    assert coords_str.name_xy('row_000034_col_000012') == (12, 34)
-    assert coords_str.name_xy('row_000000_col_000000') == (0, 0)
+    assert coords.xy_name((12, 34)) == 'row_000034_col_000012'
+    assert coords.xy_name((0, 0)) == 'row_000000_col_000000'
+    assert coords.name_xy('row_000034_col_000012') == (12, 34)
+    assert coords.name_xy('row_000000_col_000000') == (0, 0)

@@ -42,7 +42,6 @@ import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.geopipe.contracts.preparation as prepare_contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.utils as geo_utils
 import landseg.knowledge as knowledge
 
 
@@ -173,11 +172,11 @@ def __calc_test_grid(
     '''Calculate continuous patch grid dimensions for test blocks.'''
     if not test_blocks:
         return 0, 0
-    sorted_blknames = sorted(test_blocks.keys(), key=geo_utils.name_xy)
-    xmin, ymin = geo_utils.name_xy(sorted_blknames[0])
+    sorted_blknames = sorted(test_blocks.keys(), key=geo_core.name_xy)
+    xmin, ymin = geo_core.name_xy(sorted_blknames[0])
     col, row = 0.0, 0.0
     for blkname in sorted_blknames:
-        x, y = geo_utils.name_xy(blkname)
+        x, y = geo_core.name_xy(blkname)
         col = max(col, (x - xmin) / img_w)
         row = max(row, (y - ymin) / img_h)
     col_int, row_int = int(col + 1), int(row + 1)
@@ -313,7 +312,7 @@ def __parse_domain(
     # index domain if provided
     if ids_domain:
         for coord, dom in ids_domain.items():
-            blkname = geo_utils.xy_name(coord)
+            blkname = geo_core.xy_name(coord)
             if blkname in input_blocks:
                 if dom['majority'] is None or dom['majority'] < 0:
                     output_ids_domain[blkname] = 0 # default value
@@ -323,7 +322,7 @@ def __parse_domain(
     # vector domain if provided
     if vec_domain:
         for coord, dom in vec_domain.items():
-            blkname = geo_utils.xy_name(coord)
+            blkname = geo_core.xy_name(coord)
             if blkname in input_blocks:
                 if dom['pca_feature'] is None:
                     output_vec_domain[blkname] = [0.0] * vec_domain.n_pca_ax

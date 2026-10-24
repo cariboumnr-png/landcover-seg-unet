@@ -23,12 +23,12 @@
 Run ledger utilities and deterministic payload fingerprinting.
 
 Provides centralized helpers for computing canonical cryptographic
-fingerprints of run specifications and detecting collision with
+fingerprints of run specifications and detecting collisions with
 completed runs in pipeline run manifests.
 
 Public APIs:
     - `compute_fingerprint`: Deterministic SHA-256 hash of payload.
-    - `check_run_collision`: Search runs manifest for matching run.
+    - `find_run_collision`: Search runs manifest for matching run.
 '''
 
 # standard imports
