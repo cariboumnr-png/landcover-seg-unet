@@ -34,6 +34,7 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
+import landseg.geopipe.rasters as rasters
 import landseg.geopipe.utils as geo_utils
 
 
@@ -115,7 +116,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
         bands=1
     )
 
-    window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
+    window = rasters.Window(4, 4, 8, 8)
 
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
@@ -177,7 +178,7 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         bands=1
     )
 
-    window = geo_core.RasterWindow(4, 4, 8, 8)  # type: ignore
+    window = rasters.Window(4, 4, 8, 8)
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
@@ -247,10 +248,10 @@ def test_build_blocks_orchestrator(
     )
 
     image_windows = {
-        (0, 0): geo_core.RasterWindow(0, 0, 8, 8),  # type: ignore
-        (0, 8): geo_core.RasterWindow(8, 0, 8, 8),  # type: ignore
-        (8, 0): geo_core.RasterWindow(0, 8, 8, 8),  # type: ignore
-        (8, 8): geo_core.RasterWindow(8, 8, 8, 8),  # type: ignore
+        (0, 0): rasters.Window(0, 0, 8, 8),
+        (0, 8): rasters.Window(8, 0, 8, 8),
+        (8, 0): rasters.Window(0, 8, 8, 8),
+        (8, 8): rasters.Window(8, 8, 8, 8),
     }
 
     label_windows = dict(image_windows)
@@ -327,7 +328,7 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
         arr[0, 8:16, :] = 2
         src.write(arr)
 
-    window = geo_core.RasterWindow(0, 0, 16, 16)  # type: ignore
+    window = rasters.Window(0, 0, 16, 16)
 
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {

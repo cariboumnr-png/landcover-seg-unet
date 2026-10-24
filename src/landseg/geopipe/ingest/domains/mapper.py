@@ -114,7 +114,7 @@ def _read_raster(
 
 def _read(
     raster_window_id: tuple[int, int],
-    raster_window: geo_core.RasterWindow,
+    raster_window: rasters.Window,
     raster_fpath: pathlib.Path,
     expected_h_w: tuple[int, int],
 ) -> tuple[tuple[int, int], numpy.typing.NDArray]:

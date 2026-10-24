@@ -159,3 +159,16 @@ def test_vrt_metadata_and_descriptions(dummy_geotiff_factory, tmp_path):
 
     with pytest.raises(ValueError, match='Expected 1 band descriptions'):
         vrt.add_band_description_to_vrt(vrt_path, {1: 'b1', 2: 'b2'})
+
+
+# ----- `parse_vrt_tag` tests
+def test_parse_vrt_tag():
+    '''
+    Given: JSON strings, literal dict strings, and plain text.
+    When: Parsing via `parse_vrt_tag`.
+    Then: Return decoded Python objects or strings.
+    '''
+    tag_json = '{"a": 1, "b": [2, 3]}'
+    assert vrt.parse_vrt_tag(tag_json) == {'a': 1, 'b': [2, 3]}
+    assert vrt.parse_vrt_tag("{'key': 'value'}") == {'key': 'value'}
+    assert vrt.parse_vrt_tag('plain_string') == 'plain_string'
