@@ -1,57 +1,68 @@
 ## Current workflow
 
-Last updated: 2026-10-07
+Last updated: 2026-10-24
 
 ```
-[grid/builder]                           (1 World Grid – canonical spatial definition)
+[scripts/build_raster_mosaic]            (0 Raster Mosaicking – optional cross-UTM/tile assembly)
 |
-+--> [artifacts/controller]
-|        (resolve/build/reuse grid artifact under policy)
++--> [geopipe/rasters/mosaic]
+|        (assemble adjacent GeoTIFFs into unified EPSG:3161 Virtual Raster .vrt)
 |
-+--> [grid/lifecycle]
-|        (grid artifact persistence & validation)
++--> [grid/builder]                      (1 World Grid – canonical spatial definition)
+|        |
+|        +--> [geopipe/rasters/io]       (inspect reference raster metadata & bounds)
+|        |
+|        +--> [artifacts/controller]     (resolve/build/reuse grid artifact under policy)
+|        |
+|        `--> [grid/lifecycle]           (grid artifact persistence & validation)
 |
 +--> [geopipe/harmonize]                 (2 Data Harmonization – warp/resample rasters)
 |        |
-|        +--> [artifacts/controller]
-|        |        (resolve/build/reuse harmonized raster batch)
+|        +--> [geopipe/rasters]          (warp, stack, mask, vrt via rasters subsystem)
 |        |
-|        +--> [geopipe/ledger]
-|                 (register batch run in harmonization_runs.json)
+|        +--> [harmonize/processor]      (composition routing & channel reading)
+|        |
+|        +--> [knowledge/taxonomy]       (validate target taxonomy specifications)
+|        |
+|        +--> [artifacts/controller]     (resolve/build/reuse harmonized raster batch)
+|        |
+|        `--> [geopipe/ledger]           (register batch run in harmonization_runs.json)
 |
 +--> [geopipe/ingest]                    (3 Data Ingestion – canonical block pool)
 |        |
-|        +--> [ingest/blocks/assembler]
-|        |        (slice raster tiles & domain features)
+|        +--> [geopipe/rasters/io]       (grid-aligned window array reading)
 |        |
-|        +--> [ingest/collision]
-|        |        (evaluate collision policy: skip vs overwrite)
+|        +--> [geopipe/rasters/geometry] (resolution & overlap bounds checks)
 |        |
-|        +--> [artifacts/controller]
-|        |        (persist blocks into canonical pool catalog)
+|        +--> [ingest/blocks/assembler]  (slice raster tiles & domain features)
 |        |
-|        +--> [geopipe/ledger]
-|                 (register batch run in ingestion_runs.json)
+|        +--> [ingest/collision]         (evaluate collision policy: skip vs overwrite)
+|        |
+|        +--> [artifacts/controller]     (persist blocks into canonical pool catalog)
+|        |
+|        `--> [geopipe/ledger]           (register batch run in ingestion_runs.json)
 |
 +--> [geopipe/prepare]                   (4 Data Preparation – experiment datasets)
 |        |
-|        +--> [prepare/partitioner]
-|        |        (geographic AOI splitting into train/val/test)
+|        +--> [prepare/partitioner]      (geographic AOI splitting into train/val/test)
 |        |
-|        +--> [artifacts/controller]
-|        |        (persist manifests, normalization stats, DataSpecs)
+|        +--> [geopipe/rasters/geometry] (reproject AOI bounds for partition filtering)
+|        |
+|        `--> [artifacts/controller]     (persist manifests, normalization stats, DataSpecs)
 |
 +--> [models/factory]                    (5 Model construction & wiring)
 |
 +--> [session/factory]                   (6 Session construction boundary)
 |        |
+|        +--> [knowledge/resolver]       (resolve species embeddings & ecological similarity)
+|        |
 |        +--> [session/data]             (dataloaders and batching adapters)
 |        |
-|        +--> [session/engine]           (batch + epoch execution engines)
+|        +--> [session/engine]           (batch + epoch execution engines & loss objectives)
 |        |
 |        +--> [session/instrumentation]  (callbacks, logging, tracking, dashboards)
 |        |
-|        +--> [session/orchestration]    (lifecycle management and phase transitions)
+|        `--> [session/orchestration]    (lifecycle management and phase transitions)
 |
 +--> [execution/preflight]               (7 Pre-Flight Readiness Validation Engine)
 |        |                               (non-destructive dry-run inspection)
@@ -62,7 +73,7 @@ Last updated: 2026-10-07
 |        `--> [reporter]                 (120-col terminal dashboard & JSON export)
 |
 +--> [execution/executor]                (8 Execution Dispatch Layer: command=<name>)
-         |
+         |                               (resolves task recipes configs/*.yaml)
          +--> [execution/pipelines]      (8a Atomic Pipelines – 1:1 execution invariant)
          |        |
          |        +--> [WorldGridGeneration]   (build & persist world grid)
@@ -70,15 +81,17 @@ Last updated: 2026-10-07
          |        +--> [DataIngestion]         (ingest single batch into pool)
          |        +--> [DataPreparation]       (partition pool into DataSpecs)
          |        +--> [ModelTraining]         (full model training session)
-         |        +--> [ModelEvaluation]       (single-pass checkpoint evaluation)
+         |        `--> [ModelEvaluation]       (single-pass checkpoint evaluation)
          |
          `--> [execution/workflows]      (8b Composite Multi-Run Workflows)
                   |
                   +--> [batch_ingest]          (resolve ledger queue & loop ingestion)
                   +--> [diagnose_overfit]      (minimal-scope end-to-end diagnostic)
+                  +--> [e2e_intake]            (continuous intake: harmonize + ingest)
+                  +--> [e2e_experiment]        (full lifecycle: grid -> train)
                   +--> [study_sweep]           (Optuna hyperparameter study trials)
                   +--> [study_analysis]        (Optuna study reporting & trial metrics)
-                  +--> [default]               (system-wide preflight audit)
+                  `--> [default]               (system-wide preflight audit)
 ```
 ---
 
@@ -86,6 +99,10 @@ Last updated: 2026-10-07
 
 - All foundation build steps (grid, harmonize, ingest, prepare) remain pure,
   deterministic, and side-effect free in computation.
+
+- Low-level raster manipulation, window reading, resolution/CRS verification,
+  and bounds transforms are centralized in `geopipe.rasters`. Individual pipeline
+  stages do not natively import raw raster library dependencies.
 
 - All artifact reuse, rebuild, overwrite, and validation decisions are
   centralized through `artifacts.controller`, enforcing policy-driven
@@ -96,6 +113,10 @@ Last updated: 2026-10-07
 
 - Downstream stages operate on resolved artifacts, not on recomputed or
   implicit intermediates.
+
+- Ecological knowledge assets (species taxonomies, precomputed embeddings,
+  and cosine similarity matrices) are decoupled under `landseg.knowledge`
+  and configured via `execution.knowledge_dir`.
 
 - `DataSpecs` and model construction occur strictly before the session
   boundary and are treated as fully-resolved, immutable inputs.
@@ -129,9 +150,13 @@ Last updated: 2026-10-07
     strict 1-to-1 invariant (1 invocation $\rightarrow$ 1 target $\rightarrow$
     1 run directory $\rightarrow$ 1 report).
   - **Composite workflows** (`execution.workflows`): lightweight procedural
-    functions coordinating multi-run loops (`batch_ingest`), optimization
+    functions coordinating multi-run loops (`batch_ingest`), intake
+    (`e2e_intake`), full lifecycle runs (`e2e_experiment`), optimization
     sweeps (`study_sweep`), diagnostics (`diagnose_overfit`), or analyses
     (`study_analysis`).
+
+- Configuration is driven by task-oriented modular recipes in `configs/*.yaml`
+  resolving directly into structured Hydra config schemas.
 
 - The system maintains a unidirectional dependency flow:
   `geopipe (ETL) → artifacts → models → session → execution (preflight, pipelines, workflows)`

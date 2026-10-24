@@ -2,7 +2,7 @@
 
 [English](./data_preparation.md) | [Français](./data_preparation_fr.md)
 
-Dernière mise à jour : 2026-08-19
+Dernière mise à jour : 2026-10-24
 
 ---
 
@@ -23,6 +23,13 @@ quatre étapes séquentielles :
    d'entraînement, validation et test (optionnellement contraints par des
    masques géographiques AOI) et calcule les statistiques de normalisation.
 
+> [!TIP]
+> **Pré-mosaïquage multi-tuiles** : Lorsque vos rasters d'entrée couvrent
+> plusieurs tuiles adjacentes ou des zones UTM différentes, vous pouvez les
+> assembler au préalable en un raster virtuel (`.vrt`) avec
+> `scripts/build_raster_mosaic.py` ou `notebooks/00_raster_mosaic.ipynb` avant
+> d'exécuter `data-harmonize`.
+
 Les utilisateurs peuvent fournir leurs propres fichiers GeoTIFF avec un
 manifeste de jeu de données, ou utiliser le script de génération de données
 synthétiques pour explorer le cadre.
@@ -32,12 +39,14 @@ synthétiques pour explorer le cadre.
 ## Contenu
 
 - [Générateur de données d'échantillon synthétiques](#générateur-de-données-déchantillon-synthétiques)
+- [Mosaïque virtuelle avant harmonisation](#mosaïque-virtuelle-avant-harmonisation)
 - [Grille mondiale et raster de référence](#grille-mondiale-et-raster-de-référence)
 - [Manifeste et configurations de métadonnées](#manifeste-et-configurations-de-métadonnées)
   - [Manifeste central (`manifest.json`)](#manifeste-central-manifestjson)
   - [Rasters de caractéristiques (Optique / MNA)](#rasters-de-caractéristiques-optique--mna)
   - [Rasters d'étiquettes (Têtes de classification)](#rasters-détiquettes-têtes-de-classification)
   - [Rasters de domaine (Contexte optionnel)](#rasters-de-domaine-contexte-optionnel)
+  - [Configuration de la préparation (`configs/data_prepare.yaml`)](#configuration-de-la-préparation-configsdata_prepareyaml)
   - [Rasters AOI géographiques (Splits optionnels)](#rasters-aoi-géographiques-splits-optionnels)
 - [Alignement automatisé vs manuel](#alignement-automatisé-vs-manuel)
 - [Tutoriel - Créer des rasters de référence dans QGIS](#tutoriel---créer-des-rasters-de-référence-dans-qgis)
@@ -61,20 +70,43 @@ experiment/input/
 ├── reference_raster/
 │   ├── sample_extent.tif        # Étendue définissant le canevas spatial
 │   └── sample_test_aoi.tif      # Masque géographique optionnel de test
-└── raw_data/
-    ├── manifest.json            # Manifeste central du jeu de données
-    ├── sample_dev_sentinel2.tif # Imagerie optique multi-bandes (10m)
-    ├── sample_dev_sentinel2.json
-    ├── sample_dev_dem.tif       # Raster d'élévation MNA (10m)
-    ├── sample_dev_dem.json
-    ├── sample_dev_landcover.tif # Vérité terrain couverture du sol
-    ├── sample_dev_landcover.json
-    ├── sample_dev_leadspc.tif   # Vérité terrain essences forestières
-    ├── sample_dev_leadspc.json
-    ├── sample_domain_1.tif      # Masque de contexte de domaine
-    ├── sample_domain_1.json
-    └── ...
+├── raw_data/
+│   ├── manifest.json            # Manifeste central du jeu de données
+│   ├── sample_dev_sentinel2.tif # Imagerie optique multi-bandes (10m)
+│   ├── sample_dev_sentinel2.json
+│   ├── sample_dev_dem.tif       # Raster d'élévation MNA (10m)
+│   ├── sample_dev_dem.json
+│   ├── sample_dev_landcover.tif # Vérité terrain couverture du sol
+│   ├── sample_dev_landcover.json
+│   ├── sample_dev_leadspc.tif   # Vérité terrain essences forestières
+│   ├── sample_dev_leadspc.json
+│   ├── sample_domain_1.tif      # Masque de contexte de domaine
+│   ├── sample_domain_1.json
+│   └── ...
+└── utm_rasters/                 # Tuiles factices cross-UTM pour tests de mosaïque
+    ├── image_17n.tif            # GeoTIFF de caractéristiques UTM 17N
+    ├── image_18n.tif            # GeoTIFF de caractéristiques UTM 18N
+    ├── label_17n.tif            # GeoTIFF d'étiquettes UTM 17N
+    └── label_18n.tif            # GeoTIFF d'étiquettes UTM 18N
 ```
+
+---
+
+## Mosaïque virtuelle avant harmonisation
+
+Lorsque les jeux de données d'entrée se présentent sous forme de tuiles
+spatiales individuelles (comme les unités de gestion forestière de l'Ontario à
+travers les zones UTM 15N, 16N, 17N et 18N), assemblez-les en une mosaïque
+virtuelle avant de construire la grille ou d'harmoniser :
+
+```bash
+python scripts/build_raster_mosaic.py \
+    experiment/input/utm_rasters/image_*.tif \
+    --output experiment/input/raw_data/sample_dev_mosaic.vrt
+```
+
+Consultez [notebooks/00_raster_mosaic.ipynb](../notebooks/00_raster_mosaic.ipynb)
+pour une démonstration et visualisation interactives.
 
 ---
 
@@ -288,38 +320,44 @@ conditionnement du modèle.
 
 ---
 
-### Configuration de la préparation (`configs/user.yaml`)
+### Configuration de la préparation (`configs/data_prepare.yaml`)
 
 Lors de `data-prepare`, l'utilisateur peut sélectionner des canaux d'entrée
-spécifiques et des hiérarchies de reclassification des cibles :
+spécifiques et des hiérarchies de reclassification des cibles via les recettes :
 
 ```yaml
-data-prepare:
-  output_dpath: ./experiment/artifacts/prepared_data
+data:
+  preparation:
+    output_dpath: ./experiment/artifacts/prepared_data
+    rebuild: true
 
-  # 1. Sélection des caractéristiques par jeu de données (null utilise toutes les bandes)
-  features:
-    sentinel2: rgb_nir          # Schéma nommé du sidecar
-    dem: all                    # Toutes les bandes du MNA
-    # Ou en ligne :
-    # sentinel2: [blue, green, red, nir]
+    datasetview:
+      # 1. Sélection des caractéristiques par jeu de données ({} sélectionne tout)
+      features:
+        sentinel2: rgb_nir          # Schéma nommé du sidecar
+        dem: all                    # Toutes les bandes du MNA
+        # Ou liste en ligne : [blue, green, red, nir]
 
-  # 2. Reclassification des cibles par étiquette (null utilise les classes de base)
-  targets:
-    landcover: binary           # Schéma nommé du sidecar
-    leadspc: raw                # Classes de base
-    # Ou dictionnaire en ligne :
-    # landcover:
-    #   reclass:
-    #     "1": [1, 2]
-    #   reclass_name:
-    #     "1": "forest"
+      # 2. Reclassification des cibles par étiquette ({} utilise les classes de base)
+      targets:
+        landcover: binary           # Schéma nommé du sidecar
+        leadspc: raw                # Classes de base
+        # Ou dictionnaire en ligne :
+        # landcover:
+        #   reclass:
+        #     "1": [1, 2]
+        #   reclass_name:
+        #     "1": "forest"
 
-  # 3. Ratios de partitionnement et découpage
-  val_ratio: 0.20
-  test_ratio: 0.00
-  buffer_step: 0
-  rebuild: true
+    partition:
+      # 3. Ratios de partitionnement et découpage
+      val_ratio: 0.20
+      test_ratio: 0.00
+      buffer_step: 0
+      test_aoi: ./experiment/input/reference_raster/sample_test_aoi.tif
+      val_aoi: null
+      train_aoi: null
+      aoi_min_overlap: 0.5
 ```
 
 ---
@@ -332,7 +370,7 @@ régions d'évaluation :
 
 - `sample_test_aoi.tif` : Les blocs chevauchant ce raster sont alloués à
   l'ensemble de test (`test`).
-- Configuré dans `configs/user.yaml` sous `data-prepare: test_aoi: ...`
+- Configuré dans `configs/data_prepare.yaml` sous `data.preparation.partition.test_aoi: ...`
 
 ---
 
@@ -340,8 +378,10 @@ régions d'évaluation :
 
 ### Alignement automatisé par pipeline (Recommandé)
 Il n'est pas nécessaire d'aligner ou de rééchantillonner manuellement vos
-GeoTIFFs bruts au préalable. Le pipeline `data-harmonize` effectue
-automatiquement :
+GeoTIFFs bruts au préalable. Toutes les opérations bas niveau de transformation
+de coordonnées, vérification de géométrie et découpage de fenêtres sont prises
+en charge par le sous-système centralisé `landseg.geopipe.rasters`. Le pipeline
+`data-harmonize` effectue automatiquement :
 1. La reprojection des rasters bruts vers le SCR cible (par ex. `EPSG:3161`).
 2. Le rééchantillonnage bilinéaire pour les caractéristiques continues et au
    plus proche voisin pour les étiquettes catégorielles.

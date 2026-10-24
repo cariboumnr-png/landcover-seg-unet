@@ -114,16 +114,22 @@ python scripts/run.py command=default
 
 ## Configuration
 
-Most user workflows should start from `configs/user.yaml` under the root-level
-`configs/` directory. The packaged Hydra tree under `src/landseg/configs/hydra/`
-contains internal composition defaults and should be changed carefully.
+Workflows are driven by task-specific modular recipes under `configs/*.yaml`
+(such as `world_grid.yaml`, `data_harmonize.yaml`, `data_ingest.yaml`,
+`data_prepare.yaml`, `model_train.yaml`, and `end_to_end/`). Recipes resolve
+directly into the structured Hydra configuration tree. Users can specify a
+recipe via `--recipe <path>` (or `execution.recipe_fpath`).
 
 The configuration layers are:
 
-- `configs/user.yaml`: local project dataset inputs and high-level choices
-- `src/landseg/configs/hydra/`: packaged Hydra composition defaults
-- `src/landseg/configs/schema/`: structured Python config contracts
-- Development Overrides: resolved from the path in `execution.dev_cfg`
+- Task recipes: `configs/*.yaml` (or custom external recipe files)
+- Packaged Hydra composition defaults: `src/landseg/configs/hydra/`
+- Structured Python config contracts: `src/landseg/configs/schema/`
+- Base path fallbacks: configurable via `execution.exp_root` (`LANDSEG_EXP_ROOT`,
+  default `./experiment`), `execution.recipe_dir` (`LANDSEG_RECIPE_DIR`,
+  default `./configs`), and `execution.knowledge_dir` (`LANDSEG_KNOWLEDGE_DIR`,
+  default `./knowledge`)
+- Development overrides: resolved from `execution.dev_cfg`
   (typically defaults to the `AUX_SETTINGS_PATH` environment variable)
 
 Before running data pipelines, read the
@@ -253,7 +259,8 @@ src/landseg/
 |-- configs/         Hydra YAML defaults and structured config schemas
 |-- core/            Shared contracts and result types
 |-- execution/       Command dispatch, pipelines, workflows, and preflight engine
-|-- geopipe/         Geospatial harmonize, ingest, and prepare pipelines
+|-- geopipe/         Geospatial rasters subsystem, grid, harmonize, ingest, prepare
+|-- knowledge/       Domain taxonomy validation, species embeddings, similarity matrices
 |-- models/          Model frames, backbones, heads, conditioning, factories
 |-- session/         Runtime data, engines, tasks, instrumentation, orchestration
 |-- study/           Sweep and analysis utilities
@@ -280,6 +287,19 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
+- Centralized raster-ops subsystem (`landseg.geopipe.rasters`) consolidating
+  raster I/O, window reading, geometry/CRS verification, bounds reprojection,
+  masking, stacking, virtual mosaicking, and VRT manipulation (ADR-0062).
+- Decoupled domain knowledge base as an optional external asset
+  (`execution.knowledge_dir`, `landseg.knowledge`) with species profiles and
+  Sentence Transformer vector embeddings (ADR-0053).
+- Virtual raster mosaic utility (`scripts/build_raster_mosaic.py`,
+  `notebooks/00_raster_mosaic.ipynb`) for cross-UTM and multi-tile assembly (#79).
+- Task-oriented modular configuration recipes under `configs/*.yaml`, recipe
+  override support (`--recipe`), and retirement of intermediate translation
+  layers (ADR-0061).
+- Package portability with PEP 561 marker (`py.typed`), unified environment
+  fallbacks (`${oc.env:LANDSEG_*}`), and standardized runner paths.
 - Execution orchestration and pre-flight validation: atomic pipelines,
   composite workflows (`e2e-intake`, `e2e-experiment`), and preflight
   inspection engine (`command=preflight`, ADR-0060).
@@ -294,8 +314,6 @@ Recently completed or stabilized:
 
 Near-term / Medium-term focus:
 
-- Modular configuration recipes under `configs/recipes/` and flattened CLI
-  parameter overrides (ADR-0060 Section 6).
 - Document Optuna sweep workflows and publish end-to-end tutorial notebooks.
 - Stabilize metrics reporting formats and cross-run comparison tools.
 

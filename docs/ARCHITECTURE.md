@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last updated: 2026-10-18**
+**Last updated: 2026-10-24**
 
 ---
 
@@ -26,11 +26,11 @@ For module-level layouts and step-by-step guides, refer to:
 ## Core Flow
 
 ```text
-Raw Geospatial Data (GeoTIFFs / Rasters / Manifests)
+Raw Geospatial Data (GeoTIFFs / Rasters / Manifests) & Domain Knowledge
   │
   ▼
-Geospatial Pipeline (`landseg.geopipe`)
-  [1. World Grid ──► 2. Harmonization ──► 3. Ingestion ──► 4. Preparation]
+Geospatial Pipeline (`landseg.geopipe`) & Knowledge Layer (`landseg.knowledge`)
+  [0. Mosaic ──► 1. World Grid ──► 2. Harmonization ──► 3. Ingestion ──► 4. Preparation]
   │
   ▼
 Artifacts & Run Ledgers (`landseg.artifacts`)
@@ -58,11 +58,16 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ### 1. Geospatial Pipeline ([`geopipe`](../src/landseg/geopipe))
 - Owns pure, deterministic raster transformations and spatial layouts:
+  - **Rasters Subsystem (`rasters`)**: Consolidates low-level raster I/O, window
+    reading, geometry and coordinate validation, CRS checks, bounds
+    reprojection, masking, virtual mosaicking, and VRT manipulation. Acts as
+    the exclusive raster access surface across the framework, eliminating
+    raw raster library dependencies from individual stages.
   - **World Grid (`grid`)**: Defines canonical projected CRS, tiling origin,
     bounding extent, tile dimensions, and stride via [`GridLayout`](../src/landseg/geopipe/grid/layout.py).
   - **Data Harmonization (`harmonize`)**: Reprojects, warps, and stacks
     heterogeneous multi-band rasters into aligned Virtual Rasters (VRT) with
-    central manifest metadata compilation.
+    central manifest metadata compilation and processor composition.
   - **Data Ingestion (`ingest`)**: Slices harmonized rasters into unpartitioned
     canonical `.npz` data blocks, extracts categorical domain maps and PCA,
     resolves block collisions (`skip` vs `overwrite`), and registers batch runs.
@@ -74,7 +79,21 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
-### 2. Artifacts & Lifecycle Policy ([`artifacts`](../src/landseg/artifacts))
+### 2. Domain Knowledge & Embeddings ([`knowledge`](../src/landseg/knowledge))
+- Owns curated ecological domain assets and taxonomic alignment:
+  - **Species Profiles & Taxonomies (`knowledge.taxonomy`)**: Validates target
+    class taxonomies against official Forest Resources Inventory (FRI) species
+    codes.
+  - **Embeddings & Similarity (`knowledge.embeddings`, `knowledge.resolver`)**:
+    Encodes ecological descriptions into dense vector spaces and resolves
+    class cosine similarity matrices for ecological loss regularization.
+- Decoupled as an optional external asset (`execution.knowledge_dir`). Missing or
+  null knowledge paths gracefully bypass ecological regularization without
+  blocking execution.
+
+---
+
+### 3. Artifacts & Lifecycle Policy ([`artifacts`](../src/landseg/artifacts))
 - Centralized persistence, validation, and lifecycle governance via
   [`controller`](../src/landseg/artifacts/controller.py).
 - Implements [`ArtifactPolicy`](../src/landseg/artifacts/policy.py): determines whether to `build`, `reuse`,
@@ -86,7 +105,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
-### 3. Pre-Flight Readiness Validation ([`preflight`](../src/landseg/execution/preflight))
+### 4. Pre-Flight Readiness Validation ([`preflight`](../src/landseg/execution/preflight))
 - Non-destructive, dry-run diagnostic audit engine executed before allocating
   heavy GPU and filesystem compute resources.
 - Evaluates a canonical probe hierarchy:
@@ -99,7 +118,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
-### 4. Execution Dispatcher ([`execution`](../src/landseg/execution))
+### 5. Execution Dispatcher ([`execution`](../src/landseg/execution))
 - Defines *what and how execution runs* through a unified dispatcher
   ([`executor.py`](../src/landseg/execution/executor.py)).
 - Enforces strict structural separation between:
@@ -114,7 +133,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
-### 5. Models ([`models`](../src/landseg/models))
+### 6. Models ([`models`](../src/landseg/models))
 - Neural network architecture representations only (no training loops, loss
   functions, or optimizer logic).
 - Modular decomposition:
@@ -130,7 +149,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
-### 6. Session Runtime ([`session`](../src/landseg/session))
+### 7. Session Runtime ([`session`](../src/landseg/session))
 - Defines *how training and evaluation execute* at runtime.
 - Decomposed into decoupled runtime subsystems:
   - **Data (`session.data`)**: PyTorch datasets, custom collation, memory
@@ -148,7 +167,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
-### 7. Dual-Surface Configuration ([`configs`](../src/landseg/configs) & [`adapters`](../src/landseg/adapters))
+### 8. Dual-Surface Configuration ([`configs`](../src/landseg/configs) & [`adapters`](../src/landseg/adapters))
 - Enforces strict separation between core schema contracts and user-facing
   ergonomic surfaces:
   - **Core Schemas (`configs.schema`)**: Strongly typed Python dataclass
@@ -158,13 +177,14 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
   - **User CLI Surface (`adapters.cli`)**: Task-specific, modular recipes
     (`configs/*.yaml`) resolved directly into structured Hydra configs
     without intermediate translation layers; supports external recipe paths
-    via `execution.recipe_fpath`.
+    via `execution.recipe_fpath` / `--recipe`, and unified environment
+    fallbacks (`${oc.env:LANDSEG_*}`).
   - **Programmatic API Surface (`adapters.api`)**: Notebook-first configurators
     with typed, programmatically safe builder methods.
 
 ---
 
-### 8. Study & Hyperparameter Sweeps ([`study`](../src/landseg/study))
+### 9. Study & Hyperparameter Sweeps ([`study`](../src/landseg/study))
 - Orchestrates automated hyperparameter search and post-hoc trial analysis:
   - **Sweep (`study.sweep`)**: Optuna objective presets, trial parameter
     samplers, and multi-trial sweep orchestration.

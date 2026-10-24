@@ -2,7 +2,7 @@
 
 [English](./preflight_readiness.md) | [Français](./preflight_readiness_fr.md)
 
-Last updated: 2026-10-07
+Last updated: 2026-10-24
 
 ---
 
@@ -50,14 +50,17 @@ Pre-flight checks are invoked via `command=preflight` through Hydra:
 
 ```bash
 # Run system-wide readiness audit across all supported targets
-python scripts/run.py command=preflight
+landseg command=preflight
 
 # Inspect a specific pipeline or workflow target
-python scripts/run.py command=preflight execution.preflight_target=model-train
-python scripts/run.py command=preflight execution.preflight_target=data-ingest
+landseg command=preflight execution.preflight_target=model-train
+landseg command=preflight execution.preflight_target=data-ingest
+
+# Pre-flight audit against a specific modular recipe
+landseg command=preflight --recipe configs/model_train.yaml
 
 # Enable strict mode (warnings cause execution gate failure)
-python scripts/run.py command=preflight execution.preflight_target=data-harmonize execution.preflight_strict_mode=true
+landseg command=preflight execution.preflight_target=data-harmonize execution.preflight_strict_mode=true
 ```
 
 ### Programmatic Python API

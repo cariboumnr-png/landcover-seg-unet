@@ -1,57 +1,68 @@
 ## Workflow actuel
 
-Dernière mise à jour : 2026-10-07
+Dernière mise à jour : 2026-10-24
 
 ```
-[grid/builder]                           (1 Grille globale – définition spatiale canonique)
+[scripts/build_raster_mosaic]            (0 Mosaïque raster – assemblage multi-tuiles / cross-UTM optionnel)
 |
-+--> [artifacts/controller]
-|        (résolution / build / réutilisation selon politique)
++--> [geopipe/rasters/mosaic]
+|        (assemblage de GeoTIFFs adjacents en raster virtuel VRT EPSG:3161 unifié)
 |
-+--> [grid/lifecycle]
-|        (persistance et validation de l’artefact grille)
++--> [grid/builder]                      (1 Grille globale – définition spatiale canonique)
+|        |
+|        +--> [geopipe/rasters/io]       (inspection des métadonnées et limites du raster de référence)
+|        |
+|        +--> [artifacts/controller]     (résolution / build / réutilisation selon politique)
+|        |
+|        `--> [grid/lifecycle]           (persistance et validation de l’artefact grille)
 |
 +--> [geopipe/harmonize]                 (2 Harmonisation – rééchantillonnage des rasters)
 |        |
-|        +--> [artifacts/controller]
-|        |        (résolution / build / réutilisation du lot harmonisé)
+|        +--> [geopipe/rasters]          (warp, stack, mask, vrt via sous-système rasters)
 |        |
-|        +--> [geopipe/ledger]
-|                 (enregistrement du lot dans harmonization_runs.json)
+|        +--> [harmonize/processor]      (routage de composition et lecture des canaux)
+|        |
+|        +--> [knowledge/taxonomy]       (validation des spécifications de taxonomie cibles)
+|        |
+|        +--> [artifacts/controller]     (résolution / build / réutilisation du lot harmonisé)
+|        |
+|        `--> [geopipe/ledger]           (enregistrement du lot dans harmonization_runs.json)
 |
 +--> [geopipe/ingest]                    (3 Ingestion – pool canonique de blocs)
 |        |
-|        +--> [ingest/blocks/assembler]
-|        |        (découpage des tuiles et features de domaine)
+|        +--> [geopipe/rasters/io]       (lecture de fenêtres de tableaux alignées sur la grille)
 |        |
-|        +--> [ingest/collision]
-|        |        (évaluation de la politique : skip vs overwrite)
+|        +--> [geopipe/rasters/geometry] (vérification de résolution et limites de chevauchement)
 |        |
-|        +--> [artifacts/controller]
-|        |        (persistance des blocs dans le catalogue du pool)
+|        +--> [ingest/blocks/assembler]  (découpage des tuiles et features de domaine)
 |        |
-|        +--> [geopipe/ledger]
-|                 (enregistrement du lot dans ingestion_runs.json)
+|        +--> [ingest/collision]         (évaluation de la politique : skip vs overwrite)
+|        |
+|        +--> [artifacts/controller]     (persistance des blocs dans le catalogue du pool)
+|        |
+|        `--> [geopipe/ledger]           (enregistrement du lot dans ingestion_runs.json)
 |
 +--> [geopipe/prepare]                   (4 Préparation – jeux de données d'expérience)
 |        |
-|        +--> [prepare/partitioner]
-|        |        (partitionnement géographique AOI train/val/test)
+|        +--> [prepare/partitioner]      (partitionnement géographique AOI train/val/test)
 |        |
-|        +--> [artifacts/controller]
-|        |        (persistance des manifestes, stats et DataSpecs)
+|        +--> [geopipe/rasters/geometry] (reprojection des limites AOI pour filtrage)
+|        |
+|        `--> [artifacts/controller]     (persistance des manifestes, stats et DataSpecs)
 |
 +--> [models/factory]                    (5 Construction et assemblage du modèle)
 |
 +--> [session/factory]                   (6 Frontière de construction de session)
 |        |
+|        +--> [knowledge/resolver]       (résolution des plongements d'espèces et similarité écologique)
+|        |
 |        +--> [session/data]             (dataloaders et adaptateurs de batch)
 |        |
-|        +--> [session/engine]           (moteurs d’exécution batch + epoch)
+|        +--> [session/engine]           (moteurs d’exécution batch + epoch et objectifs de pertes)
 |        |
 |        +--> [session/instrumentation]  (callbacks, logging, suivi, tableaux de bord)
 |        |
-|        +--> [session/orchestration]    (gestion du cycle de vie et transitions)
+|        `--> [session/orchestration]    (gestion du cycle de vie et transitions)
 |
 +--> [execution/preflight]               (7 Moteur de validation avant vol / preflight)
 |        |                               (inspection diagnostique non destructive)
@@ -62,7 +73,7 @@ Dernière mise à jour : 2026-10-07
 |        `--> [reporter]                 (tableau de bord 120-col et export JSON)
 |
 +--> [execution/executor]                (8 Dispatch d'exécution : command=<nom>)
-         |
+         |                               (résolution des recettes de tâches configs/*.yaml)
          +--> [execution/pipelines]      (8a Pipelines atomiques – invariant 1:1)
          |        |
          |        +--> [WorldGridGeneration]   (construction de la grille globale)
@@ -70,15 +81,17 @@ Dernière mise à jour : 2026-10-07
          |        +--> [DataIngestion]         (ingestion d'un lot dans le pool)
          |        +--> [DataPreparation]       (partitionnement en DataSpecs)
          |        +--> [ModelTraining]         (session d'entraînement complète)
-         |        +--> [ModelEvaluation]       (évaluation autonome de checkpoint)
+         |        `--> [ModelEvaluation]       (évaluation autonome de checkpoint)
          |
          `--> [execution/workflows]      (8b Workflows composites multi-runs)
                   |
                   +--> [batch_ingest]          (boucle d'ingestion des lots en attente)
                   +--> [diagnose_overfit]      (diagnostic de surapprentissage)
+                  +--> [e2e_intake]            (ingestion continue : harmonisation + ingestion)
+                  +--> [e2e_experiment]        (cycle complet : grille -> entraînement)
                   +--> [study_sweep]           (essais d'optimisation Optuna)
                   +--> [study_analysis]        (rapports d'étude et métriques)
-                  +--> [default]               (audit d'aptitude avant vol)
+                  `--> [default]               (audit d'aptitude avant vol)
 ```
 ---
 
@@ -86,6 +99,11 @@ Dernière mise à jour : 2026-10-07
 
 - Toutes les étapes de construction de fondation (grille, harmonisation,
   ingestion, préparation) restent pures, déterministes et sans effets de bord.
+
+- Les manipulations de rasters de bas niveau, la lecture de fenêtres, la
+  vérification de résolution/SCR et les transformations de limites sont
+  centralisées dans `geopipe.rasters`. Les étapes de pipeline n'importent
+  pas directement de dépendances raster natives.
 
 - Toutes les décisions de réutilisation, reconstruction, écrasement et
   validation d'artefacts sont centralisées par `artifacts.controller`.
@@ -96,6 +114,10 @@ Dernière mise à jour : 2026-10-07
 
 - Les étapes aval opèrent sur des artefacts résolus, jamais sur des intermédiaires
   implicites ou recalculés.
+
+- Les ressources de connaissances écologiques (taxonomie des espèces,
+  plongements vectoriels précalculés et matrices de similarité) sont découplées
+  sous `landseg.knowledge` et configurées via `execution.knowledge_dir`.
 
 - La construction des `DataSpecs` et des modèles intervient strictement avant la
   frontière de session et produit des objets immutables.
@@ -122,9 +144,13 @@ Dernière mise à jour : 2026-10-07
     l'invariant 1:1 strict (1 invocation $\rightarrow$ 1 cible $\rightarrow$
     1 répertoire de run $\rightarrow$ 1 rapport).
   - **Workflows composites** (`execution.workflows`) : procédures fonctionnelles
-    légères coordonnant des boucles multi-runs (`batch_ingest`), des sweeps
-    d'optimisation (`study_sweep`), des diagnostics (`diagnose_overfit`) ou des
+    légères coordonnant des boucles multi-runs (`batch_ingest`), l'ingestion
+    continue (`e2e_intake`), les cycles complets (`e2e_experiment`), les sweeps
+    d'optimisation (`study_sweep`), les diagnostics (`diagnose_overfit`) ou les
     analyses (`study_analysis`).
+
+- La configuration est pilotée par des recettes modulaires par tâche dans
+  `configs/*.yaml`, se résolvant directement dans les schémas Hydra structurés.
 
 - Le système maintient un flux unidirectionnel de dépendance :
   `geopipe (ETL) → artifacts → models → session → execution (preflight, pipelines, workflows)`

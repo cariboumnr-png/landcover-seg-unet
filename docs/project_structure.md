@@ -1,6 +1,6 @@
 ## Current Project Structure
 
-Last updated: 2026-09-22
+Last updated: 2026-10-24
 
 This document summarizes the repository's current package layout and the main
 responsibility of each area. It favors the working boundaries that matter when
@@ -22,9 +22,17 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- preflight/                Exported pre-flight readiness reports
 |   `-- results/                  Local pipeline/session outputs
 |
+|-- knowledge/                    Curated ecological domain knowledge & embeddings
+|   |-- ontario_tree_species_profiles.csv
+|   |-- ontario_tree_species_grouped_profiles.csv
+|   |-- embeddings/               Precomputed PyTorch tensors & similarity matrices
+|   `-- README.md
+|
 |-- notebooks/
+|   |-- 00_raster_mosaic.ipynb    Virtual raster mosaic assembly demo
 |   |-- 01_data_preparation.ipynb Data ingest, validation, and preparation demo
-|   `-- 02_model_train.ipynb      End-to-end model training demo
+|   |-- 02_model_train.ipynb      End-to-end model training demo
+|   `-- 03_study_sweep.ipynb      Optuna hyperparameter sweep demo
 |
 |-- src/landseg/                  Installable Python package
 |   |-- adapters/                 External entry surfaces
@@ -32,18 +40,31 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- configs/                  Hydra YAML configs and structured schema dataclasses
 |   |-- core/                     Project-wide contracts and result types
 |   |-- execution/                Pipeline registry and top-level execution dispatch
-|   |-- geopipe/                  Geospatial harmonize, ingest, and prepare pipelines
+|   |-- geopipe/                  Geospatial rasters subsystem, grid, harmonize, ingest, prepare
+|   |-- knowledge/                Domain taxonomy validation, species embeddings, similarity matrices
 |   |-- models/                   Model frames, backbones, heads, conditioning, factories
 |   |-- session/                  Runtime session construction, orchestration, and engines
 |   |-- study/                    Sweep and post-run study analysis utilities
 |   |-- utils/                    Shared logging and multiprocessing helpers
+|   |-- py.typed                  PEP 561 type annotation marker
 |   |-- _constants.py             Shared constants
 |   `-- __init__.py
 |
-|-- configs/                      User-facing configuration files
-|   `-- user.yaml                 Main local pipeline-oriented configuration
+|-- configs/                      Task-oriented modular recipes
+|   |-- data_harmonize.yaml       Harmonization recipe
+|   |-- data_ingest.yaml          Ingestion recipe
+|   |-- data_prepare.yaml         Preparation recipe
+|   |-- diagnose_overfit.yaml     Overfit diagnostic recipe
+|   |-- end_to_end/               Composite workflow recipes
+|   |-- model_evaluate.yaml       Evaluation recipe
+|   |-- model_train.yaml          Model training recipe
+|   |-- study_analysis.yaml       Study analysis recipe
+|   |-- study_sweep.yaml          Study sweep recipe
+|   `-- world_grid.yaml           World grid recipe
 |
 |-- scripts/                      Helper scripts and entry points
+|   |-- build_raster_mosaic.py    Cross-UTM / multi-tile virtual raster mosaic CLI
+|   |-- build_species_embeddings.py Species profile embedding generation CLI
 |   |-- generate_dummy_data.py    Local dummy dataset generator script
 |   `-- run.py                    Bootstrap script for VM/Databricks executions
 |
@@ -121,10 +142,9 @@ src/landseg/
 |   |-- contracts/                Central pipeline summary and report schemas
 |   |-- core/                     Core abstractions, catalogs, and grid layout
 |   |-- grid/                     World grid construction, lifecycle, and logger
-|   |-- harmonize/                Warping, stacking, and valid mask operations
+|   |-- harmonize/                Reprojection, processor composition, and manifest
 |   |   |-- manifest/             Manifest schema, normalizer, and compiler
-|   |   |-- rasters/              Raster stacking, masking, and spatial helpers
-|   |   |-- taxonomy/             Taxonomy profiling and index mapping
+|   |   |-- processor/            Composition routing, feature/label readers, processor
 |   |   |-- context.py            Harmonization upstream context builder
 |   |   |-- logger.py             Harmonization stage structured logger
 |   |   `-- pipeline.py           Harmonization stage runner
@@ -141,8 +161,22 @@ src/landseg/
 |   |   |-- context.py            Preparation upstream context builder
 |   |   |-- logger.py             Preparation stage structured logger
 |   |   `-- pipeline.py           Preparation stage runner
+|   |-- rasters/                  Centralized raster operations and I/O abstraction
+|   |   |-- _types.py             Window, DatasetInfo, Affine, and BoundingBox types
+|   |   |-- geometry.py           CRS, resolution, and overlap bounds verification
+|   |   |-- io.py                 read_raster, read_rasters, read_window, get_info
+|   |   |-- mask.py               Valid pixel mask generation
+|   |   |-- mosaic.py             Virtual raster mosaic assembly
+|   |   |-- stack.py              Multi-channel raster stacking
+|   |   |-- vrt.py                Virtual raster writing and VRT tag parsing
+|   |   `-- warp.py               Reprojection, warping, and bounds transforms
 |   |-- factory.py                DataSpecs factory
-|   `-- utils/                    Raster context and coordinate string helpers
+|   `-- utils/                    Coordinate strings and collision helpers
+|
+|-- knowledge/
+|   |-- embeddings.py             Sentence Transformer embedding tensors and similarity matrices
+|   |-- resolver.py               Knowledge directory resolution and taxonomy discovery
+|   `-- taxonomy.py               Species taxonomy schema and specifications validation
 |
 |-- models/
 |   |-- backbones/
@@ -198,6 +232,11 @@ src/landseg/
   stores the structured Python config contracts.
 - `geopipe/` owns geospatial data preparation up to `DataSpecs`; model training
   data loading begins under `session/data/`.
+- `geopipe/rasters/` acts as the exclusive, centralized abstraction for all
+  low-level raster I/O, window reading, resolution/CRS verification, and
+  reprojection, eliminating direct raster library calls across other stages.
+- `knowledge/` provides decoupled ecological domain assets, taxonomy validation,
+  and species embedding spaces, configured via `execution.knowledge_dir`.
 - `models/` owns neural network construction only. Training objectives, metrics,
   optimizer setup, and task wiring live under `session/engine/`.
 - `session/` is the main runtime layer. `factory.py` selects a session runner;
@@ -211,3 +250,5 @@ src/landseg/
   distinct from `orchestration` monitoring, curriculum, and resume settings.
 - `geopipe/` stages (`harmonize`, `ingest`, `prepare`) provide symmetric triads
   (`context.py`, `logger.py`, `pipeline.py`) governed by central `contracts/`.
+- Task-oriented recipes in `configs/*.yaml` resolve directly into structured
+  Hydra contracts without an intermediate translation layer.

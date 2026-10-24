@@ -1,6 +1,6 @@
 ## Structure actuelle du projet
 
-Dernière mise à jour: 2026-09-22
+Dernière mise à jour: 2026-10-24
 
 Ce document resume l'organisation actuelle du depot et la responsabilite
 principale de chaque zone. Il privilegie les frontieres utiles pour ajouter ou
@@ -22,9 +22,17 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- preflight/                Rapports de validation préliminaire exportés
 |   `-- results/                  Sorties locales de pipelines/sessions
 |
+|-- knowledge/                    Connaissances écologiques du domaine et plongements
+|   |-- ontario_tree_species_profiles.csv
+|   |-- ontario_tree_species_grouped_profiles.csv
+|   |-- embeddings/               Tenseurs PyTorch et matrices de similarité précalculés
+|   `-- README.md
+|
 |-- notebooks/
-|   |-- 01_data_preparation.ipynb Demo d'ingestion, validation et preparation
-|   `-- 02_model_train.ipynb      Demo d'entrainement de modele de bout en bout
+|   |-- 00_raster_mosaic.ipynb    Démo d'assemblage de mosaïque raster virtuelle
+|   |-- 01_data_preparation.ipynb Démo d'ingestion, validation et préparation
+|   |-- 02_model_train.ipynb      Démo d'entraînement de modèle de bout en bout
+|   `-- 03_study_sweep.ipynb      Démo de sweep hyperparamétrique Optuna
 |
 |-- src/landseg/                  Package Python installable
 |   |-- adapters/                 Surfaces d'entree externes
@@ -32,18 +40,31 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- configs/                  Configs Hydra YAML et schemas structures
 |   |-- core/                     Contrats transversaux et types de resultats
 |   |-- execution/                Registre de pipelines et dispatch d'execution
-|   |-- geopipe/                  Pipelines géospatiaux d'harmonisation, d'ingestion et de préparation
+|   |-- geopipe/                  Sous-système rasters, grille, harmonisation, ingestion, préparation
+|   |-- knowledge/                Validation de taxonomie, plongements d'espèces, matrices de similarité
 |   |-- models/                   Frames, backbones, tetes, conditionnement, factories
 |   |-- session/                  Construction, orchestration et moteurs runtime
 |   |-- study/                    Sweeps et analyse post-execution
 |   |-- utils/                    Helpers partages de logging et multiprocessing
+|   |-- py.typed                  Marqueur d'annotations de type PEP 561
 |   |-- _constants.py             Constantes partagees
 |   `-- __init__.py
 |
-|-- configs/                      Fichiers de configuration utilisateur
-|   `-- user.yaml                 Configuration locale principale par pipeline
+|-- configs/                      Recettes modulaires par tâche
+|   |-- data_harmonize.yaml       Recette d'harmonisation
+|   |-- data_ingest.yaml          Recette d'ingestion
+|   |-- data_prepare.yaml         Recette de préparation
+|   |-- diagnose_overfit.yaml     Recette de diagnostic de surapprentissage
+|   |-- end_to_end/               Recettes de workflows composites
+|   |-- model_evaluate.yaml       Recette d'évaluation
+|   |-- model_train.yaml          Recette d'entraînement
+|   |-- study_analysis.yaml       Recette d'analyse d'étude
+|   |-- study_sweep.yaml          Recette de sweep d'étude
+|   `-- world_grid.yaml           Recette de grille monde
 |
 |-- scripts/                      Helper scripts et entry points
+|   |-- build_raster_mosaic.py    Utilitaire CLI de mosaïque raster virtuelle multi-tuiles / cross-UTM
+|   |-- build_species_embeddings.py Script CLI de génération de plongements d'espèces
 |   |-- generate_dummy_data.py    Local dummy dataset generator script
 |   `-- run.py                    Bootstrap script for VM/Databricks executions
 |
@@ -121,10 +142,9 @@ src/landseg/
 |   |-- contracts/                Schémas centraux de rapports et de transfert
 |   |-- core/                     Abstractions clés, catalogues et grille monde
 |   |-- grid/                     Construction, cycle de vie et logger de grille
-|   |-- harmonize/                Reprojection, empilement et masques
+|   |-- harmonize/                Reprojection, composition du processeur et manifeste
 |   |   |-- manifest/             Schéma de manifeste, normaliseur, compilateur
-|   |   |-- rasters/              Empilement, masquage et helpers spatiaux
-|   |   |-- taxonomy/             Profilage taxonomique et mapping d'indices
+|   |   |-- processor/            Routage de composition, lecteurs de features/labels, processeur
 |   |   |-- context.py            Constructeur de contexte amont d'harmonisation
 |   |   |-- logger.py             Logger structuré d'étape d'harmonisation
 |   |   `-- pipeline.py           Exécuteur d'étape d'harmonisation
@@ -141,8 +161,22 @@ src/landseg/
 |   |   |-- context.py            Constructeur de contexte amont de préparation
 |   |   |-- logger.py             Logger structuré d'étape de préparation
 |   |   `-- pipeline.py           Exécuteur d'étape de préparation
+|   |-- rasters/                  Sous-système centralisé d'opérations et d'E/S rasters
+|   |   |-- _types.py             Types Window, DatasetInfo, Affine et BoundingBox
+|   |   |-- geometry.py           Vérification de SCR, résolution et limites de chevauchement
+|   |   |-- io.py                 read_raster, read_rasters, read_window, get_info
+|   |   |-- mask.py               Génération de masques de pixels valides
+|   |   |-- mosaic.py             Assemblage de mosaïques rasters virtuelles
+|   |   |-- stack.py              Empilement multi-canaux de rasters
+|   |   |-- vrt.py                Écriture de rasters virtuels et analyse de balises VRT
+|   |   `-- warp.py               Reprojection, distorsion et transformations de limites
 |   |-- factory.py                Factory des DataSpecs
-|   `-- utils/                    Contexte raster et helpers de coordonnées
+|   `-- utils/                    Chaînes de coordonnées et gestion des collisions
+|
+|-- knowledge/
+|   |-- embeddings.py             Tenseurs de plongements Sentence Transformer et matrices de similarité
+|   |-- resolver.py               Résolution de répertoire et découverte taxonomique
+|   `-- taxonomy.py               Schéma taxonomique et validation des spécifications d'espèces
 |
 |-- models/
 |   |-- backbones/
@@ -198,6 +232,12 @@ src/landseg/
   `configs/schema/` contient les contrats Python structures.
 - `geopipe/` possede la preparation geospatiale jusqu'aux `DataSpecs`; le
   chargement des donnees pour l'entrainement commence dans `session/data/`.
+- `geopipe/rasters/` constitue l'abstraction centralisée et exclusive pour toutes
+  les opérations d'E/S rasters, la lecture de fenêtres, la validation de
+  géométrie/SCR et la reprojection, éliminant les appels directs à rasterio.
+- `knowledge/` fournit des ressources écologiques de domaine découplées, la
+  validation taxonomique et les espaces de plongements, configurés via
+  `execution.knowledge_dir`.
 - `models/` possede uniquement la construction des reseaux. Les objectifs,
   metriques, optimiseurs et taches vivent dans `session/engine/`.
 - `session/` est la couche runtime principale. `factory.py` selectionne un
@@ -214,3 +254,5 @@ src/landseg/
 - `geopipe/` est organisé en trois étapes (`harmonize`, `ingest`, `prepare`),
   offrant des triades symétriques (`context.py`, `logger.py`, `pipeline.py`),
   régies par les contrats centraux dans `contracts/`.
+- Les recettes orientées tâches sous `configs/*.yaml` se résolvent directement
+  dans les contrats Hydra structurés sans couche de traduction intermédiaire.

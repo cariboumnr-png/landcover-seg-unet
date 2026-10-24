@@ -122,23 +122,29 @@ python scripts/run.py command=default
 
 ## Configuration
 
-La plupart des workflows utilisateur devraient commencer avec le fichier
-`configs/user.yaml` sous le repertoire `configs/` a la racine. L'arborescence
-Hydra fournie sous `src/landseg/configs/hydra/` contient les defaults de
-composition internes et doit etre modifiee avec prudence.
+Les flux de travail sont pilotés par des recettes modulaires spécifiques aux
+tâches sous `configs/*.yaml` (telles que `world_grid.yaml`, `data_harmonize.yaml`,
+`data_ingest.yaml`, `data_prepare.yaml`, `model_train.yaml` et `end_to_end/`).
+Les recettes se résolvent directement dans l'arborescence de configuration Hydra
+structurée. Les utilisateurs peuvent spécifier une recette via `--recipe <chemin>`
+(ou `execution.recipe_fpath`).
 
-Les couches de configuration sont:
+Les couches de configuration sont :
 
-- `configs/user.yaml`: entrees locales de donnees et choix de haut niveau
-- `src/landseg/configs/hydra/`: defaults de composition Hydra du package
-- `src/landseg/configs/schema/`: contrats de configuration Python structures
-- Surcharges de developpement: resolues depuis le chemin defini dans
-  `execution.dev_cfg` (generalement via la variable d'environnement
+- Recettes par tâche : `configs/*.yaml` (ou fichiers de recettes externes)
+- Défauts de composition Hydra du package : `src/landseg/configs/hydra/`
+- Contrats de configuration Python structurés : `src/landseg/configs/schema/`
+- Replis de chemins de base : configurables via `execution.exp_root` (`LANDSEG_EXP_ROOT`,
+  défaut `./experiment`), `execution.recipe_dir` (`LANDSEG_RECIPE_DIR`,
+  défaut `./configs`) et `execution.knowledge_dir` (`LANDSEG_KNOWLEDGE_DIR`,
+  défaut `./knowledge`)
+- Surcharges de développement : résolues depuis le chemin défini dans
+  `execution.dev_cfg` (généralement via la variable d'environnement
   `AUX_SETTINGS_PATH`)
 
-Avant d'executer les pipelines de donnees, lisez le
-[guide de preparation des donnees](./docs/data_preparation_fr.md) et organisez
-les entrees locales sous la racine d'experience configuree.
+Avant d'exécuter les pipelines de données, lisez le
+[guide de préparation des données](./docs/data_preparation_fr.md) et organisez
+les entrées locales sous la racine d'expérience configurée.
 
 ## Utilisation Des Commandes
 
@@ -268,7 +274,8 @@ src/landseg/
 |-- configs/         Defaults Hydra YAML et schemas de config structures
 |-- core/            Contrats partages et types de resultats
 |-- execution/       Dispatch de commandes, pipelines, workflows et moteur avant-vol
-|-- geopipe/         Pipeline geospatial de fondation et transformation
+|-- geopipe/         Sous-système rasters, grille, harmonisation, ingestion, préparation
+|-- knowledge/       Validation de taxonomie, plongements d'espèces, matrices de similarité
 |-- models/          Frames, backbones, tetes, conditionnement, factories
 |-- session/         Donnees runtime, moteurs, taches, instrumentation, orchestration
 |-- study/           Utilitaires de sweep et d'analyse
@@ -296,6 +303,22 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
+- Sous-système centralisé d'opérations rasters (`landseg.geopipe.rasters`)
+  consolidant les E/S rasters, la lecture de fenêtres, la validation de
+  géométrie/SCR, la reprojection de limites, le masquage, l'empilement, la
+  mosaïque virtuelle et la manipulation VRT (ADR-0062).
+- Base de connaissances du domaine découplée en ressource externe optionnelle
+  (`execution.knowledge_dir`, `landseg.knowledge`) avec profils d'espèces et
+  plongements vectoriels Sentence Transformer (ADR-0053).
+- Utilitaire de mosaïque raster virtuelle (`scripts/build_raster_mosaic.py`,
+  `notebooks/00_raster_mosaic.ipynb`) pour l'assemblage inter-zones UTM et
+  multi-tuiles (#79).
+- Recettes de configuration modulaires orientées tâches sous `configs/*.yaml`,
+  support de surchage de recette (`--recipe`), et retrait des couches de
+  traduction intermédiaires (ADR-0061).
+- Portabilité du package avec marqueur PEP 561 (`py.typed`), replis uniformes
+  des variables d'environnement (`${oc.env:LANDSEG_*}`) et chemins d'exécuteurs
+  standardisés.
 - Orchestration d'execution et validation avant vol : pipelines atomiques,
   workflows composites (`e2e-intake`, `e2e-experiment`) et moteur preflight
   (`command=preflight`, ADR-0060).
@@ -310,8 +333,6 @@ Recemment complete ou stabilise :
 
 Objectifs a court et moyen terme :
 
-- Recettes de configuration modulaires sous `configs/recipes/` et simplification
-  des surcharges CLI (ADR-0060 Section 6).
 - Documentation des workflows de sweep Optuna et publication de tutoriels en
   notebooks.
 - Stabilisation des formats de rapports de metriques et outils de comparaison

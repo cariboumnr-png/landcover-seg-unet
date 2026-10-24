@@ -2,7 +2,7 @@
 
 [English](./data_preparation.md) | [Français](./data_preparation_fr.md)
 
-Last updated: 2026-08-19
+Last updated: 2026-10-24
 
 ---
 
@@ -23,6 +23,12 @@ stages:
    (optionally constrained by geographic AOI masks) and calculates band
    normalization statistics.
 
+> [!TIP]
+> **Pre-Mosaicking Multi-Tile Rasters**: When your raw imagery spans multiple
+> adjacent tiles or differing UTM zones, you can pre-assemble them into an
+> aligned Virtual Raster (`.vrt`) using `scripts/build_raster_mosaic.py` or
+> `notebooks/00_raster_mosaic.ipynb` prior to running `data-harmonize`.
+
 Users can supply their own raw GeoTIFFs along with a dataset manifest, or use
 the provided synthetic data generation script to explore the framework.
 
@@ -31,12 +37,14 @@ the provided synthetic data generation script to explore the framework.
 ## Contents
 
 - [Synthetic Sample Data Generator](#synthetic-sample-data-generator)
+- [Pre-Harmonization Virtual Mosaicking](#pre-harmonization-virtual-mosaicking)
 - [World Grid & Extent Reference](#world-grid--extent-reference)
 - [Dataset Manifest & Metadata Configs](#dataset-manifest--metadata-configs)
   - [Root Dataset Manifest (`manifest.json`)](#root-dataset-manifest-manifestjson)
   - [Feature Rasters (Optical / DEM)](#feature-rasters-optical--dem)
   - [Label Rasters (Classification Heads)](#label-rasters-classification-heads)
   - [Domain Rasters (Optional Context)](#domain-rasters-optional-context)
+  - [Preparation Stage Configuration (`configs/data_prepare.yaml`)](#preparation-stage-configuration-configsdata_prepareyaml)
   - [Geographic AOI Rasters (Optional Splits)](#geographic-aoi-rasters-optional-splits)
 - [Automated vs. Manual Alignment](#automated-vs-manual-alignment)
 - [Tutorial - Create Reference Rasters in QGIS](#tutorial---create-reference-rasters-in-qgis)
@@ -60,20 +68,42 @@ experiment/input/
 ├── reference_raster/
 │   ├── sample_extent.tif        # Project extent defining spatial canvas
 │   └── sample_test_aoi.tif      # Optional geographic test holdout mask
-└── raw_data/
-    ├── manifest.json            # Central dataset manifest
-    ├── sample_dev_sentinel2.tif # Multi-band optical imagery (10m)
-    ├── sample_dev_sentinel2.json
-    ├── sample_dev_dem.tif       # Elevation feature raster (10m)
-    ├── sample_dev_dem.json
-    ├── sample_dev_landcover.tif # Land-cover segmentation ground truth
-    ├── sample_dev_landcover.json
-    ├── sample_dev_leadspc.tif   # Tree species segmentation ground truth
-    ├── sample_dev_leadspc.json
-    ├── sample_domain_1.tif      # Categorical domain context mask
-    ├── sample_domain_1.json
-    └── ...
+├── raw_data/
+│   ├── manifest.json            # Central dataset manifest
+│   ├── sample_dev_sentinel2.tif # Multi-band optical imagery (10m)
+│   ├── sample_dev_sentinel2.json
+│   ├── sample_dev_dem.tif       # Elevation feature raster (10m)
+│   ├── sample_dev_dem.json
+│   ├── sample_dev_landcover.tif # Land-cover segmentation ground truth
+│   ├── sample_dev_landcover.json
+│   ├── sample_dev_leadspc.tif   # Tree species segmentation ground truth
+│   ├── sample_dev_leadspc.json
+│   ├── sample_domain_1.tif      # Categorical domain context mask
+│   ├── sample_domain_1.json
+│   └── ...
+└── utm_rasters/                 # Cross-UTM dummy tiles for mosaic testing
+    ├── image_17n.tif            # UTM 17N mock feature GeoTIFF
+    ├── image_18n.tif            # UTM 18N mock feature GeoTIFF
+    ├── label_17n.tif            # UTM 17N mock label GeoTIFF
+    └── label_18n.tif            # UTM 18N mock label GeoTIFF
 ```
+
+---
+
+## Pre-Harmonization Virtual Mosaicking
+
+When source datasets arrive as individual spatial tiles (such as Ontario Crown
+Forest Management Units across UTM zones 15N, 16N, 17N, and 18N), assemble
+them into a virtual mosaic before building the world grid or harmonizing:
+
+```bash
+python scripts/build_raster_mosaic.py \
+    experiment/input/utm_rasters/image_*.tif \
+    --output experiment/input/raw_data/sample_dev_mosaic.vrt
+```
+
+See [notebooks/00_raster_mosaic.ipynb](../notebooks/00_raster_mosaic.ipynb) for
+an interactive walkthrough and visualization.
 
 ---
 
@@ -287,38 +317,44 @@ stratification.
 
 ---
 
-### Preparation Stage Configuration (`configs/user.yaml`)
+### Preparation Stage Configuration (`configs/data_prepare.yaml`)
 
 During `data-prepare`, users can select specific feature channels and target
-reclassification hierarchies:
+reclassification hierarchies via task recipes:
 
 ```yaml
-data-prepare:
-  output_dpath: ./experiment/artifacts/prepared_data
+data:
+  preparation:
+    output_dpath: ./experiment/artifacts/prepared_data
+    rebuild: true
 
-  # 1. Feature selection by dataset name (null uses all bands)
-  features:
-    sentinel2: rgb_nir          # Reference named scheme from sidecar
-    dem: all                    # Use all bands from DEM
-    # Or inline:
-    # sentinel2: [blue, green, red, nir]
+    datasetview:
+      # 1. Feature selection by dataset name ({} selects all)
+      features:
+        sentinel2: rgb_nir          # Reference named scheme from sidecar
+        dem: all                    # Use all bands from DEM
+        # Or inline list: [blue, green, red, nir]
 
-  # 2. Target reclassification by label name (null uses canonical base classes)
-  targets:
-    landcover: binary           # Reference named scheme from sidecar
-    leadspc: raw                # Use raw/base classes
-    # Or inline:
-    # landcover:
-    #   reclass:
-    #     "1": [1, 2]
-    #   reclass_name:
-    #     "1": "forest"
+      # 2. Target reclassification by label name ({} uses base classes)
+      targets:
+        landcover: binary           # Reference named scheme from sidecar
+        leadspc: raw                # Use raw/base classes
+        # Or inline dictionary:
+        # landcover:
+        #   reclass:
+        #     "1": [1, 2]
+        #   reclass_name:
+        #     "1": "forest"
 
-  # 3. Spatial AOI and split ratios
-  val_ratio: 0.20
-  test_ratio: 0.00
-  buffer_step: 0
-  rebuild: true
+    partition:
+      # 3. Spatial AOI and split ratios
+      val_ratio: 0.20
+      test_ratio: 0.00
+      buffer_step: 0
+      test_aoi: ./experiment/input/reference_raster/sample_test_aoi.tif
+      val_aoi: null
+      train_aoi: null
+      aoi_min_overlap: 0.5
 ```
 
 ---
@@ -330,7 +366,7 @@ Interest (AOI) rasters to deterministically isolate evaluation regions:
 
 - `sample_test_aoi.tif`: Blocks overlapping this raster are allocated to the
   `test` split.
-- Configured in `configs/user.yaml` under `data-prepare: test_aoi: ...`
+- Configured in `configs/data_prepare.yaml` under `data.preparation.partition.test_aoi: ...`
 
 ---
 
@@ -338,7 +374,9 @@ Interest (AOI) rasters to deterministically isolate evaluation regions:
 
 ### Automated Pipeline Alignment (Recommended)
 You do not need to pre-align or resample your raw GeoTIFFs to a common CRS or
-pixel grid. The `data-harmonize` pipeline automatically:
+pixel grid. All low-level coordinate transformations, geometry checks, and
+window slicing are handled by the centralized `landseg.geopipe.rasters`
+subsystem. The `data-harmonize` pipeline automatically:
 1. Re-projects raw rasters to the target world grid CRS (e.g. `EPSG:3161`).
 2. Resamples continuous features using `bilinear` and categorical labels using
    `nearest`.

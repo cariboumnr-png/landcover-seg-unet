@@ -2,7 +2,7 @@
 
 [English](./preflight_readiness.md) | [Français](./preflight_readiness_fr.md)
 
-Dernière mise à jour : 2026-10-07
+Dernière mise à jour : 2026-10-24
 
 ---
 
@@ -52,14 +52,17 @@ Les vérifications préalables sont exécutées via `command=preflight` avec Hyd
 
 ```bash
 # Exécuter l'audit de préparation global sur les cibles prises en charge
-python scripts/run.py command=preflight
+landseg command=preflight
 
 # Inspecter une cible spécifique de pipeline ou de workflow
-python scripts/run.py command=preflight execution.preflight_target=model-train
-python scripts/run.py command=preflight execution.preflight_target=data-ingest
+landseg command=preflight execution.preflight_target=model-train
+landseg command=preflight execution.preflight_target=data-ingest
+
+# Audit avant vol sur une recette modulaire spécifique
+landseg command=preflight --recipe configs/model_train.yaml
 
 # Activer le mode strict (les avertissements bloquent l'exécution)
-python scripts/run.py command=preflight execution.preflight_target=data-harmonize execution.preflight_strict_mode=true
+landseg command=preflight execution.preflight_target=data-harmonize execution.preflight_strict_mode=true
 ```
 
 ### API Python programmatique

@@ -31,24 +31,28 @@ et de résultats (`results/`) correspondants.
 │
 ├── input/                                       # Généré par scripts/generate_dummy_data.py
 │   │
-│   ├── raw/                                     # Fichiers GeoTIFF bruts non harmonisés (utilisés par l'ETL)
-│   │   ├── sample_sentinel2.tif                 # Composite factice Sentinel-2 à 10 bandes uint16 (EPSG:32618)
-│   │   ├── sample_dem.tif                       # Raster d'élévation MNE factice à 1 bande float32 (EPSG:32618)
-│   │   └── sample_landcover.tif                 # Masque d'étiquette de couverture du sol à 1 bande uint8 (EPSG:32618)
+│   ├── raw_data/                                # Entrées rasters brutes et manifestes (ETL)
+│   │   ├── manifest.json                        # Manifeste central du jeu de données
+│   │   ├── sample_dev_sentinel2.tif             # Composite factice Sentinel-2 à 10 bandes uint16 (EPSG:32618)
+│   │   ├── sample_dev_sentinel2.json
+│   │   ├── sample_dev_dem.tif                   # Raster d'élévation MNA factice à 1 bande float32 (EPSG:32618)
+│   │   ├── sample_dev_dem.json
+│   │   ├── sample_dev_landcover.tif             # Masque d'étiquette de couverture du sol (EPSG:32618)
+│   │   ├── sample_dev_landcover.json
+│   │   ├── sample_dev_leadspc.tif               # Masque d'étiquette des essences forestières (EPSG:32618)
+│   │   ├── sample_dev_leadspc.json
+│   │   ├── sample_domain_1.tif                  # Carte de contexte de domaine catégoriel
+│   │   └── sample_domain_1.json
 │   │
-│   ├── data/                                    # Rasters d'images et d'étiquettes de développement/test (utilisés par data-ingest)
-│   │   ├── sample_dev_image.tif                 # GeoTIFF composite de caractéristiques de développement
-│   │   ├── sample_dev_label.tif                 # GeoTIFF de masque d'étiquette de développement
-│   │   ├── sample_test_image.tif                # GeoTIFF composite de caractéristiques de test
-│   │   └── sample_test_label.tif                # GeoTIFF de masque d'étiquette de test
+│   ├── reference_raster/                        # Rasters de référence d'étendue spatiale et AOI
+│   │   ├── sample_extent.tif                    # Raster de référence d'étendue (EPSG:3161)
+│   │   └── sample_test_aoi.tif                  # Raster AOI de test (EPSG:3161)
 │   │
-│   ├── domain_knowledge/                        # Rasters de connaissances du domaine catégoriels
-│   │   ├── sample_domain_1.tif                  # Carte de connaissances du domaine 1
-│   │   └── sample_domain_2.tif                  # Carte de connaissances du domaine 2
-│   │
-│   └── reference_raster/                        # Rasters de référence d'étendue spatiale et AOI
-│       ├── sample_extent.tif                    # Raster de référence d'étendue (EPSG:3161)
-│       └── sample_test_aoi.tif                  # Raster AOI de test (EPSG:3161)
+│   └── utm_rasters/                             # Rasters cross-UTM pour tests de l'utilitaire de mosaïque
+│       ├── image_17n.tif                        # Raster de caractéristiques en zone UTM 17N (EPSG:32617)
+│       ├── image_18n.tif                        # Raster de caractéristiques en zone UTM 18N (EPSG:32618)
+│       ├── label_17n.tif                        # Raster d'étiquettes en zone UTM 17N (EPSG:32617)
+│       └── label_18n.tif                        # Raster d'étiquettes en zone UTM 18N (EPSG:32618)
 │
 ├── artifacts/                                   # Généré par l'exécution des pipelines
 │   │
