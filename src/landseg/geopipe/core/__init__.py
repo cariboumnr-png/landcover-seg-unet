@@ -43,10 +43,13 @@ Public APIs:
     - `DomainTile`: TypedDict for individual domain tile coordinates.
     - `GridMeta`: TypedDict for grid metadata.
     - `GridPayload`: TypedDict for serialized grid payload.
+    - `ImageBandStats`: TypedDict for image band statistics.
     - `LabelScheme`: TypedDict for named reclassification scheme.
+    - `PreparedSchema`: TypedDict for dataset preparation schema.
     - `RasterReader`: Type alias for raster reader protocol.
     - `RasterWindow`: Type alias for raster window definition.
     - `RasterWindowDict`: TypedDict for raster window serialized dict.
+    - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
     - `TaxonomySpec`: TypedDict for domain taxonomy specification.
 '''
 
@@ -76,8 +79,11 @@ __all__ = [
     'DomainTile',
     'GridMeta',
     'GridPayload',
+    'ImageBandStats',
     'LabelScheme',
+    'PreparedSchema',
     'RasterWindowDict',
+    'TargetHeadsSchema',
     'TaxonomySpec',
 ]
 
@@ -117,6 +123,11 @@ if typing.TYPE_CHECKING:
         GridPayload,
         GridSpec,
         RasterWindowDict,
+    )
+    from .prepared_schema import (
+        ImageBandStats,
+        PreparedSchema,
+        TargetHeadsSchema,
     )
 
 
@@ -175,5 +186,19 @@ def __getattr__(name: str):
     }:
         obj = importlib.import_module('.grid_layout', __package__)
         return getattr(obj, name)
+
+    if name in {
+        'ImageBandStats',
+        'PreparedSchema',
+        'TargetHeadsSchema',
+    }:
+        obj = importlib.import_module('.prepared_schema', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'dataset_schema',
+        'prepared_schema',
+    }:
+        return importlib.import_module(f'.{name}', __package__)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

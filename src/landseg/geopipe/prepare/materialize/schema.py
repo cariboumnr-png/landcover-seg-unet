@@ -40,15 +40,16 @@ import typing
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.logger as prepare_logger
 import landseg.geopipe.prepare.dataset as prepare_dataset
 
 
 # ----- typing aliases
 PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
-ImageStatsCtrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
+ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
 LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[contracts.PreparedSchema]
+SchemaCtrl = artifacts.Controller[geo_core.PreparedSchema]
 
 
 # ----- private types
@@ -95,7 +96,7 @@ def build_schema(
 
     # schema artifact controller
     schema_ctrl = SchemaCtrl(paths.schema, policy)
-    schema = schema_ctrl.fetch()
+    schema = schema_ctrl.fetch(geo_core.prepared_schema.SCHEMA_ID)
     loaded = schema is not None
 
     if not schema:
@@ -129,7 +130,7 @@ def build_schema(
         image_stats = ctrl.fetch(strict=True)
 
         # target heads reclass hierarchy
-        heads_schema: contracts.TargetHeadsSchema = {
+        heads_schema: geo_core.TargetHeadsSchema = {
             'head_names': list(context.targets.head_names),
             'head_parent': dict(context.targets.head_parent),
             'head_parent_cls': dict(context.targets.head_parent_cls),
@@ -144,7 +145,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_id': contracts.PREPARED_SCHEMA_ID,
+            'schema_id': geo_core.prepared_schema.SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,

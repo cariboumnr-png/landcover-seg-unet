@@ -40,7 +40,6 @@ import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.geopipe.contracts.preparation as prepare_contracts
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
@@ -48,7 +47,7 @@ import landseg.knowledge as knowledge
 # ----- typing aliases
 DomainCtrl = artifacts.Controller[geo_core.DomainPayload]
 DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
-PreparedSchemaCtrl = artifacts.Controller[prepare_contracts.PreparedSchema]
+PreparedSchemaCtrl = artifacts.Controller[geo_core.PreparedSchema]
 
 
 # ----- public functions
@@ -103,7 +102,7 @@ def build_dataspec(
 
     # prepared schema
     prepared_schema = PreparedSchemaCtrl(prepared_schema_fpath).fetch(
-        prepare_contracts.PREPARED_SCHEMA_ID, strict=True
+        geo_core.prepared_schema.SCHEMA_ID, strict=True
     )
 
     # return specs
@@ -131,7 +130,7 @@ def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
 
 def _get_meta(
     data_schema: geo_core.DatasetSchema,
-    prepared_schema: prepare_contracts.PreparedSchema,
+    prepared_schema: geo_core.PreparedSchema,
 ) -> core.Meta:
     '''Populate core.Meta dataclass from schema dictionaries.'''
     dtypes = data_schema['io_conventions']['dtypes']
@@ -186,7 +185,7 @@ def __calc_test_grid(
 
 def _get_heads(
     data_schema: geo_core.DatasetSchema,
-    prepared_schema: prepare_contracts.PreparedSchema,
+    prepared_schema: geo_core.PreparedSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:
     '''Populate core.Heads dataclass from schema dictionary.'''
@@ -260,7 +259,7 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(schema: prepare_contracts.PreparedSchema) -> core.Splits:
+def _get_split(schema: geo_core.PreparedSchema) -> core.Splits:
     '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
         train={k: pathlib.Path(v) for k, v in schema['train_blocks'].items()},
@@ -270,7 +269,7 @@ def _get_split(schema: prepare_contracts.PreparedSchema) -> core.Splits:
 
 
 def _get_domain(
-    prepared_schema: prepare_contracts.PreparedSchema,
+    prepared_schema: geo_core.PreparedSchema,
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:
