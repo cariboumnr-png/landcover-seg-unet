@@ -62,7 +62,8 @@ def past_runs(
     '''
     mfst_fpath_str = str(manifest_path.resolve())
     try:
-        manifest = RunManifestCtrl(manifest_path).fetch()
+        ctrl = artifacts.Controller[dict[str, dict[str, str]]](manifest_path)
+        manifest = ctrl.fetch(strict=True)
         if manifest is not None:
             total_run_n = len(manifest)
             success_run_n = len(
@@ -115,10 +116,9 @@ def pending_harmonization(
 ) -> schema.ProbeResult:
     '''Inspect if input source dataset is already harmonized.'''
 
-    harmonization_runs_mfst = artifact_paths.data_harmonization.runs_manifest
+    harmonize_mfst = artifact_paths.data_harmonization.runs_manifest
     try:
-        ctrl = RunManifestCtrl.load_json_strict(harmonization_runs_mfst)
-        harmonization_runs = ctrl.fetch()
+        harmonization_runs = RunManifestCtrl(harmonize_mfst).fetch(strict=True)
     except artifacts.ArtifactError:
         return schema.ProbeResult(
             pid='harmonized_dataset',
@@ -179,12 +179,11 @@ def pending_ingestion(
     '''
     probe_id = pid or 'pending_ingestion'
 
-    harmonizations_mfst = artifact_paths.data_harmonization.runs_manifest
-    ingestions_mfst = artifact_paths.data_ingestion.runs_manifest
+    harmonize_mfst = artifact_paths.data_harmonization.runs_manifest
+    ingest_mfst = artifact_paths.data_ingestion.runs_manifest
 
     try:
-        ctrl = RunManifestCtrl.load_json_strict(harmonizations_mfst)
-        harmonization_runs = ctrl.fetch()
+        harmonization_runs = RunManifestCtrl(harmonize_mfst).fetch(strict=True)
         good_harmonization_runs = {
             k: v for k, v in harmonization_runs.items()
             if v.get('status') == 'SUCCESS'
@@ -199,14 +198,13 @@ def pending_ingestion(
             status=schema.ProbeStatus.FAIL,
             message='Unable to resolve pending batches',
             details={
-                'harmonization_run_manifest': str(harmonizations_mfst.resolve()),
-                'ingestion_run_manifest': str(ingestions_mfst.resolve())
+                'harmonization_run_manifest': str(harmonize_mfst.resolve()),
+                'ingestion_run_manifest': str(ingest_mfst.resolve())
             },
         )
 
     try:
-        ctrl = RunManifestCtrl.load_json_strict(ingestions_mfst)
-        ingestion_runs = ctrl.fetch()
+        ingestion_runs = RunManifestCtrl(ingest_mfst).fetch(strict=True)
         good_ingestion_runs = {
             k: v for k, v in ingestion_runs.items()
             if v.get('status') == 'SUCCESS'
@@ -273,7 +271,7 @@ def ingestion_pool_state(
         )
 
     try:
-        catalog = RunManifestCtrl(catalog_path).fetch()
+        catalog = RunManifestCtrl(catalog_path).fetch(strict=True)
         block_count = len(catalog) if catalog is not None else 0
         return schema.ProbeResult(
             pid=probe_id,
@@ -303,8 +301,8 @@ def prepared_blocks_state(
 
     schema_path = artifact_paths.data_preparation.schema
     try:
-        ctrl = artifacts.Controller[dict].load_json_strict(schema_path)
-        prep_schema = ctrl.fetch()
+        ctrl = artifacts.Controller[dict](schema_path)
+        prep_schema = ctrl.fetch(strict=True)
     except artifacts.ArtifactError:
         prep_schema = None
 

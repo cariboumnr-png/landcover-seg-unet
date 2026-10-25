@@ -39,10 +39,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid.builder as builder
 
 
-# ----- typing aliases
-GridCtrl = artifacts.Controller[geo_core.GridPayload]
-
-
 # ----- public functions
 def prepare_world_grid(
     config: contracts.WorldGridPrepConfig | None = None,
@@ -80,7 +76,7 @@ def prepare_world_grid(
         if load_only
         else artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
-    ctrl = GridCtrl(grid_fpath, policy=policy)
+    ctrl = artifacts.Controller[geo_core.GridPayload](grid_fpath, policy=policy)
     payload = ctrl.fetch(expected_schema_id=geo_core.GridLayout.SCHEMA_ID)
 
     # load or build

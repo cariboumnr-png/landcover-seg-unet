@@ -44,12 +44,6 @@ import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
 
-# ----- typing aliases
-DomainCtrl = artifacts.Controller[geo_core.DomainPayload]
-DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
-PreparedSchemaCtrl = artifacts.Controller[geo_core.PreparedSchema]
-
-
 # ----- public functions
 def build_dataspec(
     artifact_paths: artifacts.ArtifactPaths,
@@ -96,34 +90,32 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_schema = DataSchemaCtrl(data_schema_fpath).fetch(
-        geo_core.data_schema.SCHEMA_ID, strict=True
-    )
+    ctrl = artifacts.Controller[geo_core.DataSchema](data_schema_fpath)
+    data_schema = ctrl.fetch(geo_core.data_schema.SCHEMA_ID, strict=True)
 
     # prepared schema
-    prepared_schema = PreparedSchemaCtrl(prepared_schema_fpath).fetch(
-        geo_core.prepared_schema.SCHEMA_ID, strict=True
-    )
+    ctrl = artifacts.Controller[geo_core.PreparedSchema](prepared_schema_fpath)
+    prepare_schema = ctrl.fetch(geo_core.prepared_schema.SCHEMA_ID, strict=True)
 
     # return specs
     return core.DataSpecs(
         name=data_schema['dataset']['name'],
         mode=mode,
-        meta=_get_meta(data_schema, prepared_schema),
+        meta=_get_meta(data_schema, prepare_schema),
         heads=_get_heads(
             data_schema,
-            prepared_schema,
+            prepare_schema,
             knowledge_paths=artifact_paths.knowledge
         ),
-        splits=_get_split(prepared_schema),
-        domains=_get_domain(prepared_schema, ids_domain, vec_domain)
+        splits=_get_split(prepare_schema),
+        domains=_get_domain(prepare_schema, ids_domain, vec_domain)
     )
 
 
 # ----- private helpers
 def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
-    ctrl = DomainCtrl(fp)
+    ctrl = artifacts.Controller[geo_core.DomainPayload](fp)
     payload = ctrl.fetch(geo_core.DomainTileMap.SCHEMA_ID, strict=True)
     return geo_core.DomainTileMap.from_payload(payload)
 

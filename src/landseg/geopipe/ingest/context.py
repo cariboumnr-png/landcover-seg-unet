@@ -48,11 +48,6 @@ import landseg.geopipe.core as geo_core
 
 # ----- typing aliases
 HarmonizationRecords = dict[str, contracts.HarmonizationRunRecord]
-HarmonizationReportCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
-HarmonizationManifestCtrl = artifacts.Controller[HarmonizationRecords]
-IngestionRecords = dict[str, contracts.IngestionRunRecord]
-IngestionManifestCtrl = artifacts.Controller[IngestionRecords]
-DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 
 # ----- public dataclasses
@@ -176,8 +171,9 @@ def build_ingestion_context(
     '''
     # parse targeted harmonization run
     harmonization_artifact_paths.get_run_folder(harmonization_record['run_id'])
-    report_path = harmonization_artifact_paths.report
-    report = HarmonizationReportCtrl(report_path).fetch(strict=True)
+    report_fp = harmonization_artifact_paths.report
+    ctrl = artifacts.Controller[contracts.HarmonizationReportSchema](report_fp)
+    report = ctrl.fetch(strict=True)
 
     # fetch world grid
     raw_grid = report.get('grid_fpath')
@@ -282,9 +278,8 @@ def _resolve_harmonization_runs(
         )
 
     try:
-        manifest_data = HarmonizationManifestCtrl(
-            manifest_fpath
-        ).fetch(strict=True)
+        ctrl = artifacts.Controller[HarmonizationRecords](manifest_fpath)
+        manifest_data = ctrl.fetch(strict=True)
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError(
             'Failed to read harmonization runs manifest at '
@@ -385,7 +380,8 @@ def _resolve_ingestion_runs(manifest_fpath: pathlib.Path) -> set[str]:
         return set()
 
     try:
-        manifest_data = IngestionManifestCtrl(manifest_fpath).fetch(strict=True)
+        ctrl = artifacts.Controller[dict](manifest_fpath)
+        manifest_data = ctrl.fetch(strict=True)
     except artifacts.ArtifactError:
         return set()
 
@@ -423,7 +419,8 @@ def verify_pool_grid_compatibility(
         return
 
     try:
-        schema_dict = DataSchemaCtrl(schema_fpath).fetch(strict=True)
+        ctrl = artifacts.Controller[geo_core.DataSchema](schema_fpath)
+        schema_dict = ctrl.fetch(strict=True)
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError(
             f'Failed to read dataset schema at {schema_fpath}: {exc}'

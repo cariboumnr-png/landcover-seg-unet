@@ -40,12 +40,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.rasters as rasters
 
 
-# ----- typing aliases
-CatalogCtrl = (artifacts.Controller[dict[str, geo_core.DataCatalogEntry]])
-DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
-DictCtrl = artifacts.Controller[dict]
-
-
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class PreparationContext:
@@ -63,9 +57,9 @@ class PreparationContext:
 
 # ----- public functions
 def build_preparation_context(
-    windows_fpath: pathlib.Path,
-    catalog_fpath: pathlib.Path,
-    schema_fpath: pathlib.Path,
+    windows_fp: pathlib.Path,
+    catalog_fp: pathlib.Path,
+    schema_fp: pathlib.Path,
     config: contracts.PreparationPipelineConfig,
 ) -> PreparationContext:
     '''
@@ -87,15 +81,18 @@ def build_preparation_context(
             metadata.
     '''
     # load artifacts
-    windows = DictCtrl(windows_fpath).fetch(strict=True)
-    schema = DataSchemaCtrl(schema_fpath).fetch(
-        geo_core.data_schema.SCHEMA_ID, strict=True
-    )
-    catalog = CatalogCtrl(catalog_fpath).fetch(strict=True)
+    Ctrl = artifacts.Controller[dict](windows_fp)
+    windows = Ctrl.fetch(strict=True)
+
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    schema = Ctrl(schema_fp).fetch(geo_core.data_schema.SCHEMA_ID, strict=True)
+
+    Ctrl = artifacts.Controller[dict[str, geo_core.DataCatalogEntry]]
+    catalog = Ctrl(catalog_fp).fetch(strict=True)
+
     test_catalog = None
-    test_fpath = config.datasetview.test_catalog
-    if test_fpath is not None:
-        test_catalog = CatalogCtrl(test_fpath).fetch(strict=True)
+    if config.datasetview.test_catalog is not None:
+        test_catalog = Ctrl(config.datasetview.test_catalog).fetch(strict=True)
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
@@ -108,18 +105,18 @@ def build_preparation_context(
         isinstance(block_size, list) and len(block_size) == 2 and
         isinstance(block_overlap, list) and len(block_overlap) == 2
     ): # sanity
-        raise ValueError(f'Invalid block windows artifact: {windows_fpath}')
+        raise ValueError(f'Invalid block windows artifact: {windows_fp}')
 
-    partition = config.partition
+    partn = config.partition
 
     return PreparationContext(
         catalog=catalog,
         test_catalog=test_catalog,
         schema=schema,
         block_specs=(*block_size, *block_overlap),
-        train_aoi=pathlib.Path(partition.train_aoi) if partition.train_aoi else None,
-        val_aoi=pathlib.Path(partition.val_aoi) if partition.val_aoi else None,
-        test_aoi=pathlib.Path(partition.test_aoi) if partition.test_aoi else None,
+        train_aoi=pathlib.Path(partn.train_aoi) if partn.train_aoi else None,
+        val_aoi=pathlib.Path(partn.val_aoi) if partn.val_aoi else None,
+        test_aoi=pathlib.Path(partn.test_aoi) if partn.test_aoi else None,
         canvas_crs=str(image_raster_info.crs),
         canvas_transform=image_raster_info.transform,
     )

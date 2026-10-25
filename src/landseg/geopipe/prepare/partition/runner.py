@@ -46,11 +46,6 @@ import landseg.geopipe.prepare.dataset as dataset
 import landseg.geopipe.prepare.partition.orchestration as orchestration
 
 
-# ----- typing aliases
-PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
-SplitsSummaryCtrl = artifacts.Controller[contracts.PartitionSummary]
-
-
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
@@ -112,9 +107,11 @@ def run_datablocks_partition(
             partition_config = dataclasses.replace(partition_config, aoi=aoi)
 
     # partition fpaths and summary JSON controller
-    partition_ctrl = PartitionCtrl(paths.splits_source_blocks, policy)
+    Ctrl = artifacts.Controller[contracts.BlocksPartition]
+    partition_ctrl = Ctrl(paths.splits_source_blocks, policy)
     partition_fpaths = partition_ctrl.fetch()
-    summary_ctrl = SplitsSummaryCtrl(paths.splits_summary, policy)
+    Ctrl = artifacts.Controller[contracts.PartitionSummary]
+    summary_ctrl = Ctrl(paths.splits_summary, policy)
     summary = summary_ctrl.fetch()
 
     if (

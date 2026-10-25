@@ -42,11 +42,6 @@ import landseg.geopipe.contracts.harmonization as contracts
 import landseg.utils as utils
 
 
-# ----- typing aliases
-ManifestCtrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
-SchemaCtrl = artifacts.Controller[contracts.HarmonizationReportSchema]
-
-
 # ----- public classes
 class HarmonizationLogger(utils.Logger):
     '''
@@ -165,16 +160,17 @@ class HarmonizationLogger(utils.Logger):
             'timestamp': self.summary.get('timestamp', ''),
             'fingerprint': self.summary.get('fingerprint', '')
         }
-        ctrl = ManifestCtrl(run_manifest_fpath)
+        Ctrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
+        run_ctrl = Ctrl(run_manifest_fpath)
         try:
-            manifest_data = ctrl.fetch() or {} # manifest.json can be absent
+            manifest_data = run_ctrl.fetch() or {} # manifest.json can be absent
         except artifacts.ArtifactError as e:
             raise ValueError('Error reading runs manifest.json') from e
         manifest_data[uid] = record
-        ctrl.persist(manifest_data)
+        run_ctrl.persist(manifest_data)
 
     def on_close(self) -> None:
         '''Persist the collected summary JSON report directly to log_file.'''
         if self.summary is not None and self.log_file:
-            ctrl = SchemaCtrl(self.log_file)
-            ctrl.persist(self.summary)
+            Ctrl = artifacts.Controller[contracts.HarmonizationReportSchema]
+            Ctrl(self.log_file).persist(self.summary)

@@ -45,13 +45,6 @@ import landseg.geopipe.prepare.logger as prepare_logger
 import landseg.geopipe.prepare.dataset as prepare_dataset
 
 
-# ----- typing aliases
-PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
-ImageStatsCtrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
-LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[geo_core.PreparedSchema]
-
-
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
@@ -95,7 +88,8 @@ def build_schema(
     start_time = time.perf_counter()
 
     # schema artifact controller
-    schema_ctrl = SchemaCtrl(paths.schema, policy)
+    Ctrl = artifacts.Controller[geo_core.PreparedSchema]
+    schema_ctrl = Ctrl(paths.schema, policy)
     schema = schema_ctrl.fetch(geo_core.prepared_schema.SCHEMA_ID)
     loaded = schema is not None
 
@@ -109,25 +103,25 @@ def build_schema(
         }
 
         # checksum the artifacts
-        ctrl_cls = artifacts.Controller
+        Ctrl = artifacts.Controller
         checksums = {
-            'block_source': ctrl_cls(paths.splits_source_blocks).sha256,
-            'block_prepared': ctrl_cls(paths.splits_prepared_blocks).sha256,
-            'label_stats': ctrl_cls(paths.label_stats).sha256,
-            'image_stats': ctrl_cls(paths.image_stats).sha256
+            'block_source': Ctrl(paths.splits_source_blocks).sha256,
+            'block_prepared': Ctrl(paths.splits_prepared_blocks).sha256,
+            'label_stats': Ctrl(paths.label_stats).sha256,
+            'image_stats': Ctrl(paths.image_stats).sha256
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl(paths.splits_prepared_blocks)
-        block_splits = ctrl.fetch(strict=True)
+        Ctrl = artifacts.Controller[contracts.BlocksPartition]
+        block_splits = Ctrl(paths.splits_prepared_blocks).fetch(strict=True)
 
         # read label stats
-        ctrl = LabelStatsCtrl(paths.label_stats)
-        label_stats = ctrl.fetch(strict=True)
+        Ctrl = artifacts.Controller[dict[str, list[int]]]
+        label_stats = Ctrl(paths.label_stats).fetch(strict=True)
 
         # read image stats
-        ctrl = ImageStatsCtrl(paths.image_stats)
-        image_stats = ctrl.fetch(strict=True)
+        Ctrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+        image_stats = Ctrl(paths.image_stats).fetch(strict=True)
 
         # target heads reclass hierarchy
         heads_schema: geo_core.TargetHeadsSchema = {

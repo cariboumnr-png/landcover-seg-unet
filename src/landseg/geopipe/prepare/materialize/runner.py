@@ -47,12 +47,6 @@ import landseg.geopipe.prepare.materialize.schema as schema
 import landseg.geopipe.prepare.materialize.stats as stats
 
 
-# ----- typing aliases
-PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
-LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-ImageStatsCtrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
-
-
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
@@ -101,8 +95,8 @@ def run_materialize_blocks(
     start_time = time.perf_counter()
 
     # load source blocks file lists
-    ctrl = PartitionCtrl(paths.splits_source_blocks)
-    src = ctrl.fetch(strict=True)
+    Ctrl = artifacts.Controller[contracts.BlocksPartition]
+    src = Ctrl(paths.splits_source_blocks).fetch(strict=True)
 
     # get source by split
     train = set(pathlib.Path(p) for p in src['train'].values())
@@ -110,16 +104,17 @@ def run_materialize_blocks(
     test = set(pathlib.Path(p) for p in src['test'].values())
 
     # label stats on training blocks - parse from context
-    ctrl = LabelStatsCtrl(paths.label_stats, policy)
+    Ctrl = artifacts.Controller[dict[str, list[int]]]
     lbl_counts = stats.count_label(
         context.manifest.raw_class_counts,
         list(src['train'].keys())
     )
-    ctrl.persist(lbl_counts)
+    Ctrl(paths.label_stats, policy).persist(lbl_counts)
 
     # aggregate stats on training blocks
-    ctrl = ImageStatsCtrl(paths.image_stats, policy)
-    agg_stats = ctrl.fetch()
+    Ctrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
+    img_ctrl = Ctrl(paths.image_stats, policy)
+    agg_stats = img_ctrl.fetch()
     if policy != artifacts.LifecyclePolicy.REBUILD and agg_stats:
         logger.info('[CHECKPOINT] Loaded image stats from training split')
     else:
@@ -127,12 +122,13 @@ def run_materialize_blocks(
             train,
             list(context.features.indices)
         )
-        ctrl.persist(agg_stats)
+        img_ctrl.persist(agg_stats)
         logger.info('[CHECKPOINT] Created image stats from training split')
 
     # load or build normalized blocks for each split
-    ctrl = PartitionCtrl(paths.splits_prepared_blocks, policy)
-    prepared = ctrl.fetch()
+    Ctrl = artifacts.Controller[contracts.BlocksPartition]
+    prep_ctrl = Ctrl(paths.splits_prepared_blocks, policy)
+    prepared = prep_ctrl.fetch()
     loaded = prepared is not None
 
     purged_total = 0
@@ -146,7 +142,7 @@ def run_materialize_blocks(
             paths,
             logger=logger,
         )
-        ctrl.persist(prepared)
+        prep_ctrl.persist(prepared)
         logger.info('[CHECKPOINT] Created normalized dataset blocks')
 
     # build schema

@@ -45,11 +45,6 @@ import landseg.geopipe.ingest.blocks.manifest.catalog as catalog
 import landseg.geopipe.ingest.blocks.manifest.schema as schema
 
 
-# ----- typing aliases
-CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DataCatalogEntry]])
-SchemaCtrl = artifacts.Controller[geo_core.DataSchema]
-
-
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class ManifestProvenance:
@@ -99,9 +94,10 @@ def update_manifest(
             Status mapping containing update results and metrics.
     '''
     # ----- catalog
-    ctrl = CatalogDictCtrl(catalog_fpath, policy)
+    Ctrl = artifacts.Controller[dict[str, geo_core.DataCatalogEntry]]
+    cat_ctrl = Ctrl(catalog_fpath, policy)
     try:
-        catalog_dict = ctrl.fetch()
+        catalog_dict = cat_ctrl.fetch()
     except artifacts.ArtifactError as exc: # e.g., current catalog corrupted
         raise artifacts.ArtifactError from exc
 
@@ -130,14 +126,15 @@ def update_manifest(
             ingest_run_id=provenance.ingest_run_id,
         )
         catalog_json = _catalog.to_json_payload()
-        ctrl.persist(catalog_json)
+        cat_ctrl.persist(catalog_json)
     else:
         _catalog = current
 
     # ----- schema
-    ctrl = SchemaCtrl(schema_fpath, policy)
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    schema_ctrl = Ctrl(schema_fpath, policy)
     try:
-        schema_dict = ctrl.fetch()
+        schema_dict = schema_ctrl.fetch()
     except artifacts.ArtifactError as exc: # e.g., current schema corrupted
         raise artifacts.ArtifactError from exc
 
@@ -150,7 +147,7 @@ def update_manifest(
         sources=(provenance.source_image, provenance.source_label),
         label_color_map=output.label_color_map,
     )
-    ctrl.persist(schema_dict)
+    schema_ctrl.persist(schema_dict)
 
     return {
         'catalog_status': catalog_status,

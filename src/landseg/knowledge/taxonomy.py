@@ -35,11 +35,7 @@ import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
-import landseg.knowledge.embeddings as emb
-
-
-# ----- typing aliases
-SpeciesMetaCtrl = artifacts.Controller[emb.SpeciesEmbeddingsMetadata]
+import landseg.knowledge.embeddings as embeddings
 
 
 # ----- public functions
@@ -123,7 +119,7 @@ def _get_profiles(knowledge_root: pathlib.Path | str | None) -> list[str]:
 def _resolve_taxonomy_metadata(
     profile: str,
     root: pathlib.Path | str | None = None,
-) -> dict[str, emb.SpeciesEntry]:
+) -> dict[str, embeddings.SpeciesEntry]:
     '''Load canonical metadata JSON for the given taxonomy profile.'''
     candidate_paths: list[pathlib.Path] = []
     if root is not None:
@@ -150,8 +146,8 @@ def _resolve_taxonomy_metadata(
             f'Available profiles: [{avail_str}].'
         )
 
-    ctrl = SpeciesMetaCtrl.load_json_strict(meta_path)
-    meta = ctrl.fetch()
+    ctrl = artifacts.Controller[embeddings.SpeciesEmbeddingsMetadata](meta_path)
+    meta = ctrl.fetch(strict=True)
 
     classes_meta = meta.get('classes', [])
     if not classes_meta:

@@ -37,13 +37,11 @@ import dataclasses
 import pathlib
 import typing
 # local imports
-import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 
 
 # ----- typing aliases
 field = dataclasses.field
-CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DataCatalogEntry]])
 Coord = tuple[int, int]
 
 
