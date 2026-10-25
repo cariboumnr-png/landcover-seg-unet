@@ -96,40 +96,52 @@ class Controller(typing.Generic[T]):
         t = pathlib.Path(self.fp).stat().st_ctime
         return datetime.datetime.fromtimestamp(t).strftime(c.TF_ISO8601)
 
-    # ----- alternative constructors
-    @classmethod
-    def load_json_strict(cls, fp: str | pathlib.Path) -> 'ControllerStrict[T]':
-        '''Factory for a JSON controller that reads or fails.'''
-        return ControllerStrict(fp)
-
-    @classmethod
-    def load_csv_strict(cls, fp: str | pathlib.Path) -> 'ControllerStrict[T]':
-        '''Factory for a CSV controller that reads or fails.'''
-        return ControllerStrict(fp)
-
-    @classmethod
-    def load_pt_strict(cls, fp: str | pathlib.Path) -> 'ControllerStrict[T]':
-        '''Factory for a PyTorch PT controller that reads or fails.'''
-        return ControllerStrict(fp)
-
     # ----- public method
     @typing.overload
-    def fetch(self: ControllerStrict[T]) -> T:...
+    def fetch(
+        self,
+        expected_schema_id: str | None = None,
+        strict: typing.Literal[True] = ...,
+    ) -> T:...
 
     @typing.overload
-    def fetch(self) -> T | None:...
+    def fetch(
+        self,
+        expected_schema_id: str | None = None,
+        strict: typing.Literal[False] = ...,
+    ) -> T | None:...
 
-    def fetch(self) -> T | None:
+    @typing.overload
+    def fetch(
+        self,
+        expected_schema_id: str | None = None,
+        strict: bool = False,
+    ) -> T | None:...
+
+    def fetch(
+        self,
+        expected_schema_id: str | None = None,
+        strict: bool = False,
+    ) -> T | None:
         '''
         Fetch the artifact according to the lifecycle policy.
+
+        Args:
+            expected_schema_id:
+                Optional expected schema identifier. If supplied and data
+                is a mapping, validates that data['schema_id'] matches.
+            strict:
+                If True, raises ArtifactError if the artifact is missing
+                regardless of the controller lifecycle policy.
 
         Returns:
             The loaded artifact if valid and permitted by the policy,
             otherwise None to signal that reconstruction is required.
 
         Raises:
-            ArtifactError: If the artifact exists but is corrupted or
-                fails integrity validation.
+            ArtifactError: If the artifact exists but is corrupted, fails
+                integrity validation, schema_id does not match, or is
+                missing when strict is True.
         '''
 
         data: T | None
@@ -140,6 +152,17 @@ class Controller(typing.Generic[T]):
         except ArtifactError as exc: # propagate to let caller to decide
             # corrupted or hash mismatch: always fatal for now
             raise ArtifactError from exc
+
+        if data is not None and expected_schema_id is not None:
+            actual = data.get('schema_id') if isinstance(data, dict) else None
+            if actual != expected_schema_id:
+                raise ArtifactError(
+                    f"Schema mismatch in {self.fname}: "
+                    f"expected '{expected_schema_id}', got '{actual}'"
+                )
+
+        if strict and data is None:
+            raise ArtifactError(f'Required artifact is missing: {self.fname}')
 
         match self.policy:
             # policy: fail if can not load
@@ -350,12 +373,6 @@ class Controller(typing.Generic[T]):
 
         # write src to npz
         numpy.savez_compressed(fp, keys=keys, values=values)
-
-
-class ControllerStrict(Controller[T]):
-    '''"Load or fail" specialized Controller subclass.'''
-    def __init__(self, file_path: str | pathlib.Path):
-        super().__init__(file_path, artifacts.LifecyclePolicy.LOAD_OR_FAIL)
 
 
 class ArtifactError(Exception):

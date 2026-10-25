@@ -115,9 +115,8 @@ def test_csv_persist_fetch_and_hash(tmp_path):
     assert list(loaded['a']) == [1, 2]
     assert list(loaded['b']) == ['x', 'y']
 
-    # load_csv_or_fail factory
-    ctrl_fail = ctrl_mod.Controller.load_csv_strict(csv_path)
-    loaded_fail = ctrl_fail.fetch()
+    # strict fetch
+    loaded_fail = ctrl.fetch(strict=True)
     assert loaded_fail is not None
 
     # tampered CSV triggers hash mismatch
@@ -146,9 +145,8 @@ def test_pt_persist_fetch_and_hash(tmp_path):
     assert loaded is not None
     assert torch.allclose(loaded, tensor_in)
 
-    # load_pt_or_fail factory
-    ctrl_fail = ctrl_mod.Controller.load_pt_strict(pt_path)
-    loaded_fail = ctrl_fail.fetch()
+    # strict fetch
+    loaded_fail = ctrl.fetch(strict=True)
     assert loaded_fail is not None
     assert torch.allclose(loaded_fail, tensor_in)
 
@@ -178,7 +176,10 @@ def test_lifecycle_policies_fetch(tmp_path):
     json_path = str(tmp_path / 'policy_test.json')
 
     # LOAD_OR_FAIL on missing file
-    ctrl_fail = ctrl_mod.Controller.load_json_strict(json_path)
+    ctrl_fail = ctrl_mod.Controller(
+        json_path,
+        policy_mod.LifecyclePolicy.LOAD_OR_FAIL
+    )
     with pytest.raises(ctrl_mod.ArtifactError, match='Required artifact is missing'):
         ctrl_fail.fetch()
 
@@ -223,3 +224,40 @@ def test_controller_hash_mismatch_and_corruption(tmp_path):
 
     with pytest.raises(ctrl_mod.ArtifactError):
         ctrl.fetch()
+
+
+# ----- `Controller` schema validation tests
+def test_controller_schema_validation(tmp_path):
+    '''
+    Given: An artifact with a schema_id field.
+    When: Loading with expected_schema_id and strict option via fetch.
+    Then: Return payload on match, raise ArtifactError on mismatch.
+    '''
+    fpath = tmp_path / 'payload.json'
+    ctrl = ctrl_mod.Controller[dict](fpath)
+    ctrl.persist({'schema_id': 'test_schema/v1', 'data': [1, 2, 3]})
+
+    # matching schema returns payload
+    assert ctrl.fetch(expected_schema_id='test_schema/v1') is not None
+    strict_data = ctrl.fetch(
+        expected_schema_id='test_schema/v1', strict=True
+    )
+    assert strict_data['data'] == [1, 2, 3]
+
+    # mismatch raises ArtifactError
+    with pytest.raises(ctrl_mod.ArtifactError, match='Schema mismatch'):
+        ctrl.fetch(expected_schema_id='other_schema/v2')
+
+    # missing file raises ArtifactError when strict=True
+    missing_ctrl = ctrl_mod.Controller[dict](tmp_path / 'missing.json')
+    assert missing_ctrl.fetch(strict=False) is None
+    with pytest.raises(ctrl_mod.ArtifactError, match='missing'):
+        missing_ctrl.fetch(strict=True)
+
+    # LOAD_OR_FAIL policy implicitly enforces strict loading
+    strict_ctrl = ctrl_mod.Controller[dict](
+        fpath,
+        policy_mod.LifecyclePolicy.LOAD_OR_FAIL
+    )
+    res = strict_ctrl.fetch(expected_schema_id='test_schema/v1')
+    assert res['data'] == [1, 2, 3]
