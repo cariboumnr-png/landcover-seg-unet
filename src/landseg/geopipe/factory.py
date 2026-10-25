@@ -46,7 +46,7 @@ import landseg.knowledge as knowledge
 
 
 # ----- typing aliases
-DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
+DomainCtrl = artifacts.Controller[geo_core.DomainPayload]
 DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
 PreparedSchemaCtrl = artifacts.Controller[prepare_contracts.PreparedSchema]
 
@@ -97,12 +97,14 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_ctrl = DatasetSchemaCtrl.load_json_strict
-    data_schema = data_ctrl(data_schema_fpath).fetch()
+    data_schema = DatasetSchemaCtrl(data_schema_fpath).fetch(
+        geo_core.dataset_schema.SCHEMA_ID, strict=True
+    )
 
     # prepared schema
-    prepared_ctrl = PreparedSchemaCtrl.load_json_strict
-    prepared_schema = prepared_ctrl(prepared_schema_fpath).fetch()
+    prepared_schema = PreparedSchemaCtrl(prepared_schema_fpath).fetch(
+        prepare_contracts.PREPARED_SCHEMA_ID, strict=True
+    )
 
     # return specs
     return core.DataSpecs(
@@ -122,11 +124,8 @@ def build_dataspec(
 # ----- private helpers
 def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
-    ctrl = DomainCtrl.load_or_fail(
-        fp,
-        schema_id=geo_core.DomainTileMap.SCHEMA_ID,
-    )
-    payload = ctrl.load()
+    ctrl = DomainCtrl(fp)
+    payload = ctrl.fetch(geo_core.DomainTileMap.SCHEMA_ID, strict=True)
     return geo_core.DomainTileMap.from_payload(payload)
 
 

@@ -46,9 +46,7 @@ import landseg.geopipe.ingest.domains.mapper as mapper
 
 
 # ----- typing aliases
-DomainCtrl = artifacts.PayloadController[
-    dict[str, geo_core.DomainTile], geo_core.DomainMeta
-]
+DomainCtrl = artifacts.Controller[geo_core.DomainPayload]
 MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
 
 
@@ -98,12 +96,8 @@ def prepare_domain_maps(
         name = config.name
 
         # check domain artifacts
-        ctrl = DomainCtrl(
-            config.domain_fpath,
-            schema_id=geo_core.DomainTileMap.SCHEMA_ID,
-            policy=policy
-        )
-        payload = ctrl.load() # empty = domain absent
+        ctrl = DomainCtrl(config.domain_fpath, policy=policy)
+        payload = ctrl.fetch(expected_schema_id=geo_core.DomainTileMap.SCHEMA_ID)
 
         # load or create domain layer
         loaded = False
@@ -120,7 +114,7 @@ def prepare_domain_maps(
                 valid_threshold=config.valid_threshold,
                 target_variance=config.target_variance,
             ).to_json_payload()
-            ctrl.save(payload)
+            ctrl.persist(payload)
             logger.info(f'[CHECKPOINT] Created domain layer [{name}]')
 
         duration = time.perf_counter() - start_time

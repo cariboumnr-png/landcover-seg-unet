@@ -400,12 +400,6 @@ def _create_dummy_grid(fpath: pathlib.Path | str) -> geo_core.GridLayout:
         grid_extent=(160.0, 160.0),
     )
     layout = geo_core.GridLayout(spec)
-    ctrl = artifacts.PayloadController[
-        list[list[int]], geo_core.GridMeta
-    ](
-        fpath,
-        schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
-    )
-    ctrl.save(layout.to_payload())
+    ctrl = artifacts.Controller[geo_core.GridPayload](fpath)
+    ctrl.persist(layout.to_payload())
     return layout

@@ -108,25 +108,25 @@ def build_schema(
         }
 
         # checksum the artifacts
-        load = artifacts.Controller.load_json_strict
+        ctrl_cls = artifacts.Controller
         checksums = {
-            'block_source': load(paths.splits_source_blocks).sha256,
-            'block_prepared': load(paths.splits_prepared_blocks).sha256,
-            'label_stats': load(paths.label_stats).sha256,
-            'image_stats': load(paths.image_stats).sha256
+            'block_source': ctrl_cls(paths.splits_source_blocks).sha256,
+            'block_prepared': ctrl_cls(paths.splits_prepared_blocks).sha256,
+            'label_stats': ctrl_cls(paths.label_stats).sha256,
+            'image_stats': ctrl_cls(paths.image_stats).sha256
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl.load_json_strict(paths.splits_prepared_blocks)
-        block_splits = ctrl.fetch()
+        ctrl = PartitionCtrl(paths.splits_prepared_blocks)
+        block_splits = ctrl.fetch(strict=True)
 
         # read label stats
-        ctrl = LabelStatsCtrl.load_json_strict(paths.label_stats)
-        label_stats = ctrl.fetch()
+        ctrl = LabelStatsCtrl(paths.label_stats)
+        label_stats = ctrl.fetch(strict=True)
 
         # read image stats
-        ctrl = ImageStatsCtrl.load_json_strict(paths.image_stats)
-        image_stats = ctrl.fetch()
+        ctrl = ImageStatsCtrl(paths.image_stats)
+        image_stats = ctrl.fetch(strict=True)
 
         # target heads reclass hierarchy
         heads_schema: contracts.TargetHeadsSchema = {
@@ -144,7 +144,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_version': contracts.PREPARED_SCHEMA_ID,
+            'schema_id': contracts.PREPARED_SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,

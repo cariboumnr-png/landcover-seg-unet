@@ -199,7 +199,7 @@ class PreparedSchema(typing.TypedDict):
     Captures metadata and statistics generated during preparation,
     including splits, checksums, label counts, and image stats.
     '''
-    schema_version: str
+    schema_id: str
     creation_time: str
     artifacts: dict[str, str]
     checksums: dict[str, str]

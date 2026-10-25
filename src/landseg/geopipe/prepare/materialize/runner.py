@@ -101,8 +101,8 @@ def run_materialize_blocks(
     start_time = time.perf_counter()
 
     # load source blocks file lists
-    ctrl = PartitionCtrl.load_json_strict(paths.splits_source_blocks)
-    src = ctrl.fetch()
+    ctrl = PartitionCtrl(paths.splits_source_blocks)
+    src = ctrl.fetch(strict=True)
 
     # get source by split
     train = set(pathlib.Path(p) for p in src['train'].values())

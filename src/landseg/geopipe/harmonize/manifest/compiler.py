@@ -67,9 +67,9 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             List of normalized manifest entries.
     '''
     # load JSON via artifact controller
-    ctrl = ManifestCtrl.load_json_strict(fp)
+    ctrl = ManifestCtrl(fp)
     ctrl.hash(overwrite=False) # hash once
-    mfst = ctrl.fetch()
+    mfst = ctrl.fetch(strict=True)
 
     # expect JSON read as a list of dicts
     if not isinstance(mfst, list):
@@ -82,9 +82,9 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = ManifestEntryCtrl.load_json_strict(mfst_entry_path)
+            _ctrl = ManifestEntryCtrl(mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
-            entry = _ctrl.fetch()
+            entry = _ctrl.fetch(strict=True)
         except (TypeError, ValueError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 

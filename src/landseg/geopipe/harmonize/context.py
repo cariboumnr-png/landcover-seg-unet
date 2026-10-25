@@ -74,7 +74,7 @@ def build_harmonization_context(
             grid reference metadata.
     '''
     # fetch world grid
-    grid_report = GridReportCtrl.load_json_strict(grid_report_path).fetch()
+    grid_report = GridReportCtrl(grid_report_path).fetch(strict=True)
     grid_fpath = pathlib.Path(grid_report['grid']['grid_fpath'])
     world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
 

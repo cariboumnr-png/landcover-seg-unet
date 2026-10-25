@@ -87,12 +87,15 @@ def build_preparation_context(
             metadata.
     '''
     # load artifacts
-    windows = DictCtrl.load_json_strict(windows_fpath).fetch()
-    schema = DatasetSchemaCtrl.load_json_strict(schema_fpath).fetch()
-    catalog = CatalogCtrl.load_json_strict(catalog_fpath).fetch()
+    windows = DictCtrl(windows_fpath).fetch(strict=True)
+    schema = DatasetSchemaCtrl(schema_fpath).fetch(
+        geo_core.dataset_schema.SCHEMA_ID, strict=True
+    )
+    catalog = CatalogCtrl(catalog_fpath).fetch(strict=True)
     test_catalog = None
-    if config.datasetview.test_catalog is not None:
-        test_catalog = CatalogCtrl.load_json_strict(config.datasetview.test_catalog).fetch()
+    test_fpath = config.datasetview.test_catalog
+    if test_fpath is not None:
+        test_catalog = CatalogCtrl(test_fpath).fetch(strict=True)
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
