@@ -168,8 +168,7 @@ def check_report_status(
         )
 
     try:
-        report_ctrl = artifacts.Controller[dict].load_json_strict(report_fpath)
-        data = report_ctrl.fetch()
+        data = artifacts.Controller[dict](report_fpath).fetch(strict=True)
         status_val = data.get('status')
         if status_val != expected_status:
             message = (
@@ -290,8 +289,7 @@ def check_manifest_runs(
         )
 
     try:
-        manifest_ctrl = artifacts.Controller.load_json_strict(manifest_fpath)
-        data = manifest_ctrl.fetch()
+        data = artifacts.Controller(manifest_fpath).fetch(strict=True)
         records: list[dict[str, typing.Any]] = []
 
         if isinstance(data, dict):

@@ -52,7 +52,7 @@ HarmonizationReportCtrl = artifacts.Controller[contracts.HarmonizationReportSche
 HarmonizationManifestCtrl = artifacts.Controller[HarmonizationRecords]
 IngestionRecords = dict[str, contracts.IngestionRunRecord]
 IngestionManifestCtrl = artifacts.Controller[IngestionRecords]
-DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
+DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 
 
 # ----- public dataclasses
@@ -423,7 +423,7 @@ def verify_pool_grid_compatibility(
         return
 
     try:
-        schema_dict = DatasetSchemaCtrl(schema_fpath).fetch(strict=True)
+        schema_dict = DataSchemaCtrl(schema_fpath).fetch(strict=True)
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError(
             f'Failed to read dataset schema at {schema_fpath}: {exc}'

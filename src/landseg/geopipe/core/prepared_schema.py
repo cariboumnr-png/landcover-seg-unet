@@ -39,6 +39,29 @@ SCHEMA_ID = 'prepared_schema/v1'
 
 
 # ----- public types
+class PreparedSchema(typing.TypedDict):
+    '''
+    Dataset-wide preparation schema.
+
+    Captures metadata and statistics generated during preparation,
+    including splits, checksums, label counts, and image stats.
+
+    Schema: SCHEMA_ID = 'prepared_schema/v1'
+    '''
+    schema_id: str
+    creation_time: str
+    artifacts: dict[str, str]
+    checksums: dict[str, str]
+    train_blocks: dict[str, str]
+    val_blocks: dict[str, str]
+    test_blocks: dict[str, str]
+    label_stats: dict[str, list[int]]
+    image_stats: dict[str, ImageBandStats]
+    image_array_key: str
+    label_array_key: str
+    heads: typing.NotRequired[TargetHeadsSchema]
+
+
 class ImageBandStats(typing.TypedDict):
     '''
     Statistical summary for a single image band.
@@ -73,26 +96,3 @@ class TargetHeadsSchema(typing.TypedDict):
     num_classes: dict[str, int]
     class_names: dict[str, list[str]]
     ignore_classes: dict[str, list[int]]
-
-
-class PreparedSchema(typing.TypedDict):
-    '''
-    Dataset-wide preparation schema.
-
-    Captures metadata and statistics generated during preparation,
-    including splits, checksums, label counts, and image stats.
-
-    Schema: SCHEMA_ID = 'prepared_schema/v1'
-    '''
-    schema_id: str
-    creation_time: str
-    artifacts: dict[str, str]
-    checksums: dict[str, str]
-    train_blocks: dict[str, str]
-    val_blocks: dict[str, str]
-    test_blocks: dict[str, str]
-    label_stats: dict[str, list[int]]
-    image_stats: dict[str, ImageBandStats]
-    image_array_key: str
-    label_array_key: str
-    heads: typing.NotRequired[TargetHeadsSchema]

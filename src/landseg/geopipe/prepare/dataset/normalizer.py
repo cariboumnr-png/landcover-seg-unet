@@ -43,7 +43,7 @@ import landseg.geopipe.core as geo_core
 
 # ----- typing aliases
 field = dataclasses.field
-CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
+CatalogDictCtrl = (artifacts.Controller[dict[str, geo_core.DataCatalogEntry]])
 Coord = tuple[int, int]
 
 
@@ -51,9 +51,9 @@ Coord = tuple[int, int]
 @dataclasses.dataclass(frozen=True)
 class DataBlocksManifestInputs:
     '''Bundled datablocks manifest artifacts.'''
-    schema: geo_core.DatasetSchema
-    catalog: dict[str, geo_core.DatasetBlockMeta]
-    test_catalog: dict[str, geo_core.DatasetBlockMeta] | None = None
+    schema: geo_core.DataSchema
+    catalog: dict[str, geo_core.DataCatalogEntry]
+    test_catalog: dict[str, geo_core.DataCatalogEntry] | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -156,9 +156,9 @@ def read_dataset_manifest(
 
 # ----- private helpers
 def _filter_blocks(
-    catalog_dict: dict[str, geo_core.DatasetBlockMeta],
+    catalog_dict: dict[str, geo_core.DataCatalogEntry],
     valid_px_thresholds: typing.Mapping[str, float] | None = None,
-) -> dict[tuple[int, int], geo_core.DatasetBlockMeta]:
+) -> dict[tuple[int, int], geo_core.DataCatalogEntry]:
     '''Parse catalog JSON into filtered class counts and file paths.'''
     thresholds = valid_px_thresholds or {}
 
@@ -172,7 +172,7 @@ def _filter_blocks(
                 return False
         return True
 
-    catalog = geo_core.DatasetCatalog.from_dict(catalog_dict)
+    catalog = geo_core.DataCatalog.from_dict(catalog_dict)
     valid_catalog = {
         k: v for k, v in catalog.items()
         if _is_valid_block(thresholds, v['valid_px_ratios'])

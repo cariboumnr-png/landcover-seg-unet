@@ -46,12 +46,12 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 def build_schema(
     sample_block_fpath: pathlib.Path,
     *,
-    original: geo_core.DatasetSchema | None,
+    original: geo_core.DataSchema | None,
     sources: tuple[pathlib.Path, pathlib.Path | None],
     mapped_grid_id: str,
     block_identity: str = '',
     label_color_map: dict[str, list[int]] | None
-) -> geo_core.DatasetSchema:
+) -> geo_core.DataSchema:
     '''
     Create or update the dataset-level `schema.json`.
 
@@ -67,7 +67,7 @@ def build_schema(
             File path to a representative block artifact used to infer
             dataset-wide shapes, dtypes, and label settings.
         original:
-            Existing `DatasetSchema` object if present, otherwise `None`.
+            Existing `DataSchema` object if present, otherwise `None`.
         sources:
             Tuple containing paths to source image and optional label.
         mapped_grid_id:
@@ -78,7 +78,7 @@ def build_schema(
             Mapping of class name to RGB color values, or `None`.
 
     Returns:
-        geo_core.DatasetSchema:
+        geo_core.DataSchema:
             Populated data schema reflecting updated or newly created
             dataset schema.
     '''
@@ -123,8 +123,8 @@ def build_schema(
     label_shape = sample_blk.data.label.shape
 
     # create route
-    new: geo_core.DatasetSchema = {
-        'schema_id': geo_core.dataset_schema.SCHEMA_ID,
+    new: geo_core.DataSchema = {
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'dataset': {
             'name': '', # TBD
             'last_updated': t,

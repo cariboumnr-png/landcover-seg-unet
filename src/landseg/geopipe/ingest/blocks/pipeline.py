@@ -120,11 +120,11 @@ def run_blocks_building(
     )
 
     # inspect incumbent catalog if present
-    incumbent_catalog: geo_core.DatasetCatalog | None = None
+    incumbent_catalog: geo_core.DataCatalog | None = None
     try:
         cat_dict = artifacts.Controller[dict](artifact_paths.catalog).fetch()
         if cat_dict:
-            incumbent_catalog = geo_core.DatasetCatalog.from_dict(cat_dict)
+            incumbent_catalog = geo_core.DataCatalog.from_dict(cat_dict)
     except artifacts.ArtifactError:
         pass
 

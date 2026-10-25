@@ -127,7 +127,7 @@ def build_dataset_view(
 # ----- private helpers
 def _enrich_datablocks_manifest(
     datablocks_manifest: normalizer.NormalizedDataBlocksView,
-    data_schema: geo_core.DatasetSchema,
+    data_schema: geo_core.DataSchema,
     targets: semantics.TargetHeadsContext,
     focal_head: str,
 ) -> normalizer.NormalizedDataBlocksView:

@@ -41,8 +41,8 @@ import landseg.geopipe.rasters as rasters
 
 
 # ----- typing aliases
-CatalogCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
-DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
+CatalogCtrl = (artifacts.Controller[dict[str, geo_core.DataCatalogEntry]])
+DataSchemaCtrl = artifacts.Controller[geo_core.DataSchema]
 DictCtrl = artifacts.Controller[dict]
 
 
@@ -50,9 +50,9 @@ DictCtrl = artifacts.Controller[dict]
 @dataclasses.dataclass(frozen=True)
 class PreparationContext:
     '''Resolved upstream ingestion references for dataset preparation.'''
-    catalog: dict[str, geo_core.DatasetBlockMeta]
-    test_catalog: dict[str, geo_core.DatasetBlockMeta] | None
-    schema: geo_core.DatasetSchema
+    catalog: dict[str, geo_core.DataCatalogEntry]
+    test_catalog: dict[str, geo_core.DataCatalogEntry] | None
+    schema: geo_core.DataSchema
     block_specs: tuple[int, int, int, int] # (row, col, overlap_r, overlap_c)
     train_aoi: pathlib.Path | None
     val_aoi: pathlib.Path | None
@@ -88,8 +88,8 @@ def build_preparation_context(
     '''
     # load artifacts
     windows = DictCtrl(windows_fpath).fetch(strict=True)
-    schema = DatasetSchemaCtrl(schema_fpath).fetch(
-        geo_core.dataset_schema.SCHEMA_ID, strict=True
+    schema = DataSchemaCtrl(schema_fpath).fetch(
+        geo_core.data_schema.SCHEMA_ID, strict=True
     )
     catalog = CatalogCtrl(catalog_fpath).fetch(strict=True)
     test_catalog = None

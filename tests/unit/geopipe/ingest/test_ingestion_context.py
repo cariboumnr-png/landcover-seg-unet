@@ -354,7 +354,7 @@ def test_verify_pool_grid_compatibility(tmp_path):
 
     # when schema artifact exists with matching block_identity -> no error
     schema_data = {
-        'schema_id': geo_core.dataset_schema.SCHEMA_ID,
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'dataset': {
             'name': 'test_pool',
             'last_updated': '2026-09-24T00:00:00Z',

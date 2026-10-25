@@ -43,17 +43,17 @@ import landseg.geopipe.core as geo_core
 def build_catalog(
     input_block_fpaths: list[pathlib.Path],
     *,
-    original_catalog: geo_core.DatasetCatalog,
+    original_catalog: geo_core.DataCatalog,
     mapped_grid_id: str,
     source_image: pathlib.Path,
     source_label: pathlib.Path | None = None,
     harmonize_run_id: str | None = None,
     ingest_run_id: str | None = None,
-) -> geo_core.DatasetCatalog:
+) -> geo_core.DataCatalog:
     '''
     Build a new dataset catalog or update an existing one.
 
-    Constructs a `DatasetCatalog` from a collection of block files.
+    Constructs a `DataCatalog` from a collection of block files.
     For each provided block artifact (`*.npz`), it loads embedded
     metadata, extracts spatial indices, computes hash checksums, and
     records provenance back to the source image and optional label.
@@ -62,7 +62,7 @@ def build_catalog(
         input_block_fpaths:
             List of file paths to block artifacts to be cataloged.
         original_catalog:
-            Existing `DatasetCatalog`. May be empty if creating a new
+            Existing `DataCatalog`. May be empty if creating a new
             catalog from scratch.
         mapped_grid_id:
             Identifier of aligned spatial grid used to generate the
@@ -78,12 +78,12 @@ def build_catalog(
             Identifier of the active data ingestion run.
 
     Returns:
-        geo_core.DatasetCatalog:
+        geo_core.DataCatalog:
             Catalog containing merged catalog entries for all provided
             blocks and any pre-existing catalog records.
     '''
     # return dict
-    new_entries: dict[str, geo_core.DatasetBlockMeta] = {}
+    new_entries: dict[str, geo_core.DataCatalogEntry] = {}
 
     source_image = pathlib.Path(source_image)
     source_label = pathlib.Path(source_label) if source_label else None
@@ -100,7 +100,7 @@ def build_catalog(
         ctrl = artifacts.Controller(fp) # with no policy here
         meta = geo_core.DataBlock.load(fp).manifest
         row, col = geo_core.name_xy(meta['block_name'])
-        entry: geo_core.DatasetBlockMeta = {
+        entry: geo_core.DataCatalogEntry = {
             'block_name': meta['block_name'],
             'file_path': str(fp.resolve()),
             'row_col': [row, col],
@@ -126,4 +126,4 @@ def build_catalog(
         originals = {v['block_name']: v for v in original_catalog.values()}
         new_entries = {**originals, **new_entries}
     # otherwise just create from input entries
-    return geo_core.DatasetCatalog.from_dict(new_entries)
+    return geo_core.DataCatalog.from_dict(new_entries)

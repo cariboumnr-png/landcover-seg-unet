@@ -28,7 +28,7 @@ keep import order simple and circular-free.
 Public APIs:
     - `DataBlock`: Storage and interface for tiled geospatial blocks.
     - `DataBlockArrays`: Container for block-wise image and labels.
-    - `DatasetCatalog`: Mapping container for block metadata.
+    - `DataCatalog`: Mapping container for block metadata.
     - `DomainTileMap`: Mapping of valid spatial domain tiles.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
     - `GridSpec`: Specification for constructing a world grid.
@@ -36,12 +36,10 @@ Public APIs:
     - `xy_name`: Convert (x, y) coordinate tuple to block name string.
     - `CategoricalSpec`: TypedDict for categorical raster specs.
     - `DataBlockManifest`: TypedDict for block serialization manifest.
-    - `DatasetBlockMeta`: TypedDict for individual block entry.
-    - `DatasetSchema`: TypedDict for channel/band and label taxonomy.
-    - `DomainMeta`: TypedDict for domain tile map metadata.
+    - `DataCatalogEntry`: TypedDict for individual block entry.
+    - `DataSchema`: TypedDict for channel/band and label taxonomy.
     - `DomainPayload`: TypedDict for serialized domain tile map.
     - `DomainTile`: TypedDict for individual domain tile coordinates.
-    - `GridMeta`: TypedDict for grid metadata.
     - `GridPayload`: TypedDict for serialized grid payload.
     - `ImageBandStats`: TypedDict for image band statistics.
     - `LabelScheme`: TypedDict for named reclassification scheme.
@@ -62,7 +60,7 @@ __all__ = [
     # classes
     'DataBlock',
     'DataBlockArrays',
-    'DatasetCatalog',
+    'DataCatalog',
     'DomainTileMap',
     'GridLayout',
     'GridSpec',
@@ -72,12 +70,10 @@ __all__ = [
     # typing
     'CategoricalSpec',
     'DataBlockManifest',
-    'DatasetBlockMeta',
-    'DatasetSchema',
-    'DomainMeta',
+    'DataCatalogEntry',
+    'DataSchema',
     'DomainPayload',
     'DomainTile',
-    'GridMeta',
     'GridPayload',
     'ImageBandStats',
     'LabelScheme',
@@ -90,7 +86,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .categorical import (
+    from .label_scheme import (
         CategoricalSpec,
         LabelScheme,
         TaxonomySpec,
@@ -104,22 +100,20 @@ if typing.TYPE_CHECKING:
         DataBlockArrays,
         DataBlockManifest,
     )
-    from .dataset_catalog import (
-        DatasetBlockMeta,
-        DatasetCatalog,
+    from .data_catalog import (
+        DataCatalogEntry,
+        DataCatalog,
     )
-    from .dataset_schema import (
-        DatasetSchema,
+    from .data_schema import (
+        DataSchema,
     )
     from .domain_tile_map import (
-        DomainMeta,
         DomainPayload,
         DomainTile,
         DomainTileMap,
     )
     from .grid_layout import (
         GridLayout,
-        GridMeta,
         GridPayload,
         GridSpec,
         RasterWindowDict,
@@ -137,7 +131,7 @@ def __getattr__(name: str):
         'LabelScheme',
         'TaxonomySpec',
     }:
-        obj = importlib.import_module('.categorical', __package__)
+        obj = importlib.import_module('.label_scheme', __package__)
         return getattr(obj, name)
 
     if name in {
@@ -156,20 +150,19 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'DatasetBlockMeta',
-        'DatasetCatalog',
+        'DataCatalogEntry',
+        'DataCatalog',
     }:
-        obj = importlib.import_module('.dataset_catalog', __package__)
+        obj = importlib.import_module('.data_catalog', __package__)
         return getattr(obj, name)
 
     if name in {
-        'DatasetSchema',
+        'DataSchema',
     }:
-        obj = importlib.import_module('.dataset_schema', __package__)
+        obj = importlib.import_module('.data_schema', __package__)
         return getattr(obj, name)
 
     if name in {
-        'DomainMeta',
         'DomainPayload',
         'DomainTile',
         'DomainTileMap',
@@ -179,7 +172,6 @@ def __getattr__(name: str):
 
     if name in {
         'GridLayout',
-        'GridMeta',
         'GridPayload',
         'GridSpec',
         'RasterWindowDict',
@@ -196,7 +188,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'dataset_schema',
+        'data_schema',
         'prepared_schema',
     }:
         return importlib.import_module(f'.{name}', __package__)

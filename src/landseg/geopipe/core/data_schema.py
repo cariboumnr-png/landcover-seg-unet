@@ -26,7 +26,7 @@ metadata for a catalog of spatial data blocks, capturing identity,
 data sources, I/O conventions, tensor shapes, and label specs.
 
 Public APIs:
-    - `DatasetSchema`: Top-level metadata structure for a block catalog.
+    - `DataSchema`: Top-level metadata structure for a block catalog.
 '''
 
 # standard imports
@@ -40,7 +40,7 @@ SCHEMA_ID = 'data_schema/v1.1'
 
 
 # ----- public types
-class DatasetSchema(typing.TypedDict):
+class DataSchema(typing.TypedDict):
     '''
     Top-level metadata structure for a block catalog.
 
