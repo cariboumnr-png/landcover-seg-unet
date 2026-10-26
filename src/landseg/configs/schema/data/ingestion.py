@@ -39,8 +39,8 @@ class Domains(base.BaseConfigSection):
     target_variance: float = 0.9
 
     def validate(self) -> None:
-        self.require_attr_type_range('valid_threshold', float, (0, 1.0))
-        self.require_attr_type_range('target_variance', float, (0, 1.0))
+        self.require_float_max(self.valid_threshold, 'valid_threshold', 1.0)
+        self.require_float_max(self.target_variance, 'target_variance', 1.0)
 
 
 @dataclasses.dataclass
@@ -53,19 +53,19 @@ class DataBlocks(base.BaseConfigSection):
     add_spectral: list[str] | None = None
 
     def validate(self) -> None:
-        self.require_attr_type_range('ignore_index', int)
-        self.require_attr_type_range('image_dem_pad', int, (1, None))
-        self.require_attr_type_range('collision_policy', str, POLICY)
+        self.require_int(self.ignore_index, 'ignore_index')
+        self.require_int_min(self.image_dem_pad, 'image_dem_pad', 1)
+        self.require_allowed_str(self.collision_policy, 'collision_policy', POLICY)
 
         if self.add_topo is not None:
-            self.require_attr_type_range('add_topo', (list, tuple))
+            self.require_sequence(self.add_topo, 'add_topo')
             for v in self.add_topo:
-                self.require_type_range(v, 'topo_feature', str, TOPO)
+                self.require_allowed_str(v, 'topo_feature', TOPO)
 
         if self.add_spectral is not None:
-            self.require_attr_type_range('add_spectral', (list, tuple))
+            self.require_sequence(self.add_spectral, 'add_spectral')
             for v in self.add_spectral:
-                self.require_type_range(v, 'spectral_feature', str, SPECTRAL)
+                self.require_allowed_str(v, 'spectral_feature', SPECTRAL)
 
 
 @dataclasses.dataclass
@@ -81,11 +81,12 @@ class DataIngestionConfig(base.BaseConfigSection):
         self.domains.validate()
         self.datablocks.validate()
 
-        try:
-            self.require_attr_type_range('harmonization_run', int, (0, None))
-        except base.ConfigValidationError:
-            self.require_attr_type_range('harmonization_run', str)
-        except Exception as e:
-            raise base.ConfigValidationError(
-                'Failed to validate "harmonization_run" attribute'
-            ) from e
+        if self.harmonization_run is not None:
+            try:
+                self.require_int_min(self.harmonization_run, 'harmonization_run', 1)
+            except base.ConfigValidationError:
+                self.require_str(self.harmonization_run, 'harmonization_run')
+            except Exception as e:
+                raise base.ConfigValidationError(
+                    'Failed to validate "harmonization_run" attribute'
+                ) from e

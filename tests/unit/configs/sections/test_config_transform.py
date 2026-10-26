@@ -62,7 +62,7 @@ def test_dataset_view_features_validation():
 
     # invalid value type
     invalid = prep_sec.DatasetViewConfig(features={'topo': 123})
-    with pytest.raises(ValueError, match='Expected type'):
+    with pytest.raises(base.ConfigValidationError, match='Expected type'):
         invalid.validate()
 
 
@@ -70,13 +70,13 @@ def test_dataset_view_threshold_validation():
     '''
     Given: `DatasetViewConfig` with valid and out-of-range thresholds.
     When: `DatasetViewConfig.validate()` is called.
-    Then: Validate pixel threshold boundaries or raise ValueError.
+    Then: Validate pixel boundaries or raise ConfigValidationError.
     '''
     catalog = prep_sec.DatasetViewConfig(valid_pxs={'image': 0.8, 'label': 0.95})
     catalog.validate()
 
     invalid_catalog = prep_sec.DatasetViewConfig(valid_pxs={'image': 1.5})
-    with pytest.raises(ValueError, match='valid threshold'):
+    with pytest.raises(base.ConfigValidationError, match='valid threshold'):
         invalid_catalog.validate()
 
 

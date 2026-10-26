@@ -32,11 +32,11 @@ Public APIs:
 '''
 
 # standard imports
-import pathlib
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest.schema as schema
+import landseg.utils.validator as val
 
 
 # ----- public classes
@@ -52,7 +52,7 @@ class ManifestEntryNormalizer:
 
     def __init__(self, entry: typing.Any):
         '''Initialize with the input object (expect a dictionary).'''
-        self.entry = _require_dict(entry)
+        self.entry = val.require_mapping(entry, 'manifest_entry')
 
         self.name = self.entry.get('name')
         self.path = self.entry.get('path')
@@ -69,9 +69,9 @@ class ManifestEntryNormalizer:
         The returned mapping contains validated and canonicalized values
         suitable for downstream harmonization processing.
         '''
-        name = _require_string(self.name)
+        name = val.require_string(self.name, 'entry_name')
 
-        path = _require_path(self.path)
+        path = val.require_file(self.path, 'file_path', missing_ok=False)
 
         band_mapping = self._normalize_band_mapping()
 
@@ -110,8 +110,18 @@ class ManifestEntryNormalizer:
         _ = self.normalized_entry
 
     def _normalize_band_mapping(self) -> dict[int, str]:
-        mapping = _require_dict_w_str_values(self.band_mapping)
-        normalized = {_require_int_w_min(k, 1): v for k, v in mapping.items()}
+        mapping = val.require_mapping(self.band_mapping, 'band_mapping')
+        normalized: dict[int, str] = {}
+        for k, v in mapping.items():
+            try:
+                k = int(k)
+            except (ValueError, TypeError) as e:
+                raise TypeError(
+                    f'Band mapping key {k} must be an integer'
+                ) from e
+            _k = val.require_numeric_min(k, f'band_{k}_key', 1, int)
+            _v = val.require_string(v, f'band_{k}_value')
+            normalized[_k] = _v
         if set(normalized.keys()) != set(range(1, len(normalized) + 1)):
             raise ValueError(
                 f'Band mapping keys should be contiguous integers from 1, '
@@ -121,44 +131,46 @@ class ManifestEntryNormalizer:
         return normalized
 
     def _normalize_category(self) -> schema.AllowedCategory:
-        cat = _require_string(self.category)
         allowed = typing.get_args(schema.AllowedCategory)
-        if cat not in allowed:
-            raise ValueError(f'Invalid category: {cat}, must be in {allowed}')
-
-        return typing.cast(schema.AllowedCategory, cat)
+        return typing.cast(
+            schema.AllowedCategory,
+            val.require_value_from(self.category, 'category', allowed, str)
+        )
 
     def _normalize_categorical_specs(self) -> geo_core.CategoricalSpec:
-        specs = _require_dict(self.cat_specs)
+        specs = val.require_mapping(self.cat_specs, 'specs')
 
         # init w mandatory fields
-        index_base = _require_int_w_min(specs.get('index_base'), 0)
-        num_cls = _require_int_w_min(specs.get('num_cls'), 1)
-        ignore_cls = _require_int_list(specs.get('ignore_cls'))
+        index_base = specs.get('index_base')
+        _base = val.require_numeric_min(index_base, 'index_base', 0, int)
+        num_cls = specs.get('num_cls')
+        _n_cls = val.require_numeric_min(num_cls,'num_of_cls', 1, int)
+        ignore_cls = specs.get('ignore_cls')
+        _ignore = val.require_numeric_sequence(ignore_cls, 'ignore_index', int)
         _specs: geo_core.CategoricalSpec = {
-            'index_base': index_base,
-            'num_cls': num_cls,
-            'ignore_cls': ignore_cls
+            'index_base': _base,
+            'num_cls': _n_cls,
+            'ignore_cls': list(_ignore) # TODO to change to tuple type
         }
 
         # add optional fields
         cls = specs.get('class_name')
         if cls is not None:
-            _specs['class_name'] = _require_dict_w_str_values(cls)
+            _specs['class_name'] = val.require_mapping_str_v(cls, 'class_name')
 
         color_map = specs.get('color_map')
         if color_map is not None:
-            _specs['color_map'] = _require_dict(color_map)
+            _specs['color_map'] = val.require_mapping(color_map, 'color_map')
             for rgb in _specs['color_map'].values():
-                _require_int_list(rgb, 3) # rgb values
+                val.require_numeric_sequence(rgb, 'RGB_values', int, 3)
 
         taxa = specs.get('taxonomy')
         if taxa is not None:
             if not cls:
                 raise ValueError('Class names not provided for lookup')
 
-            taxa = _require_dict(taxa)
-            profile = _require_string(taxa.get('profile'))
+            taxa = val.require_mapping(taxa, 'taxonomy')
+            profile = val.require_string(taxa.get('profile'), 'profile')
             _specs['taxonomy'] = {'profile': profile}
 
         return _specs
@@ -167,7 +179,7 @@ class ManifestEntryNormalizer:
         self,
         band_mapping: dict[int, str]
     ) -> schema.FeatureSchemes:
-        schemes = _require_dict(self.schemes)
+        schemes =  val.require_mapping(self.schemes, 'feature_schemes')
 
         valid_bands = set(band_mapping.values())
         for name, bands in schemes.items():
@@ -188,92 +200,34 @@ class ManifestEntryNormalizer:
         self,
         cat_specs: geo_core.CategoricalSpec
     ) -> schema.LabelSchemes:
-        schemes = _require_dict(self.schemes)
+        schemes =  val.require_mapping(self.schemes, 'label_schemes')
 
         index_base = cat_specs['index_base']
         num_cls = cat_specs['num_cls']
         valid_range = set(range(index_base, index_base + num_cls))
 
-        for name, data in schemes.items():
-            data = _require_dict(data)
+        for k, v in schemes.items():
+            v = val.require_mapping(v, f'{k}_schema')
 
-            reclass = _require_dict(data.get('reclass'))
-            for grp_id, cls_ids in reclass.items():
-                cls_ids = _require_int_list(cls_ids)
-                for cid in cls_ids:
+            reclass = v.get('reclass')
+            reclass = val.require_mapping(reclass, 'reclass')
+            for grp_id, ids in reclass.items():
+                ids = val.require_numeric_sequence(ids, 'class_IDs', int)
+                for cid in ids:
                     if cid not in valid_range:
                         raise ValueError(
-                            f'Class ID {cid} in label scheme "{name}" group '
+                            f'Class ID {cid} in label scheme "{k}" group '
                             f'"{grp_id}" is outside valid class range '
                             f'[{index_base}..{index_base + num_cls - 1}]'
                         )
 
-            reclass_name = _require_dict_w_str_values(data.get('reclass_name'))
-            for grp_id in reclass_name:
+            recls_name = v.get('reclass_name')
+            recls_name = val.require_mapping_str_v(recls_name, 'reclass_name')
+            for grp_id in recls_name:
                 if grp_id not in reclass:
                     raise ValueError(
                         f'Group "{grp_id}" in reclass_name does not exist in '
-                        f'reclass of label scheme "{name}"'
+                        f'reclass of label scheme "{k}"'
                     )
 
         return schemes
-
-
-# ----- private helpers
-# TODO maybe we should centrally manage these *require functions along others
-def _require_dict(d: typing.Any) -> dict:
-    '''Validate that the input is a non-empty dictionary.'''
-    if not isinstance(d, dict):
-        raise TypeError(f'Input {d} must be a dict, got type {type(d)}')
-    if len(d) == 0:
-        raise ValueError('Input dict is empty')
-    return typing.cast(dict, d)
-
-
-def _require_string(s: typing.Any) -> str:
-    '''Validate that the input is a non-empty string.'''
-    if not isinstance(s, str):
-        raise TypeError(f'Input {s} must be a string, got type {type(s)}')
-    if len(s) == 0:
-        raise ValueError('Input string is empty')
-    return typing.cast(str, s)
-
-
-def _require_path(p: typing.Any) -> pathlib.Path:
-    '''Validate and convert input to a valid path string.'''
-    try:
-        return pathlib.Path(p)
-    except (TypeError, ValueError) as e:
-        raise ValueError('Input is not a valid path') from e
-
-
-def _require_int_w_min(n: typing.Any, min_value: int) -> int:
-    '''Validate that input is integer greater than or equal to min_value.'''
-    try:
-        n = int(n)
-    except (ValueError, TypeError) as e:
-        raise TypeError(
-            f"Input {n!r} must be convertible to an integer"
-        ) from e
-    if n < min_value:
-        raise ValueError(f'Input integer {n} < min value {min_value}')
-    return typing.cast(int, n)
-
-
-def _require_int_list(l: typing.Any, nint: int | None = None) -> list[int]:
-    '''Validate that input is a list of integers with optional length.'''
-    if not isinstance(l, list):
-        raise TypeError(f'Input {l} must be a list, got type {type(l)}')
-    if not all(isinstance(x, int) for x in l):
-        raise ValueError(f'Input {l} must be a list of ints, got: {l}')
-    if nint and len(l) != nint:
-        raise ValueError(f'Input {l} must have {nint} integers, got: {len(l)}')
-    return typing.cast(list[int], l)
-
-
-def _require_dict_w_str_values(d: typing.Any) -> dict[str, str]:
-    '''Validate that input dictionary has only string values.'''
-    _require_dict(d)
-    if not all(isinstance(s, str) for s in d.values()):
-        raise TypeError(f'Not all values in input dict are a string from {d}')
-    return typing.cast(dict[str, str], d)

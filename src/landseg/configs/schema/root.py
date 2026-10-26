@@ -88,7 +88,7 @@ class RootConfig(base.BaseConfigSection):
 
         for cmd in need_to_validate:
             try:
-                self.require_type_range(cmd, 'command', str, c.COMMANDS)
+                self.require_allowed_str(cmd, 'command', c.COMMANDS)
             except Exception as e:
                 raise base.ConfigValidationError from e
 

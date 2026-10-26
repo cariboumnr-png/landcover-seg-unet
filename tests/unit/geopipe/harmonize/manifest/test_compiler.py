@@ -43,6 +43,7 @@ def test_compile_dataset_manifest_success(tmp_path):
         'band_mapping': {'1': 'blue', '2': 'green', '3': 'red'},
         'category': 'features',
     }
+    (tmp_path / 's2.tif').write_bytes(b'dummy')
     with open(sub_manifest_fp, 'w', encoding='UTF-8') as f:
         json.dump(sub_entry, f)
 

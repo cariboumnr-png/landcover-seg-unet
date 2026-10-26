@@ -25,18 +25,18 @@
 import dataclasses
 import pathlib
 import typing
+# local imports
+import landseg.utils.validator as val
 
-T = typing.TypeVar('T')
-
-NumericRange: typing.TypeAlias = tuple[int | float | None, int | float | None]
-
-
-class ConfigValidationError(Exception):
-    '''Configuration Error'''
-    def __init__(self, message='Error validation configs'):
-        super().__init__(message)
+# ----- typing
+V = typing.TypeVar('V')
 
 
+# ----- typing aliases
+ConfigValidationError = val.ValidationError
+
+
+# ----- public classes
 class BaseConfigSection:
     '''Base configuration class providing shared validation primitives.'''
 
@@ -49,105 +49,107 @@ class BaseConfigSection:
         '''Validate section integrity. Default is a no-op.'''
         return None
 
-    def require_attr_type_range(
-        self,
-        attr_name: str,
-        require_types: type[T] | tuple[type[T], ...],
-        require_range: NumericRange | tuple[str] | list[str] | None = None,
-    ) -> None:
-        '''Raise TypeError if input is not of required type'''
-        # handle missing attribute (unlikely since only called internally)
-        try:
-            value = getattr(self, attr_name)
-        except AttributeError as e:
-            raise ConfigValidationError(
-                f'Unable to retrive attribute {attr_name} from'
-                f'{type(self).__name__}'
-            ) from e
-
-        try:
-            self.require_type_range(value, attr_name, require_types, require_range)
-        except ValueError as e:
-            raise ConfigValidationError(
-                f'Failed to validate attribute {attr_name} value'
-            ) from e
+    @staticmethod
+    def require_types(
+        value: object,
+        name: str,
+        required_type: type[V] | tuple[type[V], ...]
+    ) -> V:
+        '''Require a type or a tuple of types.'''
+        return val.require_types(value, name, required_type)
 
     @staticmethod
-    def require_type_range(
+    def require_str(
         value: object,
-        value_name: str,
-        require_types: type[T] | tuple[type[T], ...],
-        require_range: NumericRange | tuple[str] | list[str] | None = None,
-    ) -> None:
-        '''Raise ValueError if input is not ∈ required type | range.'''
+        name: str,
+    ) -> str:
+        '''Require a string from [allowed].'''
+        return val.require_types(value, name, str)
 
-        def _is_numeric_range(v) -> NumericRange:
-            if not isinstance(v, tuple) and len(v) == 2:
-                raise ValueError('Numeric range not a tuple of two elements')
-            a, b = v
-            if not (
-                (a is None or isinstance(a, (int | float))) and
-                (b is None or isinstance(b, (int | float)))
-            ):
-                raise ValueError('Numeric range can only have int/float/None')
-            if a is None and b is None:
-                raise ValueError('Numeric range cannot have both ends as None')
-            return v
+    @staticmethod
+    def require_allowed_str(
+        value: object,
+        name: str,
+        allowed_str: typing.Sequence[str]
+    ) -> str:
+        '''Require a string from [allowed].'''
+        return val.require_value_from(value, name, allowed_str, str)
 
-        def _is_literal_range(v) -> list[str]:
-            if (
-                not isinstance(v, (tuple, list)) and
-                all(isinstance(vv, str) for vv in v)
-            ):
-                raise ValueError('Literal range must be a list/tuple of str')
-            return [vv.lower() for vv in v]
+    @staticmethod
+    def require_int(
+        value: object,
+        name: str,
+    ) -> int:
+        '''Require an integer from [allowed].'''
+        return val.require_numeric(value, name, int)
 
-        if value is None:
-            return # skip if value is None type
+    @staticmethod
+    def require_allowed_int(
+        value: object,
+        name: str,
+        allowed_int: typing.Sequence[int]
+    ) -> int:
+        '''Require an integer from [allowed].'''
+        return val.require_value_from(value, name, allowed_int, int)
 
-        if not isinstance(value, require_types):
-            if isinstance(require_types, tuple):
-                required = ', '.join(t.__name__ for t in require_types)
-            else:
-                required = require_types.__name__
+    @staticmethod
+    def require_int_min(
+        value: object,
+        name: str,
+        value_min: int
+    ) -> int:
+        '''Require an integer >= minimal'''
+        return val.require_numeric_min(value, name, value_min, int)
 
-            raise ValueError(
-                f'Expected type: {required} for {value_name}, '
-                f'got {value} with type: {type(value)} instead'
-            )
+    @staticmethod
+    def require_int_range(
+        value: object,
+        name: str,
+        value_range: tuple[int, int],
+    ) -> int:
+        '''Require an integer within range.'''
+        return val.require_numeric_range(value, name, value_range, int)
 
-        if isinstance(value, str) and not value.strip():
-            raise ValueError(f'Value [{value_name}] must be non-empty')
+    @staticmethod
+    def require_float_min(
+        value: object,
+        name: str,
+        value_min: float
+    ) -> float:
+        '''Require a float >= minimal'''
+        return val.require_numeric_min(value, name, value_min, float)
 
-        if require_range is None:
-            return # skip if range is not to be checked
+    @staticmethod
+    def require_float_max(
+        value: object,
+        name: str,
+        value_max: float
+    ) -> float:
+        '''Require a float <= maximum'''
+        return val.require_numeric_max(value, name, value_max, float)
 
-        if isinstance(value, (int, float)):
-            vmin, vmax = _is_numeric_range(require_range)
-            if (
-                (vmin is not None and value < vmin) or
-                (vmax is not None and value > vmax)
-            ):
-                raise ValueError(
-                    f'Value [{value_name}] must be within [{vmin}, {vmax}], '
-                    f'got: {value} instead'
-                )
+    @staticmethod
+    def require_float_range(
+        value: object,
+        name: str,
+        value_range: tuple[float, float],
+    ) -> float:
+        '''Require a float within range.'''
+        return val.require_numeric_range(value, name, value_range, float)
 
-        if isinstance(value, str):
-            allowed = _is_literal_range(require_range)
-            if value.lower() not in allowed:
-                raise ValueError(
-                    f'Value [{value_name}] must be in the following: {allowed} '
-                    f'got: {value} instead'
-                )
+    @staticmethod
+    def require_sequence(
+        value: object,
+        name: str,
+        k: int | None = None
+    ) -> tuple:
+        '''Return a sequence with expected type and length as a tuple.'''
+        return val.require_sequence(value, name, k=k)
 
     @staticmethod
     def require_file(
         path: str | None,
-        name: str
-    ) -> None:
-        '''Raise if file does not exist.'''
-        if path is None:
-            return
-        if not pathlib.Path(path).is_file():
-            raise ConfigValidationError(f'Invalid file [{name}] at: {path}')
+        file_name: str
+    ) -> pathlib.Path | None:
+        '''Raise if filepath is provided but does not exist.'''
+        return val.require_file(path, file_name, missing_ok=True)

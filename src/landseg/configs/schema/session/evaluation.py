@@ -46,7 +46,7 @@ class EvaluationConfig(base.BaseConfigSection):
         return typing.cast(typing.Literal['val', 'test'], self.split)
 
     def validate(self) -> None:
-        self.require_attr_type_range('split', str, ['val', 'test'])
+        self.require_allowed_str(self.split, 'split', ['val', 'test'])
         if self.checkpoint is None:
             raise base.ConfigValidationError('Checkpoint is required')
         self.require_file(self.checkpoint, 'Checkpoint')

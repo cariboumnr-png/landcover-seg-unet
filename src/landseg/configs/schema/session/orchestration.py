@@ -43,8 +43,8 @@ class MonitorConfig(base.BaseConfigSection):
     min_delta: float | None = 0.0005
 
     def validate(self):
-        self.require_attr_type_range('patience', int, (0, None))
-        self.require_attr_type_range('min_delta', float, (0.0, None))
+        self.require_int_min(self.patience, 'patience', 0)
+        self.require_float_min(self.min_delta, 'min_delta', 0.0)
 
 
 @dataclasses.dataclass
@@ -57,9 +57,9 @@ class PhaseConfig(base.BaseConfigSection):
     frozen_heads: list[str] | None = None
 
     def validate(self):
-        self.require_attr_type_range('num_epochs', int, (1, None))
-        self.require_attr_type_range('start_epoch', int, (1, self.num_epochs))
-        self.require_attr_type_range('lr_scale', float, (0.0, None))
+        self.require_int_min(self.num_epochs, 'num_epochs', 1)
+        self.require_int_range(self.start_epoch, 'start_epoch', (1, self.num_epochs))
+        self.require_float_min(self.lr_scale, 'lr_scale', 0.0)
 
 
 @dataclasses.dataclass

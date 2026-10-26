@@ -42,14 +42,14 @@ class GridSpecs(base.BaseConfigSection):
                 f'CRS string must be [EPSG:xxxx], got {self.crs_string}'
             )
         px_x, px_y = self.pixel_size
-        self.require_type_range(px_x, 'pixel_size_x', float, (0.0, None))
-        self.require_type_range(px_y, 'pixel_size_y', float, (0.0, None))
+        self.require_float_min(px_x, 'pixel_size_x', 0.0)
+        self.require_float_min(px_y, 'pixel_size_y', 0.0)
         if px_x != px_y:
             raise ValueError('Only square pixels are supported')
 
         ex_x, ex_y = self.extent_in_crs_units
-        self.require_type_range(ex_x, 'extent_x', float, (0.0, None))
-        self.require_type_range(ex_y, 'extent_y', float, (0.0, None))
+        self.require_float_min(ex_x, 'extent_x', 0.0)
+        self.require_float_min(ex_y, 'extent_y', 0.0)
 
 @dataclasses.dataclass
 class WorldGridConfig(base.BaseConfigSection):

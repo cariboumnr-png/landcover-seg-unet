@@ -157,11 +157,11 @@ def test_datablocks_add_features_validation():
         ing_sec.DataBlocks(add_topo='invalid').validate()  # type: ignore
 
     # invalid topo item type
-    with pytest.raises(ValueError, match='Expected type'):
+    with pytest.raises(base.ConfigValidationError, match='not required type'):
         ing_sec.DataBlocks(add_topo=[123]).validate()  # type: ignore
 
     # invalid topo feature name
-    with pytest.raises(ValueError, match='must be in the following'):
+    with pytest.raises(base.ConfigValidationError, match='not in range'):
         ing_sec.DataBlocks(add_topo=['unknown']).validate()
 
     # invalid spectral type
@@ -169,11 +169,11 @@ def test_datablocks_add_features_validation():
         ing_sec.DataBlocks(add_spectral='ndvi').validate()  # type: ignore
 
     # invalid spectral item type
-    with pytest.raises(ValueError, match='Expected type'):
+    with pytest.raises(base.ConfigValidationError, match='not required type'):
         ing_sec.DataBlocks(add_spectral=[123]).validate()  # type: ignore
 
     # invalid spectral index name
-    with pytest.raises(ValueError, match='must be in the following'):
+    with pytest.raises(base.ConfigValidationError, match='not in range'):
         ing_sec.DataBlocks(add_spectral=['unknown']).validate()
 
 

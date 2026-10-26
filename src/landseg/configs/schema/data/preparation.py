@@ -43,16 +43,16 @@ class DatasetViewConfig(base.BaseConfigSection):
 
     def validate(self) -> None:
         for k, v in self.valid_pxs.items():
-            self.require_type_range(k, 'array_key', str)
-            self.require_type_range(v, f'{k} valid threshold', float, (0, 1))
+            self.require_str(k, 'array_key')
+            self.require_float_range(v, f'{k} valid threshold', (0.0, 1.0))
 
         for k, v in self.features.items():
-            self.require_type_range(k, 'feature_config_name', (str))
-            self.require_type_range(v, 'feature_config', (str, list))
+            self.require_str(k, 'feature_config_name')
+            self.require_types(v, 'feature_config', (str, list))
 
         for k, v in self.targets.items():
-            self.require_type_range(k, 'target_config_name', str)
-            self.require_type_range(v, 'target_config', (str, dict))
+            self.require_str(k, 'target_config_name')
+            self.require_types(v, 'target_config', (str, dict))
 
 
 @dataclasses.dataclass
@@ -67,9 +67,9 @@ class Partition(base.BaseConfigSection):
     aoi_min_overlap: float = 0.5
 
     def validate(self) -> None:
-        self.require_attr_type_range('val_ratio', float, (0, 1))
-        self.require_attr_type_range('test_ratio', float, (0, 1))
-        self.require_attr_type_range('aoi_min_overlap', float, (0, 1))
+        self.require_float_range(self.val_ratio, 'val_ratio', (0, 1))
+        self.require_float_range(self.test_ratio, 'test_ratio', (0, 1))
+        self.require_float_range(self.aoi_min_overlap, 'aoi_min_overlap', (0, 1))
 
 
 @dataclasses.dataclass
@@ -80,8 +80,8 @@ class Scoring(base.BaseConfigSection):
     beta: float = 0.0
 
     def validate(self) -> None:
-        self.require_attr_type_range('alpha', float, (0, None))
-        self.require_attr_type_range('beta', float, (0, None))
+        self.require_float_min(self.alpha, 'alpha', 0.0)
+        self.require_float_min(self.beta, 'beta', 0.0)
 
 
 @dataclasses.dataclass
@@ -90,7 +90,7 @@ class Hydration(base.BaseConfigSection):
     max_skew_rate: float = 10.0
 
     def validate(self) -> None:
-        self.require_attr_type_range('max_skew_rate', float, (0, None))
+        self.require_float_min(self.max_skew_rate, 'max_skew_rate', 0.0)
 
 
 @dataclasses.dataclass

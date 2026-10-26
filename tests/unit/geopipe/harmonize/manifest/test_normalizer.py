@@ -27,43 +27,46 @@ import pathlib
 import pytest
 # local imports
 import landseg.geopipe.harmonize.manifest.normalizer as normalizer_mod
+import landseg.utils.validator as val
 
 
 Normalizer = normalizer_mod.ManifestEntryNormalizer
 
 
 # ----- `ManifestEntryNormalizer` features tests
-def test_normalize_features_entry_basic():
+def test_normalize_features_entry_basic(tmp_path):
     '''
     Given: A valid features manifest entry dictionary.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Return canonical entry with None categorical specs and schemes.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 's2_sample',
-        'path': '/path/to/s2.tif',
+        'path': sample_file,
         'band_mapping': {1: 'blue', 2: 'green', 3: 'red'},
         'category': 'features',
     }
     normalizer = Normalizer(raw_entry)
     entry = normalizer.normalized_entry
     assert entry['name'] == 's2_sample'
-    assert entry['path'] == pathlib.Path(raw_entry['path'])
+    assert entry['path'] == sample_file
     assert entry['category'] == 'features'
     assert entry['band_mapping'] == {1: 'blue', 2: 'green', 3: 'red'}
     assert entry['categorical_specs'] is None
     assert entry['schemes'] is None
 
 
-def test_normalize_features_entry_with_schemes():
+def test_normalize_features_entry_with_schemes(tmp_path):
     '''
     Given: A features entry with valid named feature schemes.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Return canonical entry preserving valid feature schemes.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 's2_sample',
-        'path': '/path/to/s2.tif',
+        'path': sample_file,
         'band_mapping': {1: 'blue', 2: 'green', 3: 'red', 4: 'nir'},
         'category': 'features',
         'schemes': {
@@ -76,15 +79,16 @@ def test_normalize_features_entry_with_schemes():
     assert entry['schemes'] == raw_entry['schemes']
 
 
-def test_normalize_features_entry_invalid_scheme_band():
+def test_normalize_features_entry_invalid_scheme_band(tmp_path):
     '''
     Given: A features entry with scheme band name not in band mapping.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating missing band.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 's2_sample',
-        'path': '/path/to/s2.tif',
+        'path': sample_file,
         'band_mapping': {1: 'blue', 2: 'green', 3: 'red'},
         'category': 'features',
         'schemes': {'rgb_swir': ['blue', 'green', 'swir1']},
@@ -94,15 +98,16 @@ def test_normalize_features_entry_invalid_scheme_band():
         _ = normalizer.normalized_entry
 
 
-def test_normalize_features_entry_empty_scheme():
+def test_normalize_features_entry_empty_scheme(tmp_path):
     '''
     Given: A features entry with an empty scheme band list.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating non-empty list requirement.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 's2_sample',
-        'path': '/path/to/s2.tif',
+        'path': sample_file,
         'band_mapping': {1: 'blue', 2: 'green'},
         'category': 'features',
         'schemes': {'empty': []},
@@ -113,15 +118,16 @@ def test_normalize_features_entry_empty_scheme():
 
 
 # ----- `ManifestEntryNormalizer` labels tests
-def test_normalize_labels_entry_basic():
+def test_normalize_labels_entry_basic(tmp_path):
     '''
     Given: A valid label entry with required categorical specs.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Return canonical entry with normalized categorical specs.
     '''
+    sample_file = _create_sample_file(tmp_path, 'lc.tif')
     raw_entry = {
         'name': 'landcover',
-        'path': '/path/to/lc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'landcover'},
         'category': 'labels',
         'categorical_specs': {
@@ -150,15 +156,16 @@ def test_normalize_labels_entry_basic():
     }
 
 
-def test_normalize_labels_entry_with_schemes():
+def test_normalize_labels_entry_with_schemes(tmp_path):
     '''
     Given: A label entry with valid hierarchical label schemes.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Return canonical entry with validated label schemes.
     '''
+    sample_file = _create_sample_file(tmp_path, 'lc.tif')
     raw_entry = {
         'name': 'landcover',
-        'path': '/path/to/lc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'landcover'},
         'category': 'labels',
         'categorical_specs': {
@@ -178,15 +185,16 @@ def test_normalize_labels_entry_with_schemes():
     assert entry['schemes'] == raw_entry['schemes']
 
 
-def test_normalize_labels_entry_scheme_class_out_of_range():
+def test_normalize_labels_entry_scheme_class_out_of_range(tmp_path):
     '''
     Given: A label scheme with class ID outside valid index range.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating class ID is outside range.
     '''
+    sample_file = _create_sample_file(tmp_path, 'lc.tif')
     raw_entry = {
         'name': 'landcover',
-        'path': '/path/to/lc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'landcover'},
         'category': 'labels',
         'categorical_specs': {
@@ -206,15 +214,16 @@ def test_normalize_labels_entry_scheme_class_out_of_range():
         _ = normalizer.normalized_entry
 
 
-def test_normalize_labels_entry_scheme_reclass_name_mismatch():
+def test_normalize_labels_entry_scheme_reclass_name_mismatch(tmp_path):
     '''
     Given: A label scheme with reclass_name group not in reclass.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating group mismatch.
     '''
+    sample_file = _create_sample_file(tmp_path, 'lc.tif')
     raw_entry = {
         'name': 'landcover',
-        'path': '/path/to/lc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'landcover'},
         'category': 'labels',
         'categorical_specs': {
@@ -235,15 +244,16 @@ def test_normalize_labels_entry_scheme_reclass_name_mismatch():
 
 
 # ----- `ManifestEntryNormalizer` domains tests
-def test_normalize_domains_entry():
+def test_normalize_domains_entry(tmp_path):
     '''
     Given: A valid domain entry with categorical specs.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Return canonical domain entry with categorical specs.
     '''
+    sample_file = _create_sample_file(tmp_path, 'eco.tif')
     raw_entry = {
         'name': 'ecodistrict',
-        'path': '/path/to/eco.tif',
+        'path': sample_file,
         'band_mapping': {1: 'ecodistrict'},
         'category': 'domains',
         'categorical_specs': {
@@ -260,15 +270,16 @@ def test_normalize_domains_entry():
     assert cat_specs['num_cls'] == 12
 
 
-def test_normalize_domains_entry_with_schemes_raises():
+def test_normalize_domains_entry_with_schemes_raises(tmp_path):
     '''
     Given: A domain entry defining schemes.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating domain cannot define schemes.
     '''
+    sample_file = _create_sample_file(tmp_path, 'eco.tif')
     raw_entry = {
         'name': 'ecodistrict',
-        'path': '/path/to/eco.tif',
+        'path': sample_file,
         'band_mapping': {1: 'ecodistrict'},
         'category': 'domains',
         'categorical_specs': {
@@ -283,15 +294,16 @@ def test_normalize_domains_entry_with_schemes_raises():
         _ = normalizer.normalized_entry
 
 
-def test_normalize_band_mapping_string_keys():
+def test_normalize_band_mapping_string_keys(tmp_path):
     '''
     Given: A band mapping with string integer keys from JSON.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Convert keys to integer keys contiguous from 1.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 's2_sample',
-        'path': '/path/to/s2.tif',
+        'path': sample_file,
         'band_mapping': {'1': 'blue', '2': 'green'},
         'category': 'features',
     }
@@ -301,15 +313,16 @@ def test_normalize_band_mapping_string_keys():
 
 
 # ----- `ManifestEntryNormalizer` taxonomy tests
-def test_normalize_categorical_specs_with_taxonomy():
+def test_normalize_categorical_specs_with_taxonomy(tmp_path):
     '''
     Given: A label entry with valid taxonomy profile and class names.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Correctly preserve declared taxonomy profile.
     '''
+    sample_file = _create_sample_file(tmp_path, 'spc.tif')
     raw_entry = {
         'name': 'species',
-        'path': '/path/to/spc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'species'},
         'category': 'labels',
         'categorical_specs': {
@@ -328,15 +341,16 @@ def test_normalize_categorical_specs_with_taxonomy():
     assert taxa == {'profile': 'ontario_tree_species_grouped_profiles'}
 
 
-def test_normalize_categorical_specs_taxonomy_missing_class_name():
+def test_normalize_categorical_specs_taxonomy_missing_class_name(tmp_path):
     '''
     Given: Taxonomy declared without class_name provided.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating class names required.
     '''
+    sample_file = _create_sample_file(tmp_path, 'spc.tif')
     raw_entry = {
         'name': 'species',
-        'path': '/path/to/spc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'species'},
         'category': 'labels',
         'categorical_specs': {
@@ -352,32 +366,34 @@ def test_normalize_categorical_specs_taxonomy_missing_class_name():
 
 
 # ----- `ManifestEntryNormalizer` validation error tests
-def test_normalize_invalid_category():
+def test_normalize_invalid_category(tmp_path):
     '''
     Given: An entry with an unsupported category name.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
-    Then: Raise ValueError indicating category must be allowed.
+    Then: Raise ValidationError indicating category must be allowed.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 'sample',
-        'path': '/path/to/sample.tif',
+        'path': sample_file,
         'band_mapping': {1: 'band1'},
         'category': 'unsupported_cat',
     }
     normalizer = Normalizer(raw_entry)
-    with pytest.raises(ValueError, match='Invalid category'):
+    with pytest.raises(val.ValidationError, match='not in range'):
         _ = normalizer.normalized_entry
 
 
-def test_normalize_band_mapping_non_contiguous():
+def test_normalize_band_mapping_non_contiguous(tmp_path):
     '''
     Given: A band mapping with non-contiguous keys starting from 1.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
     Then: Raise ValueError indicating non-contiguous integer keys.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 'sample',
-        'path': '/path/to/sample.tif',
+        'path': sample_file,
         'band_mapping': {1: 'blue', 3: 'red'},
         'category': 'features',
     }
@@ -386,16 +402,17 @@ def test_normalize_band_mapping_non_contiguous():
         _ = normalizer.normalized_entry
 
 
-def test_normalize_categorical_specs_invalid_bounds():
+def test_normalize_categorical_specs_invalid_bounds(tmp_path):
     '''
     Given: Categorical specs with negative index_base and 0 num_cls.
     When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
-    Then: Raise ValueError indicating min bound violation.
+    Then: Raise ValidationError indicating min bound violation.
     '''
+    sample_file = _create_sample_file(tmp_path, 'lc.tif')
     # negative index_base
     raw_entry_neg = {
         'name': 'lc',
-        'path': '/path/to/lc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'lc'},
         'category': 'labels',
         'categorical_specs': {
@@ -404,13 +421,13 @@ def test_normalize_categorical_specs_invalid_bounds():
             'ignore_cls': [],
         },
     }
-    with pytest.raises(ValueError, match='< min value 0'):
+    with pytest.raises(val.ValidationError, match='< minimum 0'):
         _ = normalizer_mod.ManifestEntryNormalizer(raw_entry_neg).normalized_entry
 
     # 0 num_cls
     raw_entry_zero = {
         'name': 'lc',
-        'path': '/path/to/lc.tif',
+        'path': sample_file,
         'band_mapping': {1: 'lc'},
         'category': 'labels',
         'categorical_specs': {
@@ -419,7 +436,7 @@ def test_normalize_categorical_specs_invalid_bounds():
             'ignore_cls': [],
         },
     }
-    with pytest.raises(ValueError, match='< min value 1'):
+    with pytest.raises(val.ValidationError, match='< minimum 1'):
         _ = normalizer_mod.ManifestEntryNormalizer(raw_entry_zero).normalized_entry
 
 
@@ -429,24 +446,36 @@ def test_normalize_input_types():
     When: Initializing or evaluating `ManifestEntryNormalizer`.
     Then: Raise appropriate TypeError or ValueError.
     '''
-    with pytest.raises(TypeError, match='must be a dict'):
+    with pytest.raises(TypeError, match='not a mapping'):
         normalizer_mod.ManifestEntryNormalizer('not_a_dict')
 
-    with pytest.raises(ValueError, match='Input dict is empty'):
+    with pytest.raises(ValueError, match='empty dict'):
         normalizer_mod.ManifestEntryNormalizer({})
 
 
-def test_normalizer_validate_method():
+def test_normalizer_validate_method(tmp_path):
     '''
     Given: A valid manifest entry.
     When: Calling `validate()`.
     Then: Complete successfully without raising.
     '''
+    sample_file = _create_sample_file(tmp_path)
     raw_entry = {
         'name': 's2',
-        'path': '/path/to/s2.tif',
+        'path': sample_file,
         'band_mapping': {1: 'red'},
         'category': 'features',
     }
     normalizer = Normalizer(raw_entry)
     normalizer.validate()
+
+
+# ----- private helpers
+def _create_sample_file(
+    tmp_path: pathlib.Path,
+    filename: str = 'sample.tif',
+) -> pathlib.Path:
+    '''Create an empty raster placeholder file.'''
+    path = tmp_path / filename
+    path.touch(exist_ok=True)
+    return path

@@ -41,5 +41,5 @@ class DataHarmonizationConfig(base.BaseConfigSection):
 
     def validate(self) -> None:
         self.require_file(self.dataset_manifest, 'source dataset manifest')
-        self.require_attr_type_range('resampling_continuous', str, CONT)
-        self.require_attr_type_range('resampling_categorical', str, CATE)
+        self.require_allowed_str(self.resampling_continuous, '', CONT)
+        self.require_allowed_str(self.resampling_categorical, '', CATE)
