@@ -385,7 +385,7 @@ def _make_dummy_schema(
     }
     ign_cls = label_ignore_cls or {'landcover': [255]}
     return {
-        'schema_id': 'data_schema/v1.1',
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'tensor_shapes': {'image': {'H': 256, 'W': 256}},
         'io_conventions': {
             'image_band_map': img_map,

@@ -60,7 +60,7 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     with open(grid_fpath, 'r', encoding='utf-8') as f:
         grid_data = json.load(f)
     assert isinstance(grid_data, dict)
-    assert grid_data.get('schema_id') == 'grid_layout_payload/v1'
+    assert grid_data.get('schema_id') == 'grid_layout_payload/v0.1.0'
     assert isinstance(grid_data.get('data'), list)
     assert len(grid_data['data']) > 0
 

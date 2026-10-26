@@ -137,11 +137,11 @@ class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
     tuples to `DomainTile` entries, while allowing controlled internal
     population.
 
-    **Schema**: `SCHEMA_ID` = `'domain_tile_map_payload/v1'`
+    **Schema**: `SCHEMA_ID` = `'domain_tile_map_payload/v0.1.0'`
     '''
 
     # current payload schema
-    SCHEMA_ID: str = 'domain_tile_map_payload/v1'
+    SCHEMA_ID: str = 'domain_tile_map_payload/v0.1.0'
 
     def __init__(self) -> None:
         '''Initialize an empty DomainTileMap with default metadata.'''

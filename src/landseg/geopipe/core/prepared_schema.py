@@ -35,7 +35,7 @@ from __future__ import annotations
 import typing
 
 
-SCHEMA_ID = 'prepared_schema/v1'
+SCHEMA_ID = 'prepared_schema/v0.1.0'
 
 
 # ----- public types
@@ -46,7 +46,7 @@ class PreparedSchema(typing.TypedDict):
     Captures metadata and statistics generated during preparation,
     including splits, checksums, label counts, and image stats.
 
-    Schema: SCHEMA_ID = 'prepared_schema/v1'
+    Schema: SCHEMA_ID = 'prepared_schema/v0.1.0'
     '''
     schema_id: str
     creation_time: str

@@ -57,7 +57,7 @@ et de résultats (`results/`) correspondants.
 ├── artifacts/                                   # Généré par l'exécution des pipelines
 │   │
 │   ├── world_grids/                             # Produit par le pipeline 'world-grid'
-│   │   ├── grid_row_<srow>_<orow>_col_<scol>_<ocol>.json *
+│   │   ├── grid_row_<srow>_<orow>_col_<scol>_<ocol>.json
 │   │   └── grid_report.json                     # Rapport de synthèse d'exécution du quadrillage mondial
 │   │
 │   ├── harmonized_data/                         # Produit par le pipeline 'data-harmonize'
@@ -78,7 +78,7 @@ et de résultats (`results/`) correspondants.
 │   │   │   ├── collisions.json                  # Registre des collisions entre lots
 │   │   │   └── config.json                      # Enregistrement de configuration
 │   │   ├── domain_knowledge/                    # Bassin de connaissances de domaine
-│   │   │   ├── <domain_name>.json *
+│   │   │   ├── <domain_name>.json
 │   │   │   └── <domain_name>_tiles_<gid>.npz
 │   │   └── data_blocks/                         # Bassin canonique de blocs de données
 │   │       ├── blocks/                          # Tableaux bruts non normalisés
@@ -115,5 +115,6 @@ et de résultats (`results/`) correspondants.
 └── preflight/                                   # Produit par la validation 'command=preflight'
     └── preflight_report_<uid>.json              # Rapport JSON de diagnostic de préparation
 
-* Remarque : Les fichiers `_meta.json` associés sont générés aux côtés des artefacts JSON de grille, de domaine et de fenêtre.
+* Remarque : Les artefacts de grille et de domaine sont stockés sous forme
+  d'enveloppes JSON uniques et autonomes (voir ADR-0063).
 ```

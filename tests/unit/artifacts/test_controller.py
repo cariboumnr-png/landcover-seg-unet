@@ -243,13 +243,13 @@ def test_controller_schema_validation(tmp_path):
     Then: Enforce schema matching on both read and write.
     '''
     fpath = tmp_path / 'payload.json'
-    ctrl = ctrl_mod.Controller[dict](fpath, schema_id='test_schema/v1')
+    ctrl = ctrl_mod.Controller[dict](fpath, schema_id='test_schema/v0.1.0')
 
     # persisting mismatched schema raises ArtifactError
     with pytest.raises(ctrl_mod.ArtifactError, match='Schema mismatch'):
-        ctrl.persist({'schema_id': 'wrong_schema/v0', 'data': [1]})
+        ctrl.persist({'schema_id': 'wrong_schema/v0.1.0', 'data': [1]})
 
-    ctrl.persist({'schema_id': 'test_schema/v1', 'data': [1, 2, 3]})
+    ctrl.persist({'schema_id': 'test_schema/v0.1.0', 'data': [1, 2, 3]})
 
     # matching schema returns payload
     loaded = ctrl.fetch()
@@ -257,7 +257,10 @@ def test_controller_schema_validation(tmp_path):
     assert loaded['data'] == [1, 2, 3]
 
     # controller configured with different schema raises on load
-    other_ctrl = ctrl_mod.Controller[dict](fpath, schema_id='other_schema/v2')
+    other_ctrl = ctrl_mod.Controller[dict](
+        fpath,
+        schema_id='other_schema/v0.2.0',
+    )
     with pytest.raises(ctrl_mod.ArtifactError, match='Schema mismatch'):
         other_ctrl.fetch()
 

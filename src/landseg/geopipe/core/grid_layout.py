@@ -109,11 +109,11 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
     rasterio window objects.
 
     Schema:
-        SCHEMA_ID = 'grid_layout_payload/v1'
+        SCHEMA_ID = 'grid_layout_payload/v0.1.0'
     '''
 
     # current payload schema
-    SCHEMA_ID: str = 'grid_layout_payload/v1'
+    SCHEMA_ID: str = 'grid_layout_payload/v0.1.0'
 
     def __init__(self, spec: GridSpec):
         '''

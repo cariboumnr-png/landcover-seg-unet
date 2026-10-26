@@ -96,7 +96,7 @@ def test_build_dataset_view_success():
 def _make_dummy_schema() -> geo_core.DataSchema:
     '''Construct minimal DataSchema for dataset view tests.'''
     return {
-        'schema_id': 'data_schema/v1.1',
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'tensor_shapes': {'image': {'H': 256, 'W': 256}},
         'io_conventions': {
             'image_band_map': {'blue': 0, 'green': 1, 'red': 2, 'nir': 3},

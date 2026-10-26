@@ -74,10 +74,10 @@ class DataCatalog(collections.abc.Mapping[tuple[int, int], DataCatalogEntry]):
     Maps (row, col) coordinate tuples to `DataCatalogEntry` objects,
     providing dictionary-like access and deterministic serialization.
 
-    Schema: SCHEMA_ID = 'data_catalog_payload/v1'
+    Schema: SCHEMA_ID = 'data_catalog_payload/v0.1.0'
     '''
 
-    SCHEMA_ID: str = 'data_catalog_payload/v1'
+    SCHEMA_ID: str = 'data_catalog_payload/v0.1.0'
 
     def __init__(self) -> None:
         '''Initialize an empty DataCatalog instance.'''

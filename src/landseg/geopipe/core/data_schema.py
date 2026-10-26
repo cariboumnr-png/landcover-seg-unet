@@ -36,7 +36,7 @@ import typing
 import landseg.geopipe.core as geo_core
 
 
-SCHEMA_ID = 'data_schema/v1.1'
+SCHEMA_ID = 'data_schema/v0.1.0'
 
 
 # ----- public types
@@ -54,7 +54,7 @@ class DataSchema(typing.TypedDict):
         tensor_shapes: explicit tensor shape specifications.
         labels: label schema, hierarchy, and ignore rules.
 
-    Schema: SCHEMA_ID = 'data_schema/v1.1'
+    Schema: SCHEMA_ID = 'data_schema/v0.1.0'
     '''
 
     schema_id: str
