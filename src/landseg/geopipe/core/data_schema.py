@@ -26,7 +26,7 @@ metadata for a catalog of spatial data blocks, capturing identity,
 data sources, I/O conventions, tensor shapes, and label specs.
 
 Public APIs:
-    - `DatasetSchema`: Top-level metadata structure for a block catalog.
+    - `DataSchema`: Top-level metadata structure for a block catalog.
 '''
 
 # standard imports
@@ -36,11 +36,11 @@ import typing
 import landseg.geopipe.core as geo_core
 
 
-SCHEMA_ID = 'data_schema/v1.1'
+SCHEMA_ID = 'data_schema/v0.1.0'
 
 
 # ----- public types
-class DatasetSchema(typing.TypedDict):
+class DataSchema(typing.TypedDict):
     '''
     Top-level metadata structure for a block catalog.
 
@@ -54,7 +54,7 @@ class DatasetSchema(typing.TypedDict):
         tensor_shapes: explicit tensor shape specifications.
         labels: label schema, hierarchy, and ignore rules.
 
-    Schema: SCHEMA_ID = 'data_schema/v1.1'
+    Schema: SCHEMA_ID = 'data_schema/v0.1.0'
     '''
 
     schema_id: str

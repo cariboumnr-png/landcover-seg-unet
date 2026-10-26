@@ -39,10 +39,6 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid.builder as builder
 
 
-# ----- typing aliases
-PayloadCtrl = artifacts.PayloadController[list[list[int]], geo_core.GridMeta]
-
-
 # ----- public functions
 def prepare_world_grid(
     config: contracts.WorldGridPrepConfig | None = None,
@@ -70,20 +66,23 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        gid = geo_core.GridLayout.generate_gid(config.tile_size, config.tile_stride)
+        gid = geo_core.GridLayout.generate_gid(
+            config.tile_size, config.tile_stride
+        )
         grid_fpath = pathlib.Path(config.output_dpath) / f'{gid}.json'
 
-    ctrl = PayloadCtrl(
-        grid_fpath,
-        schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
+    policy = (
+        artifacts.LifecyclePolicy.LOAD_OR_FAIL
+        if load_only
+        else artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
-
-    payload = ctrl.load()
-
-    # raise if load failed in load_only mode
-    if load_only and not payload:
-        raise ValueError(f'Loading grid failed: {grid_fpath}')
+    Ctrl = artifacts.Controller[geo_core.GridPayload]
+    ctrl = Ctrl(
+        grid_fpath,
+        policy,
+        schema_id=geo_core.GridLayout.SCHEMA_ID
+    )
+    payload = ctrl.fetch()
 
     # load or build
     if payload:
@@ -102,10 +101,10 @@ def prepare_world_grid(
                 origin=config.manual_specs.origin,
                 pixel_size=config.manual_specs.pixel_size,
                 extent_in_crs_units=config.manual_specs.extent_in_crs_units,
-            )
+            ),
         )
         payload = _grid.to_payload()
-        ctrl.save(payload)
+        ctrl.persist(payload)
         is_loaded = False
 
     return is_loaded, grid_fpath, _grid

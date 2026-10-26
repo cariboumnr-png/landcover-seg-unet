@@ -354,7 +354,7 @@ def test_verify_pool_grid_compatibility(tmp_path):
 
     # when schema artifact exists with matching block_identity -> no error
     schema_data = {
-        'schema_id': geo_core.dataset_schema.SCHEMA_ID,
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'dataset': {
             'name': 'test_pool',
             'last_updated': '2026-09-24T00:00:00Z',
@@ -400,12 +400,6 @@ def _create_dummy_grid(fpath: pathlib.Path | str) -> geo_core.GridLayout:
         grid_extent=(160.0, 160.0),
     )
     layout = geo_core.GridLayout(spec)
-    ctrl = artifacts.PayloadController[
-        list[list[int]], geo_core.GridMeta
-    ](
-        fpath,
-        schema_id=geo_core.GridLayout.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING
-    )
-    ctrl.save(layout.to_payload())
+    ctrl = artifacts.Controller[geo_core.GridPayload](fpath)
+    ctrl.persist(layout.to_payload())
     return layout

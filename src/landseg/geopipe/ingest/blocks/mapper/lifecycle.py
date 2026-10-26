@@ -40,10 +40,6 @@ import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
 import landseg.geopipe.rasters as rasters
 
 
-# ----- typing aliases
-MappedWindowsCtrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]
-
-
 # ----- public functions
 def map_rasters_to_grid(
     world_grid: geo_core.GridLayout,
@@ -77,11 +73,11 @@ def map_rasters_to_grid(
         mapper.MappedRasterWindows:
             Container describing mapped grid cells and raster windows.
     '''
-    # artifacts controller
-    ctrl = MappedWindowsCtrl(mapped_windows_path, policy)
+    Ctrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]
+    windows_ctrl = Ctrl(mapped_windows_path, policy=policy)
 
     # mapped windows fpath
-    payload: contracts.MappedRasterWindowsPayload | None = ctrl.fetch()
+    payload = windows_ctrl.fetch(missing_ok=True)
     # build if needed
     if not payload:
         mapped_windows = mapper.map_rasters(world_grid, image_path, label_path)
@@ -92,7 +88,7 @@ def map_rasters_to_grid(
             'tile_shape': list(mapped_windows.tile_shape),
             'tile_overlap': list(mapped_windows.tile_overlap)
         }
-        ctrl.persist(payload)
+        windows_ctrl.persist(payload)
 
     # build from payload and return
     mapped_windows = mapper.MappedRasterWindows(

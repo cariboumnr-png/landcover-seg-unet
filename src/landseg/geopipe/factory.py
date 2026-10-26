@@ -40,15 +40,8 @@ import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.geopipe.contracts.preparation as prepare_contracts
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
-
-
-# ----- typing aliases
-DomainCtrl = artifacts.PayloadController[dict[str, geo_core.DomainTile], geo_core.DomainMeta]
-DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
-PreparedSchemaCtrl = artifacts.Controller[prepare_contracts.PreparedSchema]
 
 
 # ----- public functions
@@ -97,42 +90,45 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_ctrl = DatasetSchemaCtrl.load_json_strict
-    data_schema = data_ctrl(data_schema_fpath).fetch()
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    data_schema = Ctrl(
+        data_schema_fpath,
+        schema_id=geo_core.data_schema.SCHEMA_ID
+    ).fetch()
 
     # prepared schema
-    prepared_ctrl = PreparedSchemaCtrl.load_json_strict
-    prepared_schema = prepared_ctrl(prepared_schema_fpath).fetch()
+    Ctrl = artifacts.Controller[geo_core.PreparedSchema]
+    prepare_schema = Ctrl(
+        prepared_schema_fpath,
+        schema_id=geo_core.prepared_schema.SCHEMA_ID
+    ).fetch()
 
     # return specs
     return core.DataSpecs(
         name=data_schema['dataset']['name'],
         mode=mode,
-        meta=_get_meta(data_schema, prepared_schema),
+        meta=_get_meta(data_schema, prepare_schema),
         heads=_get_heads(
             data_schema,
-            prepared_schema,
+            prepare_schema,
             knowledge_paths=artifact_paths.knowledge
         ),
-        splits=_get_split(prepared_schema),
-        domains=_get_domain(prepared_schema, ids_domain, vec_domain)
+        splits=_get_split(prepare_schema),
+        domains=_get_domain(prepare_schema, ids_domain, vec_domain)
     )
 
 
 # ----- private helpers
 def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
-    ctrl = DomainCtrl.load_or_fail(
-        fp,
-        schema_id=geo_core.DomainTileMap.SCHEMA_ID,
-    )
-    payload = ctrl.load()
+    Ctrl = artifacts.Controller[geo_core.DomainPayload]
+    payload = Ctrl(fp, schema_id=geo_core.DomainTileMap.SCHEMA_ID).fetch()
     return geo_core.DomainTileMap.from_payload(payload)
 
 
 def _get_meta(
-    data_schema: geo_core.DatasetSchema,
-    prepared_schema: prepare_contracts.PreparedSchema,
+    data_schema: geo_core.DataSchema,
+    prepared_schema: geo_core.PreparedSchema,
 ) -> core.Meta:
     '''Populate core.Meta dataclass from schema dictionaries.'''
     dtypes = data_schema['io_conventions']['dtypes']
@@ -186,8 +182,8 @@ def __calc_test_grid(
 
 
 def _get_heads(
-    data_schema: geo_core.DatasetSchema,
-    prepared_schema: prepare_contracts.PreparedSchema,
+    data_schema: geo_core.DataSchema,
+    prepared_schema: geo_core.PreparedSchema,
     knowledge_paths: artifacts.KnowledgePaths | None = None
 ) -> core.Heads:
     '''Populate core.Heads dataclass from schema dictionary.'''
@@ -261,7 +257,7 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(schema: prepare_contracts.PreparedSchema) -> core.Splits:
+def _get_split(schema: geo_core.PreparedSchema) -> core.Splits:
     '''Populate core.Splits dataclass from schema dictionary.'''
     return core.Splits(
         train={k: pathlib.Path(v) for k, v in schema['train_blocks'].items()},
@@ -271,7 +267,7 @@ def _get_split(schema: prepare_contracts.PreparedSchema) -> core.Splits:
 
 
 def _get_domain(
-    prepared_schema: prepare_contracts.PreparedSchema,
+    prepared_schema: geo_core.PreparedSchema,
     ids_domain: geo_core.DomainTileMap | None,
     vec_domain: geo_core.DomainTileMap | None
 ) -> core.Domains:

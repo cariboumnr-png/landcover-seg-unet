@@ -144,9 +144,10 @@ class IngestionLogger(utils.Logger):
             'fingerprint': self.summary['fingerprint'],
             'run_folder': str(run_folder.resolve()),
         }
-        ctrl = artifacts.Controller[dict](manifest_fpath)
+        Ctrl = artifacts.Controller[dict[str, contracts.IngestionRunRecord]]
+        ctrl = Ctrl(manifest_fpath)
         try:
-            manifest_data = ctrl.fetch() or {}
+            manifest_data = ctrl.fetch(missing_ok=True) or {}
         except artifacts.ArtifactError as exc:
             raise ValueError(
                 f'Error reading runs manifest at {manifest_fpath}'
@@ -157,5 +158,5 @@ class IngestionLogger(utils.Logger):
     def on_close(self) -> None:
         '''Persist the collected summary JSON report.'''
         if self.summary is not None:
-            ctrl = artifacts.Controller(self.log_file)
-            ctrl.persist(self.summary)
+            Ctrl = artifacts.Controller[contracts.IngestReportSchema]
+            Ctrl(self.log_file).persist(self.summary)

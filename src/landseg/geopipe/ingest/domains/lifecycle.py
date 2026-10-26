@@ -45,13 +45,6 @@ import landseg.geopipe.ingest.domains.builder as builder
 import landseg.geopipe.ingest.domains.mapper as mapper
 
 
-# ----- typing aliases
-DomainCtrl = artifacts.PayloadController[
-    dict[str, geo_core.DomainTile], geo_core.DomainMeta
-]
-MappingCtrl = artifacts.Controller[mapper.RasterTileDict]
-
-
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class DomainBuildingConfig:
@@ -98,12 +91,13 @@ def prepare_domain_maps(
         name = config.name
 
         # check domain artifacts
-        ctrl = DomainCtrl(
+        Ctrl = artifacts.Controller[geo_core.DomainPayload]
+        domain_ctrl = Ctrl(
             config.domain_fpath,
+            policy=policy,
             schema_id=geo_core.DomainTileMap.SCHEMA_ID,
-            policy=policy
         )
-        payload = ctrl.load() # empty = domain absent
+        payload = domain_ctrl.fetch()
 
         # load or create domain layer
         loaded = False
@@ -120,7 +114,7 @@ def prepare_domain_maps(
                 valid_threshold=config.valid_threshold,
                 target_variance=config.target_variance,
             ).to_json_payload()
-            ctrl.save(payload)
+            domain_ctrl.persist(payload)
             logger.info(f'[CHECKPOINT] Created domain layer [{name}]')
 
         duration = time.perf_counter() - start_time
@@ -155,16 +149,17 @@ def _prep_mapping(
 ) -> mapper.RasterTileDict:
     '''Fetch existing mapped tiles artifact or map raster onto grid.'''
     # check mapped tiles before building
-    ctrl = MappingCtrl(config.tiles_fpath, policy)
+    Ctrl = artifacts.Controller[mapper.RasterTileDict]
+    tiles_ctrl = Ctrl(config.tiles_fpath, policy=policy)
     try:
-        mapped = ctrl.fetch()
+        mapped = tiles_ctrl.fetch()
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError from exc
     # create a new mapping if not valid
     if not mapped:
         try:
             mapped = mapper.map_domain_to_grid(grid, config.input_fpath)
-            ctrl.persist(mapped)
+            tiles_ctrl.persist(mapped)
         except ValueError as e:
             raise ValueError(
                 f'Error mapping domain to grid for file: {config.input_fpath}'

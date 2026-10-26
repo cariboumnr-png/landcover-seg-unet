@@ -126,7 +126,7 @@ class _TargetTopology:
 
 # ----- public functions
 def resolve_feature_channels(
-    data_schema: geo_core.DatasetSchema,
+    data_schema: geo_core.DataSchema,
     user_features_cfg: typing.Mapping[str, str] | list[str] | None,
 ) -> FeatureSelection:
     '''
@@ -195,7 +195,7 @@ def resolve_feature_channels(
 
 
 def resolve_target_heads(
-    data_schema: geo_core.DatasetSchema,
+    data_schema: geo_core.DataSchema,
     user_targets_cfg: typing.Mapping[str, str | geo_core.LabelScheme] | None,
 ) -> TargetHeadsContext:
     '''

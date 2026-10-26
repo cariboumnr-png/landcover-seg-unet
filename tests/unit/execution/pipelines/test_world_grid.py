@@ -59,8 +59,10 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
     assert grid_fpath.exists()
     with open(grid_fpath, 'r', encoding='utf-8') as f:
         grid_data = json.load(f)
-    assert isinstance(grid_data, list)
-    assert len(grid_data) > 0
+    assert isinstance(grid_data, dict)
+    assert grid_data.get('schema_id') == 'grid_layout_payload/v0.1.0'
+    assert isinstance(grid_data.get('data'), list)
+    assert len(grid_data['data']) > 0
 
     # verify grid report artifact was generated
     report_fpath = tmp_path / 'world_grids' / 'report.json'
@@ -69,4 +71,4 @@ def test_world_grid_pipeline_success(tmp_path, dummy_data_paths):
         report_data = json.load(f)
     assert report_data['status'] == 'SUCCESS'
     assert report_data['grid']['grid_fpath'] == str(grid_fpath)
-    assert report_data['total_tiles'] == len(grid_data)
+    assert report_data['total_tiles'] == len(grid_data['data'])

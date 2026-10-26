@@ -31,8 +31,6 @@ import torch
 import landseg.artifacts as artifacts
 import landseg.knowledge as knowledge
 
-MetaController = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata]
-
 
 def resolve_similarity_matrix(
     profile: str,
@@ -60,9 +58,8 @@ def resolve_similarity_matrix(
         )
     kp = artifacts.KnowledgePaths(root=pathlib.Path(knowledge_root))
     matrix_path = kp.similarity_matrix_fpath(profile)
-    ctrl = artifacts.Controller[torch.Tensor].load_pt_strict(matrix_path)
-    tensor = ctrl.fetch()
-    return tensor
+    ctrl = artifacts.Controller[torch.Tensor](matrix_path)
+    return ctrl.fetch()
 
 
 def resolve_profile_metadata(
@@ -91,6 +88,5 @@ def resolve_profile_metadata(
         )
     kp = artifacts.KnowledgePaths(root=pathlib.Path(knowledge_root))
     meta_path = kp.metadata_fpath(profile)
-    ctrl = MetaController.load_json_strict(meta_path)
-    meta = ctrl.fetch()
-    return meta
+    ctrl = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata](meta_path)
+    return ctrl.fetch()

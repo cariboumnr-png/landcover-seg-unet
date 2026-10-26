@@ -40,19 +40,13 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.rasters as rasters
 
 
-# ----- typing aliases
-CatalogCtrl = (artifacts.Controller[dict[str, geo_core.DatasetBlockMeta]])
-DatasetSchemaCtrl = artifacts.Controller[geo_core.DatasetSchema]
-DictCtrl = artifacts.Controller[dict]
-
-
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class PreparationContext:
     '''Resolved upstream ingestion references for dataset preparation.'''
-    catalog: dict[str, geo_core.DatasetBlockMeta]
-    test_catalog: dict[str, geo_core.DatasetBlockMeta] | None
-    schema: geo_core.DatasetSchema
+    catalog: dict[str, geo_core.DataCatalogEntry]
+    test_catalog: dict[str, geo_core.DataCatalogEntry] | None
+    schema: geo_core.DataSchema
     block_specs: tuple[int, int, int, int] # (row, col, overlap_r, overlap_c)
     train_aoi: pathlib.Path | None
     val_aoi: pathlib.Path | None
@@ -63,9 +57,9 @@ class PreparationContext:
 
 # ----- public functions
 def build_preparation_context(
-    windows_fpath: pathlib.Path,
-    catalog_fpath: pathlib.Path,
-    schema_fpath: pathlib.Path,
+    windows_fp: pathlib.Path,
+    catalog_fp: pathlib.Path,
+    schema_fp: pathlib.Path,
     config: contracts.PreparationPipelineConfig,
 ) -> PreparationContext:
     '''
@@ -87,36 +81,41 @@ def build_preparation_context(
             metadata.
     '''
     # load artifacts
-    windows = DictCtrl.load_json_strict(windows_fpath).fetch()
-    schema = DatasetSchemaCtrl.load_json_strict(schema_fpath).fetch()
-    catalog = CatalogCtrl.load_json_strict(catalog_fpath).fetch()
+    Ctrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]
+    windows = Ctrl(windows_fp).fetch()
+
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    schema = Ctrl(schema_fp, schema_id=geo_core.data_schema.SCHEMA_ID).fetch()
+
+    Ctrl = artifacts.Controller[dict[str, geo_core.DataCatalogEntry]]
+    catalog = Ctrl(catalog_fp).fetch()
     test_catalog = None
     if config.datasetview.test_catalog is not None:
-        test_catalog = CatalogCtrl.load_json_strict(config.datasetview.test_catalog).fetch()
+        test_catalog = Ctrl(config.datasetview.test_catalog).fetch()
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
     image_raster_info = rasters.get_info(pathlib.Path(image_paths[0]))
 
     # block specs from windows
-    block_size: list[int] | None = windows.get('tile_shape')
-    block_overlap: list[int] | None = windows.get('tile_overlap')
+    blk_size = windows.get('tile_shape')
+    blk_overlap = windows.get('tile_overlap')
     if not (
-        isinstance(block_size, list) and len(block_size) == 2 and
-        isinstance(block_overlap, list) and len(block_overlap) == 2
+        isinstance(blk_size, list) and len(blk_size) == 2 and
+        isinstance(blk_overlap, list) and len(blk_overlap) == 2
     ): # sanity
-        raise ValueError(f'Invalid block windows artifact: {windows_fpath}')
+        raise ValueError(f'Invalid block windows artifact: {windows_fp}')
 
-    partition = config.partition
+    splits = config.partition
 
     return PreparationContext(
         catalog=catalog,
         test_catalog=test_catalog,
         schema=schema,
-        block_specs=(*block_size, *block_overlap),
-        train_aoi=pathlib.Path(partition.train_aoi) if partition.train_aoi else None,
-        val_aoi=pathlib.Path(partition.val_aoi) if partition.val_aoi else None,
-        test_aoi=pathlib.Path(partition.test_aoi) if partition.test_aoi else None,
+        block_specs=(blk_size[0], blk_size[1], blk_overlap[0], blk_overlap[1]),
+        train_aoi=pathlib.Path(splits.train_aoi) if splits.train_aoi else None,
+        val_aoi=pathlib.Path(splits.val_aoi) if splits.val_aoi else None,
+        test_aoi=pathlib.Path(splits.test_aoi) if splits.test_aoi else None,
         canvas_crs=str(image_raster_info.crs),
         canvas_transform=image_raster_info.transform,
     )

@@ -34,8 +34,6 @@ Public APIs:
     - `IngestionPaths`: Ingestion artifact directory paths.
     - `KnowledgePaths`: Knowledge artifact directory paths.
     - `LifecyclePolicy`: Artifact lifecycle retention policy.
-    - `PayloadController`: Base JSON/dict payload controller.
-    - `PayloadDict`: TypedDict mapping keys to JSON-serializable payloads.
     - `PreparationPaths`: Preparation artifact directory paths.
     - `SessionPaths`: Session artifact directory paths.
     - `compute_fingerprint`: Deterministic SHA-256 hash of payload.
@@ -58,7 +56,6 @@ __all__ = [
     'IngestionPaths',
     'KnowledgePaths',
     'LifecyclePolicy',
-    'PayloadController',
     'PipelineArtifactsPaths',
     'PreparationPaths',
     'SessionPaths',
@@ -70,7 +67,6 @@ __all__ = [
     'save_checkpoint',
     # typing
     'CheckpointMeta',
-    'PayloadDict',
 ]
 
 
@@ -98,10 +94,6 @@ if typing.TYPE_CHECKING:
         PreparationPaths,
         SessionPaths,
         WorldGridPaths,
-    )
-    from .payload_io import (
-        PayloadController,
-        PayloadDict,
     )
     from .policy import (
         LifecyclePolicy,
@@ -142,13 +134,6 @@ def __getattr__(name: str):
         'WorldGridPaths',
     }:
         obj = importlib.import_module('.paths', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'PayloadController',
-        'PayloadDict',
-    }:
-        obj = importlib.import_module('.payload_io', __package__)
         return getattr(obj, name)
 
     if name in {'LifecyclePolicy'}:

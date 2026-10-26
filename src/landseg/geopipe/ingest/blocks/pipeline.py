@@ -49,10 +49,6 @@ import landseg.geopipe.ingest.blocks.manifest as manifest
 import landseg.geopipe.ingest.blocks.mapper as mapper
 
 
-# ----- typing aliases
-CollisionManifestCtrl = artifacts.Controller[contracts.RunCollisionManifest]
-
-
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     '''Typed pipeline-specific paths container.'''
@@ -120,11 +116,11 @@ def run_blocks_building(
     )
 
     # inspect incumbent catalog if present
-    incumbent_catalog: geo_core.DatasetCatalog | None = None
+    incumbent_catalog: geo_core.DataCatalog | None = None
     try:
         cat_dict = artifacts.Controller[dict](artifact_paths.catalog).fetch()
         if cat_dict:
-            incumbent_catalog = geo_core.DatasetCatalog.from_dict(cat_dict)
+            incumbent_catalog = geo_core.DataCatalog.from_dict(cat_dict)
     except artifacts.ArtifactError:
         pass
 
@@ -145,7 +141,8 @@ def run_blocks_building(
     )
 
     # persist collision manifest
-    CollisionManifestCtrl(context.collisions_artifacts_fpath).persist({
+    Ctrl = artifacts.Controller[contracts.RunCollisionManifest]
+    Ctrl(context.collisions_artifacts_fpath).persist({
         'ingestion_run_id': context.ingest_run_id or '',
         'ingestion_run_uid': logger.run_uid,
         'harmonization_run_id': context.harmonize_run_id or '',

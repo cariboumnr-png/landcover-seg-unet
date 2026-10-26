@@ -40,11 +40,6 @@ import landseg.geopipe.harmonize.manifest.normalizer as normalizer
 import landseg.geopipe.harmonize.manifest.schema as schema
 
 
-# ----- typing aliases
-ManifestCtrl = artifacts.Controller[list[dict[str, typing.Any]]]
-ManifestEntryCtrl = artifacts.Controller[schema.ManifestEntry]
-
-
 # ----- public classes
 class DatasetManifestError(Exception):
     '''Base class for errors when compiling dataset manifest JSON.'''
@@ -67,7 +62,7 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             List of normalized manifest entries.
     '''
     # load JSON via artifact controller
-    ctrl = ManifestCtrl.load_json_strict(fp)
+    ctrl = artifacts.Controller[list[dict[str, typing.Any]]](fp)
     ctrl.hash(overwrite=False) # hash once
     mfst = ctrl.fetch()
 
@@ -79,10 +74,11 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
         )
 
     compiled: list[schema.ManifestEntry] = []
+    EntryCtrl = artifacts.Controller[schema.ManifestEntry]
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = ManifestEntryCtrl.load_json_strict(mfst_entry_path)
+            _ctrl = EntryCtrl(mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
             entry = _ctrl.fetch()
         except (TypeError, ValueError) as e:

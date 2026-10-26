@@ -93,10 +93,10 @@ def test_build_dataset_view_success():
 
 
 # ----- private helpers
-def _make_dummy_schema() -> geo_core.DatasetSchema:
-    '''Construct minimal DatasetSchema for dataset view tests.'''
+def _make_dummy_schema() -> geo_core.DataSchema:
+    '''Construct minimal DataSchema for dataset view tests.'''
     return {
-        'schema_id': 'data_schema/v1.1',
+        'schema_id': geo_core.data_schema.SCHEMA_ID,
         'tensor_shapes': {'image': {'H': 256, 'W': 256}},
         'io_conventions': {
             'image_band_map': {'blue': 0, 'green': 1, 'red': 2, 'nir': 3},
@@ -114,9 +114,9 @@ def _make_dummy_schema() -> geo_core.DatasetSchema:
     }  # type: ignore[return-value]
 
 
-def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
+def _make_dummy_catalog() -> dict[str, geo_core.DataCatalogEntry]:
     '''Construct minimal catalog mapping for dataset view tests.'''
-    meta_0_0: geo_core.DatasetBlockMeta = {
+    meta_0_0: geo_core.DataCatalogEntry = {
         'block_name': 'row_000000_col_000000',
         'file_path': '/path/block_0_0.npz',
         'row_col': [0, 0],
@@ -131,7 +131,7 @@ def _make_dummy_catalog() -> dict[str, geo_core.DatasetBlockMeta]:
         'source_label': None,
         'source_label_sha_256': None,
     }
-    meta_0_256: geo_core.DatasetBlockMeta = {
+    meta_0_256: geo_core.DataCatalogEntry = {
         'block_name': 'row_000256_col_000000',
         'file_path': '/path/block_256_0.npz',
         'row_col': [256, 0],

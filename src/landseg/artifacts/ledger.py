@@ -40,10 +40,6 @@ import typing
 import landseg.artifacts.controller as controller
 
 
-# ----- typing aliases
-ManifestCtrl = controller.Controller[dict[str, dict[str, typing.Any]]]
-
-
 # ----- public functions
 def compute_fingerprint(payload: typing.Any) -> str:
     '''
@@ -91,8 +87,8 @@ def find_run_collision(
     fpath = pathlib.Path(manifest_fpath)
     if not fpath.exists():
         return None
-
-    manifest = ManifestCtrl(fpath).fetch() or {}
+    ctrl = controller.Controller[dict[str, dict[str, typing.Any]]](fpath)
+    manifest = ctrl.fetch() or {}
 
     for run_uid, record in manifest.items():
         if (

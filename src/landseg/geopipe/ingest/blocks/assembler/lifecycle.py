@@ -86,7 +86,7 @@ class BlockBuildingContext:
     block_size: tuple[int, int]     # block size in row, col
     image_band_map: dict[str, int]
     label_specs: dict[str, geo_core.CategoricalSpec]
-    incumbent_catalog: geo_core.DatasetCatalog | None = None
+    incumbent_catalog: geo_core.DataCatalog | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -309,7 +309,7 @@ def _prep_block_windows(
 
 def _structural_validation(
     input_coords: dict[tuple[int, int], pathlib.Path],
-    incumbent_catalog: geo_core.DatasetCatalog | None = None,
+    incumbent_catalog: geo_core.DataCatalog | None = None,
     *,
     artifacts_policy: artifacts.LifecyclePolicy,
     collision_policy: str | contracts.CollisionPolicyType = 'skip',

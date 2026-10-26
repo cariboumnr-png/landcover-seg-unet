@@ -115,10 +115,10 @@ def test_csv_persist_fetch_and_hash(tmp_path):
     assert list(loaded['a']) == [1, 2]
     assert list(loaded['b']) == ['x', 'y']
 
-    # load_csv_or_fail factory
-    ctrl_fail = ctrl_mod.Controller.load_csv_strict(csv_path)
-    loaded_fail = ctrl_fail.fetch()
-    assert loaded_fail is not None
+    # default fetch succeeds
+    loaded_ok = ctrl.fetch()
+    assert loaded_ok is not None
+    assert list(loaded_ok['a']) == [1, 2]
 
     # tampered CSV triggers hash mismatch
     with open(csv_path, 'a', encoding='UTF-8') as f:
@@ -146,12 +146,6 @@ def test_pt_persist_fetch_and_hash(tmp_path):
     assert loaded is not None
     assert torch.allclose(loaded, tensor_in)
 
-    # load_pt_or_fail factory
-    ctrl_fail = ctrl_mod.Controller.load_pt_strict(pt_path)
-    loaded_fail = ctrl_fail.fetch()
-    assert loaded_fail is not None
-    assert torch.allclose(loaded_fail, tensor_in)
-
     # tampered PT triggers hash mismatch
     tensor_tampered = torch.randn(4, 4)
     torch.save(tensor_tampered, pt_path)
@@ -177,9 +171,25 @@ def test_lifecycle_policies_fetch(tmp_path):
     '''
     json_path = str(tmp_path / 'policy_test.json')
 
-    # LOAD_OR_FAIL on missing file
-    ctrl_fail = ctrl_mod.Controller.load_json_strict(json_path)
-    with pytest.raises(ctrl_mod.ArtifactError, match='Required artifact is missing'):
+    # default policy is LOAD_OR_FAIL on missing file
+    ctrl_default = ctrl_mod.Controller(json_path)
+    assert ctrl_default.policy == policy_mod.LifecyclePolicy.LOAD_OR_FAIL
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='Required artifact is missing'
+    ):
+        ctrl_default.fetch()
+
+    # missing_ok=True suppresses error and returns None
+    assert ctrl_default.fetch(missing_ok=True) is None
+
+    # explicit LOAD_OR_FAIL on missing file
+    ctrl_fail = ctrl_mod.Controller(
+        json_path,
+        policy_mod.LifecyclePolicy.LOAD_OR_FAIL
+    )
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='Required artifact is missing'
+    ):
         ctrl_fail.fetch()
 
     # BUILD_IF_MISSING on missing file
@@ -223,3 +233,39 @@ def test_controller_hash_mismatch_and_corruption(tmp_path):
 
     with pytest.raises(ctrl_mod.ArtifactError):
         ctrl.fetch()
+
+
+# ----- `Controller` schema validation tests
+def test_controller_schema_validation(tmp_path):
+    '''
+    Given: An artifact with a schema_id bound at controller initialization.
+    When: Loading and persisting payloads via fetch and persist.
+    Then: Enforce schema matching on both read and write.
+    '''
+    fpath = tmp_path / 'payload.json'
+    ctrl = ctrl_mod.Controller[dict](fpath, schema_id='test_schema/v0.1.0')
+
+    # persisting mismatched schema raises ArtifactError
+    with pytest.raises(ctrl_mod.ArtifactError, match='Schema mismatch'):
+        ctrl.persist({'schema_id': 'wrong_schema/v0.1.0', 'data': [1]})
+
+    ctrl.persist({'schema_id': 'test_schema/v0.1.0', 'data': [1, 2, 3]})
+
+    # matching schema returns payload
+    loaded = ctrl.fetch()
+    assert loaded is not None
+    assert loaded['data'] == [1, 2, 3]
+
+    # controller configured with different schema raises on load
+    other_ctrl = ctrl_mod.Controller[dict](
+        fpath,
+        schema_id='other_schema/v0.2.0',
+    )
+    with pytest.raises(ctrl_mod.ArtifactError, match='Schema mismatch'):
+        other_ctrl.fetch()
+
+    # missing file raises by default, returns None when missing_ok=True
+    missing_ctrl = ctrl_mod.Controller[dict](tmp_path / 'missing.json')
+    with pytest.raises(ctrl_mod.ArtifactError, match='missing'):
+        missing_ctrl.fetch()
+    assert missing_ctrl.fetch(missing_ok=True) is None

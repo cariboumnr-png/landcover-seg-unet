@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for DatasetCatalog and DatasetBlockMeta.'''
+'''Unit tests for DataCatalog and DataCatalogEntry.'''
 
 # standard imports
 import json
@@ -27,15 +27,15 @@ import json
 import landseg.geopipe.core as geo_core
 
 
-# ----- `DatasetCatalog` tests
+# ----- `DataCatalog` tests
 def test_dataset_catalog_container_protocol():
     '''
-    Given: An empty DatasetCatalog.
+    Given: An empty DataCatalog.
     When: Populating entries and checking dictionary interface.
     Then: Correctly gets, sets, iterates, and tracks length.
     '''
     sample_entry = _make_sample_entry()
-    catalog = geo_core.DatasetCatalog()
+    catalog = geo_core.DataCatalog()
     assert len(catalog) == 0
 
     catalog[(10, 20)] = sample_entry
@@ -48,12 +48,12 @@ def test_dataset_catalog_container_protocol():
 def test_dataset_catalog_from_dict():
     '''
     Given: A raw dictionary with row/col formatted string keys.
-    When: Calling DatasetCatalog.from_dict.
+    When: Calling DataCatalog.from_dict.
     Then: Parses string keys to (x, y) coordinate tuples.
     '''
     sample_entry = _make_sample_entry()
     raw = {'row_000020_col_000010': sample_entry}
-    catalog = geo_core.DatasetCatalog.from_dict(raw)
+    catalog = geo_core.DataCatalog.from_dict(raw)
 
     assert len(catalog) == 1
     # row 20, col 10 -> (col=10, row=20)
@@ -63,12 +63,12 @@ def test_dataset_catalog_from_dict():
 
 def test_dataset_catalog_to_json_payload():
     '''
-    Given: A populated DatasetCatalog.
+    Given: A populated DataCatalog.
     When: Calling to_json_payload.
     Then: Returns formatted JSON string matching original entries.
     '''
     sample_entry = _make_sample_entry()
-    catalog = geo_core.DatasetCatalog()
+    catalog = geo_core.DataCatalog()
     catalog[(10, 20)] = sample_entry
 
     payload_str = catalog.to_json_payload()
@@ -81,8 +81,8 @@ def test_dataset_catalog_to_json_payload():
 
 
 # ----- private helpers
-def _make_sample_entry() -> geo_core.DatasetBlockMeta:
-    '''Provide a sample DatasetBlockMeta dictionary.'''
+def _make_sample_entry() -> geo_core.DataCatalogEntry:
+    '''Provide a sample DataCatalogEntry dictionary.'''
     return {
         'block_name': 'row_000020_col_000010',
         'file_path': '/path/to/block.npz',

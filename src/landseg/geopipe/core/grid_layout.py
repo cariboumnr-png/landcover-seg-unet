@@ -109,11 +109,11 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
     rasterio window objects.
 
     Schema:
-        SCHEMA_ID = 'grid_layout_payload/v1'
+        SCHEMA_ID = 'grid_layout_payload/v0.1.0'
     '''
 
     # current payload schema
-    SCHEMA_ID: str = 'grid_layout_payload/v1'
+    SCHEMA_ID: str = 'grid_layout_payload/v0.1.0'
 
     def __init__(self, spec: GridSpec):
         '''
@@ -289,10 +289,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
             GridLayout:
                 Restored GridLayout instance.
         '''
-        ctrl = artifacts.PayloadController[
-            list[list[int]], GridMeta
-        ].load_or_fail(fpath, schema_id=cls.SCHEMA_ID)
-        payload = ctrl.load()
+        Ctrl = artifacts.Controller[GridPayload]
+        payload = Ctrl(fpath, schema_id=cls.SCHEMA_ID).fetch()
         return cls.from_payload(payload)
 
     # ----- public method

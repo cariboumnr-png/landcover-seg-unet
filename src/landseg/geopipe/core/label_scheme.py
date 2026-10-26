@@ -30,7 +30,6 @@ Public APIs:
     - `CategoricalSpec`: TypedDict for categorical raster specs.
     - `TaxonomySpec`: TypedDict for domain taxonomy specification.
     - `LabelScheme`: TypedDict for named reclassification scheme.
-    - `LabelSchemes`: Type alias for mapping names to `LabelScheme`.
 '''
 
 # standard imports

@@ -40,15 +40,9 @@ import typing
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.logger as prepare_logger
 import landseg.geopipe.prepare.dataset as prepare_dataset
-
-
-# ----- typing aliases
-PartitionCtrl = artifacts.Controller[contracts.BlocksPartition]
-ImageStatsCtrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
-LabelStatsCtrl = artifacts.Controller[dict[str, list[int]]]
-SchemaCtrl = artifacts.Controller[contracts.PreparedSchema]
 
 
 # ----- private types
@@ -94,7 +88,12 @@ def build_schema(
     start_time = time.perf_counter()
 
     # schema artifact controller
-    schema_ctrl = SchemaCtrl(paths.schema, policy)
+    Ctrl = artifacts.Controller[geo_core.PreparedSchema]
+    schema_ctrl = Ctrl(
+        paths.schema,
+        policy=policy,
+        schema_id=geo_core.prepared_schema.SCHEMA_ID,
+    )
     schema = schema_ctrl.fetch()
     loaded = schema is not None
 
@@ -108,28 +107,28 @@ def build_schema(
         }
 
         # checksum the artifacts
-        load = artifacts.Controller.load_json_strict
+        Ctrl = artifacts.Controller[typing.Any]
         checksums = {
-            'block_source': load(paths.splits_source_blocks).sha256,
-            'block_prepared': load(paths.splits_prepared_blocks).sha256,
-            'label_stats': load(paths.label_stats).sha256,
-            'image_stats': load(paths.image_stats).sha256
+            'block_source': Ctrl(paths.splits_source_blocks).sha256,
+            'block_prepared': Ctrl(paths.splits_prepared_blocks).sha256,
+            'label_stats': Ctrl(paths.label_stats).sha256,
+            'image_stats': Ctrl(paths.image_stats).sha256
         }
 
         # read blocks splits
-        ctrl = PartitionCtrl.load_json_strict(paths.splits_prepared_blocks)
-        block_splits = ctrl.fetch()
+        Ctrl = artifacts.Controller[contracts.BlocksPartition]
+        block_splits = Ctrl(paths.splits_prepared_blocks).fetch()
 
         # read label stats
-        ctrl = LabelStatsCtrl.load_json_strict(paths.label_stats)
-        label_stats = ctrl.fetch()
+        Ctrl = artifacts.Controller[dict[str, list[int]]]
+        label_stats = Ctrl(paths.label_stats).fetch()
 
         # read image stats
-        ctrl = ImageStatsCtrl.load_json_strict(paths.image_stats)
-        image_stats = ctrl.fetch()
+        Ctrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+        image_stats = Ctrl(paths.image_stats).fetch()
 
         # target heads reclass hierarchy
-        heads_schema: contracts.TargetHeadsSchema = {
+        heads_schema: geo_core.TargetHeadsSchema = {
             'head_names': list(context.targets.head_names),
             'head_parent': dict(context.targets.head_parent),
             'head_parent_cls': dict(context.targets.head_parent_cls),
@@ -144,7 +143,7 @@ def build_schema(
 
         # populate schema dict
         schema = {
-            'schema_version': contracts.PREPARED_SCHEMA_ID,
+            'schema_id': geo_core.prepared_schema.SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
             'checksums': checksums,

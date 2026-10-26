@@ -233,14 +233,8 @@ def test_gridlayout_from_fpath(tmp_path):
     )
     layout = grid_layout.GridLayout(spec)
     grid_fp = tmp_path / 'grid.json'
-    ctrl = artifacts.PayloadController[
-        list[list[int]], grid_layout.GridMeta
-    ](
-        grid_fp,
-        schema_id=grid_layout.GridLayout.SCHEMA_ID,
-        policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
-    )
-    ctrl.save(layout.to_payload())
+    ctrl = artifacts.Controller[grid_layout.GridPayload](grid_fp)
+    ctrl.persist(layout.to_payload())
 
     from_cls = grid_layout.GridLayout.from_fpath(grid_fp)
     assert from_cls.gid == layout.gid

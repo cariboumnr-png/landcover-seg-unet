@@ -102,7 +102,6 @@ class GridLogger(utils.Logger):
     def close(self) -> None:
         '''Flush and close file handlers, writing report JSON if set.'''
         if self.summary is not None and self.log_file:
-            artifacts.Controller[contracts.GridReportSchema](
-                self.log_file
-            ).persist(self.summary)
+            Ctrl = artifacts.Controller[contracts.GridReportSchema]
+            Ctrl(self.log_file).persist(self.summary)
         super().close()
