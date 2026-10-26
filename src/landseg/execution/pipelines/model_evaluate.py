@@ -63,8 +63,8 @@ class ModelEvaluation(base.SessionPipeline):
             metrics = {h: m.as_dict for h, m in _metrics.items()}
 
             # persist the validation log as the current outputs
-            output_ctrl = artifacts.Controller(self.pipeline_paths.evaluation)
-            output_ctrl.persist(metrics)
+            Ctrl = artifacts.Controller[dict]
+            Ctrl(self.pipeline_paths.evaluation).persist(metrics)
 
             # update summary
             self.logger.set_status('SUCCESS')

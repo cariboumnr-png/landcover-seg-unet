@@ -95,9 +95,8 @@ def run_materialize_blocks(
     start_time = time.perf_counter()
 
     # load source blocks file lists
-    src = artifacts.Controller[contracts.BlocksPartition](
-        paths.splits_source_blocks
-    ).fetch()
+    Ctrl = artifacts.Controller[contracts.BlocksPartition]
+    src = Ctrl(paths.splits_source_blocks).fetch()
 
     # get source by split
     train = set(pathlib.Path(p) for p in src['train'].values())
@@ -109,16 +108,12 @@ def run_materialize_blocks(
         context.manifest.raw_class_counts,
         list(src['train'].keys())
     )
-    artifacts.Controller[dict[str, list[int]]](
-        paths.label_stats,
-        policy=policy
-    ).persist(lbl_counts)
+    Ctrl = artifacts.Controller[dict[str, list[int]]]
+    Ctrl(paths.label_stats, policy=policy).persist(lbl_counts)
 
     # aggregate stats on training blocks
-    img_ctrl = artifacts.Controller[dict[str, contracts.ImageBandStats]](
-        paths.image_stats,
-        policy=policy
-    )
+    Ctrl = artifacts.Controller[dict[str, contracts.ImageBandStats]]
+    img_ctrl = Ctrl(paths.image_stats, policy=policy)
     agg_stats = img_ctrl.fetch()
     if policy != artifacts.LifecyclePolicy.REBUILD and agg_stats:
         logger.info('[CHECKPOINT] Loaded image stats from training split')
@@ -131,10 +126,8 @@ def run_materialize_blocks(
         logger.info('[CHECKPOINT] Created image stats from training split')
 
     # load or build normalized blocks for each split
-    prep_ctrl = artifacts.Controller[contracts.BlocksPartition](
-        paths.splits_prepared_blocks,
-        policy=policy
-    )
+    Ctrl = artifacts.Controller[contracts.BlocksPartition]
+    prep_ctrl = Ctrl(paths.splits_prepared_blocks, policy=policy)
     prepared = prep_ctrl.fetch()
     loaded = prepared is not None
 

@@ -96,8 +96,9 @@ def build_catalog(
         lbl_hash = None
 
     # add to current catalog dict
+    Ctrl = artifacts.Controller
     for fp in input_block_fpaths:
-        ctrl = artifacts.Controller(fp) # with no policy here
+        ctrl = Ctrl(fp)  # with no policy here
         meta = geo_core.DataBlock.load(fp).manifest
         row, col = geo_core.name_xy(meta['block_name'])
         entry: geo_core.DataCatalogEntry = {

@@ -88,7 +88,8 @@ def build_schema(
     start_time = time.perf_counter()
 
     # schema artifact controller
-    schema_ctrl = artifacts.Controller[geo_core.PreparedSchema](
+    Ctrl = artifacts.Controller[geo_core.PreparedSchema]
+    schema_ctrl = Ctrl(
         paths.schema,
         policy=policy,
         schema_id=geo_core.prepared_schema.SCHEMA_ID,
@@ -106,7 +107,7 @@ def build_schema(
         }
 
         # checksum the artifacts
-        Ctrl = artifacts.Controller
+        Ctrl = artifacts.Controller[typing.Any]
         checksums = {
             'block_source': Ctrl(paths.splits_source_blocks).sha256,
             'block_prepared': Ctrl(paths.splits_prepared_blocks).sha256,
@@ -115,19 +116,16 @@ def build_schema(
         }
 
         # read blocks splits
-        block_splits = artifacts.Controller[contracts.BlocksPartition](
-            paths.splits_prepared_blocks
-        ).fetch()
+        Ctrl = artifacts.Controller[contracts.BlocksPartition]
+        block_splits = Ctrl(paths.splits_prepared_blocks).fetch()
 
         # read label stats
-        label_stats = artifacts.Controller[dict[str, list[int]]](
-            paths.label_stats
-        ).fetch()
+        Ctrl = artifacts.Controller[dict[str, list[int]]]
+        label_stats = Ctrl(paths.label_stats).fetch()
 
         # read image stats
-        image_stats = artifacts.Controller[dict[str, geo_core.ImageBandStats]](
-            paths.image_stats
-        ).fetch()
+        Ctrl = artifacts.Controller[dict[str, geo_core.ImageBandStats]]
+        image_stats = Ctrl(paths.image_stats).fetch()
 
         # target heads reclass hierarchy
         heads_schema: geo_core.TargetHeadsSchema = {

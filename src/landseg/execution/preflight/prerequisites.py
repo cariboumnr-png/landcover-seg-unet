@@ -289,7 +289,8 @@ def check_manifest_runs(
         )
 
     try:
-        data = artifacts.Controller(manifest_fpath).fetch()
+        Ctrl = artifacts.Controller[dict[str, typing.Any] | list[typing.Any]]
+        data = Ctrl(manifest_fpath).fetch()
         records: list[dict[str, typing.Any]] = []
 
         if isinstance(data, dict):

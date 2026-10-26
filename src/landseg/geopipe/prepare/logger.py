@@ -94,5 +94,5 @@ class PreparationLogger(utils.Logger):
     def on_close(self) -> None:
         '''Persist the collected summary JSON report.'''
         if self.summary is not None:
-            ctrl = artifacts.Controller(self.log_file)
-            ctrl.persist(self.summary)
+            Ctrl = artifacts.Controller[contracts.PreparationReportSchema]
+            Ctrl(self.log_file).persist(self.summary)

@@ -100,5 +100,5 @@ class SessionLogger(utils.Logger):
         t = datetime.datetime.now().strftime(c.TF_ISO8601)
         if self.summary is not None:
             self.summary['completed_at'] = t
-            ctrl = artifacts.Controller(self.log_file)
-            ctrl.persist(self.summary)
+            Ctrl = artifacts.Controller[SessionSummary]
+            Ctrl(self.log_file).persist(self.summary)

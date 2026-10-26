@@ -74,10 +74,11 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
         )
 
     compiled: list[schema.ManifestEntry] = []
+    EntryCtrl = artifacts.Controller[schema.ManifestEntry]
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = artifacts.Controller[schema.ManifestEntry](mfst_entry_path)
+            _ctrl = EntryCtrl(mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
             entry = _ctrl.fetch()
         except (TypeError, ValueError) as e:

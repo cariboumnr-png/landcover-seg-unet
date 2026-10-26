@@ -73,10 +73,8 @@ def map_rasters_to_grid(
         mapper.MappedRasterWindows:
             Container describing mapped grid cells and raster windows.
     '''
-    windows_ctrl = artifacts.Controller[contracts.MappedRasterWindowsPayload](
-        mapped_windows_path,
-        policy=policy
-    )
+    Ctrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]
+    windows_ctrl = Ctrl(mapped_windows_path, policy=policy)
 
     # mapped windows fpath
     payload = windows_ctrl.fetch(missing_ok=True)

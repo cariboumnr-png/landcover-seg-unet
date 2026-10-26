@@ -90,13 +90,15 @@ def build_dataspec(
         vec_domain = None
 
     # data schema
-    data_schema = artifacts.Controller[geo_core.DataSchema](
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    data_schema = Ctrl(
         data_schema_fpath,
         schema_id=geo_core.data_schema.SCHEMA_ID
     ).fetch()
 
     # prepared schema
-    prepare_schema = artifacts.Controller[geo_core.PreparedSchema](
+    Ctrl = artifacts.Controller[geo_core.PreparedSchema]
+    prepare_schema = Ctrl(
         prepared_schema_fpath,
         schema_id=geo_core.prepared_schema.SCHEMA_ID
     ).fetch()
@@ -119,10 +121,8 @@ def build_dataspec(
 # ----- private helpers
 def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
-    payload = artifacts.Controller[geo_core.DomainPayload](
-        fp,
-        schema_id=geo_core.DomainTileMap.SCHEMA_ID
-    ).fetch()
+    Ctrl = artifacts.Controller[geo_core.DomainPayload]
+    payload = Ctrl(fp, schema_id=geo_core.DomainTileMap.SCHEMA_ID).fetch()
     return geo_core.DomainTileMap.from_payload(payload)
 
 

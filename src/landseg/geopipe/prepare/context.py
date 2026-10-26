@@ -81,20 +81,17 @@ def build_preparation_context(
             metadata.
     '''
     # load artifacts
-    windows = artifacts.Controller[contracts.MappedRasterWindowsPayload](
-        windows_fp
-    ).fetch()
+    Ctrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]
+    windows = Ctrl(windows_fp).fetch()
 
-    schema = artifacts.Controller[geo_core.DataSchema](
-        schema_fp,
-        schema_id=geo_core.data_schema.SCHEMA_ID
-    ).fetch()
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    schema = Ctrl(schema_fp, schema_id=geo_core.data_schema.SCHEMA_ID).fetch()
 
-    CatalogCtrl = artifacts.Controller[dict[str, geo_core.DataCatalogEntry]]
-    catalog = CatalogCtrl(catalog_fp).fetch()
+    Ctrl = artifacts.Controller[dict[str, geo_core.DataCatalogEntry]]
+    catalog = Ctrl(catalog_fp).fetch()
     test_catalog = None
     if config.datasetview.test_catalog is not None:
-        test_catalog = CatalogCtrl(config.datasetview.test_catalog).fetch()
+        test_catalog = Ctrl(config.datasetview.test_catalog).fetch()
 
     # resolve canvas crs and transform from image source
     image_paths = schema['dataset']['data_source']['image_paths']
