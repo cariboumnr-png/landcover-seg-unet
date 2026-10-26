@@ -59,7 +59,7 @@ def resolve_similarity_matrix(
     kp = artifacts.KnowledgePaths(root=pathlib.Path(knowledge_root))
     matrix_path = kp.similarity_matrix_fpath(profile)
     ctrl = artifacts.Controller[torch.Tensor](matrix_path)
-    return ctrl.fetch(strict=True)
+    return ctrl.fetch()
 
 
 def resolve_profile_metadata(
@@ -89,4 +89,4 @@ def resolve_profile_metadata(
     kp = artifacts.KnowledgePaths(root=pathlib.Path(knowledge_root))
     meta_path = kp.metadata_fpath(profile)
     ctrl = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata](meta_path)
-    return ctrl.fetch(strict=True)
+    return ctrl.fetch()

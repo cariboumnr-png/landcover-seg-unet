@@ -147,7 +147,7 @@ def _resolve_taxonomy_metadata(
         )
 
     ctrl = artifacts.Controller[embeddings.SpeciesEmbeddingsMetadata](meta_path)
-    meta = ctrl.fetch(strict=True)
+    meta = ctrl.fetch()
 
     classes_meta = meta.get('classes', [])
     if not classes_meta:

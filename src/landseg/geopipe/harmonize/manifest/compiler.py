@@ -64,7 +64,7 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
     # load JSON via artifact controller
     ctrl = artifacts.Controller[list[dict[str, typing.Any]]](fp)
     ctrl.hash(overwrite=False) # hash once
-    mfst = ctrl.fetch(strict=True)
+    mfst = ctrl.fetch()
 
     # expect JSON read as a list of dicts
     if not isinstance(mfst, list):
@@ -79,7 +79,7 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             mfst_entry_path = mfst_entry.get('manifest', '')
             _ctrl = artifacts.Controller[schema.ManifestEntry](mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
-            entry = _ctrl.fetch(strict=True)
+            entry = _ctrl.fetch()
         except (TypeError, ValueError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 

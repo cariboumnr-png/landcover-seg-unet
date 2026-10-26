@@ -60,6 +60,7 @@ class Controller(typing.Generic[T]):
         self,
         file_path: str | pathlib.Path,
         policy: artifacts.LifecyclePolicy | None = None,
+        *,
         schema_id: str | None = None,
     ):
         '''
@@ -110,35 +111,23 @@ class Controller(typing.Generic[T]):
     def fetch(
         self,
         missing_ok: typing.Literal[False] = ...,
-        *,
-        expected_schema_id: str | None = ...,
-        strict: bool | None = ...,
     ) -> T:...
 
     @typing.overload
     def fetch(
         self,
         missing_ok: typing.Literal[True],
-        *,
-        expected_schema_id: str | None = ...,
-        strict: bool | None = ...,
     ) -> T | None:...
 
     @typing.overload
     def fetch(
         self,
         missing_ok: bool = ...,
-        *,
-        expected_schema_id: str | None = ...,
-        strict: bool | None = ...,
     ) -> T | None:...
 
     def fetch(
         self,
         missing_ok: bool = False,
-        *,
-        expected_schema_id: str | None = None,
-        strict: bool | None = None,
     ) -> T | None:
         '''
         Fetch the artifact according to the lifecycle policy.
@@ -147,11 +136,6 @@ class Controller(typing.Generic[T]):
             missing_ok:
                 If True, suppresses missing artifact error when policy is
                 `LOAD_OR_FAIL` and returns None.
-            expected_schema_id:
-                Optional expected schema identifier override.
-            strict:
-                Legacy strictness flag. If supplied, strict=True sets
-                missing_ok=False and strict=False sets missing_ok=True.
 
         Returns:
             The loaded artifact if valid and permitted by the policy,
@@ -162,11 +146,6 @@ class Controller(typing.Generic[T]):
                 integrity validation, schema_id does not match, or is
                 missing when missing_ok is False and policy is LOAD_OR_FAIL.
         '''
-        target_schema = expected_schema_id or self.schema_id
-
-        if strict is not None:
-            missing_ok = not strict
-
         data: T | None
         try:
             data = self._load()
@@ -175,12 +154,12 @@ class Controller(typing.Generic[T]):
         except ArtifactError as exc:
             raise ArtifactError from exc
 
-        if data is not None and target_schema is not None:
+        if data is not None and self.schema_id is not None:
             actual = data.get('schema_id') if isinstance(data, dict) else None
-            if actual != target_schema:
+            if actual != self.schema_id:
                 raise ArtifactError(
                     f"Schema mismatch in {self.fname}: "
-                    f"expected '{target_schema}', got '{actual}'"
+                    f"expected '{self.schema_id}', got '{actual}'"
                 )
 
         if data is None:

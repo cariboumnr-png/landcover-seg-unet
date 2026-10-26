@@ -74,7 +74,7 @@ def test_generate_embeddings_with_knowledge_root_str(dummy_csv_path, tmp_path):
 
     ctrl = artifacts.Controller[
         embeddings_mod.SpeciesEmbeddingsMetadata
-    ].load_json_strict(meta_path)
+    ](meta_path)
     meta = ctrl.fetch()
     assert meta is not None
     assert meta['num_classes'] == 2

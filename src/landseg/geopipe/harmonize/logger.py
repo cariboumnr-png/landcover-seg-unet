@@ -163,7 +163,8 @@ class HarmonizationLogger(utils.Logger):
         Ctrl = artifacts.Controller[dict[str, contracts.HarmonizationRunRecord]]
         run_ctrl = Ctrl(run_manifest_fpath)
         try:
-            manifest_data = run_ctrl.fetch() or {} # manifest.json can be absent
+            manifest_data = run_ctrl.fetch(missing_ok=True) or {}
+            # manifest.json can be absent
         except artifacts.ArtifactError as e:
             raise ValueError('Error reading runs manifest.json') from e
         manifest_data[uid] = record

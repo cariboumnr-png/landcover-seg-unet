@@ -91,9 +91,12 @@ def prepare_domain_maps(
         name = config.name
 
         # check domain artifacts
-        ctrl = artifacts.Controller[geo_core.DomainPayload]
-        domain_ctrl = ctrl(config.domain_fpath, policy=policy)
-        payload = domain_ctrl.fetch(geo_core.DomainTileMap.SCHEMA_ID)
+        domain_ctrl = artifacts.Controller[geo_core.DomainPayload](
+            config.domain_fpath,
+            policy=policy,
+            schema_id=geo_core.DomainTileMap.SCHEMA_ID,
+        )
+        payload = domain_ctrl.fetch()
 
         # load or create domain layer
         loaded = False
@@ -145,8 +148,10 @@ def _prep_mapping(
 ) -> mapper.RasterTileDict:
     '''Fetch existing mapped tiles artifact or map raster onto grid.'''
     # check mapped tiles before building
-    Ctrl = artifacts.Controller[mapper.RasterTileDict]
-    tiles_ctrl = Ctrl(config.tiles_fpath, policy)
+    tiles_ctrl = artifacts.Controller[mapper.RasterTileDict](
+        config.tiles_fpath,
+        policy=policy,
+    )
     try:
         mapped = tiles_ctrl.fetch()
     except artifacts.ArtifactError as exc:

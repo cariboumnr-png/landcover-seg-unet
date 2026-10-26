@@ -49,7 +49,7 @@ def raw_dataset(
         ctrl = artifacts.Controller[list](manifest_fp)
         ctrl.hash(overwrite=False) # hash upon first open
 
-        manifest = ctrl.fetch(strict=True)
+        manifest = ctrl.fetch()
         if not isinstance(manifest, list): # simple check
             raise RuntimeError('Raw dataset manifest JSON not read as a list')
         n = len(manifest)

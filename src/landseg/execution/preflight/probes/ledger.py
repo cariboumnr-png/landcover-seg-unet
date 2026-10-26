@@ -63,7 +63,7 @@ def past_runs(
     mfst_fpath_str = str(manifest_path.resolve())
     try:
         ctrl = artifacts.Controller[dict[str, dict[str, str]]](manifest_path)
-        manifest = ctrl.fetch(strict=True)
+        manifest = ctrl.fetch(missing_ok=True)
         if manifest is not None:
             total_run_n = len(manifest)
             success_run_n = len(
@@ -118,7 +118,7 @@ def pending_harmonization(
 
     harmonize_mfst = artifact_paths.data_harmonization.runs_manifest
     try:
-        harmonization_runs = RunManifestCtrl(harmonize_mfst).fetch(strict=True)
+        harmonization_runs = RunManifestCtrl(harmonize_mfst).fetch()
     except artifacts.ArtifactError:
         return schema.ProbeResult(
             pid='harmonized_dataset',
@@ -183,7 +183,7 @@ def pending_ingestion(
     ingest_mfst = artifact_paths.data_ingestion.runs_manifest
 
     try:
-        harmonization_runs = RunManifestCtrl(harmonize_mfst).fetch(strict=True)
+        harmonization_runs = RunManifestCtrl(harmonize_mfst).fetch()
         good_harmonization_runs = {
             k: v for k, v in harmonization_runs.items()
             if v.get('status') == 'SUCCESS'
@@ -204,7 +204,7 @@ def pending_ingestion(
         )
 
     try:
-        ingestion_runs = RunManifestCtrl(ingest_mfst).fetch(strict=True)
+        ingestion_runs = RunManifestCtrl(ingest_mfst).fetch()
         good_ingestion_runs = {
             k: v for k, v in ingestion_runs.items()
             if v.get('status') == 'SUCCESS'
@@ -271,7 +271,7 @@ def ingestion_pool_state(
         )
 
     try:
-        catalog = RunManifestCtrl(catalog_path).fetch(strict=True)
+        catalog = RunManifestCtrl(catalog_path).fetch()
         block_count = len(catalog) if catalog is not None else 0
         return schema.ProbeResult(
             pid=probe_id,
@@ -302,7 +302,7 @@ def prepared_blocks_state(
     schema_path = artifact_paths.data_preparation.schema
     try:
         ctrl = artifacts.Controller[dict](schema_path)
-        prep_schema = ctrl.fetch(strict=True)
+        prep_schema = ctrl.fetch()
     except artifacts.ArtifactError:
         prep_schema = None
 

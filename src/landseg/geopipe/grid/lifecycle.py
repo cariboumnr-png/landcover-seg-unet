@@ -76,8 +76,12 @@ def prepare_world_grid(
         if load_only
         else artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
-    ctrl = artifacts.Controller[geo_core.GridPayload](grid_fpath, policy=policy)
-    payload = ctrl.fetch(expected_schema_id=geo_core.GridLayout.SCHEMA_ID)
+    ctrl = artifacts.Controller[geo_core.GridPayload](
+        grid_fpath,
+        policy,
+        schema_id=geo_core.GridLayout.SCHEMA_ID
+    )
+    payload = ctrl.fetch()
 
     # load or build
     if payload:
@@ -90,9 +94,7 @@ def prepare_world_grid(
             tile_size=config.tile_size,
             tile_stride=config.tile_stride,
             mode=config.mode,
-            ref_fpath=(
-                pathlib.Path(config.ref_fpath) if config.ref_fpath else None
-            ),
+            ref_fpath=pathlib.Path(config.ref_fpath) if config.ref_fpath else None,
             manual_specs=builder.GridConfigs(
                 crs_string=config.manual_specs.crs_string,
                 origin=config.manual_specs.origin,

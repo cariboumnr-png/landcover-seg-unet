@@ -168,7 +168,7 @@ def check_report_status(
         )
 
     try:
-        data = artifacts.Controller[dict](report_fpath).fetch(strict=True)
+        data = artifacts.Controller[dict](report_fpath).fetch()
         status_val = data.get('status')
         if status_val != expected_status:
             message = (
@@ -289,7 +289,7 @@ def check_manifest_runs(
         )
 
     try:
-        data = artifacts.Controller(manifest_fpath).fetch(strict=True)
+        data = artifacts.Controller(manifest_fpath).fetch()
         records: list[dict[str, typing.Any]] = []
 
         if isinstance(data, dict):

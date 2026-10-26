@@ -146,7 +146,7 @@ class IngestionLogger(utils.Logger):
         }
         ctrl = artifacts.Controller[dict](manifest_fpath)
         try:
-            manifest_data = ctrl.fetch() or {}
+            manifest_data = ctrl.fetch(missing_ok=True) or {}
         except artifacts.ArtifactError as exc:
             raise ValueError(
                 f'Error reading runs manifest at {manifest_fpath}'

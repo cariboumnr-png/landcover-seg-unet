@@ -448,9 +448,7 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
     assert report_fp.name == f'preflight_report_{uid}.json'
     assert report_fp.parent == exp_root / 'preflight'
 
-    report_data = artifacts.Controller[dict].load_json_strict(
-        report_fp
-    ).fetch()
+    report_data = artifacts.Controller[dict](report_fp).fetch()
     assert report_data['uid'] == uid
     assert report_data['target'] == 'model-train'
     assert report_data['status'] == 'READY'

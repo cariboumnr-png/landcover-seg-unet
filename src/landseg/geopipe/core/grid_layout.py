@@ -289,8 +289,10 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
             GridLayout:
                 Restored GridLayout instance.
         '''
-        ctrl = artifacts.Controller[GridPayload](fpath)
-        payload = ctrl.fetch(cls.SCHEMA_ID, strict=True)
+        payload = artifacts.Controller[GridPayload](
+            fpath,
+            schema_id=cls.SCHEMA_ID
+        ).fetch()
         return cls.from_payload(payload)
 
     # ----- public method

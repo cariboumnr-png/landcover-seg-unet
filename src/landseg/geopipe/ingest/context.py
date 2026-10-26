@@ -173,7 +173,7 @@ def build_ingestion_context(
     harmonization_artifact_paths.get_run_folder(harmonization_record['run_id'])
     report_fp = harmonization_artifact_paths.report
     ctrl = artifacts.Controller[contracts.HarmonizationReportSchema](report_fp)
-    report = ctrl.fetch(strict=True)
+    report = ctrl.fetch()
 
     # fetch world grid
     raw_grid = report.get('grid_fpath')
@@ -278,8 +278,9 @@ def _resolve_harmonization_runs(
         )
 
     try:
-        ctrl = artifacts.Controller[HarmonizationRecords](manifest_fpath)
-        manifest_data = ctrl.fetch(strict=True)
+        manifest_data = artifacts.Controller[HarmonizationRecords](
+            manifest_fpath
+        ).fetch()
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError(
             'Failed to read harmonization runs manifest at '
@@ -381,7 +382,7 @@ def _resolve_ingestion_runs(manifest_fpath: pathlib.Path) -> set[str]:
 
     try:
         ctrl = artifacts.Controller[dict](manifest_fpath)
-        manifest_data = ctrl.fetch(strict=True)
+        manifest_data = ctrl.fetch()
     except artifacts.ArtifactError:
         return set()
 
@@ -420,7 +421,7 @@ def verify_pool_grid_compatibility(
 
     try:
         ctrl = artifacts.Controller[geo_core.DataSchema](schema_fpath)
-        schema_dict = ctrl.fetch(strict=True)
+        schema_dict = ctrl.fetch()
     except artifacts.ArtifactError as exc:
         raise artifacts.ArtifactError(
             f'Failed to read dataset schema at {schema_fpath}: {exc}'

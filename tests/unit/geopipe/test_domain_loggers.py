@@ -65,7 +65,7 @@ def test_grid_logger_lifecycle(tmp_path):
 
     assert report_fp.exists()
     ctrl = artifacts.Controller[contracts.GridReportSchema](report_fp)
-    report = ctrl.fetch(strict=True)
+    report = ctrl.fetch()
     assert report['status'] == 'SUCCESS'
     loaded = report['grid']
     assert loaded['grid_id'] == world_grid.gid
