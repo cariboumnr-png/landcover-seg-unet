@@ -56,7 +56,7 @@ class _ParsedManifestEntry:
 
 # ----- public functions
 def harmonizer(  # pylint: disable=too-many-arguments, too-many-locals
-    mfst_entries: list[manifest.ManifestEntry],
+    mfst_entries: tuple[manifest.ManifestEntry, ...],
     output_dir: pathlib.Path,
     *,
     dst_crs: rasters.CRS,

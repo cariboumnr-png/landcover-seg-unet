@@ -37,7 +37,6 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.harmonize.manifest.normalizer as normalizer
-import landseg.geopipe.harmonize.manifest.schema as schema
 import landseg.utils.validator as val
 
 
@@ -52,7 +51,7 @@ class DatasetManifestError(Exception):
 # ----- public functions
 def compile_dataset_manifest(
     fp: pathlib.Path
-) -> tuple[schema.ManifestEntry, ...]:
+) -> tuple[normalizer.ManifestEntry, ...]:
     '''
     Read, validate, and compile dataset manifest from JSON.
 
@@ -78,8 +77,8 @@ def compile_dataset_manifest(
             f'got: {type(mfst)}'
         ) from e
 
-    compiled: list[schema.ManifestEntry] = []
-    EntryCtrl = artifacts.Controller[schema.ManifestEntry]
+    compiled: list[normalizer.ManifestEntry] = []
+    EntryCtrl = artifacts.Controller[normalizer.ManifestEntry]
     for i, mfst_entry in enumerate(mfst):
         try:
             mfst_entry_path = mfst_entry.get('manifest', '')
@@ -90,7 +89,7 @@ def compile_dataset_manifest(
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 
         try:
-            norm = normalizer.ManifestEntryNormalizer(entry).normalized_entry
+            norm = normalizer.normalize_manifest_entry(entry)
             compiled.append(norm)
         except (TypeError, ValueError, val.ValidationError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
