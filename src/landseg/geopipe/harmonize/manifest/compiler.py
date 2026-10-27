@@ -32,6 +32,7 @@ Public APIs:
 '''
 
 # standard imports
+import collections
 import pathlib
 import typing
 # local imports
@@ -67,10 +68,13 @@ def compile_dataset_manifest(
     ctrl = artifacts.Controller[list[dict[str, typing.Any]]](fp)
     ctrl.hash(overwrite=False) # hash once
     mfst = ctrl.fetch()
-
-    # expect JSON read as a list of dicts
+    # cheap type check: expect JSON read as a list of dicts
     try:
-        val.require_types(mfst, 'dataset_manifest', list)
+        val.require_sequence(mfst, 'dataset_manifest')
+        if len(mfst) == 0:
+            raise DatasetManifestError('Manifest JSON read as an empty list')
+        for i, mfst_entry in enumerate(mfst):
+            val.require_mapping(mfst_entry, f'manifest_entry_{i}')
     except val.ValidationError as e:
         raise DatasetManifestError(
             f'Manifest JSON expected to read as a list dictionaries, '
@@ -78,27 +82,38 @@ def compile_dataset_manifest(
         ) from e
 
     compiled: list[normalizer.ManifestEntry] = []
-    EntryCtrl = artifacts.Controller[normalizer.ManifestEntry]
-    for i, mfst_entry in enumerate(mfst):
+    fingerprints: dict[str, str] = {}
+    for mfst_entry in mfst:
+        name = val.require_string(mfst_entry.get('name'), 'entry_name')
+        data_path = val.require_file(mfst_entry.get('path'), 'data_file_path')
+        mfst_path = val.require_file(mfst_entry.get('manifest'), 'manifest')
+
         try:
-            mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = EntryCtrl(mfst_entry_path)
+            _ctrl = artifacts.Controller[normalizer.ManifestEntry](mfst_path)
             _ctrl.hash(overwrite=False) # hash once
             entry = _ctrl.fetch()
-        except (TypeError, ValueError, val.ValidationError) as e:
-            raise DatasetManifestError(f'Invalid manifest entry {i}') from e
+        except artifacts.ArtifactError as e:
+            raise DatasetManifestError(f'Error loading {mfst_path}') from e
 
         try:
             norm = normalizer.normalize_manifest_entry(entry)
             compiled.append(norm)
-        except (TypeError, ValueError, val.ValidationError) as e:
-            raise DatasetManifestError(f'Invalid manifest entry {i}') from e
+        except (ValueError, val.ValidationError) as e:
+            raise DatasetManifestError(f'Error validating {mfst_path}') from e
 
-        # matching sanity
-        assert norm['name'] == mfst_entry.get('name')
-        path = mfst_entry.get('path')
-        assert path
-        assert norm['path'].resolve() == pathlib.Path(path)
+        # matching checks
+        if not (
+            name == norm['name'] and
+            data_path.resolve() == norm['path'].resolve()
+        ):
+            raise DatasetManifestError('Mismatch manifest name/data file path')
+
+        fingerprints[name] = artifacts.compute_fingerprint(norm)
+
+    # check for collisions
+    dup = {i for i, c in collections.Counter(fingerprints).items() if c > 1}
+    if dup:
+        raise DatasetManifestError(f'Found duplicated manifest entries: {dup}')
 
     # return a tuple of entries
     return tuple(compiled)
