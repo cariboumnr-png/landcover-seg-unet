@@ -82,12 +82,14 @@ class ManifestEntryNormalizer:
             if self.schemes:
                 raise ValueError('Domain rasters should not define "schemes"')
             schemes = None
+
         elif category in ['label', 'labels']:
             categorical_specs = self._normalize_categorical_specs()
             if self.schemes:
                 schemes = self._normalize_label_schemes(categorical_specs)
             else:
                 schemes = None
+
         else:
             categorical_specs = None
             if self.schemes:
@@ -139,19 +141,7 @@ class ManifestEntryNormalizer:
 
     def _normalize_categorical_specs(self) -> geo_core.CategoricalSpec:
         specs = val.require_mapping(self.cat_specs, 'specs')
-
-        # init w mandatory fields
-        index_base = specs.get('index_base')
-        _base = val.require_numeric_min(index_base, 'index_base', 0, int)
-        num_cls = specs.get('num_cls')
-        _n_cls = val.require_numeric_min(num_cls,'num_of_cls', 1, int)
-        ignore_cls = specs.get('ignore_cls')
-        _ignore = val.require_numeric_sequence(ignore_cls, 'ignore_index', int)
-        _specs: geo_core.CategoricalSpec = {
-            'index_base': _base,
-            'num_cls': _n_cls,
-            'ignore_cls': list(_ignore) # TODO to change to tuple type
-        }
+        _specs = self._init_categorical_specs(specs)
 
         # add optional fields
         cls = specs.get('class_name')
@@ -160,9 +150,12 @@ class ManifestEntryNormalizer:
 
         color_map = specs.get('color_map')
         if color_map is not None:
-            _specs['color_map'] = val.require_mapping(color_map, 'color_map')
-            for rgb in _specs['color_map'].values():
-                val.require_numeric_sequence(rgb, 'RGB_values', int, 3)
+            _cmap = val.require_mapping(color_map, 'color_map')
+            validated_cmp: dict[str, tuple[int, int, int]] = {}
+            for k, rgb in _cmap.items():
+                _rgb = val.require_numeric_sequence(rgb, f'RGB@{k}', int, 3)
+                validated_cmp[k] = (_rgb[0], _rgb[1], _rgb[2])
+            _specs['color_map'] = validated_cmp
 
         taxa = specs.get('taxonomy')
         if taxa is not None:
@@ -179,55 +172,61 @@ class ManifestEntryNormalizer:
         self,
         band_mapping: dict[int, str]
     ) -> schema.FeatureSchemes:
-        schemes =  val.require_mapping(self.schemes, 'feature_schemes')
+        schemes = val.require_mapping(self.schemes, 'feature_schemes')
 
-        valid_bands = set(band_mapping.values())
+        valid_bands = list(band_mapping.values())
+        normalized: dict[str, tuple[str, ...]] = {}
         for name, bands in schemes.items():
-            if not isinstance(bands, list) or not bands:
-                raise ValueError(
-                    f'Feature scheme "{name}" must be non-empty list of '
-                    f'band names, got: {bands}'
-                )
-            for b in bands:
-                if not isinstance(b, str) or b not in valid_bands:
-                    raise ValueError(
-                        f'Band "{b}" in feature scheme "{name}" is not in '
-                        f'band_mapping: {sorted(valid_bands)}'
-                    )
-        return schemes
+            val.require_sequence(bands, f'feature_scheme_{name}')
+            b_seq = val.require_string_sequence(bands, f'scheme_{name}')
+            for b in b_seq:
+                val.require_value_from(b, f'scheme_{name}_band_{b}', valid_bands, str)
+            normalized[name] = b_seq
+        return normalized
 
     def _normalize_label_schemes(
         self,
         cat_specs: geo_core.CategoricalSpec
     ) -> schema.LabelSchemes:
-        schemes =  val.require_mapping(self.schemes, 'label_schemes')
+        valid_range = range(
+            cat_specs['index_base'],
+            cat_specs['index_base'] + cat_specs['num_cls']
+        )
 
-        index_base = cat_specs['index_base']
-        num_cls = cat_specs['num_cls']
-        valid_range = set(range(index_base, index_base + num_cls))
+        schemes = val.require_mapping(self.schemes, 'label_schemes')
 
+        normalized: schema.LabelSchemes = {}
         for k, v in schemes.items():
-            v = val.require_mapping(v, f'{k}_schema')
+            v = val.require_mapping(v, f'{k}_scheme')
 
-            reclass = v.get('reclass')
-            reclass = val.require_mapping(reclass, 'reclass')
+            reclass = val.require_mapping(v.get('reclass'), 'reclass')
+            norm_reclass: dict[str, tuple[int, ...]] = {}
             for grp_id, ids in reclass.items():
-                ids = val.require_numeric_sequence(ids, 'class_IDs', int)
-                for cid in ids:
-                    if cid not in valid_range:
-                        raise ValueError(
-                            f'Class ID {cid} in label scheme "{k}" group '
-                            f'"{grp_id}" is outside valid class range '
-                            f'[{index_base}..{index_base + num_cls - 1}]'
-                        )
+                ids_tuple = val.require_numeric_sequence(ids, 'class_IDs', int)
+                norm_reclass[grp_id] = ids_tuple
+                for cid in ids_tuple:
+                    val.require_value_from(cid, 'class_IDs', valid_range, str)
 
-            recls_name = v.get('reclass_name')
-            recls_name = val.require_mapping_str_v(recls_name, 'reclass_name')
-            for grp_id in recls_name:
-                if grp_id not in reclass:
-                    raise ValueError(
-                        f'Group "{grp_id}" in reclass_name does not exist in '
-                        f'reclass of label scheme "{k}"'
-                    )
+            reclass_name = val.require_mapping(v.get('reclass_name'), 'reclass_name')
+            valid_group_ids = list(reclass.keys())
+            for grp_id in reclass_name.keys():
+                val.require_value_from(grp_id, 'group_ID', valid_group_ids, str)
 
-        return schemes
+            normalized[k] = {
+                'reclass': norm_reclass,
+                'reclass_name': reclass_name,
+            }
+
+        return normalized
+
+    @staticmethod
+    def _init_categorical_specs(specs: dict) -> geo_core.CategoricalSpec:
+        '''Initialize categorical specs with required fields.'''
+        base = specs.get('index_base')
+        num_cls = specs.get('num_cls')
+        ignore = specs.get('ignore_cls')
+        return {
+            'index_base': val.require_numeric_min(base, 'index_base', 0, int),
+            'num_cls': val.require_numeric_min(num_cls, 'num_cls', 1, int),
+            'ignore_cls': val.require_numeric_sequence(ignore, 'ignore_cls', int)
+        }

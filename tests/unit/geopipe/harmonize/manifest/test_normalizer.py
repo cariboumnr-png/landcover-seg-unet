@@ -76,7 +76,10 @@ def test_normalize_features_entry_with_schemes(tmp_path):
     }
     normalizer = Normalizer(raw_entry)
     entry = normalizer.normalized_entry
-    assert entry['schemes'] == raw_entry['schemes']
+    assert entry['schemes'] == {
+        'rgb': ('blue', 'green', 'red'),
+        'rgb_nir': ('blue', 'green', 'red', 'nir'),
+    }
 
 
 def test_normalize_features_entry_invalid_scheme_band(tmp_path):
@@ -148,7 +151,12 @@ def test_normalize_labels_entry_basic(tmp_path):
     assert cat_specs is not None
     assert cat_specs['index_base'] == 1
     assert cat_specs['num_cls'] == 3
-    assert cat_specs['ignore_cls'] == [255]
+    assert cat_specs['ignore_cls'] == (255,)
+    assert cat_specs.get('color_map') == {
+        '1': (0, 100, 0),
+        '2': (34, 139, 34),
+        '3': (0, 0, 255),
+    }
     assert cat_specs.get('class_name') == {
         '1': 'conifer',
         '2': 'decid',
@@ -182,7 +190,12 @@ def test_normalize_labels_entry_with_schemes(tmp_path):
     }
     normalizer = Normalizer(raw_entry)
     entry = normalizer.normalized_entry
-    assert entry['schemes'] == raw_entry['schemes']
+    assert entry['schemes'] == {
+        'binary': {
+            'reclass': {'1': (1, 2), '2': (3,)},
+            'reclass_name': {'1': 'forest', '2': 'water'},
+        },
+    }
 
 
 def test_normalize_labels_entry_scheme_class_out_of_range(tmp_path):
@@ -422,7 +435,8 @@ def test_normalize_categorical_specs_invalid_bounds(tmp_path):
         },
     }
     with pytest.raises(val.ValidationError, match='< minimum 0'):
-        _ = normalizer_mod.ManifestEntryNormalizer(raw_entry_neg).normalized_entry
+        norm = normalizer_mod.ManifestEntryNormalizer(raw_entry_neg)
+        _ = norm.normalized_entry
 
     # 0 num_cls
     raw_entry_zero = {
@@ -437,7 +451,8 @@ def test_normalize_categorical_specs_invalid_bounds(tmp_path):
         },
     }
     with pytest.raises(val.ValidationError, match='< minimum 1'):
-        _ = normalizer_mod.ManifestEntryNormalizer(raw_entry_zero).normalized_entry
+        norm = normalizer_mod.ManifestEntryNormalizer(raw_entry_zero)
+        _ = norm.normalized_entry
 
 
 def test_normalize_input_types():

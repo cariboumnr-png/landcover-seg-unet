@@ -47,7 +47,7 @@ class HarmonizationContext:
     grid: geo_core.GridLayout
     grid_id: str
     grid_fpath: pathlib.Path
-    compiled_dataset_manifest: list[manifest.ManifestEntry]
+    compiled_dataset_manifest: tuple[manifest.ManifestEntry, ...]
     current_run_identity: str = ''
     collided_run_uid: str | None = None
 

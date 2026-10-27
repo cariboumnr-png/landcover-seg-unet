@@ -38,6 +38,7 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.harmonize.manifest.normalizer as normalizer
 import landseg.geopipe.harmonize.manifest.schema as schema
+import landseg.utils.validator as val
 
 
 # ----- public classes
@@ -49,7 +50,9 @@ class DatasetManifestError(Exception):
 
 
 # ----- public functions
-def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
+def compile_dataset_manifest(
+    fp: pathlib.Path
+) -> tuple[schema.ManifestEntry, ...]:
     '''
     Read, validate, and compile dataset manifest from JSON.
 
@@ -58,8 +61,8 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             File path to root dataset manifest JSON.
 
     Returns:
-        list[schema.ManifestEntry]:
-            List of normalized manifest entries.
+        tuple[schema.ManifestEntry, ...]:
+            Tuple of normalized manifest entries.
     '''
     # load JSON via artifact controller
     ctrl = artifacts.Controller[list[dict[str, typing.Any]]](fp)
@@ -67,11 +70,13 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
     mfst = ctrl.fetch()
 
     # expect JSON read as a list of dicts
-    if not isinstance(mfst, list):
+    try:
+        val.require_types(mfst, 'dataset_manifest', list)
+    except val.ValidationError as e:
         raise DatasetManifestError(
             f'Manifest JSON expected to read as a list dictionaries, '
             f'got: {type(mfst)}'
-        )
+        ) from e
 
     compiled: list[schema.ManifestEntry] = []
     EntryCtrl = artifacts.Controller[schema.ManifestEntry]
@@ -81,13 +86,13 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             _ctrl = EntryCtrl(mfst_entry_path)
             _ctrl.hash(overwrite=False) # hash once
             entry = _ctrl.fetch()
-        except (TypeError, ValueError) as e:
+        except (TypeError, ValueError, val.ValidationError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 
         try:
             norm = normalizer.ManifestEntryNormalizer(entry).normalized_entry
             compiled.append(norm)
-        except(TypeError, ValueError) as e:
+        except (TypeError, ValueError, val.ValidationError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 
         # matching sanity
@@ -96,5 +101,5 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
         assert path
         assert norm['path'].resolve() == pathlib.Path(path)
 
-    # return a list of entries
-    return compiled
+    # return a tuple of entries
+    return tuple(compiled)

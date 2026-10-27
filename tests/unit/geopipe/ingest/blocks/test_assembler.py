@@ -115,12 +115,12 @@ def test_build_single_block_success(dummy_geotiff_factory):
         bands=1
     )
 
-    window = rasters.Window(4, 4, 8, 8)
+    window = rasters.Window(4, 4, 8, 8) # type: ignore
 
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 0,
         }
     }
@@ -177,11 +177,11 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         bands=1
     )
 
-    window = rasters.Window(4, 4, 8, 8)
+    window = rasters.Window(4, 4, 8, 8) # type: ignore
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 0,
         }
     }
@@ -247,17 +247,17 @@ def test_build_blocks_orchestrator(
     )
 
     image_windows = {
-        (0, 0): rasters.Window(0, 0, 8, 8),
-        (0, 8): rasters.Window(8, 0, 8, 8),
-        (8, 0): rasters.Window(0, 8, 8, 8),
-        (8, 8): rasters.Window(8, 8, 8, 8),
+        (0, 0): rasters.Window(0, 0, 8, 8), # type: ignore
+        (0, 8): rasters.Window(8, 0, 8, 8), # type: ignore
+        (8, 0): rasters.Window(0, 8, 8, 8), # type: ignore
+        (8, 8): rasters.Window(8, 8, 8, 8), # type: ignore
     }
 
     label_windows = dict(image_windows)
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 0,
         }
     }
@@ -327,12 +327,12 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
         arr[0, 8:16, :] = 2
         src.write(arr)
 
-    window = rasters.Window(0, 0, 16, 16)
+    window = rasters.Window(0, 0, 16, 16) # type: ignore
 
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 1,
         }
     }
@@ -392,7 +392,7 @@ def test_read_label_specs_dataset_level_tags(dummy_geotiff_factory):
     specs = assembler.read_label_specs(lbl_path)
     assert 'landcover' in specs
     assert specs['landcover']['num_cls'] == 2
-    assert specs['landcover']['ignore_cls'] == [255]
+    assert specs['landcover']['ignore_cls'] == (255,)
     assert specs['landcover']['index_base'] == 1
     assert specs['landcover'].get('class_name') == {
         '1': 'forest',

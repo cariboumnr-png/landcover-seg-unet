@@ -124,11 +124,20 @@ def read_label_specs(
             key: rasters.parse_vrt_tag(tags[key])
             for key in ('num_cls', 'ignore_cls', 'index_base')
         }
+        if isinstance(spec.get('ignore_cls'), (list, tuple)):
+            spec['ignore_cls'] = tuple(spec['ignore_cls'])
+
         # optional keys
         for key in ('class_name', 'color_map', 'taxonomy'):
             if key in tags:
                 value = rasters.parse_vrt_tag(tags[key])
                 if value:
+                    if key == 'color_map' and isinstance(value, dict):
+                        value = {
+                            k: tuple(rgb) if isinstance(rgb, (list, tuple))
+                            else rgb
+                            for k, rgb in value.items()
+                        }
                     spec[key] = value
 
         name = desc.strip() if desc and desc.strip() else f'band_{i}'

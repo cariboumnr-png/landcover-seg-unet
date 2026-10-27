@@ -54,7 +54,7 @@ AllowedCategory: typing.TypeAlias = typing.Literal[
 LabelSchemes: typing.TypeAlias = dict[str, geo_core.LabelScheme]
 
 
-FeatureSchemes: typing.TypeAlias = dict[str, list[str]]
+FeatureSchemes: typing.TypeAlias = dict[str, tuple[str, ...]]
 
 
 # ----- public types
