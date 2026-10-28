@@ -30,6 +30,7 @@ Public APIs:
     - `grid_inputs`: Validate world grid definition inputs.
     - `grid_reference`: Validate world grid reference artifact.
     - `manifest_contract`: Validate dataset manifest contract.
+    - `pool_grid_compatibility`: Validate pool grid compatibility.
 '''
 
 # standard imports
@@ -38,9 +39,11 @@ import pathlib
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
+import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.grid.handlers as grid_handlers
 import landseg.geopipe.harmonize.handlers as harmonize_handlers
+import landseg.geopipe.ingest.handlers as ingest_handlers
 
 
 # ----- public functions
@@ -202,4 +205,94 @@ def manifest_contract(
             status=schema.ProbeStatus.FAIL,
             message=f'Dataset manifest contract invalid: {err}',
             details={'error': str(err), 'dataset_manifest': str(manifest_fp)},
+        )
+
+
+def pool_grid_compatibility(
+    paths_or_config: (
+        configs.RootConfig | artifacts.ArtifactPaths | pathlib.Path
+    ),
+    grid: geo_core.GridLayout | None = None,
+    pid: str | None = None,
+) -> schema.ProbeResult:
+    '''
+    Validate pool grid compatibility through domain handler.
+
+    Args:
+        paths_or_config:
+            RootConfig, ArtifactPaths, or direct path to schema JSON.
+        grid:
+            Optional GridLayout instance if `paths_or_config` is a path.
+        pid:
+            Optional probe identifier override.
+
+    Returns:
+        schema.ProbeResult:
+            Evaluation result with status PASS or FAIL.
+    '''
+    schema_fp: pathlib.Path
+    target_grid: geo_core.GridLayout
+
+    if grid is not None and isinstance(paths_or_config, (pathlib.Path, str)):
+        schema_fp = pathlib.Path(paths_or_config)
+        target_grid = grid
+    else:
+        if isinstance(paths_or_config, configs.RootConfig):
+            paths = artifacts.ArtifactPaths.from_config(paths_or_config)
+        else:
+            assert isinstance(paths_or_config, artifacts.ArtifactPaths)
+            paths = paths_or_config
+
+        schema_fp = paths.data_ingestion.data_blocks.schema
+        report_fp = paths.world_grid.report
+        if not report_fp.exists():
+            return schema.ProbeResult(
+                pid=pid or 'pool_grid_compatibility',
+                category='Contract',
+                status=schema.ProbeStatus.FAIL,
+                message=f'World grid report not found at {report_fp}',
+                details={'report_fpath': str(report_fp)},
+            )
+        try:
+            target_grid = harmonize_handlers.validate_grid_reference(
+                report_fp
+            )[0]
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            return schema.ProbeResult(
+                pid=pid or 'pool_grid_compatibility',
+                category='Contract',
+                status=schema.ProbeStatus.FAIL,
+                message=f'World grid reference invalid: {err}',
+                details={'report_fpath': str(report_fp), 'error': str(err)},
+            )
+
+    try:
+        ingest_handlers.validate_pool_grid_compatibility(
+            schema_fp, target_grid
+        )
+        if not schema_fp.exists():
+            msg = 'Pool schema not yet initialized (baseline established)'
+        else:
+            msg = (
+                'Pool grid compatibility verified '
+                f'(grid_id: {target_grid.gid})'
+            )
+        return schema.ProbeResult(
+            pid=pid or 'pool_grid_compatibility',
+            category='Contract',
+            status=schema.ProbeStatus.PASS,
+            message=msg,
+            details={
+                'grid_id': target_grid.gid,
+                'schema_fpath': str(schema_fp),
+                'schema_exists': schema_fp.exists(),
+            },
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return schema.ProbeResult(
+            pid=pid or 'pool_grid_compatibility',
+            category='Contract',
+            status=schema.ProbeStatus.FAIL,
+            message=f'Pool grid compatibility invalid: {err}',
+            details={'schema_fpath': str(schema_fp), 'error': str(err)},
         )

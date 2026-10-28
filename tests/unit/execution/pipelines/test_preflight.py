@@ -21,6 +21,9 @@
 
 '''Unit tests for standalone pre-flight execution validation module.'''
 
+# standard imports
+import dataclasses
+import types
 # third-party imports
 import pytest
 # local imports
@@ -313,9 +316,11 @@ def test_probe_grid_inputs_success(monkeypatch):
     When: `grid_inputs()` is called.
     Then: Return a PASS probe result with category Contract.
     '''
+    @dataclasses.dataclass
     class _MockGrid:
-        gid = 'grid_utm17'
-        def __len__(self):
+        gid: str = 'grid_utm17'
+
+        def __len__(self) -> int:
             return 4
 
     cfg = configs.RootConfig()
@@ -354,6 +359,52 @@ def test_probe_grid_inputs_failure(monkeypatch):
     assert 'Invalid reference raster' in result.message
 
 
+def test_probe_pool_grid_compatibility_success(monkeypatch, tmp_path):
+    '''
+    Given: A grid layout and compatible schema.
+    When: `pool_grid_compatibility()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    mock_grid = types.SimpleNamespace(gid='grid_utm17')
+    schema_fp = tmp_path / 'schema.json'
+    monkeypatch.setattr(
+        'landseg.geopipe.ingest.handlers.validate_pool_grid_compatibility',
+        lambda fp, grid: None,
+    )
+    result = preflight.probes.pool_grid_compatibility(
+        schema_fp, grid=mock_grid
+    )
+    assert result.category == 'Contract'
+    assert result.pid == 'pool_grid_compatibility'
+    assert result.status == preflight.ProbeStatus.PASS
+    assert 'Pool schema not yet initialized' in result.message
+
+
+def test_probe_pool_grid_compatibility_failure(monkeypatch, tmp_path):
+    '''
+    Given: A domain handler raising ArtifactError on grid mismatch.
+    When: `pool_grid_compatibility()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    mock_grid = types.SimpleNamespace(gid='grid_utm17')
+    schema_fp = tmp_path / 'schema.json'
+
+    def _failing_validate(fp, grid):
+        raise artifacts.ArtifactError('Grid compatibility mismatch')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.ingest.handlers.validate_pool_grid_compatibility',
+        _failing_validate,
+    )
+    result = preflight.probes.pool_grid_compatibility(
+        schema_fp, grid=mock_grid
+    )
+    assert result.category == 'Contract'
+    assert result.pid == 'pool_grid_compatibility'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'Grid compatibility mismatch' in result.message
+
+
 def test_inspect_target():
     '''
     Given: An execution target (data-ingest).
@@ -367,6 +418,7 @@ def test_inspect_target():
     probe_ids = [p.pid for p in result.probes]
     assert 'ingestion_output' in probe_ids
     assert 'collision_policy' in probe_ids
+    assert 'pool_grid_compatibility' in probe_ids
     assert 'past_harmonization_runs' in probe_ids
     assert 'past_ingestion_runs' in probe_ids
     assert 'pending_ingestion' in probe_ids

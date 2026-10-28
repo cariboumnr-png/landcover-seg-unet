@@ -100,6 +100,7 @@ def inspect_target(
             results.extend([
                 probes.dir_writable(ingest_paths.root, 'ingestion_output'),
                 probes.collision_policy(root_config),
+                probes.pool_grid_compatibility(artifact_paths),
                 probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
                 probes.past_runs(ingest_paths.runs_manifest, 'past_ingestion_runs'),
                 probes.pending_ingestion(artifact_paths),
