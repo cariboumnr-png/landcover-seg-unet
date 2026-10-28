@@ -42,6 +42,7 @@ Public APIs:
     - `read_band_map`: Reads and validates raster band mapping dict.
     - `read_label_specs`: Reads and formats label specification dict.
     - `read_schemes`: Reads and maps categorical scheme definitions.
+    - `validate_block_feature_specs`: Validates block feature specs.
 '''
 
 # standard imports
@@ -66,6 +67,7 @@ __all__ = [
     'read_band_map',
     'read_label_specs',
     'read_schemes',
+    'validate_block_feature_specs',
 ]
 
 
@@ -76,6 +78,7 @@ if typing.TYPE_CHECKING:
         DataBlockContext,
         DataBlockInputs,
         build_data_block,
+        validate_block_feature_specs,
     )
     from .io import (
         RasterReadInput,
@@ -99,6 +102,7 @@ def __getattr__(name: str):
         'DataBlockContext',
         'DataBlockInputs',
         'build_data_block',
+        'validate_block_feature_specs',
     }:
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)

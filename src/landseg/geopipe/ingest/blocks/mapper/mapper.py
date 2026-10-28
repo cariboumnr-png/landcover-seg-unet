@@ -29,6 +29,7 @@ used during block construction and model training workflows.
 Public APIs:
     - MappedRasterWindows: Dataclass container for read windows.
     - map_rasters: Maps input rasters to grid and builds windows.
+    - validate_raster_alignment: Validates raster alignment with grid.
 '''
 
 # standard imports
@@ -52,6 +53,59 @@ class MappedRasterWindows:
 
 
 # ----- public functions
+def validate_raster_alignment(
+    world_grid: geo_core.GridLayout,
+    img: rasters.DatasetReader | None,
+    lbl: rasters.DatasetReader | None = None,
+) -> tuple[tuple[float, float], rasters.BoundingBox]:
+    '''
+    Validate raster CRS, resolution, and overlap against a grid.
+
+    Checks that opened image and optional label rasters are valid,
+    share a CRS matching the world grid, possess identical pixel
+    resolutions, and have an overlapping spatial extent.
+
+    Args:
+        world_grid:
+            Target spatial grid layout definition.
+        img:
+            Opened dataset reader for source image raster.
+        lbl:
+            Optional opened dataset reader for source label raster.
+
+    Returns:
+        tuple[tuple[float, float], rasters.BoundingBox]:
+            Pair of `(pixel_size, inter_bbox)` where `pixel_size` is
+            `(x_res, y_res)` and `inter_bbox` is the intersection extent.
+
+    Raises:
+        ValueError:
+            If image is missing, CRSs disagree, pixel sizes differ,
+            spatial extents do not overlap, or raster CRS does not
+            match the target world grid CRS.
+    '''
+    if img is None:
+        raise ValueError('A valid image raster is required')
+    if img.crs is None:
+        raise ValueError('A valid image raster with CRS is required')
+    if lbl is not None and lbl.crs is None:
+        raise ValueError('A valid label raster with CRS is required')
+
+    data_crs = rasters.check_raster_crs(img.crs, lbl.crs if lbl else None)
+    if not rasters.is_same_crs(world_grid.crs, data_crs):
+        raise ValueError(
+            f'Data CRS [{data_crs}] != world CRS [{world_grid.crs}]'
+        )
+
+    pixel_size = rasters.check_raster_resolution(
+        img.transform, lbl.transform if lbl else None
+    )
+    inter_bbox = rasters.compute_overlap_bounds(
+        img.bounds, lbl.bounds if lbl else None
+    )
+    return pixel_size, inter_bbox
+
+
 def map_rasters(
     world_grid: geo_core.GridLayout,
     image_fpath: pathlib.Path,
@@ -85,33 +139,13 @@ def map_rasters(
             match the target world grid CRS.
     '''
     with rasters.read_rasters(image_fpath, label_fpath) as (img, lbl):
-        # make sure at least image is present
-        if img is None:
-            raise ValueError('A valid image raster is required')
-        if img.crs is None:
-            raise ValueError('A valid image raster with CRS is required')
-        if lbl is not None and lbl.crs is None:
-            raise ValueError('A valid label raster with CRS is required')
-
-        # check crs match and alignment with world grid
-        data_crs = rasters.check_raster_crs(img.crs, lbl.crs if lbl else None)
-        if not rasters.is_same_crs(world_grid.crs, data_crs):
-            raise ValueError(
-                f'Data CRS [{data_crs}] != world CRS [{world_grid.crs}]'
-            )
-
-        # verify resolution match and compute overlapping extent
-        pixel_size = rasters.check_raster_resolution(
-            img.transform, lbl.transform if lbl else None
+        pixel_size, inter_bbox = validate_raster_alignment(
+            world_grid, img, lbl
         )
-        inter_bbox = rasters.compute_overlap_bounds(
-            img.bounds, lbl.bounds if lbl else None
-        )
-
-        # focus on tiles inside the intersected extent
         inside = _crop(world_grid, pixel_size, inter_bbox)
 
-        # get image and optionally label reading windows
+        assert img is not None
+
         return MappedRasterWindows(
             image=_get_windows(world_grid, img.transform, inside),
             label=_get_windows(

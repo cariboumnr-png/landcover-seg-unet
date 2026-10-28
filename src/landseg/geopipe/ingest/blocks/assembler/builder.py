@@ -31,9 +31,11 @@ Public APIs:
     - DataBlockInputs: container for raw arrays to construct a DataBlock.
     - DataBlockConfig: build-time configuration for feature engineering.
     - build_data_block: construct a DataBlock with derived features.
+    - validate_block_feature_specs: validate block feature specs.
 '''
 
 # standard imports
+import collections.abc
 import dataclasses
 import math
 # third-party imports
@@ -93,6 +95,71 @@ class DataBlockContext:
 
 
 # ----- public functions
+def validate_block_feature_specs(
+    band_names: collections.abc.Iterable[str],
+    *,
+    add_spectral: collections.abc.Iterable[str] | None = None,
+    add_topo: collections.abc.Iterable[str] | None = None,
+    has_label: bool = False,
+    label_specs: dict[str, geo_core.CategoricalSpec] | None = None,
+) -> None:
+    '''
+    Validate spectral, topographic, and label feature specifications.
+
+    Verifies that requested spectral indices and topographic metrics
+    are supported and have all prerequisite bands available in the
+    input band map. Also verifies that label specifications are provided
+    when label processing is enabled.
+
+    Args:
+        band_names:
+            Band names present in the input imagery.
+        add_spectral:
+            Optional sequence of spectral indices to compute.
+        add_topo:
+            Optional sequence of topographic metrics to compute.
+        has_label:
+            Whether label processing is active for the block.
+        label_specs:
+            Categorical label specifications mapping head names to
+            specs.
+
+    Raises:
+        ValueError:
+            If requested indices/metrics are invalid, if required bands
+            are missing, or if label specifications are missing when
+            `has_label` is `True`.
+    '''
+    band_map = [b.lower() for b in band_names]
+
+    if add_spectral:
+        spectral = [s.lower() for s in add_spectral]
+        invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
+        if invalid:
+            raise ValueError(f'Invalid spectral indices: {invalid}')
+
+        if 'red' not in band_map:
+            raise ValueError('Unable to add spectrals: red band missing')
+        if 'ndvi' in spectral and 'nir' not in band_map:
+            raise ValueError('NDVI calculation: NIR band missing')
+        if 'ndmi' in spectral and 'swir1' not in band_map:
+            raise ValueError('NDMI calculation: SWIR1 band missing')
+        if 'nbr' in spectral and 'swir2' not in band_map:
+            raise ValueError('NBR calculation: SWIR2 band missing')
+
+    if add_topo:
+        topo = [t.lower() for t in add_topo]
+        invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
+        if invalid:
+            raise ValueError(f'Invalid topo features: {invalid}')
+
+        if 'dem' not in band_map:
+            raise ValueError('DEM band missing for topographical features')
+
+    if has_label and not label_specs:
+        raise ValueError('"label_specs" not provided')
+
+
 def build_data_block(
     inputs: DataBlockInputs,
     config: DataBlockConfig,
@@ -122,22 +189,16 @@ def build_data_block(
     manifest['label_nodata'] = context.label_nodata or 0
 
     image = inputs.image_array.astype(numpy.float32)
-    band_map = [b.lower() for b in context.image_band_map]
+
+    validate_block_feature_specs(
+        context.image_band_map,
+        add_spectral=config.add_spectral,
+        add_topo=config.add_topo,
+        has_label=inputs.has_label,
+        label_specs=context.label_specs,
+    )
 
     if config.add_spectral:
-        spectral = [s.lower() for s in config.add_spectral]
-        invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
-        if invalid:
-            raise ValueError(f'Invalid spectral indices: {invalid}')
-
-        if 'red' not in band_map:
-            raise ValueError('Unable to add spectrals: red band missing')
-        if 'ndvi' in spectral and 'nir' not in band_map:
-            raise ValueError('NDVI calculation: NIR band missing')
-        if 'ndmi' in spectral and 'swir1' not in band_map:
-            raise ValueError('NDMI calculation: SWIR1 band missing')
-        if 'nbr' in spectral and 'swir2' not in band_map:
-            raise ValueError('NBR calculation: SWIR2 band missing')
         image = _image_add_spectral(
             image,
             manifest,
@@ -145,13 +206,6 @@ def build_data_block(
         )
 
     if config.add_topo:
-        topo = [t.lower() for t in config.add_topo]
-        invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
-        if invalid:
-            raise ValueError(f'Invalid topo features: {invalid}')
-
-        if 'dem' not in band_map:
-            raise ValueError('DEM band missing for topographical features')
         padded_dem = inputs.pad_dem.astype(numpy.float32)
         image = _image_add_topography(
             image,
@@ -170,11 +224,10 @@ def build_data_block(
     )
 
     if inputs.has_label:
-        if not context.label_specs:
-            raise ValueError('"label_specs" not provided')
         manifest['has_label'] = True
         manifest['label_nodata'] = context.label_nodata or -1
         assert inputs.label_array is not None
+        assert context.label_specs is not None
         raw_label = inputs.label_array.astype(numpy.uint8)
         label_stack = _label_canonicalize(
             raw_label,

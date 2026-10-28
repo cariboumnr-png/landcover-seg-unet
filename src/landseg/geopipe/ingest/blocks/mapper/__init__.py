@@ -27,6 +27,7 @@ module resolution.
 
 Public APIs:
     - `map_rasters_to_grid`: Maps rasters onto grid with caching.
+    - `validate_raster_alignment`: Validates raster alignment with grid.
 '''
 
 # standard imports
@@ -37,6 +38,7 @@ import typing
 __all__ = [
     # functions
     'map_rasters_to_grid',
+    'validate_raster_alignment',
 ]
 
 
@@ -45,11 +47,18 @@ if typing.TYPE_CHECKING:
     from .lifecycle import (
         map_rasters_to_grid,
     )
+    from .mapper import (
+        validate_raster_alignment,
+    )
 
 
 def __getattr__(name: str):
     if name in {'map_rasters_to_grid'}:
         obj = importlib.import_module('.lifecycle', __package__)
+        return getattr(obj, name)
+
+    if name in {'validate_raster_alignment'}:
+        obj = importlib.import_module('.mapper', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

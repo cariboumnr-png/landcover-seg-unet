@@ -360,6 +360,47 @@ def test_config_post_init_missing_required_bands(indice, required):
         assembler.build_data_block(inputs, cfg, ctx)
 
 
+# ----- `validate_block_feature_specs` tests
+def test_validate_block_feature_specs_valid():
+    '''
+    Given: Valid band names, spectral indices, and topo features.
+    When: Validating block feature specs.
+    Then: Validation passes without raising any exceptions.
+    '''
+    bands = ['red', 'green', 'blue', 'nir', 'swir1', 'swir2', 'dem']
+    assembler.validate_block_feature_specs(
+        bands,
+        add_spectral=['ndvi', 'ndmi', 'nbr'],
+        add_topo=['slope', 'aspect', 'tpi'],
+        has_label=True,
+        label_specs=BASE_LABELSPECS,
+    )
+
+
+def test_validate_block_feature_specs_missing_label_specs():
+    '''
+    Given: `has_label=True` but no `label_specs`.
+    When: Validating block feature specs.
+    Then: Raise a ValueError indicating label specs are missing.
+    '''
+    with pytest.raises(ValueError, match='"label_specs" not provided'):
+        assembler.validate_block_feature_specs(['red'], has_label=True)
+
+
+def test_validate_block_feature_specs_invalid_features():
+    '''
+    Given: Unknown spectral or topographic features.
+    When: Validating block feature specs.
+    Then: Raise a ValueError.
+    '''
+    with pytest.raises(ValueError, match='Invalid spectral indices'):
+        assembler.validate_block_feature_specs(
+            ['red'], add_spectral=['unknown']
+        )
+    with pytest.raises(ValueError, match='Invalid topo features'):
+        assembler.validate_block_feature_specs(['dem'], add_topo=['unknown'])
+
+
 # ----- `_Calc` numerical calculators tests
 def test_calc_entropy():
     '''
