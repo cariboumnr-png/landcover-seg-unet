@@ -40,27 +40,42 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import importlib
+import pathlib
 import typing
 
 
 class _Validators:
-    @staticmethod
-    def feature_specs(*args, **kwargs):
-        '''Validate feature engineering specs.'''
-        import landseg.geopipe.ingest.blocks.assembler.builder as builder
-        return builder.validate_block_feature_specs(*args, **kwargs)
 
     @staticmethod
-    def pool_compatibility(*args, **kwargs):
+    def feature_specs(
+        image_fpath: pathlib.Path | typing.Any,
+        label_fpath: pathlib.Path | None = None,
+        *,
+        add_spectral: list[str] | None = None,
+        add_topo: list[str] | None = None,
+    ) -> None:
+        '''Validate feature engineering specs.'''
+        import landseg.geopipe.ingest.blocks.assembler.io as io
+        if isinstance(image_fpath, io.RasterReadContext):
+            image_fpath.validate_feature_specs(
+                add_spectral=add_spectral,
+                add_topo=add_topo,
+            )
+        else:
+            ctx = io.RasterReadContext.from_rasters(image_fpath, label_fpath)
+            ctx.validate_feature_specs(add_spectral, add_topo)
+
+    @staticmethod
+    def pool_compatibility(*args, **kwargs) -> None:
         ''' Validate pool grid alignment.'''
         import landseg.geopipe.ingest.context as context
-        return context.verify_pool_grid_compatibility(*args, **kwargs)
+        context.verify_pool_grid_compatibility(*args, **kwargs)
 
     @staticmethod
-    def raster_alignment(*args, **kwargs):
+    def raster_alignment(*args, **kwargs) -> None:
         '''Validate raster CRS and resolution.'''
         import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
-        return mapper.validate_raster_alignment(*args, **kwargs)
+        mapper.validate_raster_alignment(*args, **kwargs)
 
 validators = _Validators()
 

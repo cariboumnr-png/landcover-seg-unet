@@ -28,142 +28,26 @@ multi-head label stacks, and initial per-block statistics into a
 materialized DataBlock.
 
 Public APIs:
-    - DataBlockInputs: container for raw arrays to construct a DataBlock.
-    - DataBlockConfig: build-time configuration for feature engineering.
     - build_data_block: construct a DataBlock with derived features.
-    - validate_block_feature_specs: validate block feature specs.
 '''
 
 # standard imports
-import collections.abc
-import dataclasses
 import math
 # third-party imports
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
-
-
-# ----- public dataclasses
-@dataclasses.dataclass
-class DataBlockInputs:
-    '''Container for source materials needed to build a `DataBlock`.'''
-    block_name: str
-    image_array: numpy.ndarray
-    image_padded_dem: numpy.ndarray | None
-    label_array: numpy.ndarray | None
-
-    def __post_init__(self):
-        if self.image_array.ndim != 3:
-            raise ValueError('Image array is not of shape [C, H, W]')
-
-        if self.label_array is not None:
-            if self.label_array.ndim != 3:
-                raise ValueError('Label array is not of shape [C, H, W]')
-            if self.image_array.shape[-2:] != self.label_array.shape[-2:]:
-                raise ValueError('Image and label arrays have different H / W')
-
-    @property
-    def has_label(self) -> bool:
-        '''Return `True` if label array is provided.'''
-        return self.label_array is not None
-
-    @property
-    def pad_dem(self) -> numpy.ndarray:
-        '''Return padded DEM array if provided.'''
-        if self.image_padded_dem is None:
-            raise ValueError('Cannot access padded DEM as it is not provided')
-        return self.image_padded_dem
-
-
-@dataclasses.dataclass(frozen=True)
-class DataBlockConfig:
-    '''Build-time config for feature engineering and data encoding.'''
-    image_dem_pad_px: int
-    label_ignore_index: int = 255
-    add_spectral: list[str] | None = None
-    add_topo: list[str] | None = None
-
-
-@dataclasses.dataclass(frozen=True)
-class DataBlockContext:
-    '''Context for data blocks building.'''
-    image_band_map: dict[str, int]
-    image_nodata: float
-    label_specs: dict[str, geo_core.CategoricalSpec] | None = None
-    label_nodata: int | None = None
+import landseg.geopipe.ingest.blocks.assembler.io as io
 
 
 # ----- public functions
-def validate_block_feature_specs(
-    band_names: collections.abc.Iterable[str],
-    *,
-    add_spectral: collections.abc.Iterable[str] | None = None,
-    add_topo: collections.abc.Iterable[str] | None = None,
-    has_label: bool = False,
-    label_specs: dict[str, geo_core.CategoricalSpec] | None = None,
-) -> None:
-    '''
-    Validate spectral, topographic, and label feature specifications.
-
-    Verifies that requested spectral indices and topographic metrics
-    are supported and have all prerequisite bands available in the
-    input band map. Also verifies that label specifications are provided
-    when label processing is enabled.
-
-    Args:
-        band_names:
-            Band names present in the input imagery.
-        add_spectral:
-            Optional sequence of spectral indices to compute.
-        add_topo:
-            Optional sequence of topographic metrics to compute.
-        has_label:
-            Whether label processing is active for the block.
-        label_specs:
-            Categorical label specifications mapping head names to
-            specs.
-
-    Raises:
-        ValueError:
-            If requested indices/metrics are invalid, if required bands
-            are missing, or if label specifications are missing when
-            `has_label` is `True`.
-    '''
-    band_map = [b.lower() for b in band_names]
-
-    if add_spectral:
-        spectral = [s.lower() for s in add_spectral]
-        invalid = [s for s in spectral if s not in ['ndvi', 'ndmi', 'nbr']]
-        if invalid:
-            raise ValueError(f'Invalid spectral indices: {invalid}')
-
-        if 'red' not in band_map:
-            raise ValueError('Unable to add spectrals: red band missing')
-        if 'ndvi' in spectral and 'nir' not in band_map:
-            raise ValueError('NDVI calculation: NIR band missing')
-        if 'ndmi' in spectral and 'swir1' not in band_map:
-            raise ValueError('NDMI calculation: SWIR1 band missing')
-        if 'nbr' in spectral and 'swir2' not in band_map:
-            raise ValueError('NBR calculation: SWIR2 band missing')
-
-    if add_topo:
-        topo = [t.lower() for t in add_topo]
-        invalid = [t for t in topo if t not in ['slope', 'aspect', 'tpi']]
-        if invalid:
-            raise ValueError(f'Invalid topo features: {invalid}')
-
-        if 'dem' not in band_map:
-            raise ValueError('DEM band missing for topographical features')
-
-    if has_label and not label_specs:
-        raise ValueError('"label_specs" not provided')
-
-
 def build_data_block(
-    inputs: DataBlockInputs,
-    config: DataBlockConfig,
-    context: DataBlockContext,
+    block_name: str,
+    raster_data: io.RasterReadOutput,
+    *,
+    ignore_index: int = 255,
+    add_spectral: list[str] | None = None,
+    add_topo: list[str] | None = None,
 ) -> geo_core.DataBlock:
     '''
     Construct a DataBlock from source arrays and build config.
@@ -173,74 +57,63 @@ def build_data_block(
     valid mask generation, and per-band statistical summaries.
 
     Args:
-        inputs:
-            source arrays and metadata required to build the block.
-        config:
-            build configuration controlling feature engineering.
+        block_name:
+            Unique identifier for the block.
+        raster_data:
+            Loaded raster arrays and metadata from `io.RasterReadOutput`.
+        ignore_index:
+            Target ignore index for categorical labels.
+        add_spectral:
+            Optional sequence of spectral indices to compute.
+        add_topo:
+            Optional sequence of topographic metrics to compute.
 
     Returns:
         geo_core.DataBlock:
-            a fully populated block instance.
+            A fully populated block instance.
     '''
-    manifest = geo_core.DataBlock.empty_manifest(inputs.block_name)
-    manifest['image_band_map'] = dict(context.image_band_map)
-    manifest['image_nodata'] = context.image_nodata
-    manifest['label_ignore_index'] = config.label_ignore_index
-    manifest['label_nodata'] = context.label_nodata or 0
+    manifest = geo_core.DataBlock.empty_manifest(block_name)
+    manifest['image_band_map'] = dict(raster_data.image_band_map) # shallow copy
+    manifest['image_nodata'] = raster_data.image_nodata
+    manifest['label_ignore_index'] = ignore_index
+    manifest['label_nodata'] = raster_data.label_nodata or 0
 
-    image = inputs.image_array.astype(numpy.float32)
+    image = raster_data.image_array.astype(numpy.float32)
 
-    validate_block_feature_specs(
-        context.image_band_map,
-        add_spectral=config.add_spectral,
-        add_topo=config.add_topo,
-        has_label=inputs.has_label,
-        label_specs=context.label_specs,
-    )
-
-    if config.add_spectral:
+    if add_spectral:
         image = _image_add_spectral(
             image,
             manifest,
-            [item.lower() for item in config.add_spectral],
+            [item.lower() for item in add_spectral],
         )
 
-    if config.add_topo:
-        padded_dem = inputs.pad_dem.astype(numpy.float32)
+    if add_topo:
         image = _image_add_topography(
             image,
-            padded_dem,
+            raster_data.pad_dem.astype(numpy.float32),
             manifest,
-            [item.lower() for item in config.add_topo],
-            config.image_dem_pad_px,
+            [item.lower() for item in add_topo],
         )
 
-    valid_mask, img_ratio = _image_get_valid_mask(
-        image, manifest['image_nodata']
-    )
+    valid_mask, img_ratio = _image_get_valid_mask(image, manifest['image_nodata'])
     manifest['valid_ratios']['image'] = img_ratio
-    manifest['image_stats'] = _image_get_stats(
-        image, manifest['image_nodata']
-    )
+    manifest['image_stats'] = _image_get_stats(image, manifest['image_nodata'])
 
-    if inputs.has_label:
+    if raster_data.label_array is not None:
+        assert raster_data.label_specs is not None
+
         manifest['has_label'] = True
-        manifest['label_nodata'] = context.label_nodata or -1
-        assert inputs.label_array is not None
-        assert context.label_specs is not None
-        raw_label = inputs.label_array.astype(numpy.uint8)
-        label_stack = _label_canonicalize(
-            raw_label,
-            context.label_specs,
-            manifest,
-        )
+        manifest['label_nodata'] = raster_data.label_nodata or -1
+
+        raw_lbl = raster_data.label_array.astype(numpy.uint8)
+        lbl_stack = _canonicalize_lbl(raw_lbl, raster_data.label_specs, manifest)
     else:
-        label_stack = numpy.array([1])
+        lbl_stack = numpy.array([1])
         manifest['has_label'] = False
 
     arrays = geo_core.DataBlockArrays(
         image=image,
-        label=label_stack,
+        label=lbl_stack,
         valid_mask=valid_mask,
     )
     arrays.validate()
@@ -317,7 +190,6 @@ def _image_add_topography(
     padded_dem: numpy.ndarray,
     manifest: geo_core.DataBlockManifest,
     features: list[str],
-    pad: int,
 ) -> numpy.ndarray:
     '''Add topographical metrics to the image array.'''
     arrs = {
@@ -326,16 +198,13 @@ def _image_add_topography(
         'sin_a': numpy.zeros_like(image[0], dtype=numpy.float32),
         'tpi': numpy.zeros_like(image[0], dtype=numpy.float32),
     }
-    max_h, max_w = padded_dem.shape
-    if not image[0].shape == (max_h - 2 * pad, max_w - 2 * pad):
-        raise ValueError(
-            f'Mismatch in image dimensions: {image[0].shape} vs'
-            f'({max_h - 2 * pad}, {max_w - 2 * pad}), padding: {pad}'
-        )
+    # image [C, H, W] vs padded_dem [H, W]
+    pad_h = (padded_dem.shape[0] - image.shape[1]) // 2
+    pad_w = (padded_dem.shape[1] - image.shape[2]) // 2
+    assert pad_h == pad_w # sanity on square tiles
+    nodata = manifest['image_nodata']
 
-    _compute_topo_windows(
-        padded_dem, arrs, features, pad, manifest['image_nodata']
-    )
+    _compute_topo_windows(padded_dem, arrs, features, pad_h, nodata)
 
     band_idx = manifest['image_band_map']
     topos: list[numpy.ndarray] = []
@@ -410,6 +279,22 @@ def _image_get_stats(
     return stats
 
 
+def _canonicalize_lbl(
+    raw_label: numpy.ndarray,
+    lbl_specs: dict[str, geo_core.CategoricalSpec],
+    manifest: geo_core.DataBlockManifest,
+) -> numpy.ndarray:
+    '''Normalize the label stack based on label specs.'''
+    stack: list[numpy.ndarray] = []
+    for i, (name, spec) in enumerate(lbl_specs.items(), 1):
+        manifest['label_band_map'][name] = i - 1
+        arr = raw_label[i - 1]
+        normalized = _canonicalize_single_head(arr, spec, name, manifest)
+        stack.append(normalized)
+
+    return numpy.stack(stack, axis=0)
+
+
 def _canonicalize_single_head(
     arr: numpy.ndarray,
     spec: geo_core.CategoricalSpec,
@@ -445,24 +330,6 @@ def _canonicalize_single_head(
         manifest['label_taxonomy'][name] = spec['taxonomy']
 
     return normalized
-
-
-def _label_canonicalize(
-    raw_label: numpy.ndarray,
-    lbl_specs: dict[str, geo_core.CategoricalSpec],
-    manifest: geo_core.DataBlockManifest,
-) -> numpy.ndarray:
-    '''Normalize the label stack based on label specs.'''
-    stack: list[numpy.ndarray] = []
-    for i, (name, spec) in enumerate(lbl_specs.items(), 1):
-        manifest['label_band_map'][name] = i - 1
-        arr = raw_label[i - 1]
-        normalized = _canonicalize_single_head(
-            arr, spec, name, manifest
-        )
-        stack.append(normalized)
-
-    return numpy.stack(stack, axis=0)
 
 
 # ----- private classes

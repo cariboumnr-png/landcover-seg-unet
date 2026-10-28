@@ -71,10 +71,6 @@ def run_data_ingestion(
 
         assert context.features
 
-        data_blocks_inputs = ingest_blocks.BlockBuildingInputs(
-            image_fpath=context.features,
-            label_fpath=context.labels,
-        )
         data_blocks_config = ingest_blocks.BlockBuildingConfig(
             dem_pad_px=config.datablocks.image_dem_pad,
             ignore_index=config.datablocks.ignore_index,
@@ -93,7 +89,8 @@ def run_data_ingestion(
         )
 
         ingest_blocks.run_blocks_building(
-            data_blocks_inputs,
+            context.features,
+            context.labels,
             data_blocks_config,
             data_blocks_context,
             logger=logger,
