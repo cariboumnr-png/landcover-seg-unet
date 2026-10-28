@@ -23,7 +23,6 @@
 
 # standard imports
 import dataclasses
-import re
 # local imports
 import landseg.configs.schema.base as base
 
@@ -37,19 +36,19 @@ class GridSpecs(base.BaseConfigSection):
     extent_in_crs_units: tuple[float, float] = (0.0, 0.0)
 
     def validate(self):
-        if not bool(re.fullmatch(r'epsg:\d+', self.crs_string, re.I)):
-            raise base.ConfigValidationError(
-                f'CRS string must be [EPSG:xxxx], got {self.crs_string}'
-            )
-        px_x, px_y = self.pixel_size
-        self.require_float_min(px_x, 'pixel_size_x', 0.0)
-        self.require_float_min(px_y, 'pixel_size_y', 0.0)
-        if px_x != px_y:
+        self.require_str(self.crs_string, 'CRS (string)')
+        self.require_sequence(self.origin, 'origin', 2)
+
+        px, py = self.require_sequence(self.pixel_size, 'pixel_size', 2)
+        px = self.require_float_min(px, 'pixel_size_x', 0.0)
+        py = self.require_float_min(py, 'pixel_size_y', 0.0)
+        if px != py:
             raise ValueError('Only square pixels are supported')
 
-        ex_x, ex_y = self.extent_in_crs_units
-        self.require_float_min(ex_x, 'extent_x', 0.0)
-        self.require_float_min(ex_y, 'extent_y', 0.0)
+        ex, ey = self.require_sequence(self.extent_in_crs_units, 'extent', 2)
+        self.require_float_min(ex, 'extent_x', 0.0)
+        self.require_float_min(ey, 'extent_y', 0.0)
+
 
 @dataclasses.dataclass
 class WorldGridConfig(base.BaseConfigSection):
@@ -62,24 +61,21 @@ class WorldGridConfig(base.BaseConfigSection):
     output_dpath: str = '${execution.exp_root}/artifacts/world_grids'
 
     def validate(self) -> None:
-        # currently we only accept equal row and col sizes and strides
-        if self.tile_size[0] != self.tile_size[1]:
+        tx, ty = self.require_sequence(self.tile_size, 'tile_size', 2)
+        tx = self.require_int_min(tx, 'tile_size_x', 1)
+        ty = self.require_int_min(ty, 'tile_size_y', 1)
+        if tx != ty:
             raise ValueError('Only square blocks are supported.')
-        if self.tile_size[0] <= 0:
-            raise ValueError('Block size must be positive.')
 
-        if self.tile_stride[0] != self.tile_stride[1]:
+        sx, sy = self.require_sequence(self.tile_stride, 'tile_stride', 2)
+        sx = self.require_int_range(sx, 'tile_stride_x', (1, tx))
+        sy = self.require_int_range(sy, 'tile_stride_y', (1, ty))
+        if sx != sy:
             raise ValueError('Only equal row/column stride is supported.')
-        if self.tile_stride[0] < 0:
-            raise ValueError('Block stride must be zero or positive.')
 
         match self.mode:
-            case 'ref':
-                self.require_file(self.ref_fpath, 'grid reference raster')
-
-            case 'manual':
-                self.manual_specs.validate()
-
+            case 'ref': pass # defer file system checks to domain validation
+            case 'manual': self.manual_specs.validate()
             case _: raise base.ConfigValidationError(
                 f'Grid mode can either be "ref" or "manual", got: {self.mode}'
             )

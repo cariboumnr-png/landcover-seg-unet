@@ -91,18 +91,7 @@ def prepare_world_grid(
     else:
         if not config:
             raise ValueError('No config for grid generation is found')
-        _grid = builder.build_grid(
-            tile_size=config.tile_size,
-            tile_stride=config.tile_stride,
-            mode=config.mode,
-            ref_fpath=pathlib.Path(config.ref_fpath) if config.ref_fpath else None,
-            manual_specs=builder.GridConfigs(
-                crs_string=config.manual_specs.crs_string,
-                origin=config.manual_specs.origin,
-                pixel_size=config.manual_specs.pixel_size,
-                extent_in_crs_units=config.manual_specs.extent_in_crs_units,
-            ),
-        )
+        _grid = builder.build_grid(config)
         payload = _grid.to_payload()
         ctrl.persist(payload)
         is_loaded = False

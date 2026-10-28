@@ -153,7 +153,7 @@ def map_rasters(
             ),
             grid_id=world_grid.gid,
             tile_shape=world_grid.tile_size,
-            tile_overlap=world_grid.tile_overlap,
+            tile_overlap=world_grid.tile_stride,
         )
 
 

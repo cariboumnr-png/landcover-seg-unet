@@ -92,12 +92,9 @@ class GridSpec:
     tile_stride: tuple[int, int]                  # rows, cols in pixels
     grid_extent: tuple[float, float]              # H_y, W_x in in CRS units
 
-    def __post_init__(self):
-        '''Validate tile stride is smaller than tile size.'''
-        ts, to = self.tile_size, self.tile_stride
-        if not (to[0] < ts[0] and to[1] < ts[1]):
-            raise ValueError('Overlap must be smaller than block size.')
-
+    def as_dict(self):
+        '''Return dict repr.'''
+        return dataclasses.asdict(self)
 
 # ----- public classes
 class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
@@ -190,7 +187,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
         return self._spec.tile_size
 
     @property
-    def tile_overlap(self) -> tuple[int, int]:
+    def tile_stride(self) -> tuple[int, int]:
         '''Return the overlap between adjacent tiles in pixels.'''
         return self._spec.tile_stride
 
@@ -380,8 +377,8 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
         row_px = math.floor(spec.grid_extent[0] / spec.pixel_size[1])
         col_px = math.floor(spec.grid_extent[1] / spec.pixel_size[0])
         # iterate through the blocks by row then col
-        ystep = spec.tile_size[0] - spec.tile_stride[0]
-        xstep = spec.tile_size[1] - spec.tile_stride[1]
+        ystep = spec.tile_stride[0]
+        xstep = spec.tile_stride[1]
         for y in range(0, row_px, ystep):
             for x in range(0, col_px, xstep):
                 # dynamically adjust window size to stay within bounds

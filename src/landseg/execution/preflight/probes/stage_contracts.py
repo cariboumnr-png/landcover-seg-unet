@@ -41,8 +41,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.grid.builder as grid_builder
-import landseg.geopipe.grid.handlers as grid_handlers
+import landseg.geopipe.grid as grid_mod
 import landseg.geopipe.harmonize.handlers as harmonize_handlers
 import landseg.geopipe.ingest.handlers as ingest_handlers
 import landseg.geopipe.prepare.handlers as prepare_handlers
@@ -68,38 +67,13 @@ def grid_inputs(
     '''
     grid_cfg = config.data.world_grid
     try:
-        manual_specs = None
-        if grid_cfg.mode == 'manual':
-            manual_specs = grid_builder.GridConfigs(
-                crs_string=grid_cfg.manual_specs.crs_string,
-                origin=grid_cfg.manual_specs.origin,
-                pixel_size=grid_cfg.manual_specs.pixel_size,
-                extent_in_crs_units=grid_cfg.manual_specs.extent_in_crs_units,
-            )
-        grid = grid_handlers.validate_grid_inputs(
-            tile_size=grid_cfg.tile_size,
-            tile_stride=grid_cfg.tile_stride,
-            mode=grid_cfg.mode,
-            ref_fpath=(
-                pathlib.Path(grid_cfg.ref_fpath)
-                if grid_cfg.ref_fpath
-                else None
-            ),
-            manual_specs=manual_specs,
-        )
+        grid_specs = grid_mod.validate_inputs(grid_cfg)
         return schema.ProbeResult(
             pid=pid or 'grid_inputs',
             category='Contract',
             status=schema.ProbeStatus.PASS,
-            message=(
-                f'World grid inputs verified (grid_id: {grid.gid}, '
-                f'tiles: {len(grid)})'
-            ),
-            details={
-                'grid_id': grid.gid,
-                'mode': grid_cfg.mode,
-                'tiles': len(grid),
-            },
+            message='World grid inputs verified',
+            details={**grid_specs.as_dict()},
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
         return schema.ProbeResult(

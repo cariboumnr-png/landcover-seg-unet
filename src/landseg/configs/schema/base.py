@@ -49,6 +49,8 @@ class BaseConfigSection:
         '''Validate section integrity. Default is a no-op.'''
         return None
 
+    validator = val
+
     @staticmethod
     def require_types(
         value: object,
@@ -107,7 +109,7 @@ class BaseConfigSection:
         name: str,
         value_range: tuple[int, int],
     ) -> int:
-        '''Require an integer within range.'''
+        '''Require an integer within rang (min <= x <=max)e.'''
         return val.require_numeric_range(value, name, value_range, int)
 
     @staticmethod
@@ -134,7 +136,7 @@ class BaseConfigSection:
         name: str,
         value_range: tuple[float, float],
     ) -> float:
-        '''Require a float within range.'''
+        '''Require a float within range (min <= x <=max).'''
         return val.require_numeric_range(value, name, value_range, float)
 
     @staticmethod

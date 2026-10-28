@@ -88,7 +88,7 @@ class GridLogger(utils.Logger):
             'crs': world_grid.crs,
             'pixel_size': world_grid.pixel_size,
             'tile_size': world_grid.tile_size,
-            'tile_overlap': world_grid.tile_overlap,
+            'tile_overlap': world_grid.tile_stride,
         }
         if self.summary is not None:
             self.summary['grid'] = grid_report

@@ -41,14 +41,14 @@ __all__ = [
     'GridLogger',
     # functions
     'prepare_world_grid',
-    'validate_grid_inputs',
+    'validate_inputs',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .handlers import (
-        validate_grid_inputs,
+    from .builder import (
+        validate_inputs,
     )
     from .lifecycle import (
         prepare_world_grid,
@@ -60,9 +60,9 @@ if typing.TYPE_CHECKING:
 
 def __getattr__(name: str):
     if name in {
-        'validate_grid_inputs',
+        'validate_inputs',
     }:
-        obj = importlib.import_module('.handlers', __package__)
+        obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
     if name in {

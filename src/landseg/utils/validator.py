@@ -192,7 +192,7 @@ def require_numeric_range(
     require_range: NumericRange,
     require_type: type[T] | None = None,
 ) -> T | float | int:
-    '''Require a number within closed range (min, max).'''
+    '''Require a number within closed range (min <= x <=max).'''
     _value = require_numeric(value, value_name, require_type)
     _require_range = require_numeric_sequence(require_range, 'range', k=2)
     mmin, mmax = _require_range
