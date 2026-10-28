@@ -84,12 +84,7 @@ def inspect_target(
             results.extend([
                 probes.dir_writable(grid_paths.root, 'world_grid_output'),
                 probes.target_file_exists(grid_paths.report, 'world_grid_report'),
-                probes.spatial_reference(root_config),
-                probes.crs_info(root_config),
-                probes.pixel_size(root_config),
-                probes.grid_extent(root_config),
-                probes.grid_origin(root_config),
-                probes.grid_specs(root_config),
+                probes.grid_inputs(root_config),
             ])
 
         case 'data-harmonize':

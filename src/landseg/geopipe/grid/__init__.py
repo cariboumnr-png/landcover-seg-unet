@@ -28,6 +28,7 @@ resolution to keep import order simple and circular-free.
 Public APIs:
     - `GridLogger`: Logger tracking world grid execution and report.
     - `prepare_world_grid`: Build or load persisted world grid artifact.
+    - `validate_grid_inputs`: Construct and validate world grid layout.
 '''
 
 # standard imports
@@ -40,11 +41,15 @@ __all__ = [
     'GridLogger',
     # functions
     'prepare_world_grid',
+    'validate_grid_inputs',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .handlers import (
+        validate_grid_inputs,
+    )
     from .lifecycle import (
         prepare_world_grid,
     )
@@ -54,6 +59,12 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'validate_grid_inputs',
+    }:
+        obj = importlib.import_module('.handlers', __package__)
+        return getattr(obj, name)
+
     if name in {
         'prepare_world_grid',
     }:

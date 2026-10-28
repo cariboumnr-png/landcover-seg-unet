@@ -20,10 +20,10 @@
 # =========================================================================== #
 
 '''
-Diagnostic probe library for pre-flight readiness checks.
+Preflight validation probes package.
 
-Exposes specialized probes for hardware, filesystem storage, spatial
-contracts, run ledgers, model specifications, and optimization studies.
+Provides automated environment, hardware, dataset, policy, and spatial
+probes that can be combined into custom pipelines.
 '''
 
 # standard imports
@@ -32,25 +32,20 @@ import importlib
 import typing
 
 __all__ = [
-    'ingestion_pool_state',
     'checkpoint_ready',
     'collision_policy',
-    'crs_info',
     'dir_writable',
     'eval_split',
-    'grid_extent',
-    'grid_origin',
+    'grid_inputs',
     'grid_reference',
-    'grid_specs',
     'hardware_info',
+    'ingestion_pool_state',
     'manifest_contract',
     'model_body',
     'past_runs',
     'pending_harmonization',
     'pending_ingestion',
-    'pixel_size',
     'prepared_blocks_state',
-    'spatial_reference',
     'target_file_exists',
 ]
 
@@ -79,15 +74,8 @@ if typing.TYPE_CHECKING:
     from .policy import (
         collision_policy,
     )
-    from .spatial import (
-        crs_info,
-        grid_extent,
-        grid_origin,
-        grid_specs,
-        pixel_size,
-        spatial_reference,
-    )
     from .stage_contracts import (
+        grid_inputs,
         grid_reference,
         manifest_contract,
     )
@@ -133,17 +121,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'crs_info',
-        'grid_extent',
-        'grid_origin',
-        'grid_specs',
-        'pixel_size',
-        'spatial_reference',
-    }:
-        obj = importlib.import_module('.spatial', __package__)
-        return getattr(obj, name)
-
-    if name in {
+        'grid_inputs',
         'grid_reference',
         'manifest_contract',
     }:

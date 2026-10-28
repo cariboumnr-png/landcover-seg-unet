@@ -158,23 +158,6 @@ def test_probe_filesystem(tmp_path):
     assert file_result.status == preflight.ProbeStatus.PASS
 
 
-def test_probe_spatial():
-    '''
-    Given: A RootConfig with world grid parameters.
-    When: Spatial probes are invoked.
-    Then: Return valid probe results with category Spatial.
-    '''
-    cfg = configs.RootConfig()
-    ref_result = preflight.probes.spatial_reference(cfg)
-    crs_result = preflight.probes.crs_info(cfg)
-    pix_result = preflight.probes.pixel_size(cfg)
-
-    assert ref_result.category == 'Spatial'
-    assert ref_result.pid == 'world_grid_reference'
-    assert crs_result.pid == 'crs'
-    assert pix_result.pid == 'pixel_size'
-
-
 def test_probe_ledger(tmp_path):
     '''
     Given: A RootConfig pointing to a temporary experiment root.
@@ -322,6 +305,53 @@ def test_probe_grid_reference_failure(monkeypatch):
     assert result.category == 'Contract'
     assert result.status == preflight.ProbeStatus.FAIL
     assert 'Corrupt grid layout payload' in result.message
+
+
+def test_probe_grid_inputs_success(monkeypatch):
+    '''
+    Given: A RootConfig with valid world grid inputs.
+    When: `grid_inputs()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    class _MockGrid:
+        gid = 'grid_utm17'
+        def __len__(self):
+            return 4
+
+    cfg = configs.RootConfig()
+    cfg.data.world_grid.mode = 'manual'
+    monkeypatch.setattr(
+        'landseg.geopipe.grid.handlers.validate_grid_inputs',
+        lambda **kwargs: _MockGrid(),
+    )
+    result = preflight.probes.grid_inputs(cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'grid_inputs'
+    assert result.status == preflight.ProbeStatus.PASS
+    assert 'grid_id: grid_utm17' in result.message
+    assert 'tiles: 4' in result.message
+
+
+def test_probe_grid_inputs_failure(monkeypatch):
+    '''
+    Given: A grid handler raising an exception during grid construction.
+    When: `grid_inputs()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    cfg = configs.RootConfig()
+
+    def _failing_validate(**kwargs):
+        raise ValueError('Invalid reference raster: dummy.tif')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.grid.handlers.validate_grid_inputs',
+        _failing_validate,
+    )
+    result = preflight.probes.grid_inputs(cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'grid_inputs'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'Invalid reference raster' in result.message
 
 
 def test_inspect_target():

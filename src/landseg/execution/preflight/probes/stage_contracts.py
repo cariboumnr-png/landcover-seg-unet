@@ -20,12 +20,14 @@
 # =========================================================================== #
 
 '''
-Stage contract diagnostic probes backed by authoritative domain handlers.
+Stage contract diagnostic probes backed by authoritative domain
+handlers.
 
 Invokes domain validation routines directly from pipeline stages to
 verify contract compliance before execution.
 
 Public APIs:
+    - `grid_inputs`: Validate world grid definition inputs.
     - `grid_reference`: Validate world grid reference artifact.
     - `manifest_contract`: Validate dataset manifest contract.
 '''
@@ -36,10 +38,74 @@ import pathlib
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
+import landseg.geopipe.grid.builder as grid_builder
+import landseg.geopipe.grid.handlers as grid_handlers
 import landseg.geopipe.harmonize.handlers as harmonize_handlers
 
 
 # ----- public functions
+def grid_inputs(
+    config: configs.RootConfig,
+    pid: str | None = None,
+) -> schema.ProbeResult:
+    '''
+    Validate world grid definition inputs through domain handler.
+
+    Args:
+        config:
+            Root configuration containing world grid options.
+        pid:
+            Optional probe identifier override.
+
+    Returns:
+        schema.ProbeResult:
+            Evaluation result with status PASS or FAIL.
+    '''
+    grid_cfg = config.data.world_grid
+    try:
+        manual_specs = None
+        if grid_cfg.mode == 'manual':
+            manual_specs = grid_builder.GridConfigs(
+                crs_string=grid_cfg.manual_specs.crs_string,
+                origin=grid_cfg.manual_specs.origin,
+                pixel_size=grid_cfg.manual_specs.pixel_size,
+                extent_in_crs_units=grid_cfg.manual_specs.extent_in_crs_units,
+            )
+        grid = grid_handlers.validate_grid_inputs(
+            tile_size=grid_cfg.tile_size,
+            tile_stride=grid_cfg.tile_stride,
+            mode=grid_cfg.mode,
+            ref_fpath=(
+                pathlib.Path(grid_cfg.ref_fpath)
+                if grid_cfg.ref_fpath
+                else None
+            ),
+            manual_specs=manual_specs,
+        )
+        return schema.ProbeResult(
+            pid=pid or 'grid_inputs',
+            category='Contract',
+            status=schema.ProbeStatus.PASS,
+            message=(
+                f'World grid inputs verified (grid_id: {grid.gid}, '
+                f'tiles: {len(grid)})'
+            ),
+            details={
+                'grid_id': grid.gid,
+                'mode': grid_cfg.mode,
+                'tiles': len(grid),
+            },
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return schema.ProbeResult(
+            pid=pid or 'grid_inputs',
+            category='Contract',
+            status=schema.ProbeStatus.FAIL,
+            message=f'World grid inputs invalid: {err}',
+            details={'error': str(err), 'mode': getattr(grid_cfg, 'mode', None)},
+        )
+
+
 def grid_reference(
     report_or_config: configs.RootConfig | pathlib.Path | str,
     pid: str | None = None,
