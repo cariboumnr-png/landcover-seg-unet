@@ -110,7 +110,7 @@ def inspect_target(
         case 'data-prepare':
             results.extend([
                 probes.dir_writable(prep_paths.root, 'preparation_output'),
-                probes.target_file_exists(prep_paths.report, 'preparation_report'),
+                probes.preparation_contract(artifact_paths, root_config),
                 probes.ingestion_pool_state(artifact_paths),
                 probes.prepared_blocks_state(artifact_paths),
             ])

@@ -31,6 +31,7 @@ Public APIs:
     - `grid_reference`: Validate world grid reference artifact.
     - `manifest_contract`: Validate dataset manifest contract.
     - `pool_grid_compatibility`: Validate pool grid compatibility.
+    - `preparation_contract`: Validate data preparation contract.
 '''
 
 # standard imports
@@ -44,6 +45,7 @@ import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.grid.handlers as grid_handlers
 import landseg.geopipe.harmonize.handlers as harmonize_handlers
 import landseg.geopipe.ingest.handlers as ingest_handlers
+import landseg.geopipe.prepare.handlers as prepare_handlers
 
 
 # ----- public functions
@@ -294,5 +296,117 @@ def pool_grid_compatibility(
             category='Contract',
             status=schema.ProbeStatus.FAIL,
             message=f'Pool grid compatibility invalid: {err}',
+            details={'schema_fpath': str(schema_fp), 'error': str(err)},
+        )
+
+
+def preparation_contract(
+    paths_or_config: (
+        configs.RootConfig | artifacts.ArtifactPaths | pathlib.Path
+    ),
+    config: configs.RootConfig | None = None,
+    pid: str | None = None,
+) -> schema.ProbeResult:
+    '''
+    Validate data preparation contract through domain handlers.
+
+    Verifies upstream ingestion schema and catalog, and validates
+    requested feature channels and target head configurations against
+    the dataset schema.
+
+    Args:
+        paths_or_config:
+            RootConfig, ArtifactPaths, or direct path to schema JSON.
+        config:
+            Optional RootConfig if `paths_or_config` is ArtifactPaths.
+        pid:
+            Optional probe identifier override.
+
+    Returns:
+        schema.ProbeResult:
+            Evaluation result with status PASS or FAIL.
+    '''
+    schema_fp: pathlib.Path
+    root_cfg: configs.RootConfig | None
+
+    if isinstance(paths_or_config, (pathlib.Path, str)):
+        schema_fp = pathlib.Path(paths_or_config)
+        root_cfg = config
+    elif isinstance(paths_or_config, configs.RootConfig):
+        root_cfg = paths_or_config
+        paths = artifacts.ArtifactPaths.from_config(root_cfg)
+        schema_fp = paths.data_ingestion.data_blocks.schema
+    else:
+        assert isinstance(paths_or_config, artifacts.ArtifactPaths)
+        paths = paths_or_config
+        root_cfg = config
+        schema_fp = paths.data_ingestion.data_blocks.schema
+
+    if not schema_fp.exists():
+        return schema.ProbeResult(
+            pid=pid or 'preparation_contract',
+            category='Contract',
+            status=schema.ProbeStatus.FAIL,
+            message=f'Upstream ingestion schema not found at {schema_fp}',
+            details={'schema_fpath': str(schema_fp)},
+        )
+
+    try:
+        Ctrl = artifacts.Controller[geo_core.DataSchema]
+        data_schema = Ctrl(
+            schema_fp, schema_id=geo_core.data_schema.SCHEMA_ID
+        ).fetch()
+
+        if root_cfg is not None:
+            prep_cfg = root_cfg.data.preparation
+            features = prepare_handlers.validate_feature_channels(
+                data_schema, prep_cfg.datasetview.features
+            )
+            targets = prepare_handlers.validate_target_heads(
+                data_schema, prep_cfg.datasetview.targets
+            )
+            focal_head = prepare_handlers.validate_focal_head(
+                targets, prep_cfg.datasetview.focal_target
+            )
+            for aoi_name, aoi_val in [
+                ('train_aoi', prep_cfg.partition.train_aoi),
+                ('val_aoi', prep_cfg.partition.val_aoi),
+                ('test_aoi', prep_cfg.partition.test_aoi),
+            ]:
+                if aoi_val and not pathlib.Path(aoi_val).exists():
+                    raise FileNotFoundError(
+                        f'Configured {aoi_name} not found at {aoi_val}'
+                    )
+
+            return schema.ProbeResult(
+                pid=pid or 'preparation_contract',
+                category='Contract',
+                status=schema.ProbeStatus.PASS,
+                message=(
+                    f'Preparation contract verified (focal_head: {focal_head}, '
+                    f'features: {len(features.names)}, '
+                    f'target_heads: {len(targets.head_names)})'
+                ),
+                details={
+                    'focal_head': focal_head,
+                    'features': list(features.names),
+                    'target_heads': list(targets.head_names),
+                    'schema_fpath': str(schema_fp),
+                },
+            )
+
+        return schema.ProbeResult(
+            pid=pid or 'preparation_contract',
+            category='Contract',
+            status=schema.ProbeStatus.PASS,
+            message='Upstream ingestion schema verified',
+            details={'schema_fpath': str(schema_fp)},
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return schema.ProbeResult(
+            pid=pid or 'preparation_contract',
+            category='Contract',
+            status=schema.ProbeStatus.FAIL,
+            message=f'Preparation contract invalid: {err}',
             details={'schema_fpath': str(schema_fp), 'error': str(err)},
         )

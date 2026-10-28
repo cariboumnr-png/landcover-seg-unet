@@ -46,6 +46,7 @@ __all__ = [
     'pending_harmonization',
     'pending_ingestion',
     'pool_grid_compatibility',
+    'preparation_contract',
     'prepared_blocks_state',
     'target_file_exists',
 ]
@@ -80,6 +81,7 @@ if typing.TYPE_CHECKING:
         grid_reference,
         manifest_contract,
         pool_grid_compatibility,
+        preparation_contract,
     )
 
 
@@ -127,6 +129,7 @@ def __getattr__(name: str):
         'grid_reference',
         'manifest_contract',
         'pool_grid_compatibility',
+        'preparation_contract',
     }:
         obj = importlib.import_module('.stage_contracts', __package__)
         return getattr(obj, name)

@@ -405,6 +405,84 @@ def test_probe_pool_grid_compatibility_failure(monkeypatch, tmp_path):
     assert 'Grid compatibility mismatch' in result.message
 
 
+def test_probe_preparation_contract_schema_missing(tmp_path):
+    '''
+    Given: A missing upstream ingestion schema path.
+    When: `preparation_contract()` is called.
+    Then: Return a FAIL probe result with schema missing message.
+    '''
+    schema_fp = tmp_path / 'missing_schema.json'
+    result = preflight.probes.preparation_contract(schema_fp)
+    assert result.category == 'Contract'
+    assert result.pid == 'preparation_contract'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'Upstream ingestion schema not found' in result.message
+
+
+def test_probe_preparation_contract_success(monkeypatch, tmp_path):
+    '''
+    Given: Valid schema and matching dataset preparation configuration.
+    When: `preparation_contract()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    schema_fp = tmp_path / 'schema.json'
+    schema_fp.write_text('{"schema_id": "schema"}', encoding='utf-8')
+    monkeypatch.setattr(
+        artifacts.Controller,
+        'fetch',
+        lambda self: {'schema_id': 'schema'},
+    )
+    mock_features = types.SimpleNamespace(names=('b1', 'b2'))
+    mock_targets = types.SimpleNamespace(head_names=('h1',))
+    monkeypatch.setattr(
+        'landseg.geopipe.prepare.handlers.validate_feature_channels',
+        lambda schema, cfg: mock_features,
+    )
+    monkeypatch.setattr(
+        'landseg.geopipe.prepare.handlers.validate_target_heads',
+        lambda schema, cfg: mock_targets,
+    )
+    monkeypatch.setattr(
+        'landseg.geopipe.prepare.handlers.validate_focal_head',
+        lambda targets, focal: 'h1',
+    )
+    cfg = configs.RootConfig()
+    result = preflight.probes.preparation_contract(schema_fp, config=cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'preparation_contract'
+    assert result.status == preflight.ProbeStatus.PASS
+    assert 'Preparation contract verified' in result.message
+
+
+def test_probe_preparation_contract_failure(monkeypatch, tmp_path):
+    '''
+    Given: A domain handler raising KeyError on feature mismatch.
+    When: `preparation_contract()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    schema_fp = tmp_path / 'schema.json'
+    schema_fp.write_text('{"schema_id": "schema"}', encoding='utf-8')
+    monkeypatch.setattr(
+        artifacts.Controller,
+        'fetch',
+        lambda self: {'schema_id': 'schema'},
+    )
+
+    def _failing_features(schema, cfg):
+        raise KeyError('Requested feature band not found')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.prepare.handlers.validate_feature_channels',
+        _failing_features,
+    )
+    cfg = configs.RootConfig()
+    result = preflight.probes.preparation_contract(schema_fp, config=cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'preparation_contract'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'Requested feature band not found' in result.message
+
+
 def test_inspect_target():
     '''
     Given: An execution target (data-ingest).
@@ -444,9 +522,7 @@ def test_probe_canonical_ordering():
         'Hardware': 4,
     }
     targets = (
-        'world-grid',
-        'data-harmonize',
-        'data-ingest',
+        'world-grid', 'data-harmonize', 'data-ingest', 'data-prepare',
         'model-train',
     )
     for target in targets:

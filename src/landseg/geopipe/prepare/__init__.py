@@ -23,13 +23,18 @@
 Top-level namespace for `landseg.geopipe.prepare`.
 
 Exposes public dataset context builders, partitioners, materializers,
-preparation schema, and schema generators via lazy resolution.
+preparation schema, handlers, and schema generators via lazy resolution.
 
 Public APIs:
     - `PreparationContext`: Resolved execution context for prepare.
     - `PreparationLogger`: Specialized logger for preparation runs.
     - `build_preparation_context`: Build context from catalog & schema.
     - `run_data_preparation`: pipeline runner.
+    - `validate_dataset_view`: Validate and compile dataset view.
+    - `validate_feature_channels`: Validate requested feature channels.
+    - `validate_focal_head`: Validate focal target head selection.
+    - `validate_preparation_context`: Validate preparation inputs.
+    - `validate_target_heads`: Validate multi-head target hierarchy.
 '''
 
 # standard imports
@@ -44,6 +49,11 @@ __all__ = [
     # functions
     'build_preparation_context',
     'run_data_preparation',
+    'validate_dataset_view',
+    'validate_feature_channels',
+    'validate_focal_head',
+    'validate_preparation_context',
+    'validate_target_heads',
 ]
 
 
@@ -52,6 +62,13 @@ if typing.TYPE_CHECKING:
     from .context import (
         PreparationContext,
         build_preparation_context,
+    )
+    from .handlers import (
+        validate_dataset_view,
+        validate_feature_channels,
+        validate_focal_head,
+        validate_preparation_context,
+        validate_target_heads,
     )
     from .logger import (
         PreparationLogger,
@@ -62,6 +79,16 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'validate_dataset_view',
+        'validate_feature_channels',
+        'validate_focal_head',
+        'validate_preparation_context',
+        'validate_target_heads',
+    }:
+        obj = importlib.import_module('.handlers', __package__)
+        return getattr(obj, name)
+
     if name in {'PreparationContext', 'build_preparation_context'}:
         obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
