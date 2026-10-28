@@ -90,14 +90,14 @@ def require_numeric(
     '''Require an integer and a float.'''
     if require_type is float:
         if not isinstance(value, float):
-            raise ValidationError('Expected a float')
+            raise ValidationError(f'Expected a float: got {type(value)}')
         return value
     if require_type is int:
         if not isinstance(value, int):
-            raise ValidationError('Expected an integer')
+            raise ValidationError(f'Expected an integer: got {type(value)}')
         return value
     if not isinstance(value, (int, float)):
-        raise ValidationError('Expected a number')
+        raise ValidationError(f'Expected a number: got {type(value)}')
     return value
 
 

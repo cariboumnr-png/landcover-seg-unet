@@ -38,9 +38,9 @@ class StudySweepConfig(base.BaseConfigSection):
     seed: int = 42
 
     def validate(self) -> None:
-        self.val.require_string(self.study_name, 'study_name')
-        self.val.require_string(self.storage, 'storage')
-        self.val.require_string(self.preset_name, 'preset_name')
-        self.require_allowed_str(self.direction, 'direction', ['minimize', 'maximize'])
-        self.require_int_min(self.n_trials, 'n_trials', 1)
-        self.require_int_min(self.seed, 'seed', 0)
+        self.val.require_string(self.study_name)
+        self.val.require_string(self.storage)
+        self.val.require_string(self.preset_name)
+        self.val.require_value_from(self.direction, ['minimize', 'maximize'], str)
+        self.val.require_numeric_min(self.n_trials, 1, int)
+        self.val.require_numeric_min(self.seed, 0, int)

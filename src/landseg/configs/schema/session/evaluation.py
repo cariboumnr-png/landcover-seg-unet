@@ -47,6 +47,3 @@ class EvaluationConfig(base.BaseConfigSection):
 
     def validate(self) -> None:
         self.val.require_value_from(self.split, ['val', 'test'], str)
-        if self.checkpoint is None:
-            raise base.ConfigValidationError('Checkpoint is required')
-        self.val.require_file(self.checkpoint)

@@ -67,9 +67,9 @@ class Partition(base.BaseConfigSection):
     aoi_min_overlap: float = 0.5
 
     def validate(self) -> None:
-        self.val.require_numeric_range('val_ratio', (0, 1))
-        self.val.require_numeric_range('test_ratio', (0, 1))
-        self.val.require_numeric_range('aoi_min_overlap', (0, 1))
+        self.val.require_numeric_range(self.val_ratio, (0, 1))
+        self.val.require_numeric_range(self.test_ratio, (0, 1))
+        self.val.require_numeric_range(self.aoi_min_overlap, (0, 1))
 
 
 @dataclasses.dataclass

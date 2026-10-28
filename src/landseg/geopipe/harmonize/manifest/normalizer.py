@@ -225,9 +225,9 @@ def _normalize_label_schemes(
     cls_range = (index_base, index_base + num_cls - 1)
 
     normalized: dict[str, geo_core.LabelScheme] = {}
-    for k in schemes:
+    for k, v in schemes.items():
         name = val.require_string(str(k))
-        normalized[name] = _normalize_label_scheme(name, cls_range)
+        normalized[name] = _normalize_label_scheme(v, cls_range)
     return normalized
 
 
