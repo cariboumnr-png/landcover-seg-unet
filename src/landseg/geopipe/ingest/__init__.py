@@ -33,6 +33,9 @@ Public APIs:
     - `build_ingestion_context`: Load ingestion context from report.
     - `resolve_pending_ingestion_batches`: Determine batches to ingest.
     - `run_data_ingestion`: Pipeline runner.
+    - `validate_block_feature_specs`: Validate feature engineering specs.
+    - `validate_pool_grid_compatibility`: Validate pool grid alignment.
+    - `validate_raster_alignment`: Validate raster CRS and resolution.
     - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 
@@ -49,12 +52,20 @@ __all__ = [
     'build_ingestion_context',
     'resolve_pending_ingestion_batches',
     'run_data_ingestion',
+    'validate_block_feature_specs',
+    'validate_pool_grid_compatibility',
+    'validate_raster_alignment',
     'verify_pool_grid_compatibility',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .handlers import (
+        validate_block_feature_specs,
+        validate_pool_grid_compatibility,
+        validate_raster_alignment,
+    )
     from .context import (
         IngestionContext,
         build_ingestion_context,
@@ -70,6 +81,14 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
+    if name in {
+        'validate_block_feature_specs',
+        'validate_pool_grid_compatibility',
+        'validate_raster_alignment',
+    }:
+        obj = importlib.import_module('.handlers', __package__)
+        return getattr(obj, name)
+
     if name in {'IngestionLogger'}:
         obj = importlib.import_module('.logger', __package__)
         return getattr(obj, name)
