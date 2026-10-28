@@ -42,9 +42,9 @@ import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid as grid_mod
-import landseg.geopipe.harmonize.handlers as harmonize_handlers
-import landseg.geopipe.ingest.handlers as ingest_handlers
-import landseg.geopipe.prepare.handlers as prepare_handlers
+import landseg.geopipe.harmonize as harmonize_mod
+import landseg.geopipe.ingest as ingest_mod
+import landseg.geopipe.prepare as prepare_mod
 
 
 # ----- public functions
@@ -67,7 +67,7 @@ def grid_inputs(
     '''
     grid_cfg = config.data.world_grid
     try:
-        grid_specs = grid_mod.validate_inputs(grid_cfg)
+        grid_specs = grid_mod.validators.grid_reference(grid_cfg)
         return schema.ProbeResult(
             pid=pid or 'grid_inputs',
             category='Contract',
@@ -109,7 +109,7 @@ def grid_reference(
         report_fp = pathlib.Path(report_or_config)
 
     try:
-        grid, gid, grid_fp = harmonize_handlers.validate_grid_reference(report_fp)
+        grid, gid, grid_fp = harmonize_mod.validators.grid_reference(report_fp)
         return schema.ProbeResult(
             pid=pid or 'grid_reference',
             category='Contract',
@@ -161,7 +161,7 @@ def manifest_contract(
         )
 
     try:
-        entries = harmonize_handlers.validate_manifest_contract(
+        entries = harmonize_mod.validators.manifest_contract(
             pathlib.Path(manifest_fp)
         )
         return schema.ProbeResult(
@@ -230,7 +230,7 @@ def pool_grid_compatibility(
                 details={'report_fpath': str(report_fp)},
             )
         try:
-            target_grid = harmonize_handlers.validate_grid_reference(
+            target_grid = harmonize_mod.validators.grid_reference(
                 report_fp
             )[0]
         except Exception as err:  # pylint: disable=broad-exception-caught
@@ -243,7 +243,7 @@ def pool_grid_compatibility(
             )
 
     try:
-        ingest_handlers.validate_pool_grid_compatibility(
+        ingest_mod.validators.pool_compatibility(
             schema_fp, target_grid
         )
         if not schema_fp.exists():
@@ -333,13 +333,13 @@ def preparation_contract(
 
         if root_cfg is not None:
             prep_cfg = root_cfg.data.preparation
-            features = prepare_handlers.validate_feature_channels(
+            features = prepare_mod.validators.feature_channels(
                 data_schema, prep_cfg.datasetview.features
             )
-            targets = prepare_handlers.validate_target_heads(
+            targets = prepare_mod.validators.target_heads(
                 data_schema, prep_cfg.datasetview.targets
             )
-            focal_head = prepare_handlers.validate_focal_head(
+            focal_head = prepare_mod.validators.focal_head(
                 targets, prep_cfg.datasetview.focal_target
             )
             for aoi_name, aoi_val in [

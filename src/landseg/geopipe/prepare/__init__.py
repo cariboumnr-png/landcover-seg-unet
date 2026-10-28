@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=import-outside-toplevel
+
 '''
 Top-level namespace for `landseg.geopipe.prepare`.
 
@@ -30,17 +32,48 @@ Public APIs:
     - `PreparationLogger`: Specialized logger for preparation runs.
     - `build_preparation_context`: Build context from catalog & schema.
     - `run_data_preparation`: pipeline runner.
-    - `validate_dataset_view`: Validate and compile dataset view.
-    - `validate_feature_channels`: Validate requested feature channels.
-    - `validate_focal_head`: Validate focal target head selection.
-    - `validate_preparation_context`: Validate preparation inputs.
-    - `validate_target_heads`: Validate multi-head target hierarchy.
 '''
 
 # standard imports
 from __future__ import annotations
 import importlib
 import typing
+
+
+class _Validators:
+
+    @staticmethod
+    def dataset_view(*args, **kwargs):
+        '''Validate and compile dataset view.'''
+        import landseg.geopipe.prepare.dataset.view as view
+        return view.build_dataset_view(*args, **kwargs)
+
+    @staticmethod
+    def feature_channels(*args, **kwargs):
+        '''Validate requested feature channels.'''
+        import landseg.geopipe.prepare.dataset.semantics as semantics
+        return semantics.resolve_feature_channels(*args, **kwargs)
+
+    @staticmethod
+    def focal_head(*args, **kwargs):
+        '''Validate focal target head selection.'''
+        import landseg.geopipe.prepare.dataset.semantics as semantics
+        return semantics.resolve_focal_head(*args, **kwargs)
+
+    @staticmethod
+    def preparation_context(*args, **kwargs):
+        '''Validate preparation inputs.'''
+        import landseg.geopipe.prepare.context as context
+        return context.build_preparation_context(*args, **kwargs)
+
+    @staticmethod
+    def target_heads(*args, **kwargs):
+        '''Validate multi-head target hierarchy.'''
+        import landseg.geopipe.prepare.dataset.semantics as semantics
+        return semantics.resolve_target_heads(*args, **kwargs)
+
+validators = _Validators()
+
 
 __all__ = [
     # classes
@@ -49,11 +82,8 @@ __all__ = [
     # functions
     'build_preparation_context',
     'run_data_preparation',
-    'validate_dataset_view',
-    'validate_feature_channels',
-    'validate_focal_head',
-    'validate_preparation_context',
-    'validate_target_heads',
+    # namespace
+    'validators',
 ]
 
 
@@ -63,33 +93,16 @@ if typing.TYPE_CHECKING:
         PreparationContext,
         build_preparation_context,
     )
-    from .handlers import (
-        validate_dataset_view,
-        validate_feature_channels,
-        validate_focal_head,
-        validate_preparation_context,
-        validate_target_heads,
-    )
-    from .logger import (
-        PreparationLogger,
-    )
-    from .pipeline import (
-        run_data_preparation,
-    )
+    from .logger import PreparationLogger
+    from .pipeline import run_data_preparation
 
 
 def __getattr__(name: str):
-    if name in {
-        'validate_dataset_view',
-        'validate_feature_channels',
-        'validate_focal_head',
-        'validate_preparation_context',
-        'validate_target_heads',
-    }:
-        obj = importlib.import_module('.handlers', __package__)
-        return getattr(obj, name)
 
-    if name in {'PreparationContext', 'build_preparation_context'}:
+    if name in {
+        'PreparationContext',
+        'build_preparation_context'
+    }:
         obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
 

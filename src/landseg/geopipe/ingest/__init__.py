@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=import-outside-toplevel
+
 '''
 Top-level namespace for `landseg.geopipe.ingest`.
 
@@ -33,16 +35,35 @@ Public APIs:
     - `build_ingestion_context`: Load ingestion context from report.
     - `resolve_pending_ingestion_batches`: Determine batches to ingest.
     - `run_data_ingestion`: Pipeline runner.
-    - `validate_block_feature_specs`: Validate feature engineering specs.
-    - `validate_pool_grid_compatibility`: Validate pool grid alignment.
-    - `validate_raster_alignment`: Validate raster CRS and resolution.
-    - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 
 # standard imports
 from __future__ import annotations
 import importlib
 import typing
+
+
+class _Validators:
+    @staticmethod
+    def feature_specs(*args, **kwargs):
+        '''Validate feature engineering specs.'''
+        import landseg.geopipe.ingest.blocks.assembler.builder as builder
+        return builder.validate_block_feature_specs(*args, **kwargs)
+
+    @staticmethod
+    def pool_compatibility(*args, **kwargs):
+        ''' Validate pool grid alignment.'''
+        import landseg.geopipe.ingest.context as context
+        return context.verify_pool_grid_compatibility(*args, **kwargs)
+
+    @staticmethod
+    def raster_alignment(*args, **kwargs):
+        '''Validate raster CRS and resolution.'''
+        import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
+        return mapper.validate_raster_alignment(*args, **kwargs)
+
+validators = _Validators()
+
 
 __all__ = [
     # classes
@@ -52,41 +73,28 @@ __all__ = [
     'build_ingestion_context',
     'resolve_pending_ingestion_batches',
     'run_data_ingestion',
-    'validate_block_feature_specs',
-    'validate_pool_grid_compatibility',
-    'validate_raster_alignment',
-    'verify_pool_grid_compatibility',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .handlers import (
-        validate_block_feature_specs,
-        validate_pool_grid_compatibility,
-        validate_raster_alignment,
-    )
     from .context import (
         IngestionContext,
         build_ingestion_context,
         resolve_pending_ingestion_batches,
-        verify_pool_grid_compatibility,
     )
-    from .logger import (
-        IngestionLogger,
-    )
-    from .pipeline import (
-        run_data_ingestion,
-    )
+    from .logger import IngestionLogger
+    from .pipeline import run_data_ingestion
 
 
 def __getattr__(name: str):
+
     if name in {
-        'validate_block_feature_specs',
-        'validate_pool_grid_compatibility',
-        'validate_raster_alignment',
+        'IngestionContext',
+        'build_ingestion_context',
+        'resolve_pending_ingestion_batches',
     }:
-        obj = importlib.import_module('.handlers', __package__)
+        obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
 
     if name in {'IngestionLogger'}:
@@ -95,15 +103,6 @@ def __getattr__(name: str):
 
     if name in {'run_data_ingestion'}:
         obj = importlib.import_module('.pipeline', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'IngestionContext',
-        'build_ingestion_context',
-        'resolve_pending_ingestion_batches',
-        'verify_pool_grid_compatibility',
-    }:
-        obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

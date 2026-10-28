@@ -57,11 +57,11 @@ def build_grid(config: contracts.WorldGridPrepConfig) -> geo_core.GridLayout:
         geo_core.GridLayout:
             Constructed world grid layout instance.
     '''
-    grid_specs = validate_inputs(config)
+    grid_specs = compile_inputs(config)
     return geo_core.GridLayout(grid_specs)
 
 
-def validate_inputs(config: contracts.WorldGridPrepConfig):
+def compile_inputs(config: contracts.WorldGridPrepConfig) -> geo_core.GridSpec:
     '''Validate world grid generation configuration.'''
     if config.mode == 'ref':
         ref_fpath = val.require_file(config.ref_fpath)

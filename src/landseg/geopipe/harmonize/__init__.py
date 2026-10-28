@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=import-outside-toplevel
+
 '''
 Top-level namespace for `landseg.geopipe.harmonize`.
 
@@ -30,14 +32,29 @@ Public APIs:
     - `HarmonizationLogger`: Logger tracking ETL progress and summary.
     - `build_harmonization_context`: Load reference context from report.
     - `run_data_harmonization`: pipeline runner.
-    - `validate_grid_reference`: Load and validate world grid reference.
-    - `validate_manifest_contract`: Validate manifest and output uniqueness.
 '''
 
 # standard imports
 from __future__ import annotations
 import importlib
 import typing
+
+
+class _Validators:
+    @staticmethod
+    def grid_reference(*args, **kwargs):
+        '''Load and validate world grid reference.'''
+        import landseg.geopipe.harmonize.context as context
+        return context.load_grid_reference(*args, **kwargs)
+
+    @staticmethod
+    def manifest_contract(*args, **kwargs):
+        '''Validate input dataset manifest JSON.'''
+        import landseg.geopipe.harmonize.manifest.compiler as compiler
+        return compiler.compile_dataset_manifest(*args, **kwargs)
+
+validators = _Validators()
+
 
 __all__ = [
     # classes
@@ -46,8 +63,8 @@ __all__ = [
     # functions
     'build_harmonization_context',
     'run_data_harmonization',
-    'validate_grid_reference',
-    'validate_manifest_contract',
+    # namespace
+    'validators',
 ]
 
 
@@ -57,27 +74,16 @@ if typing.TYPE_CHECKING:
         HarmonizationContext,
         build_harmonization_context,
     )
-    from .handlers import (
-        validate_grid_reference,
-        validate_manifest_contract,
-    )
-    from .logger import (
-        HarmonizationLogger,
-    )
-    from .pipeline import (
-        run_data_harmonization,
-    )
+    from .logger import HarmonizationLogger
+    from .pipeline import run_data_harmonization
+
 
 def __getattr__(name: str):
-    if name in {'HarmonizationContext', 'build_harmonization_context'}:
-        obj = importlib.import_module('.context', __package__)
-        return getattr(obj, name)
-
     if name in {
-        'validate_grid_reference',
-        'validate_manifest_contract',
+        'HarmonizationContext',
+        'build_harmonization_context'
     }:
-        obj = importlib.import_module('.handlers', __package__)
+        obj = importlib.import_module('.context', __package__)
         return getattr(obj, name)
 
     if name in {'HarmonizationLogger'}:

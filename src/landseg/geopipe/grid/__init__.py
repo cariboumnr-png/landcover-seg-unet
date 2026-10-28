@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=import-outside-toplevel
+
 '''
 Top-level namespace for `landseg.geopipe.grid`.
 
@@ -28,7 +30,6 @@ resolution to keep import order simple and circular-free.
 Public APIs:
     - `GridLogger`: Logger tracking world grid execution and report.
     - `prepare_world_grid`: Build or load persisted world grid artifact.
-    - `validate_grid_inputs`: Construct and validate world grid layout.
 '''
 
 # standard imports
@@ -36,38 +37,35 @@ from __future__ import annotations
 import importlib
 import typing
 
+
+class _Validators: # pylint: disable=R0903
+    @staticmethod
+    def grid_reference(*args, **kwargs):
+        '''Validate grid generation configurations.'''
+        import landseg.geopipe.grid.builder as builder
+        return builder.compile_inputs(*args, **kwargs)
+
+validators = _Validators()
+
+
 __all__ = [
     # classes
     'GridLogger',
     # functions
     'prepare_world_grid',
-    'validate_inputs',
+    'validators',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import (
-        validate_inputs,
-    )
-    from .lifecycle import (
-        prepare_world_grid,
-    )
-    from .logger import (
-        GridLogger,
-    )
+    from .lifecycle import prepare_world_grid
+    from .logger import GridLogger
 
 
 def __getattr__(name: str):
-    if name in {
-        'validate_inputs',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
 
-    if name in {
-        'prepare_world_grid',
-    }:
+    if name in {'prepare_world_grid'}:
         obj = importlib.import_module('.lifecycle', __package__)
         return getattr(obj, name)
 
