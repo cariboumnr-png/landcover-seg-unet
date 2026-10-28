@@ -36,18 +36,20 @@ class GridSpecs(base.BaseConfigSection):
     extent_in_crs_units: tuple[float, float] = (0.0, 0.0)
 
     def validate(self):
-        self.require_str(self.crs_string, 'CRS (string)')
-        self.require_sequence(self.origin, 'origin', 2)
+        self.val.require_string(self.crs_string)
+        ox, oy = self.val.require_sequence(self.origin, 2)
+        self.val.require_numeric(ox)
+        self.val.require_numeric(oy)
 
-        px, py = self.require_sequence(self.pixel_size, 'pixel_size', 2)
-        px = self.require_float_min(px, 'pixel_size_x', 0.0)
-        py = self.require_float_min(py, 'pixel_size_y', 0.0)
+        px, py = self.val.require_sequence(self.pixel_size, 2)
+        px = self.val.require_numeric_min(px, 0.0)
+        py = self.val.require_numeric_min(py, 0.0)
         if px != py:
             raise ValueError('Only square pixels are supported')
 
-        ex, ey = self.require_sequence(self.extent_in_crs_units, 'extent', 2)
-        self.require_float_min(ex, 'extent_x', 0.0)
-        self.require_float_min(ey, 'extent_y', 0.0)
+        ex, ey = self.val.require_sequence(self.extent_in_crs_units, 2)
+        self.val.require_numeric_min(ex, 0.0)
+        self.val.require_numeric_min(ey, 0.0)
 
 
 @dataclasses.dataclass
@@ -61,15 +63,15 @@ class WorldGridConfig(base.BaseConfigSection):
     output_dpath: str = '${execution.exp_root}/artifacts/world_grids'
 
     def validate(self) -> None:
-        tx, ty = self.require_sequence(self.tile_size, 'tile_size', 2)
-        tx = self.require_int_min(tx, 'tile_size_x', 1)
-        ty = self.require_int_min(ty, 'tile_size_y', 1)
+        tx, ty = self.val.require_sequence(self.tile_size, 2)
+        tx = self.val.require_numeric_min(tx, 1, int)
+        ty = self.val.require_numeric_min(ty, 1, int)
         if tx != ty:
             raise ValueError('Only square blocks are supported.')
 
-        sx, sy = self.require_sequence(self.tile_stride, 'tile_stride', 2)
-        sx = self.require_int_range(sx, 'tile_stride_x', (1, tx))
-        sy = self.require_int_range(sy, 'tile_stride_y', (1, ty))
+        sx, sy = self.val.require_sequence(self.tile_stride, 2)
+        sx = self.val.require_numeric_range(sx, (1, tx), int)
+        sy = self.val.require_numeric_range(sy, (1, ty), int)
         if sx != sy:
             raise ValueError('Only equal row/column stride is supported.')
 

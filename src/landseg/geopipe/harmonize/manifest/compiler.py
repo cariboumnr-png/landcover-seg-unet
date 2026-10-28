@@ -70,11 +70,11 @@ def compile_dataset_manifest(
     mfst = ctrl.fetch()
     # cheap type check: expect JSON read as a list of dicts
     try:
-        val.require_sequence(mfst, 'dataset_manifest')
+        val.require_sequence(mfst)
         if len(mfst) == 0:
             raise DatasetManifestError('Manifest JSON read as an empty list')
         for i, mfst_entry in enumerate(mfst):
-            val.require_mapping(mfst_entry, f'manifest_entry_{i}')
+            val.require_mapping(mfst_entry)
     except val.ValidationError as e:
         raise DatasetManifestError(
             f'Manifest JSON expected to read as a list dictionaries, '
@@ -85,9 +85,9 @@ def compile_dataset_manifest(
     fingerprints: list[str] = []
     for i, mfst_entry in enumerate(mfst):
         try:
-            name = val.require_string(mfst_entry.get('name'), 'entry_name')
-            data = val.require_file(mfst_entry.get('path'), 'data_file_path')
-            mfst_path = val.require_file(mfst_entry.get('manifest'), 'manifest')
+            name = val.require_string(mfst_entry.get('name'))
+            data = val.require_file(mfst_entry.get('path'))
+            mfst_path = val.require_file(mfst_entry.get('manifest'))
         except (val.ValidationError, ValueError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 

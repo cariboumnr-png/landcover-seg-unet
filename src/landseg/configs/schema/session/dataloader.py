@@ -34,5 +34,5 @@ class DataLoaderConfig(base.BaseConfigSection):
     batch_size: int = 16
 
     def validate(self):
-        self.require_int_min(self.patch_size, 'patch_size', 1)
-        self.require_int_min(self.batch_size, 'batch_size', 1)
+        self.val.require_numeric_min(self.patch_size, 1, int)
+        self.val.require_numeric_min(self.batch_size, 1, int)

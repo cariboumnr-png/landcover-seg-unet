@@ -94,7 +94,7 @@ class BlockBuildingOutput:
     '''Results and statistics from a multi-block building execution.'''
     coords_created: list[tuple[int, int]]
     collided_blocks: list[contracts.CollisionRecord]
-    label_color_map: dict[str, list[int]] | None
+    label_color_map: dict[str, tuple[int, int, int]] | None
     running_stats: contracts.BlocksBuildingStats
 
 
@@ -258,7 +258,7 @@ def build_blocks(
     _create_missing_blocks(inputs, todo, config, context, _output_dir)
 
     # extract label color map from specs if present and pass through
-    label_color_map: dict[str, list[int]] | None = None
+    label_color_map: dict[str, tuple[int, int, int]] | None = None
     if context.label_specs:
         for spec in context.label_specs.values():
             if 'color_map' in spec and spec['color_map']:

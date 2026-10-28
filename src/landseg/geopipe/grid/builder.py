@@ -64,7 +64,7 @@ def build_grid(config: contracts.WorldGridPrepConfig) -> geo_core.GridLayout:
 def validate_inputs(config: contracts.WorldGridPrepConfig):
     '''Validate world grid generation configuration.'''
     if config.mode == 'ref':
-        ref_fpath = val.require_file(config.ref_fpath, 'reference raster file')
+        ref_fpath = val.require_file(config.ref_fpath)
         raster_info = rasters.get_info(ref_fpath)
         l, b, r, t = raster_info.bounds
         return geo_core.GridSpec(

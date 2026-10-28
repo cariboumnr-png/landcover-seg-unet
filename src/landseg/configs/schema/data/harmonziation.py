@@ -40,5 +40,5 @@ class DataHarmonizationConfig(base.BaseConfigSection):
     output_dpath: str = '${execution.exp_root}/artifacts/harmonized_data'
 
     def validate(self) -> None:
-        self.require_allowed_str(self.resampling_continuous, '', CONT)
-        self.require_allowed_str(self.resampling_categorical, '', CATE)
+        self.val.require_value_from(self.resampling_continuous, CONT, str)
+        self.val.require_value_from(self.resampling_categorical, CATE, str)

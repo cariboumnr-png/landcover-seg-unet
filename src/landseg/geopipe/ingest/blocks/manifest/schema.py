@@ -50,7 +50,7 @@ def build_schema(
     sources: tuple[pathlib.Path, pathlib.Path | None],
     mapped_grid_id: str,
     block_identity: str = '',
-    label_color_map: dict[str, list[int]] | None
+    label_color_map: dict[str, tuple[int, int, int]] | None
 ) -> geo_core.DataSchema:
     '''
     Create or update the dataset-level `schema.json`.
@@ -91,6 +91,12 @@ def build_schema(
     # parse schemes from sources
     image_schemes = assembler.read_schemes(source_image)
     label_schemes = assembler.read_schemes(source_label) if source_label else {}
+
+    # color map
+    color_map = (
+        {k: list(v) for k, v in label_color_map.items()}
+        if label_color_map else None
+    )
 
     # update route # NOTE need to review this route
     if original:
@@ -177,7 +183,7 @@ def build_schema(
             'label_num_cls': sample_blk.manifest['label_num_cls'],
             'label_ignore_cls': sample_blk.manifest['label_ignore_cls'],
             'label_class_names': sample_blk.manifest['label_cls_names'],
-            'label_class_color_map': label_color_map,
+            'label_class_color_map': color_map,
             'label_taxonomy': sample_blk.manifest.get('label_taxonomy', {}),
         },
     }

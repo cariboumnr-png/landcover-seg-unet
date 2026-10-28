@@ -81,9 +81,9 @@ def normalize_manifest_entry(entry: typing.Any) -> ManifestEntry:
         ManifestEntry:
             Canonical validated manifest entry.
     '''
-    _entry = val.require_mapping(entry, 'manifest_entry')
-    name = val.require_string(_entry.get('name'), 'entry_name')
-    path = val.require_file(_entry.get('path'), 'file_path', missing_ok=False)
+    _entry = val.require_mapping(entry)
+    name = val.require_string(_entry.get('name'))
+    path = val.require_file(_entry.get('path'), missing_ok=False)
     band_mapping = _normalize_band_mapping(_entry.get('band_mapping'))
     category = _normalize_category(_entry.get('category'))
     raw_schemes = _entry.get('schemes')
@@ -127,16 +127,16 @@ def _normalize_category(category: typing.Any) -> AllowedCategory:
     allowed = typing.get_args(AllowedCategory)
     return typing.cast(
         AllowedCategory,
-        val.require_value_from(category, 'category', allowed, str),
+        val.require_value_from(category, allowed, str),
     )
 
 
 def _normalize_band_mapping(raw: typing.Any) -> dict[int, str]:
     '''Validate and convert band mapping keys to contiguous 1-based ints.'''
-    mapping = val.require_mapping_str_v(raw, 'band_mapping')
+    mapping = val.require_mapping_str_v(raw)
     normalized: dict[int, str] = {}
     for k, v in mapping.items():
-        k_int = val.require_numeric_min(int(k), f'band_{k}_key', 1, int)
+        k_int = val.require_numeric_min(int(k), 1, int)
         # int conversion will throw if not an int and propegate to compiler.py
         normalized[k_int] = v
     if set(normalized.keys()) != set(range(1, len(normalized) + 1)):
@@ -149,22 +149,22 @@ def _normalize_band_mapping(raw: typing.Any) -> dict[int, str]:
 
 def _normalize_categorical(raw: typing.Any) -> geo_core.CategoricalSpec:
     '''Validate categorical raster specifications.'''
-    raw_dict = val.require_mapping(raw, 'categorical_specs')
+    raw_dict = val.require_mapping(raw)
     specs = _init_categorical_specs(raw_dict)
 
     cls_names = raw_dict.get('class_name')
     if cls_names is not None:
-        specs['class_name'] = val.require_mapping_str_v(cls_names, 'class_name')
+        specs['class_name'] = val.require_mapping_str_v(cls_names)
 
     color_map = raw_dict.get('color_map')
     if color_map is not None:
-        cmap = val.require_mapping(color_map, 'color_map')
+        cmap = val.require_mapping(color_map)
         validated_cmp: dict[str, tuple[int, int, int]] = {}
         for k, rgb in cmap.items():
-            rgb_t = val.require_numeric_sequence(rgb, f'RGB@{k}', int, 3)
-            r = val.require_numeric_range(rgb_t[0], f'R@{k}', (0, 255), int)
-            g = val.require_numeric_range(rgb_t[1], f'G@{k}', (0, 255), int)
-            b = val.require_numeric_range(rgb_t[2], f'B@{k}', (0, 255), int)
+            rgb_t = val.require_numeric_sequence(rgb, int, 3)
+            r = val.require_numeric_range(rgb_t[0], (0, 255), int)
+            g = val.require_numeric_range(rgb_t[1], (0, 255), int)
+            b = val.require_numeric_range(rgb_t[2], (0, 255), int)
             validated_cmp[str(k)] = (r, g, b)
         specs['color_map'] = validated_cmp
 
@@ -172,8 +172,8 @@ def _normalize_categorical(raw: typing.Any) -> geo_core.CategoricalSpec:
     if taxanomy is not None:
         if not cls_names:
             raise ValueError('Class names not provided for lookup')
-        taxa_dict = val.require_mapping(taxanomy, 'taxonomy')
-        profile = val.require_string(taxa_dict.get('profile'), 'profile')
+        taxa_dict = val.require_mapping(taxanomy)
+        profile = val.require_string(taxa_dict.get('profile'))
         specs['taxonomy'] = {'profile': profile}
 
     return specs
@@ -181,14 +181,14 @@ def _normalize_categorical(raw: typing.Any) -> geo_core.CategoricalSpec:
 
 def _init_categorical_specs(raw: typing.Any) -> geo_core.CategoricalSpec:
     '''Initialize categorical specs with required fields.'''
-    specs = val.require_mapping(raw, 'specs')
+    specs = val.require_mapping(raw)
     base = specs.get('index_base')
     num_cls = specs.get('num_cls')
     ignore = specs.get('ignore_cls')
     return {
-        'index_base': val.require_numeric_min(base, 'index_base', 0, int),
-        'num_cls': val.require_numeric_min(num_cls, 'num_cls', 1, int),
-        'ignore_cls': val.require_numeric_sequence(ignore, 'ignore_cls', int),
+        'index_base': val.require_numeric_min(base, 0, int),
+        'num_cls': val.require_numeric_min(num_cls, 1, int),
+        'ignore_cls': val.require_numeric_sequence(ignore, int),
     }
 
 
@@ -197,19 +197,19 @@ def _normalize_feature_schemes(
     band_mapping: dict[int, str],
 ) -> dict[str, tuple[str, ...]]:
     '''Validate named feature band groupings.'''
-    schemes = val.require_mapping(raw_schemes, 'feature_schemes')
+    schemes = val.require_mapping(raw_schemes)
     valid_bands = tuple(band_mapping.values())
     normalized: dict[str, tuple[str, ...]] = {}
 
     for name, bands in schemes.items():
-        b_seq = val.require_string_sequence(bands, f'feature_scheme_{name}')
+        b_seq = val.require_string_sequence(bands)
         if not b_seq:
             raise ValueError(
                 f'Feature scheme "{name}" must be non-empty list of '
                 f'band names, got: {bands}'
             )
         for b in b_seq:
-            val.require_value_from(b, f'band@{name}', valid_bands, str)
+            val.require_value_from(b, valid_bands, str)
         normalized[name] = b_seq
     return normalized
 
@@ -219,44 +219,41 @@ def _normalize_label_schemes(
     cat_specs: geo_core.CategoricalSpec,
 ) -> dict[str, geo_core.LabelScheme]:
     '''Validate named label reclassification schemes.'''
-    schemes = val.require_mapping(raw_schemes, 'label_schemes')
+    schemes = val.require_mapping(raw_schemes)
     index_base = cat_specs['index_base']
     num_cls = cat_specs['num_cls']
     cls_range = (index_base, index_base + num_cls - 1)
 
     normalized: dict[str, geo_core.LabelScheme] = {}
-    for k, v in schemes.items():
-        name = val.require_string(str(k), f'scheme_name@{k}')
-        normalized[name] = _normalize_label_scheme(name, v, cls_range)
+    for k in schemes:
+        name = val.require_string(str(k))
+        normalized[name] = _normalize_label_scheme(name, cls_range)
     return normalized
 
 
 def _normalize_label_scheme(
-    name: str,
     raw_scheme: typing.Any,
     cls_range: tuple[int, int],
 ) -> geo_core.LabelScheme:
     '''Validate a single label reclassification scheme.'''
-    scheme_dict = val.require_mapping(raw_scheme, f'{name}_scheme')
-    reclass = val.require_mapping(scheme_dict.get('reclass'), 'reclass')
+    scheme_dict = val.require_mapping(raw_scheme)
+    reclass = val.require_mapping(scheme_dict.get('reclass'))
 
     norm_reclass: dict[str, tuple[int, ...]] = {}
     for grp_id, ids in reclass.items():
-        grp_key = val.require_string(str(grp_id), f'group_id@{grp_id}')
-        class_ids = val.require_numeric_sequence(ids, 'class_IDs', int)
-        for i in class_ids:
-            val.require_numeric_range(i, f'class_id@{grp_key}', cls_range, int)
-        norm_reclass[grp_key] = class_ids
+        grp_key = val.require_string(str(grp_id))
+        class_ids = val.require_numeric_sequence(ids)
+        norm_reclass[grp_key] = tuple(
+            val.require_numeric_range(i, cls_range, int) for i in class_ids
+        )
 
     raw_names = scheme_dict.get('reclass_name')
-    raw_names = val.require_mapping_str_v(raw_names, 'reclass_name')
+    raw_names = val.require_mapping_str_v(raw_names)
     valid_groups = tuple(norm_reclass.keys())
 
     reclass_name: dict[str, str] = {}
     for grp_id, grp_label in raw_names.items():
-        grp_key = val.require_value_from(
-            str(grp_id), f'reclass_group@{name}', valid_groups, str
-        )
+        grp_key = val.require_value_from(str(grp_id), valid_groups, str)
         reclass_name[grp_key] = grp_label
 
     return {
