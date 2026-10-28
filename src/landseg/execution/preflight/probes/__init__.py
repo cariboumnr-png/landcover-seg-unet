@@ -40,15 +40,16 @@ __all__ = [
     'eval_split',
     'grid_extent',
     'grid_origin',
+    'grid_reference',
     'grid_specs',
     'hardware_info',
+    'manifest_contract',
     'model_body',
     'past_runs',
     'pending_harmonization',
     'pending_ingestion',
     'pixel_size',
     'prepared_blocks_state',
-    'raw_dataset',
     'spatial_reference',
     'target_file_exists',
 ]
@@ -56,9 +57,6 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dataset import (
-        raw_dataset,
-    )
     from .filesystem import (
         dir_writable,
         target_file_exists,
@@ -89,14 +87,13 @@ if typing.TYPE_CHECKING:
         pixel_size,
         spatial_reference,
     )
+    from .stage_contracts import (
+        grid_reference,
+        manifest_contract,
+    )
 
 
 def __getattr__(name: str):
-    if name in {
-        'raw_dataset',
-    }:
-        obj = importlib.import_module('.dataset', __package__)
-        return getattr(obj, name)
 
     if name in {
         'dir_writable',
@@ -144,6 +141,13 @@ def __getattr__(name: str):
         'spatial_reference',
     }:
         obj = importlib.import_module('.spatial', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'grid_reference',
+        'manifest_contract',
+    }:
+        obj = importlib.import_module('.stage_contracts', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

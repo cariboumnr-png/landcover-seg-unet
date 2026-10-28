@@ -528,6 +528,14 @@ def test_require_file_accepts_path_string(tmp_path):
     assert require_file(str(source), 'config') == source # type: ignore
 
 
+def test_require_file_accepts_path_object(tmp_path):
+    '''Given a valid Path instance, when checked, then return a Path.'''
+    source = tmp_path / 'config.yaml'
+    source.write_text('key: value\n', encoding='utf-8')
+
+    assert require_file(source, 'config') == source
+
+
 def test_require_file_rejects_missing_file(tmp_path):
     '''Given a nonexistent file, when validated, then raise ValidationError.'''
     source = tmp_path / 'missing.tif'

@@ -82,11 +82,14 @@ def compile_dataset_manifest(
         ) from e
 
     compiled: list[normalizer.ManifestEntry] = []
-    fingerprints: dict[str, str] = {}
-    for mfst_entry in mfst:
-        name = val.require_string(mfst_entry.get('name'), 'entry_name')
-        data_path = val.require_file(mfst_entry.get('path'), 'data_file_path')
-        mfst_path = val.require_file(mfst_entry.get('manifest'), 'manifest')
+    fingerprints: list[str] = []
+    for i, mfst_entry in enumerate(mfst):
+        try:
+            name = val.require_string(mfst_entry.get('name'), 'entry_name')
+            data = val.require_file(mfst_entry.get('path'), 'data_file_path')
+            mfst_path = val.require_file(mfst_entry.get('manifest'), 'manifest')
+        except (val.ValidationError, ValueError) as e:
+            raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 
         try:
             _ctrl = artifacts.Controller[normalizer.ManifestEntry](mfst_path)
@@ -104,11 +107,11 @@ def compile_dataset_manifest(
         # matching checks
         if not (
             name == norm['name'] and
-            data_path.resolve() == norm['path'].resolve()
+            data.resolve() == norm['path'].resolve()
         ):
             raise DatasetManifestError('Mismatch manifest name/data file path')
 
-        fingerprints[name] = artifacts.compute_fingerprint(norm)
+        fingerprints.append(artifacts.compute_fingerprint(norm))
 
     # check for collisions
     dup = {i for i, c in collections.Counter(fingerprints).items() if c > 1}

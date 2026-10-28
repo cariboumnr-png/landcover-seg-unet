@@ -95,7 +95,8 @@ def inspect_target(
         case 'data-harmonize':
             results.extend([
                 probes.dir_writable(harm_paths.root, 'harmonization_output'),
-                probes.raw_dataset(root_config),
+                probes.grid_reference(grid_paths.report),
+                probes.manifest_contract(root_config),
                 probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
                 probes.pending_harmonization(artifact_paths, root_config),
             ])

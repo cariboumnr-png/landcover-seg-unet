@@ -30,6 +30,8 @@ Public APIs:
     - `HarmonizationLogger`: Logger tracking ETL progress and summary.
     - `build_harmonization_context`: Load reference context from report.
     - `run_data_harmonization`: pipeline runner.
+    - `validate_grid_reference`: Load and validate world grid reference.
+    - `validate_manifest_contract`: Validate manifest and output uniqueness.
 '''
 
 # standard imports
@@ -44,6 +46,8 @@ __all__ = [
     # functions
     'build_harmonization_context',
     'run_data_harmonization',
+    'validate_grid_reference',
+    'validate_manifest_contract',
 ]
 
 
@@ -52,6 +56,10 @@ if typing.TYPE_CHECKING:
     from .context import (
         HarmonizationContext,
         build_harmonization_context,
+    )
+    from .handlers import (
+        validate_grid_reference,
+        validate_manifest_contract,
     )
     from .logger import (
         HarmonizationLogger,
@@ -63,6 +71,13 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {'HarmonizationContext', 'build_harmonization_context'}:
         obj = importlib.import_module('.context', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'validate_grid_reference',
+        'validate_manifest_contract',
+    }:
+        obj = importlib.import_module('.handlers', __package__)
         return getattr(obj, name)
 
     if name in {'HarmonizationLogger'}:

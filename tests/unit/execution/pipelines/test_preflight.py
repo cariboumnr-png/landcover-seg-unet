@@ -29,6 +29,7 @@ import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.preflight as preflight
 import landseg.execution.preflight.engine as engine
+import landseg.utils.validator as val
 
 
 # ----- `inspect_target` tests
@@ -53,12 +54,22 @@ def test_inspect_target_success(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(
         preflight.probes,
-        'raw_dataset',
-        lambda cfg: preflight.schema.ProbeResult(
-            pid='source_dataset_manifest',
-            category='Dataset',
+        'grid_reference',
+        lambda report, **kwargs: preflight.schema.ProbeResult(
+            pid='grid_reference',
+            category='Contract',
             status=preflight.ProbeStatus.PASS,
-            message='Mock manifest valid',
+            message='Mock grid reference valid',
+        ),
+    )
+    monkeypatch.setattr(
+        preflight.probes,
+        'manifest_contract',
+        lambda cfg: preflight.schema.ProbeResult(
+            pid='manifest_contract',
+            category='Contract',
+            status=preflight.ProbeStatus.PASS,
+            message='Mock manifest contract valid',
         ),
     )
 
@@ -202,6 +213,115 @@ def test_probe_policy():
     result = preflight.probes.collision_policy(cfg)
     assert result.category == 'Policy'
     assert result.pid == 'collision_policy'
+
+
+def test_probe_manifest_contract_unconfigured():
+    '''
+    Given: A RootConfig with empty dataset manifest path.
+    When: `manifest_contract()` is called.
+    Then: Return a FAIL probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.harmonization.dataset_manifest = ''
+    result = preflight.probes.manifest_contract(cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'manifest_contract'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'not configured' in result.message
+
+
+def test_probe_manifest_contract_success(monkeypatch):
+    '''
+    Given: A RootConfig with valid dataset manifest contract.
+    When: `manifest_contract()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.harmonization.dataset_manifest = 'dummy/manifest.json'
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.handlers.validate_manifest_contract',
+        lambda fpath: ({'name': 's2'},),
+    )
+    result = preflight.probes.manifest_contract(cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'manifest_contract'
+    assert result.status == preflight.ProbeStatus.PASS
+    assert '1 valid entries' in result.message
+
+
+def test_probe_manifest_contract_validation_error(monkeypatch):
+    '''
+    Given: A manifest raising ValidationError during validation.
+    When: `manifest_contract()` is called.
+    Then: Return a FAIL probe result capturing ValidationError.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.harmonization.dataset_manifest = 'dummy/manifest.json'
+
+    def _failing_validate(fpath):
+        raise val.ValidationError('Duplicate output name')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.handlers.validate_manifest_contract',
+        _failing_validate,
+    )
+    result = preflight.probes.manifest_contract(cfg)
+    assert result.category == 'Contract'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'Duplicate output name' in result.message
+
+
+def test_probe_grid_reference_missing(tmp_path):
+    '''
+    Given: A non-existent world grid report path.
+    When: `grid_reference()` is called.
+    Then: Return a FAIL probe result with category Contract.
+    '''
+    missing_report = tmp_path / 'missing_report.json'
+    result = preflight.probes.grid_reference(missing_report)
+    assert result.category == 'Contract'
+    assert result.pid == 'grid_reference'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'validation failed' in result.message
+
+
+def test_probe_grid_reference_success(monkeypatch):
+    '''
+    Given: A valid world grid reference handler response.
+    When: `grid_reference()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    mock_grid = {'tile_1': 'window_1', 'tile_2': 'window_2'}
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.handlers.validate_grid_reference',
+        lambda report_fpath: (mock_grid, 'grid_utm17', 'grid.json'),
+    )
+    cfg = configs.RootConfig()
+    result = preflight.probes.grid_reference(cfg)
+    assert result.category == 'Contract'
+    assert result.pid == 'grid_reference'
+    assert result.status == preflight.ProbeStatus.PASS
+    assert 'grid_id: grid_utm17' in result.message
+    assert 'tiles: 2' in result.message
+
+
+def test_probe_grid_reference_failure(monkeypatch):
+    '''
+    Given: A handler raising an exception during grid validation.
+    When: `grid_reference()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    def _failing_validate(report_fpath):
+        raise RuntimeError('Corrupt grid layout payload')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.handlers.validate_grid_reference',
+        _failing_validate,
+    )
+    result = preflight.probes.grid_reference('some_report.json')
+    assert result.category == 'Contract'
+    assert result.status == preflight.ProbeStatus.FAIL
+    assert 'Corrupt grid layout payload' in result.message
 
 
 def test_inspect_target():

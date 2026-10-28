@@ -149,13 +149,14 @@ def _normalize_band_mapping(raw: typing.Any) -> dict[int, str]:
 
 def _normalize_categorical(raw: typing.Any) -> geo_core.CategoricalSpec:
     '''Validate categorical raster specifications.'''
-    specs = _init_categorical_specs(raw)
+    raw_dict = val.require_mapping(raw, 'categorical_specs')
+    specs = _init_categorical_specs(raw_dict)
 
-    cls_names = specs.get('class_name')
+    cls_names = raw_dict.get('class_name')
     if cls_names is not None:
         specs['class_name'] = val.require_mapping_str_v(cls_names, 'class_name')
 
-    color_map = specs.get('color_map')
+    color_map = raw_dict.get('color_map')
     if color_map is not None:
         cmap = val.require_mapping(color_map, 'color_map')
         validated_cmp: dict[str, tuple[int, int, int]] = {}
@@ -167,7 +168,7 @@ def _normalize_categorical(raw: typing.Any) -> geo_core.CategoricalSpec:
             validated_cmp[str(k)] = (r, g, b)
         specs['color_map'] = validated_cmp
 
-    taxanomy = specs.get('taxonomy')
+    taxanomy = raw_dict.get('taxonomy')
     if taxanomy is not None:
         if not cls_names:
             raise ValueError('Class names not provided for lookup')

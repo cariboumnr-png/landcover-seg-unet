@@ -319,7 +319,7 @@ def require_string_sequence(
 # files
 @typing.overload
 def require_file(
-    path: str | None,
+    path: str | pathlib.Path | None,
     file_name: str,
     *,
     missing_ok: typing.Literal[False] = False,
@@ -328,7 +328,7 @@ def require_file(
 
 @typing.overload
 def require_file(
-    path: str | None,
+    path: str | pathlib.Path | None,
     file_name: str,
     *,
     missing_ok: typing.Literal[True],
@@ -337,7 +337,7 @@ def require_file(
 
 @typing.overload
 def require_file(
-    path: str | None,
+    path: str | pathlib.Path | None,
     file_name: str,
     *,
     missing_ok: bool = False,
@@ -345,7 +345,7 @@ def require_file(
 
 
 def require_file(
-    path: str | None,
+    path: str | pathlib.Path | None,
     file_name: str,
     *,
     missing_ok: bool = False,

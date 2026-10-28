@@ -70,11 +70,8 @@ def build_harmonization_context(
             Execution context containing the restored GridLayout and
             grid reference metadata.
     '''
-    # fetch world grid
-    Ctrl = artifacts.Controller[contracts.GridReportSchema]
-    grid_report = Ctrl(grid_report_path).fetch()
-    grid_fpath = pathlib.Path(grid_report['grid']['grid_fpath'])
-    world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
+    # load world grid
+    world_grid, grid_id, grid_fpath = load_grid_reference(grid_report_path)
 
     # compile dataset manifest JOSN
     mfst_path = pathlib.Path(config.dataset_manifest)
@@ -98,9 +95,21 @@ def build_harmonization_context(
 
     return HarmonizationContext(
         grid=world_grid,
-        grid_id=grid_report['grid']['grid_id'],
+        grid_id=grid_id,
         grid_fpath=grid_fpath,
         compiled_dataset_manifest=compiled,
         current_run_identity=fingerprint,
         collided_run_uid=collided
     )
+
+
+def load_grid_reference(
+    grid_report_path: pathlib.Path,
+) -> tuple[geo_core.GridLayout, str, pathlib.Path]:
+    '''Load and validate world grid reference from upstream grid report.'''
+    Ctrl = artifacts.Controller[contracts.GridReportSchema]
+    grid_report = Ctrl(grid_report_path).fetch()
+    grid_id = grid_report['grid']['grid_id']
+    grid_fpath = pathlib.Path(grid_report['grid']['grid_fpath'])
+    world_grid = geo_core.GridLayout.from_fpath(grid_fpath)
+    return world_grid, grid_id, grid_fpath
