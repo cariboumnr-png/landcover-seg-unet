@@ -251,6 +251,55 @@ def build_ingestion_context(
     )
 
 
+def verify_pool_grid_compatibility(
+    schema_fpath: pathlib.Path,
+    grid: pathlib.Path | geo_core.GridLayout,
+) -> None:
+    '''
+    Verify incoming world grid compatibility with existing block pool.
+
+    Args:
+        schema_fpath:
+            File path to existing dataset schema artifact.
+        grid:
+            Incoming GridLayout instance or grid file path to validate.
+
+    Raises:
+        artifacts.ArtifactError:
+            If existing pool schema belongs to an incompatible spatial
+            block identity or grid ID.
+    '''
+    if not schema_fpath.exists():
+        return
+
+    try:
+        Ctrl = artifacts.Controller[geo_core.DataSchema]
+        schema_dict = Ctrl(schema_fpath).fetch()
+    except artifacts.ArtifactError as exc:
+        raise artifacts.ArtifactError(
+            f'Failed to read dataset schema at {schema_fpath}: {exc}'
+        ) from exc
+
+    if not isinstance(schema_dict, dict):
+        return
+
+    dataset_info = schema_dict.get('dataset', {})
+    existing_block_id = dataset_info.get('block_identity')
+    if existing_block_id:
+        grid_layout = (
+            grid
+            if isinstance(grid, geo_core.GridLayout)
+            else geo_core.GridLayout.from_fpath(pathlib.Path(grid))
+        )
+        if existing_block_id != grid_layout.block_identity:
+            raise artifacts.ArtifactError(
+                f'Grid compatibility mismatch: incoming batch grid '
+                f'[{grid_layout.block_identity}] does not match existing '
+                f'block pool [{existing_block_id}].'
+            )
+        return
+
+
 # ----- private helpers
 def _resolve_harmonization_runs(
     manifest_fpath: pathlib.Path
@@ -395,47 +444,3 @@ def _resolve_ingestion_runs(manifest_fpath: pathlib.Path) -> set[str]:
         and rec.get('status') == 'SUCCESS'
         and rec.get('harmonization_run_uid')
     }
-
-
-def verify_pool_grid_compatibility(
-    schema_fpath: pathlib.Path,
-    grid: geo_core.GridLayout,
-) -> None:
-    '''
-    Verify incoming world grid compatibility with existing block pool.
-
-    Args:
-        schema_fpath:
-            File path to existing dataset schema artifact.
-        grid:
-            Incoming GridLayout instance to validate.
-
-    Raises:
-        artifacts.ArtifactError:
-            If existing pool schema belongs to an incompatible spatial
-            block identity or grid ID.
-    '''
-    if not schema_fpath.exists():
-        return
-
-    try:
-        Ctrl = artifacts.Controller[geo_core.DataSchema]
-        schema_dict = Ctrl(schema_fpath).fetch()
-    except artifacts.ArtifactError as exc:
-        raise artifacts.ArtifactError(
-            f'Failed to read dataset schema at {schema_fpath}: {exc}'
-        ) from exc
-
-    if not isinstance(schema_dict, dict):
-        return
-
-    dataset_info = schema_dict.get('dataset', {})
-    existing_block_id = dataset_info.get('block_identity')
-    if existing_block_id:
-        if existing_block_id != grid.block_identity:
-            raise artifacts.ArtifactError(
-                f'Grid compatibility mismatch: incoming batch grid '
-                f'[{grid.block_identity}] does not match existing block '
-                f'pool [{existing_block_id}].'
-            )
-        return

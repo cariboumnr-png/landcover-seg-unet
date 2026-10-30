@@ -35,6 +35,7 @@ Public APIs:
     - `build_ingestion_context`: Load ingestion context from report.
     - `resolve_pending_ingestion_batches`: Determine batches to ingest.
     - `run_data_ingestion`: Pipeline runner.
+    - `validators`: Preflight validation namespace.
 '''
 
 # standard imports
@@ -48,7 +49,7 @@ class _Validators:
 
     @staticmethod
     def feature_specs(
-        image_fpath: pathlib.Path | typing.Any,
+        image_fpath: pathlib.Path,
         label_fpath: pathlib.Path | None = None,
         *,
         add_spectral: list[str] | None = None,
@@ -56,26 +57,35 @@ class _Validators:
     ) -> None:
         '''Validate feature engineering specs.'''
         import landseg.geopipe.ingest.blocks.assembler.io as io
-        if isinstance(image_fpath, io.RasterReadContext):
-            image_fpath.validate_feature_specs(
-                add_spectral=add_spectral,
-                add_topo=add_topo,
-            )
-        else:
-            ctx = io.RasterReadContext.from_rasters(image_fpath, label_fpath)
-            ctx.validate_feature_specs(add_spectral, add_topo)
+        ctx = io.RasterReadContext.from_rasters(image_fpath, label_fpath)
+        ctx.validate_feature_specs(add_spectral, add_topo)
 
     @staticmethod
-    def pool_compatibility(*args, **kwargs) -> None:
-        ''' Validate pool grid alignment.'''
+    def pool_compatibility(
+        schema_fpath: pathlib.Path,
+        grid_fpath: pathlib.Path | geo_core.GridLayout,
+    ) -> None:
+        '''Validate pool grid alignment.'''
         import landseg.geopipe.ingest.context as context
-        context.verify_pool_grid_compatibility(*args, **kwargs)
+        context.verify_pool_grid_compatibility(schema_fpath, grid_fpath)
 
     @staticmethod
-    def raster_alignment(*args, **kwargs) -> None:
-        '''Validate raster CRS and resolution.'''
-        import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
-        mapper.validate_raster_alignment(*args, **kwargs)
+    def raster_alignment(
+        image_fpath: pathlib.Path,
+        grid_fpath: pathlib.Path | geo_core.GridLayout,
+        label_fpath: pathlib.Path | None = None,
+    ) -> None:
+        '''Validate raster CRS, resolution, and grid alignment.'''
+        import landseg.geopipe.core as geo_core
+        import landseg.geopipe.ingest.blocks.mapper as mapper
+        import landseg.geopipe.rasters as rasters
+        grid = (
+            grid_fpath
+            if isinstance(grid_fpath, geo_core.GridLayout)
+            else geo_core.GridLayout.from_fpath(grid_fpath)
+        )
+        with rasters.read_rasters(image_fpath, label_fpath) as (img, lbl):
+            mapper.validate_raster_alignment(grid, img, lbl)
 
 validators = _Validators()
 
@@ -88,11 +98,14 @@ __all__ = [
     'build_ingestion_context',
     'resolve_pending_ingestion_batches',
     'run_data_ingestion',
+    # validators
+    'validators',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    import landseg.geopipe.core as geo_core
     from .context import (
         IngestionContext,
         build_ingestion_context,
