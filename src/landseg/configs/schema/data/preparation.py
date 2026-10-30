@@ -69,7 +69,12 @@ class Partition(base.BaseConfigSection):
     def validate(self) -> None:
         self.val.require_numeric_range(self.val_ratio, (0, 1))
         self.val.require_numeric_range(self.test_ratio, (0, 1))
+        self.val.require_numeric_range(self.val_ratio + self.test_ratio, (0, 1))
+        self.val.require_numeric_min(self.buffer_step, 0, int)
         self.val.require_numeric_range(self.aoi_min_overlap, (0, 1))
+        # edge case
+        if self.val_ratio + self.test_ratio == 1:
+            raise base.ConfigValidationError('Training blocks ratio == 0')
 
 
 @dataclasses.dataclass

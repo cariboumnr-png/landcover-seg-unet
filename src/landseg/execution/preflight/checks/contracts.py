@@ -51,7 +51,7 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid as grid_mod
 import landseg.geopipe.harmonize as harmonize_mod
 import landseg.geopipe.ingest as ingest_mod
-import landseg.geopipe.prepare as prepare_mod
+import landseg.geopipe.prepare as prepare
 
 
 # ----- constants
@@ -66,7 +66,7 @@ def grid_specs(
 ) -> schema.ProbeResult:
     '''Validate world grid definition inputs through the domain handler.'''
     try:
-        specs = grid_mod.validators.grid_reference(ctx.config.data.world_grid)
+        specs = grid_mod.validators.grid_specs(ctx.config.data.world_grid)
     except Exception as err:  # pylint: disable=broad-exception-caught
         return _fail(pid, f'World grid inputs invalid: {err}', err)
 
@@ -79,6 +79,7 @@ def grid_specs(
     )
 
 
+# geopipe.harmonize
 def grid_artifact(
     ctx: context.InspectionContext,
     pid: str = 'grid_reference',
@@ -111,7 +112,6 @@ def grid_artifact(
     )
 
 
-# geopipe.harmonize
 def manifest_contract(
     ctx: context.InspectionContext,
     pid: str = 'manifest_contract',
@@ -151,6 +151,63 @@ def manifest_contract(
 
 
 # geopipe.ingest
+def feature_specs(
+    ctx: context.InspectionContext,
+    pid: str = 'feature_specs',
+) -> schema.ProbeResult:
+    '''
+    Validate requested feature engineering specs against actual bands.
+
+    Confirms that spectral/topographic add-ons requested in config are
+    feasible given the bands present in the harmonized rasters.
+    '''
+    paths = ctx.paths
+    datablocks = ctx.config.data.ingestion.datablocks
+
+    try:
+        record = _resolve_ingestion_record(ctx)
+        ingest_ctx = ingest_mod.build_ingestion_context(
+            paths.data_harmonization,
+            record,
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return schema.ProbeResult(
+            pid=pid,
+            category=_CATEGORY,
+            status=schema.ProbeStatus.SKIP,
+            message=f'Skipped: unable to resolve harmonization batch ({err})',
+        )
+
+    if ingest_ctx.features is None:
+        return schema.ProbeResult(
+            pid=pid,
+            category=_CATEGORY,
+            status=schema.ProbeStatus.FAIL,
+            message='No harmonized feature raster resolved for ingestion',
+        )
+
+    try:
+        ingest_mod.validators.feature_specs(
+            ingest_ctx.features,
+            ingest_ctx.labels,
+            add_spectral=datablocks.add_spectral,
+            add_topo=datablocks.add_topo,
+        )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return _fail(pid, f'Feature engineering specs invalid: {err}', err)
+
+    return schema.ProbeResult(
+        pid=pid,
+        category=_CATEGORY,
+        status=schema.ProbeStatus.PASS,
+        message='Feature engineering specs are feasible',
+        details={
+            'add_spectral': datablocks.add_spectral,
+            'add_topo': datablocks.add_topo,
+        },
+    )
+
+
 def pool_compatibility(
     ctx: context.InspectionContext,
     pid: str = 'pool_grid_compatibility',
@@ -272,65 +329,8 @@ def raster_alignment(
     )
 
 
-def feature_specs(
-    ctx: context.InspectionContext,
-    pid: str = 'feature_specs',
-) -> schema.ProbeResult:
-    '''
-    Validate requested feature engineering specs against actual bands.
-
-    Confirms that spectral/topographic add-ons requested in config are
-    feasible given the bands present in the harmonized rasters.
-    '''
-    paths = ctx.paths
-    datablocks = ctx.config.data.ingestion.datablocks
-
-    try:
-        record = _resolve_ingestion_record(ctx)
-        ingest_ctx = ingest_mod.build_ingestion_context(
-            paths.data_harmonization,
-            record,
-        )
-    except Exception as err:  # pylint: disable=broad-exception-caught
-        return schema.ProbeResult(
-            pid=pid,
-            category=_CATEGORY,
-            status=schema.ProbeStatus.SKIP,
-            message=f'Skipped: unable to resolve harmonization batch ({err})',
-        )
-
-    if ingest_ctx.features is None:
-        return schema.ProbeResult(
-            pid=pid,
-            category=_CATEGORY,
-            status=schema.ProbeStatus.FAIL,
-            message='No harmonized feature raster resolved for ingestion',
-        )
-
-    try:
-        ingest_mod.validators.feature_specs(
-            ingest_ctx.features,
-            ingest_ctx.labels,
-            add_spectral=datablocks.add_spectral,
-            add_topo=datablocks.add_topo,
-        )
-    except Exception as err:  # pylint: disable=broad-exception-caught
-        return _fail(pid, f'Feature engineering specs invalid: {err}', err)
-
-    return schema.ProbeResult(
-        pid=pid,
-        category=_CATEGORY,
-        status=schema.ProbeStatus.PASS,
-        message='Feature engineering specs are feasible',
-        details={
-            'add_spectral': datablocks.add_spectral,
-            'add_topo': datablocks.add_topo,
-        },
-    )
-
-
 # geopipe.prepare
-def preparation_contract(
+def prepare_semantics(
     ctx: context.InspectionContext,
     pid: str = 'preparation_contract',
 ) -> schema.ProbeResult:
@@ -347,20 +347,13 @@ def preparation_contract(
 
     try:
         Ctrl = artifacts.Controller[geo_core.DataSchema]
-        data_schema = Ctrl(
-            schema_fp, schema_id=geo_core.data_schema.SCHEMA_ID
-        ).fetch()
-        prep_cfg = ctx.config.data.preparation
+        schm = Ctrl(schema_fp, schema_id=geo_core.data_schema.SCHEMA_ID).fetch()
 
-        features = prepare_mod.validators.feature_channels(
-            data_schema, prep_cfg.datasetview.features
-        )
-        targets = prepare_mod.validators.target_heads(
-            data_schema, prep_cfg.datasetview.targets
-        )
-        focal_head = prepare_mod.validators.focal_head(
-            targets, prep_cfg.datasetview.focal_target
-        )
+        cfg = ctx.config.data.preparation.datasetview
+        features = prepare.validators.feature_channels(schm, cfg.features)
+        targets = prepare.validators.target_heads(schm, cfg.targets)
+        focal_head = prepare.validators.focal_head(targets, cfg.focal_target)
+
     except Exception as err:  # pylint: disable=broad-exception-caught
         return _fail(
             pid,
@@ -383,67 +376,6 @@ def preparation_contract(
             'features': list(features.names),
             'target_heads': list(targets.head_names),
             'schema_fpath': str(schema_fp),
-        },
-    )
-
-
-def partition_config(
-    ctx: context.InspectionContext,
-    pid: str = 'partition_config',
-) -> schema.ProbeResult:
-    '''
-    Validate partition ratios, stride, and AOI availability.
-
-    Checks the domain invariants the partitioner relies on but the
-    config schema does not enforce: val+test < 1, positive buffer
-    stride, and presence of configured AOI rasters.
-    '''
-    partition = ctx.config.data.preparation.partition
-
-    problems: list[str] = []
-
-    if partition.val_ratio < 0 or partition.test_ratio < 0:
-        problems.append(
-            f'neg ratio (val={partition.val_ratio}, '
-            f'test={partition.test_ratio})'
-        )
-    if partition.val_ratio + partition.test_ratio >= 1.0:
-        problems.append(
-            f'val+test ratios must be < 1 (got '
-            f'{partition.val_ratio + partition.test_ratio:.3f})'
-        )
-    if partition.buffer_step < 0:
-        problems.append(
-            f'buffer_step must be >= 0 (got {partition.buffer_step})'
-        )
-
-    for aoi_name in ('train_aoi', 'val_aoi', 'test_aoi'):
-        aoi_val = getattr(partition, aoi_name, None)
-        if aoi_val and not pathlib.Path(aoi_val).exists():
-            problems.append(f'{aoi_name} not found at {aoi_val}')
-
-    if problems:
-        return schema.ProbeResult(
-            pid=pid,
-            category=_CATEGORY,
-            status=schema.ProbeStatus.FAIL,
-            message=f'Partition configuration invalid: {"; ".join(problems)}',
-            details={'problems': problems},
-        )
-
-    return schema.ProbeResult(
-        pid=pid,
-        category=_CATEGORY,
-        status=schema.ProbeStatus.PASS,
-        message=(
-            f'Partition config verified (val={partition.val_ratio}, '
-            f'test={partition.test_ratio}, '
-            f'buffer_step={partition.buffer_step})'
-        ),
-        details={
-            'val_ratio': partition.val_ratio,
-            'test_ratio': partition.test_ratio,
-            'buffer_step': partition.buffer_step,
         },
     )
 

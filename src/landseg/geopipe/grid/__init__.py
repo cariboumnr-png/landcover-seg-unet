@@ -39,13 +39,16 @@ import typing
 
 
 class _Validators: # pylint: disable=R0903
+
+    import landseg.geopipe.contracts as contracts
     @staticmethod
-    def grid_reference(*args, **kwargs):
+    def grid_specs(config: contracts.WorldGridPrepConfig):
         '''Validate grid generation configurations.'''
         import landseg.geopipe.grid.builder as builder
-        return builder.compile_inputs(*args, **kwargs)
+        return builder.compile_inputs(config)
 
 validators = _Validators()
+
 
 
 __all__ = [
@@ -53,6 +56,7 @@ __all__ = [
     'GridLogger',
     # functions
     'prepare_world_grid',
+    # validators
     'validators',
 ]
 

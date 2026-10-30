@@ -43,12 +43,6 @@ import typing
 class _Validators:
 
     @staticmethod
-    def dataset_view(*args, **kwargs):
-        '''Validate and compile dataset view.'''
-        import landseg.geopipe.prepare.dataset.view as view
-        return view.build_dataset_view(*args, **kwargs)
-
-    @staticmethod
     def feature_channels(*args, **kwargs):
         '''Validate requested feature channels.'''
         import landseg.geopipe.prepare.dataset.semantics as semantics
@@ -59,12 +53,6 @@ class _Validators:
         '''Validate focal target head selection.'''
         import landseg.geopipe.prepare.dataset.semantics as semantics
         return semantics.resolve_focal_head(*args, **kwargs)
-
-    @staticmethod
-    def preparation_context(*args, **kwargs):
-        '''Validate preparation inputs.'''
-        import landseg.geopipe.prepare.context as context
-        return context.build_preparation_context(*args, **kwargs)
 
     @staticmethod
     def target_heads(*args, **kwargs):

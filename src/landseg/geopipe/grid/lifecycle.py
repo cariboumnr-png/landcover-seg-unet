@@ -77,11 +77,7 @@ def prepare_world_grid(
         else artifacts.LifecyclePolicy.BUILD_IF_MISSING
     )
     Ctrl = artifacts.Controller[geo_core.GridPayload]
-    ctrl = Ctrl(
-        grid_fpath,
-        policy,
-        schema_id=geo_core.GridLayout.SCHEMA_ID
-    )
+    ctrl = Ctrl(grid_fpath, policy, schema_id=geo_core.GridLayout.SCHEMA_ID)
     payload = ctrl.fetch()
 
     # load or build

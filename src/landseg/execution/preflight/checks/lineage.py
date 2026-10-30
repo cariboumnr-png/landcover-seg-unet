@@ -148,8 +148,7 @@ def upstream_manifest(
         )
 
     try:
-        Ctrl = artifacts.Controller[dict]
-        data = Ctrl(manifest_fpath).fetch()
+        data = artifacts.Controller[dict](manifest_fpath).fetch()
     except artifacts.ArtifactError as err:
         return schema.ProbeResult(
             pid=pid,

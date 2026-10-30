@@ -37,21 +37,22 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import importlib
+import pathlib
 import typing
 
 
 class _Validators:
     @staticmethod
-    def grid_reference(*args, **kwargs):
+    def grid_reference(grid_report_path: pathlib.Path):
         '''Load and validate world grid reference.'''
         import landseg.geopipe.harmonize.context as context
-        return context.load_grid_reference(*args, **kwargs)
+        return context.load_grid_reference(grid_report_path)
 
     @staticmethod
-    def manifest_contract(*args, **kwargs):
+    def manifest_contract(manifest_path: pathlib.Path):
         '''Validate input dataset manifest JSON.'''
         import landseg.geopipe.harmonize.manifest.compiler as compiler
-        return compiler.compile_dataset_manifest(*args, **kwargs)
+        return compiler.compile_dataset_manifest(manifest_path)
 
 validators = _Validators()
 
@@ -63,7 +64,7 @@ __all__ = [
     # functions
     'build_harmonization_context',
     'run_data_harmonization',
-    # namespace
+    # validators
     'validators',
 ]
 
