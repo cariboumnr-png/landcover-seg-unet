@@ -20,15 +20,16 @@
 # =========================================================================== #
 
 '''
-Pre-flight execution engine and inspection dispatcher.
+Pre-flight suite execution engine.
 
-Coordinates non-destructive validation probe execution across pipeline
-and workflow targets, handles reporting, and enforces readiness.
+Runs a target's declarative probe suite (see `catalog`) against an
+`InspectionContext`, flattening list-valued checks and containing any
+unexpected exception as a failing probe so a single misbehaving check
+never aborts the whole inspection.
 
 Public APIs:
-    - `SUPPORTED_TARGETS`: execution targets supported by preflight engine.
-    - `inspect_target`: Run diagnostic probe suite on an execution target.
-    - `run_preflight`: Dispatch pre-flight checks for targets.
+    - `assert_target_ready`: Fail-fast gate for target execution.
+    - `inspect_target`: Execute a target suite, returning a PreflightResult.
 '''
 
 # standard imports
@@ -36,128 +37,67 @@ import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.execution.preflight.prerequisites as prerequisites
-import landseg.execution.preflight.probes as probes
+import landseg.execution.preflight.catalog as catalog
+import landseg.execution.preflight.context as context
 import landseg.execution.preflight.reporter as reporter
 import landseg.execution.preflight.schema as schema
 
-SUPPORTED_TARGETS: tuple[str, ...] = (
-    'world-grid',
-    'data-harmonize',
-    'data-ingest',
-    'data-prepare',
-    'model-train',
-    'model-evaluate',
-    'diagnose-overfit',
-)
-
 
 # ----- public functions
+def assert_target_ready(
+    target: str,
+    config: configs.RootConfig,
+    *,
+    artifact_paths: artifacts.ArtifactPaths | None = None,
+) -> None:
+    '''Assert execution readiness for a target.'''
+    ctx = context.InspectionContext.from_config(
+        config,
+        artifact_paths=artifact_paths,
+    )
+    result = inspect_target(target, ctx)
+
+    if not result.is_ready:
+        failures = [
+            f'{p.pid}: {p.message}'
+            for p in result.probes
+            if p.status == schema.ProbeStatus.FAIL
+        ]
+        raise RuntimeError(
+            f'Preflight validation failed for "{target}":\n'
+            + '\n'.join(f'  - {msg}' for msg in failures)
+        )
+
+
 def inspect_target(
     target: str,
-    root_config: configs.RootConfig,
+    ctx: context.InspectionContext,
 ) -> schema.PreflightResult:
     '''
-    Run diagnostic probe suite on an execution target non-destructively.
+    Execute the diagnostic probe suite for a single execution target.
 
     Args:
         target:
-            execution target identifier or concrete pipeline runner instance.
-        root_config:
-            optional root configuration (inferred from pipeline if omitted).
+            execution target identifier (e.g. `'data-ingest'`).
+        ctx:
+            pre-resolved inspection context (config + artifact paths).
 
     Returns:
         schema.PreflightResult:
-            aggregated readiness evaluation and diagnostic probe results.
+            aggregated readiness evaluation and probe results.
     '''
-    artifact_paths = artifacts.ArtifactPaths.from_config(root_config)
+    specs = catalog.suite_for(target)
+    if not specs:
+        return _blocked_unsupported(target)
 
-    grid_paths = artifact_paths.world_grid
-    harm_paths = artifact_paths.data_harmonization
-    ingest_paths = artifact_paths.data_ingestion
-    prep_paths = artifact_paths.data_preparation
+    results: list[schema.ProbeResult] = []
+    for spec in specs:
+        results.extend(_run_spec(spec, ctx))
 
-    checks = prerequisites.check_target_prerequisites(target, artifact_paths)
-    results = [check.to_probe_result() for check in checks]
-    match target:
-        case 'world-grid':
-            results.extend([
-                probes.dir_writable(grid_paths.root, 'world_grid_output'),
-                probes.target_file_exists(grid_paths.report, 'world_grid_report'),
-                probes.grid_inputs(root_config),
-            ])
-
-        case 'data-harmonize':
-            results.extend([
-                probes.dir_writable(harm_paths.root, 'harmonization_output'),
-                probes.grid_reference(grid_paths.report),
-                probes.manifest_contract(root_config),
-                probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
-                probes.pending_harmonization(artifact_paths, root_config),
-            ])
-
-        case 'data-ingest':
-            results.extend([
-                probes.dir_writable(ingest_paths.root, 'ingestion_output'),
-                probes.collision_policy(root_config),
-                probes.pool_grid_compatibility(artifact_paths),
-                probes.past_runs(harm_paths.runs_manifest, 'past_harmonization_runs'),
-                probes.past_runs(ingest_paths.runs_manifest, 'past_ingestion_runs'),
-                probes.pending_ingestion(artifact_paths),
-                probes.ingestion_pool_state(artifact_paths),
-            ])
-
-        case 'data-prepare':
-            results.extend([
-                probes.dir_writable(prep_paths.root, 'preparation_output'),
-                probes.preparation_contract(artifact_paths, root_config),
-                probes.ingestion_pool_state(artifact_paths),
-                probes.prepared_blocks_state(artifact_paths),
-            ])
-
-        case 'model-train':
-            results.extend([
-                probes.dir_writable(artifact_paths.session_root, 'checkpoint_dir'),
-                probes.model_body(root_config),
-                probes.pending_ingestion(artifact_paths, desire_pending=False),
-                probes.prepared_blocks_state(artifact_paths, desire_existing=True),
-                *probes.hardware_info(root_config),
-            ])
-
-        case 'model-evaluate':
-            results.extend([
-                probes.dir_writable(artifact_paths.session_root, 'eval_output'),
-                probes.checkpoint_ready(root_config),
-                probes.model_body(root_config),
-                probes.eval_split(root_config),
-                *probes.hardware_info(root_config),
-            ])
-
-        case 'diagnose-overfit':
-            results.extend([
-                probes.model_body(root_config),
-                *probes.hardware_info(root_config),
-            ])
-
-        case _:
-            results.append(
-                schema.ProbeResult(
-                    pid='target_support',
-                    category='Execution',
-                    status=schema.ProbeStatus.FAIL,
-                    message=(
-                        f'Target "{target}" has no registered preflight '
-                        'inspection suite'
-                    ),
-                )
-            )
-
-    all_ready = all(p.status != schema.ProbeStatus.FAIL for p in results)
-    status = 'READY' if all_ready else 'BLOCKED'
-
+    all_ready = all(r.status != schema.ProbeStatus.FAIL for r in results)
     return schema.PreflightResult(
         target=target,
-        status=status,
+        status='READY' if all_ready else 'BLOCKED',
         probes=results,
     )
 
@@ -184,20 +124,21 @@ def run_preflight(
         schema.PreflightResult | list[schema.PreflightResult]:
             single result or list of results across all targets.
     '''
+    cxt = context.InspectionContext.from_config(root_config)
     selected_target = (
         target
         or root_config.execution.preflight_target
         or 'all'
     )
-    if selected_target in SUPPORTED_TARGETS:
+    if selected_target in catalog.SUPPORTED_TARGETS:
         results: schema.PreflightResult | list[schema.PreflightResult]
-        results = inspect_target(selected_target, root_config)
+        results = inspect_target(selected_target, cxt)
 
     elif selected_target == 'all':
-        results = [inspect_target(t, root_config) for t in SUPPORTED_TARGETS]
+        results = [inspect_target(t, cxt) for t in catalog.SUPPORTED_TARGETS]
 
     else:
-        allowed = sorted(list(SUPPORTED_TARGETS) + ['all'])
+        allowed = sorted(list(catalog.SUPPORTED_TARGETS) + ['all'])
         raise KeyError(
             f'Target "{selected_target}" not supported for preflight; '
             f'allowed: {allowed}'
@@ -232,3 +173,43 @@ def run_preflight(
             )
 
     return results
+
+
+# ----- private helpers
+def _run_spec(
+    spec: catalog.ProbeSpec,
+    ctx: context.InspectionContext,
+) -> list[schema.ProbeResult]:
+    '''Run a single probe spec, flattening lists and trapping errors.'''
+    try:
+        outcome = spec.run(ctx)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return [
+            schema.ProbeResult(
+                pid=spec.pid,
+                category=schema.ProbeCategory.EXECUTION,
+                status=schema.ProbeStatus.FAIL,
+                message=f'Probe raised unexpectedly: {err}',
+                details={'error': str(err), 'error_type': type(err).__name__},
+            )
+        ]
+
+    if isinstance(outcome, list):
+        return outcome
+    return [outcome]
+
+
+def _blocked_unsupported(target: str) -> schema.PreflightResult:
+    '''Build a BLOCKED result for a target lacking a registered suite.'''
+    probe = schema.ProbeResult(
+        pid='target_support',
+        category=schema.ProbeCategory.EXECUTION,
+        status=schema.ProbeStatus.FAIL,
+        message=(f'Target "{target}" has no registered inspection suite'),
+        details={'supported': list(catalog.SUPPORTED_TARGETS)},
+    )
+    return schema.PreflightResult(
+        target=target,
+        status='BLOCKED',
+        probes=[probe],
+    )

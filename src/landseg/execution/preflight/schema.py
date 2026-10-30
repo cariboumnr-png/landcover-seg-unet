@@ -22,10 +22,11 @@
 '''
 Pre-flight data structures and result schemas.
 
-Defines diagnostic probe execution statuses, individual probe result
-records, and aggregated pre-flight readiness results.
+Defines diagnostic probe categories, execution statuses, individual
+probe result records, and aggregated pre-flight readiness results.
 
 Public APIs:
+    - `ProbeCategory`: Enumeration of probe concern families.
     - `ProbeStatus`: Diagnostic probe status enumeration.
     - `ProbeResult`: Immutable evaluation record for a single probe.
     - `PreflightResult`: Aggregated validation result for a target.
@@ -38,6 +39,18 @@ import typing
 
 
 # ----- public types
+class ProbeCategory(enum.StrEnum):
+    '''Probe concern family, used as the report grouping column.'''
+    FILESYSTEM = 'Filesystem'
+    POLICY = 'Policy'
+    LINEAGE = 'Lineage'
+    CONTRACT = 'Contract'
+    LEDGER = 'Ledger'
+    MODEL = 'Model'
+    HARDWARE = 'Hardware'
+    EXECUTION = 'Execution'
+
+
 class ProbeStatus(enum.StrEnum):
     '''Diagnostic probe execution status.'''
     PASS = 'PASS'
@@ -51,7 +64,7 @@ class ProbeStatus(enum.StrEnum):
 class ProbeResult:
     '''Single diagnostic probe evaluation result.'''
     pid: str
-    category: str
+    category: ProbeCategory
     status: ProbeStatus
     message: str
     details: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
@@ -89,7 +102,7 @@ class PreflightResult:
             'probes': [
                 {
                     'probe_id': p.pid,
-                    'category': p.category,
+                    'category': p.category.value,
                     'status': p.status.value,
                     'message': p.message,
                     'details': p.details,

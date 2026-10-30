@@ -20,75 +20,51 @@
 # =========================================================================== #
 
 '''
-Storage and filesystem diagnostic probes.
+Execution policy diagnostic checks.
 
-Validates output directory access, writability, and path readiness.
+Inspects collision handling and other execution rules that affect
+how artifacts are written.
 
 Public APIs:
-    - `probe_storage`: Validate pipeline output directory access.
+    - `collision_policy`: Inspect block collision resolution policy.
 '''
 
-# standard imports
-import os
-import pathlib
 # local imports
+import landseg.execution.preflight.context as context
 import landseg.execution.preflight.schema as schema
 
 
+# ----- constants
+_VALID_POLICIES = {'skip', 'overwrite', 'error'}
+
+
 # ----- public functions
-def dir_writable(
-    dir_path: pathlib.Path | None,
-    pid: str | None = None
+def collision_policy(
+    ctx: context.InspectionContext,
+    pid: str = 'collision_policy',
 ) -> schema.ProbeResult:
-    '''Check if destination directory is writable.'''
-    if dir_path is None:
+    '''Inspect block collision resolution policy.'''
+    policy = ctx.config.data.ingestion.datablocks.collision_policy.lower()
+
+    if policy == 'overwrite':
+        status = schema.ProbeStatus.WARN
+        message = "Policy 'overwrite' replaces existing blocks"
+    elif policy in {'skip', 'error'}:
+        status = schema.ProbeStatus.PASS
+        message = f"Collision policy '{policy}' configured"
+    else:
         return schema.ProbeResult(
-            pid=pid or 'target_directory',
-            category='Filesystem',
+            pid=pid,
+            category=schema.ProbeCategory.POLICY,
             status=schema.ProbeStatus.FAIL,
-            message='Target directory path is not defined',
-            details={'target_dir': dir_path},
+            message=f"Unsupported collision policy '{policy}'",
+            details={'policy': policy, 'valid': sorted(_VALID_POLICIES)},
         )
 
-    # find existing parent dir (recursive)
-    check_path = dir_path.resolve()
-    while not check_path.exists():
-        parent = check_path.parent
-        if parent == check_path:
-            break
-        check_path = parent
-
-    w_ok = os.access(check_path, os.W_OK)
-    status = schema.ProbeStatus.PASS if w_ok else schema.ProbeStatus.FAIL
-    flag = 'is' if w_ok else 'is not'
-
     return schema.ProbeResult(
-        pid=pid or 'target_directory',
-        category='Filesystem',
+        pid=pid,
+        category=schema.ProbeCategory.POLICY,
         status=status,
-        message=f'Target directory {flag} writable',
-        details={'target_dir': dir_path},
-    )
-
-
-def target_file_exists(
-    file_path: pathlib.Path,
-    pid: str | None = None,
-    force_rebuild: bool = False,
-) -> schema.ProbeResult:
-    '''Check if the target file already exists.'''
-    is_file = file_path.is_file()
-
-    match is_file, force_rebuild:
-        case True, True: status = schema.ProbeStatus.WARN
-        case True, False: status = schema.ProbeStatus.PASS
-        case False, _: status = schema.ProbeStatus.PASS
-
-    flag = 'already' if is_file else 'does not'
-    return schema.ProbeResult(
-        pid=pid or 'target_file',
-        category='Filesystem',
-        status=status,
-        message=f'Target file {flag} exists; force_rebuild: {force_rebuild}',
-        details={'target_file_path': str(file_path.resolve())},
+        message=message,
+        details={'policy': policy},
     )
