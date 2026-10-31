@@ -29,8 +29,11 @@ import numpy
 import rasterio
 # local imports
 import landseg.artifacts as artifacts
+import landseg.execution.workflows.diagnose_overfit as diagnose_overfit
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler as assembler
+import landseg.geopipe.ingest.blocks.mapper as mapper
+import landseg.geopipe.ingest.blocks.mapper.mapper as mapper_mod
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
@@ -46,11 +49,9 @@ def test_check_npz_integrity_success(tmp_path):
     '''
     fpath = tmp_path / 'test.npz'
     img = numpy.ones((5, 8, 8), dtype=numpy.float32)
-    cfg = builder.DataBlockConfig(
-        image_dem_pad_px=8,
-        label_ignore_index=255,
-    )
-    context = builder.DataBlockContext(
+    raster_data = io.RasterReadOutput(
+        image_array=img,
+        image_nodata=numpy.nan,
         image_band_map={
             'red': 0,
             'green': 1,
@@ -58,15 +59,12 @@ def test_check_npz_integrity_success(tmp_path):
             'nir': 3,
             'dem': 4,
         },
-        image_nodata=numpy.nan,
-    )
-    inputs = builder.DataBlockInputs(
-        block_name='test_block',
-        image_array=img,
         image_padded_dem=None,
         label_array=None,
+        label_nodata=None,
+        label_specs=None,
     )
-    block = builder.build_data_block(inputs, cfg, context)
+    block = builder.build_data_block('test_block', raster_data)
     block.save(fpath)
     res = io.check_npz_integrity((0, 0), fpath)
     assert res == {(0, 0): True}
@@ -99,7 +97,7 @@ def test_check_npz_integrity_corrupted(tmp_path):
 def test_build_single_block_success(dummy_geotiff_factory):
     '''
     Given: Valid image and label rasters with DEM and spectral config.
-    When: Running build_single_block.
+    When: Running _build_a_block.
     Then: Return a DataBlock containing calculated indices and labels.
     '''
     img_path = dummy_geotiff_factory(
@@ -115,43 +113,38 @@ def test_build_single_block_success(dummy_geotiff_factory):
         bands=1
     )
 
-    window = rasters.Window(4, 4, 8, 8)
-
+    window = rasters.Window(4, 4, 8, 8) # type: ignore
+    image_band_map = {
+        'red': 0,
+        'green': 1,
+        'blue': 2,
+        'nir': 3,
+        'dem': 4,
+    }
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 0,
         }
     }
-
-    inputs = assembler.RasterReadInput(
-        image_fpath=img_path,
-        image_window=window,
-        image_band_map={
-            'red': 0,
-            'green': 1,
-            'blue': 2,
-            'nir': 3,
-            'dem': 4,
-        },
-        image_dem_pad_px=2,
-        label_fpath=lbl_path,
-        label_window=window,
-        label_specs=label_specs
+    context = io.RasterReadContext.from_rasters(
+        img_path,
+        lbl_path,
+        image_band_map=image_band_map,
+        label_specs=label_specs,
     )
 
     # pylint: disable=protected-access
-    db_config = builder.DataBlockConfig(
-        image_dem_pad_px=2,
-        label_ignore_index=255,
+    block = lifecycle._build_a_block(
+        name='block_4_4',
+        image_window=window,
+        label_window=window,
+        context=context,
+        dem_pad_px=2,
+        ignore_index=255,
         add_spectral=['ndvi'],
         add_topo=['slope', 'aspect', 'tpi'],
-    )
-    block = lifecycle._build_single_block(
-        name='block_4_4',
-        raster_inputs=inputs,
-        db_config=db_config,
     )
     assert block.manifest['block_name'] == 'block_4_4'
     assert block.manifest['has_label'] is True
@@ -161,7 +154,7 @@ def test_build_single_block_success(dummy_geotiff_factory):
 def test_build_single_block_defaults(dummy_geotiff_factory):
     '''
     Given: Valid rasters without extra features requested.
-    When: Running build_single_block with default options.
+    When: Running _build_a_block with default options.
     Then: Return a block containing only the original image bands.
     '''
     img_path = dummy_geotiff_factory(
@@ -177,40 +170,36 @@ def test_build_single_block_defaults(dummy_geotiff_factory):
         bands=1
     )
 
-    window = rasters.Window(4, 4, 8, 8)
+    window = rasters.Window(4, 4, 8, 8) # type: ignore
+    image_band_map = {
+        'red': 0,
+        'green': 1,
+        'blue': 2,
+        'nir': 3,
+        'dem': 4,
+    }
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 0,
         }
     }
-
-    inputs = assembler.RasterReadInput(
-        image_fpath=img_path,
-        image_window=window,
-        image_band_map={
-            'red': 0,
-            'green': 1,
-            'blue': 2,
-            'nir': 3,
-            'dem': 4,
-        },
-        image_dem_pad_px=2,
-        label_fpath=lbl_path,
-        label_window=window,
-        label_specs=label_specs
+    context = io.RasterReadContext.from_rasters(
+        img_path,
+        lbl_path,
+        image_band_map=image_band_map,
+        label_specs=label_specs,
     )
 
     # pylint: disable=protected-access
-    db_config = builder.DataBlockConfig(
-        image_dem_pad_px=2,
-        label_ignore_index=255,
-    )
-    block = lifecycle._build_single_block(
+    block = lifecycle._build_a_block(
         name='block_4_4_def',
-        raster_inputs=inputs,
-        db_config=db_config,
+        image_window=window,
+        label_window=window,
+        context=context,
+        dem_pad_px=2,
+        ignore_index=255,
     )
     assert block.manifest['block_name'] == 'block_4_4_def'
     assert block.manifest['has_label'] is True
@@ -241,37 +230,36 @@ def test_build_blocks_orchestrator(
     )
 
     out_dir = tmp_path / 'blocks'
-    inputs = assembler.BlockBuildingInputs(
-        image_fpath=img_path,
-        label_fpath=lbl_path,
-    )
 
     image_windows = {
-        (0, 0): rasters.Window(0, 0, 8, 8),
-        (0, 8): rasters.Window(8, 0, 8, 8),
-        (8, 0): rasters.Window(0, 8, 8, 8),
-        (8, 8): rasters.Window(8, 8, 8, 8),
+        (0, 0): rasters.Window(0, 0, 8, 8), # type: ignore
+        (0, 8): rasters.Window(8, 0, 8, 8), # type: ignore
+        (8, 0): rasters.Window(0, 8, 8, 8), # type: ignore
+        (8, 8): rasters.Window(8, 8, 8, 8), # type: ignore
     }
-
     label_windows = dict(image_windows)
+
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'class_head': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 0,
         }
     }
-    context = assembler.BlockBuildingContext(
-        image=image_windows,
-        label=label_windows,
-        block_size=(8, 8),
-        image_band_map={
-            'red': 0,
-            'green': 1,
-            'blue': 2,
-            'nir': 3,
-            'dem': 4,
-        },
+    image_band_map = {
+        'red': 0,
+        'green': 1,
+        'blue': 2,
+        'nir': 3,
+        'dem': 4,
+    }
+    inputs = assembler.BlockBuildingInputs(
+        image_fpath=img_path,
+        image_windows=image_windows,
+        label_fpath=lbl_path,
+        label_windows=label_windows,
+        expected_block_size=(8, 8),
+        image_band_map=image_band_map,
         label_specs=label_specs,
     )
 
@@ -287,7 +275,6 @@ def test_build_blocks_orchestrator(
     result = assembler.build_blocks(
         inputs=inputs,
         config=config,
-        context=context,
         output_dir=out_dir,
     )
 
@@ -305,7 +292,7 @@ def test_build_blocks_orchestrator(
 def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
     '''
     Given: Large label and image inputs meeting coverage requirements.
-    When: Running raster_assembler.
+    When: Running diagnostic test block builder.
     Then: Return path to serialized DataBlock with valid coverage.
     '''
     img_path = dummy_geotiff_factory(
@@ -326,41 +313,32 @@ def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
         arr[0, 0:8, :] = 1
         arr[0, 8:16, :] = 2
         src.write(arr)
+        src.set_band_description(1, 'class_head')
+        src.update_tags(
+            num_cls='2',
+            ignore_cls='[255]',
+            index_base='1',
+        )
 
-    window = rasters.Window(0, 0, 16, 16)
-
-    label_specs: dict[str, geo_core.CategoricalSpec] = {
-        'class_head': {
-            'num_cls': 2,
-            'ignore_cls': [255],
-            'index_base': 1,
-        }
-    }
-
-    read_input = assembler.RasterReadInput(
-        image_fpath=img_path,
-        image_window=window,
-        image_band_map={
-            'red': 0,
-            'green': 1,
-            'blue': 2,
-            'nir': 3,
-            'dem': 4,
-        },
-        image_dem_pad_px=2,
-        label_fpath=lbl_path,
-        label_window=window,
-        label_specs=label_specs,
+    window = rasters.Window(0, 0, 16, 16) # type: ignore
+    mapped = mapper_mod.MappedRasterWindows(
+        grid_id='test_grid',
+        image={(0, 0): window},
+        label={(0, 0): window},
+        tile_shape=(16, 16),
+        tile_overlap=(0, 0),
     )
+    raster_ctx = assembler.RasterReadContext.from_rasters(img_path, lbl_path)
 
-    inputs = {'test_block': read_input}
-
-    fpath = assembler.build_test_block(
+    # pylint: disable=protected-access
+    fpath = diagnose_overfit._build_test_block(
         save_dpath=tmp_path / 'test_blocks',
-        inputs=inputs,
+        mapped=mapped,
+        raster_ctx=raster_ctx,
+        dem_pad_px=2,
         target_head='class_head',
         valid_px_per=0.5,
-        need_all_classes=True
+        need_all_classes=False,
     )
 
     assert fpath is not None
@@ -389,10 +367,12 @@ def test_read_label_specs_dataset_level_tags(dummy_geotiff_factory):
             class_name="{'1': 'forest', '2': 'water'}",
         )
 
-    specs = assembler.read_label_specs(lbl_path)
+    ctx = io.RasterReadContext.from_rasters(lbl_path, lbl_path)
+    specs = ctx.label_specs
+    assert specs is not None
     assert 'landcover' in specs
     assert specs['landcover']['num_cls'] == 2
-    assert specs['landcover']['ignore_cls'] == [255]
+    assert specs['landcover']['ignore_cls'] == (255,)
     assert specs['landcover']['index_base'] == 1
     assert specs['landcover'].get('class_name') == {
         '1': 'forest',

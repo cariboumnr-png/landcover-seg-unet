@@ -30,17 +30,13 @@ windows.
 
 Public APIs:
     - `BlockBuildingConfig`: Container for building configurations.
-    - `BlockBuildingContext`: Read windows for pipeline execution.
-    - `BlockBuildingInput`: I/O path options for lifecycle pipeline.
-    - `BlockBuildingOutput`: Result wrapping builder execution outputs.
-    - `DataBlockConfig`: Configuration for feature engineering.
-    - `DataBlockInputs`: Container for raw array data block inputs.
-    - `RasterReadInput`: Specs parameter for reading raster inputs.
+    - `BlockBuildingInputs`: Source raster paths and window mappings.
+    - `BlockBuildingOutput`: Results and summary statistics.
+    - `RasterReadContext`: Immutable raster context and metadata.
+    - `RasterReadOutput`: Read arrays, nodata values, and metadata.
     - `build_blocks`: Parallelized multiblock checking and assembly.
     - `build_data_block`: Construct a DataBlock with derived features.
-    - `build_test_block`: Finds, normalizes, and saves a test block.
-    - `read_band_map`: Reads and validates raster band mapping dict.
-    - `read_label_specs`: Reads and formats label specification dict.
+    - `read_block_raster_data`: Reads windowed raster arrays and DEM.
     - `read_schemes`: Reads and maps categorical scheme definitions.
 '''
 
@@ -51,20 +47,15 @@ import typing
 
 __all__ = [
     # classes
-    'BlockBuildingConfig',
-    'BlockBuildingContext',
     'BlockBuildingInputs',
+    'BlockBuildingConfig',
     'BlockBuildingOutput',
-    'DataBlockConfig',
-    'DataBlockContext',
-    'DataBlockInputs',
-    'RasterReadInput',
+    'RasterReadContext',
+    'RasterReadOutput',
     # functions
     'build_blocks',
     'build_data_block',
-    'build_test_block',
-    'read_band_map',
-    'read_label_specs',
+    'read_block_raster_data',
     'read_schemes',
 ]
 
@@ -72,53 +63,43 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import (
-        DataBlockConfig,
-        DataBlockContext,
-        DataBlockInputs,
         build_data_block,
     )
     from .io import (
-        RasterReadInput,
-        read_band_map,
-        read_label_specs,
+        RasterReadContext,
+        RasterReadOutput,
+        read_block_raster_data,
         read_schemes,
     )
     from .lifecycle import (
-        BlockBuildingConfig,
-        BlockBuildingContext,
         BlockBuildingInputs,
+        BlockBuildingConfig,
         BlockBuildingOutput,
         build_blocks,
-        build_test_block,
     )
 
 
 def __getattr__(name: str):
     if name in {
-        'DataBlockConfig',
-        'DataBlockContext',
-        'DataBlockInputs',
         'build_data_block',
     }:
         obj = importlib.import_module('.builder', __package__)
         return getattr(obj, name)
 
     if name in {
-        'RasterReadInput',
-        'read_band_map',
-        'read_label_specs',
+        'RasterReadContext',
+        'RasterReadOutput',
+        'read_block_raster_data',
         'read_schemes',
     }:
         obj = importlib.import_module('.io', __package__)
         return getattr(obj, name)
 
     if name in {
-        'BlockBuildingConfig',
-        'BlockBuildingContext',
         'BlockBuildingInputs',
+        'BlockBuildingConfig',
         'BlockBuildingOutput',
         'build_blocks',
-        'build_test_block',
     }:
         obj = importlib.import_module('.lifecycle', __package__)
         return getattr(obj, name)

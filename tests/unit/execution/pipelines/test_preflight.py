@@ -21,6 +21,8 @@
 
 '''Unit tests for standalone pre-flight execution validation module.'''
 
+# standard imports
+import types
 # third-party imports
 import pytest
 # local imports
@@ -28,89 +30,84 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.preflight as preflight
-import landseg.execution.preflight.engine as engine
+import landseg.execution.preflight.catalog as catalog
+import landseg.execution.preflight.checks as checks
+import landseg.execution.preflight.context as context
+import landseg.execution.preflight.reporter as reporter
+import landseg.execution.preflight.schema as schema
+import landseg.utils.validator as val
 
 
 # ----- `inspect_target` tests
 def test_inspect_target_success(tmp_path, monkeypatch):
     '''
-    Given: An execution target whose prerequisite and probes pass.
+    Given: An execution target whose registered probes all pass.
     When: `inspect_target()` is called.
-    Then: Return a READY result with a passing prerequisite probe.
+    Then: Return a READY result with no errors.
     '''
     config = configs.RootConfig()
     config.execution.exp_root = str(tmp_path / 'exp')
-    monkeypatch.setattr(
-        preflight.prerequisites,
-        'check_target_prerequisites',
-        lambda target, paths: [
-            preflight.prerequisites.PrerequisiteCheck.passed(
-                target=target,
-                upstream_target='world-grid',
-                message=f'Prerequisites verified for {target}',
-            )
-        ],
-    )
-    monkeypatch.setattr(
-        preflight.probes,
-        'raw_dataset',
-        lambda cfg: preflight.schema.ProbeResult(
-            pid='source_dataset_manifest',
-            category='Dataset',
-            status=preflight.ProbeStatus.PASS,
-            message='Mock manifest valid',
+    ctx = context.InspectionContext.from_config(config)
+
+    passing_spec = catalog.ProbeSpec(
+        pid='mock_probe',
+        run=lambda c: schema.ProbeResult(
+            pid='mock_probe',
+            category=schema.ProbeCategory.LINEAGE,
+            status=schema.ProbeStatus.PASS,
+            message='Prerequisites verified for data-harmonize',
         ),
     )
+    monkeypatch.setattr(
+        catalog,
+        'suite_for',
+        lambda target: (passing_spec,),
+    )
 
-    result = preflight.inspect_target('data-harmonize', config)
+    result = preflight.inspect_target('data-harmonize', ctx)
 
-    assert isinstance(result, preflight.PreflightResult)
+    assert isinstance(result, schema.PreflightResult)
     assert result.target == 'data-harmonize'
     assert result.status == 'READY'
     assert result.is_ready is True
     assert len(result.errors) == 0
-
-    assert any(
-        p.pid == 'pipeline_prerequisites'
-        and p.status == preflight.ProbeStatus.PASS
-        and 'data-harmonize' in p.message
-        for p in result.probes
-    )
+    assert result.probes[0].pid == 'mock_probe'
 
 
 def test_inspect_target_failure(tmp_path, monkeypatch):
     '''
-    Given: An execution target whose prerequisite checks fail.
+    Given: An execution target with a failing probe.
     When: `inspect_target()` is called.
     Then: Return a BLOCKED result capturing failure in probe errors.
     '''
     config = configs.RootConfig()
     config.execution.exp_root = str(tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(config)
+
+    failing_spec = catalog.ProbeSpec(
+        pid='mock_failing_probe',
+        run=lambda c: schema.ProbeResult(
+            pid='mock_failing_probe',
+            category=schema.ProbeCategory.LINEAGE,
+            status=schema.ProbeStatus.FAIL,
+            message='Missing upstream artifact',
+        ),
+    )
     monkeypatch.setattr(
-        preflight.prerequisites,
-        'check_target_prerequisites',
-        lambda target, paths: [
-            preflight.prerequisites.PrerequisiteCheck.failed(
-                target=target,
-                upstream_target='world-grid',
-                message='Missing upstream artifact',
-            )
-        ],
+        catalog,
+        'suite_for',
+        lambda target: (failing_spec,),
     )
 
-    result = preflight.inspect_target('data-harmonize', config)
+    result = preflight.inspect_target('data-harmonize', ctx)
 
-    assert isinstance(result, preflight.PreflightResult)
+    assert isinstance(result, schema.PreflightResult)
     assert result.target == 'data-harmonize'
     assert result.status == 'BLOCKED'
     assert result.is_ready is False
-    assert len(result.errors) >= 1
-    assert any('Missing upstream artifact' in err for err in result.errors)
-
-    lineage_probe = next(
-        p for p in result.probes if p.pid == 'pipeline_prerequisites'
-    )
-    assert lineage_probe.status == preflight.ProbeStatus.FAIL
+    assert len(result.errors) == 1
+    assert 'Missing upstream artifact' in result.errors[0]
+    assert result.probes[0].status == schema.ProbeStatus.FAIL
 
 
 # ----- probe unit tests
@@ -121,62 +118,44 @@ def test_probe_hardware():
     Then: Return a list containing the cuda_device probe.
     '''
     cfg = configs.RootConfig()
-    results = preflight.probes.hardware_info(cfg)
+    ctx = context.InspectionContext.from_config(cfg)
+    results = checks.hardware.hardware_info(ctx)
     assert len(results) >= 1
-    assert results[0].category == 'Hardware'
+    assert results[0].category == schema.ProbeCategory.HARDWARE
     assert results[0].pid == 'cuda_device'
     assert 'torch_version' in results[0].details
 
 
 def test_probe_filesystem(tmp_path):
     '''
-    Given: A writable directory path and file target.
-    When: `dir_writable()` and `target_file_exists()` are called.
-    Then: Return passing probe results with category Filesystem.
+    Given: A writable directory path and a missing path.
+    When: `dir_writable()` is called.
+    Then: Return PASS for writable path and FAIL for undefined path.
     '''
-    dir_result = preflight.probes.dir_writable(tmp_path, 'test_dir')
-    assert dir_result.category == 'Filesystem'
+    dir_result = checks.filesystem.dir_writable(tmp_path, 'test_dir')
+    assert dir_result.category == schema.ProbeCategory.FILESYSTEM
     assert dir_result.pid == 'test_dir'
-    assert dir_result.status == preflight.ProbeStatus.PASS
+    assert dir_result.status == schema.ProbeStatus.PASS
 
-    file_result = preflight.probes.target_file_exists(
-        tmp_path / 'out.json', 'test_file'
-    )
-    assert file_result.category == 'Filesystem'
-    assert file_result.pid == 'test_file'
-    assert file_result.status == preflight.ProbeStatus.PASS
-
-
-def test_probe_spatial():
-    '''
-    Given: A RootConfig with world grid parameters.
-    When: Spatial probes are invoked.
-    Then: Return valid probe results with category Spatial.
-    '''
-    cfg = configs.RootConfig()
-    ref_result = preflight.probes.spatial_reference(cfg)
-    crs_result = preflight.probes.crs_info(cfg)
-    pix_result = preflight.probes.pixel_size(cfg)
-
-    assert ref_result.category == 'Spatial'
-    assert ref_result.pid == 'world_grid_reference'
-    assert crs_result.pid == 'crs'
-    assert pix_result.pid == 'pixel_size'
+    none_result = checks.filesystem.dir_writable(None, 'missing_dir')
+    assert none_result.category == schema.ProbeCategory.FILESYSTEM
+    assert none_result.pid == 'missing_dir'
+    assert none_result.status == schema.ProbeStatus.FAIL
 
 
 def test_probe_ledger(tmp_path):
     '''
     Given: A RootConfig pointing to a temporary experiment root.
-    When: `ingestion_pool_state()` is called.
+    When: `ingested_pool_state()` is called.
     Then: Return ledger diagnostic probe records.
     '''
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
-    artifact_paths = artifacts.ArtifactPaths.from_config(cfg)
-    result = preflight.probes.ingestion_pool_state(artifact_paths)
-    assert result.category == 'Ledger'
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.ledger.ingested_pool_state(ctx)
+    assert result.category == schema.ProbeCategory.LEDGER
     assert result.pid == 'ingested_blocks_pool'
-    assert result.status == preflight.ProbeStatus.PASS
+    assert result.status == schema.ProbeStatus.PASS
 
 
 def test_probe_model():
@@ -186,10 +165,11 @@ def test_probe_model():
     Then: Verify model_body probe passes with category Model.
     '''
     cfg = configs.RootConfig()
-    result = preflight.probes.model_body(cfg)
-    assert result.category == 'Model'
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.model.model_body(ctx)
+    assert result.category == schema.ProbeCategory.MODEL
     assert result.pid == 'model_body'
-    assert result.status == preflight.ProbeStatus.PASS
+    assert result.status == schema.ProbeStatus.PASS
 
 
 def test_probe_policy():
@@ -199,9 +179,317 @@ def test_probe_policy():
     Then: Return collision_policy probe with category Policy.
     '''
     cfg = configs.RootConfig()
-    result = preflight.probes.collision_policy(cfg)
-    assert result.category == 'Policy'
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.policy.collision_policy(ctx)
+    assert result.category == schema.ProbeCategory.POLICY
     assert result.pid == 'collision_policy'
+
+
+def test_probe_manifest_contract_unconfigured():
+    '''
+    Given: A RootConfig with empty dataset manifest path.
+    When: `manifest_contract()` is called.
+    Then: Return a FAIL probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.harmonization.dataset_manifest = ''
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.manifest_contract(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'manifest_contract'
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'not configured' in result.message
+
+
+def test_probe_manifest_contract_success(monkeypatch):
+    '''
+    Given: A RootConfig with valid dataset manifest contract.
+    When: `manifest_contract()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.harmonization.dataset_manifest = 'dummy/manifest.json'
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.validators.manifest_contract',
+        lambda fpath: ({'name': 's2'},),
+    )
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.manifest_contract(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'manifest_contract'
+    assert result.status == schema.ProbeStatus.PASS
+    assert '1 valid entries' in result.message
+
+
+def test_probe_manifest_contract_validation_error(monkeypatch):
+    '''
+    Given: A manifest raising ValidationError during validation.
+    When: `manifest_contract()` is called.
+    Then: Return a FAIL probe result capturing ValidationError.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.harmonization.dataset_manifest = 'dummy/manifest.json'
+
+    def _failing_validate(fpath):
+        raise val.ValidationError('Duplicate output name')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.validators.manifest_contract',
+        _failing_validate,
+    )
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.manifest_contract(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'Duplicate output name' in result.message
+
+
+def test_probe_grid_reference_missing(tmp_path):
+    '''
+    Given: A non-existent world grid report path.
+    When: `grid_artifact()` is called.
+    Then: Return a FAIL probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    cfg.execution.exp_root = str(tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.grid_artifact(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'grid_reference'
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'validation failed' in result.message
+
+
+def test_probe_grid_reference_success(monkeypatch, tmp_path):
+    '''
+    Given: A valid world grid reference handler response.
+    When: `grid_artifact()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    mock_grid = {'tile_1': 'window_1', 'tile_2': 'window_2'}
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.validators.grid_reference',
+        lambda report_fpath: (mock_grid, 'grid_utm17', 'grid.json'),
+    )
+    cfg = configs.RootConfig()
+    cfg.execution.exp_root = str(tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.grid_artifact(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'grid_reference'
+    assert result.status == schema.ProbeStatus.PASS
+    assert 'grid_id: grid_utm17' in result.message
+    assert 'tiles: 2' in result.message
+
+
+def test_probe_grid_reference_failure(monkeypatch, tmp_path):
+    '''
+    Given: A handler raising an exception during grid validation.
+    When: `grid_artifact()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    def _failing_validate(report_fpath):
+        raise RuntimeError('Corrupt grid layout payload')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.validators.grid_reference',
+        _failing_validate,
+    )
+    cfg = configs.RootConfig()
+    cfg.execution.exp_root = str(tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.grid_artifact(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'Corrupt grid layout payload' in result.message
+
+
+def test_probe_grid_inputs_success(monkeypatch):
+    '''
+    Given: A RootConfig with valid world grid inputs.
+    When: `grid_specs()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.world_grid.mode = 'manual'
+    monkeypatch.setattr(
+        'landseg.geopipe.grid.validators.grid_specs',
+        lambda wg_cfg: types.SimpleNamespace(grid_id='grid_utm17', tiles=4),
+    )
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.grid_specs(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'grid_inputs'
+    assert result.status == schema.ProbeStatus.PASS
+
+
+def test_probe_grid_inputs_failure(monkeypatch):
+    '''
+    Given: A grid handler raising an exception during grid construction.
+    When: `grid_specs()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    cfg = configs.RootConfig()
+
+    def _failing_validate(wg_cfg):
+        raise ValueError('Invalid reference raster: dummy.tif')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.grid.validators.grid_specs',
+        _failing_validate,
+    )
+    ctx = context.InspectionContext.from_config(cfg)
+    result = checks.contracts.grid_specs(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'grid_inputs'
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'Invalid reference raster' in result.message
+
+
+def test_probe_pool_grid_compatibility_success(monkeypatch, tmp_path):
+    '''
+    Given: A grid layout and compatible schema.
+    When: `pool_compatibility()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+    ctx.paths.world_grid.report.parent.mkdir(parents=True, exist_ok=True)
+    ctx.paths.world_grid.report.touch()
+
+    mock_grid = types.SimpleNamespace(gid='grid_utm17')
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.validators.grid_reference',
+        lambda fp: (mock_grid, 'grid_utm17', fp),
+    )
+    monkeypatch.setattr(
+        'landseg.geopipe.ingest.validators.pool_compatibility',
+        lambda fp, grid: None,
+    )
+    result = checks.contracts.pool_compatibility(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'pool_grid_compatibility'
+    assert result.status == schema.ProbeStatus.PASS
+    assert 'Pool schema not yet initialized' in result.message
+
+
+def test_probe_pool_grid_compatibility_failure(monkeypatch, tmp_path):
+    '''
+    Given: A domain handler raising ArtifactError on grid mismatch.
+    When: `pool_compatibility()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+    ctx.paths.world_grid.report.parent.mkdir(parents=True, exist_ok=True)
+    ctx.paths.world_grid.report.touch()
+
+    mock_grid = types.SimpleNamespace(gid='grid_utm17')
+    monkeypatch.setattr(
+        'landseg.geopipe.harmonize.validators.grid_reference',
+        lambda fp: (mock_grid, 'grid_utm17', fp),
+    )
+
+    def _failing_validate(fp, grid):
+        raise artifacts.ArtifactError('Grid compatibility mismatch')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.ingest.validators.pool_compatibility',
+        _failing_validate,
+    )
+    result = checks.contracts.pool_compatibility(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'pool_grid_compatibility'
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'Grid compatibility mismatch' in result.message
+
+
+def test_probe_preparation_contract_schema_missing(tmp_path):
+    '''
+    Given: A missing upstream ingestion schema path.
+    When: `prepare_semantics()` is called.
+    Then: Return a FAIL probe result with schema missing message.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+    result = checks.contracts.prepare_semantics(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'preparation_contract'
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'Upstream ingestion schema not found' in result.message
+
+
+def test_probe_preparation_contract_success(monkeypatch, tmp_path):
+    '''
+    Given: Valid schema and matching dataset preparation configuration.
+    When: `prepare_semantics()` is called.
+    Then: Return a PASS probe result with category Contract.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+    ctx.paths.data_ingestion.data_blocks.schema.parent.mkdir(
+        parents=True, exist_ok=True
+    )
+    ctx.paths.data_ingestion.data_blocks.schema.write_text(
+        '{"schema_id": "schema"}', encoding='utf-8'
+    )
+
+    monkeypatch.setattr(
+        artifacts.Controller,
+        'fetch',
+        lambda self: {'schema_id': 'schema'},
+    )
+    mock_features = types.SimpleNamespace(names=('b1', 'b2'))
+    mock_targets = types.SimpleNamespace(head_names=('h1',))
+    monkeypatch.setattr(
+        'landseg.geopipe.prepare.validators.dataset_semantics',
+        lambda schm, cfg=None, **kw: (mock_features, mock_targets, 'h1'),
+    )
+    result = checks.contracts.prepare_semantics(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'preparation_contract'
+    assert result.status == schema.ProbeStatus.PASS
+    assert 'Preparation contract verified' in result.message
+
+
+def test_probe_preparation_contract_failure(monkeypatch, tmp_path):
+    '''
+    Given: A domain handler raising KeyError on feature mismatch.
+    When: `prepare_semantics()` is called.
+    Then: Return a FAIL probe result capturing the error message.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+    ctx.paths.data_ingestion.data_blocks.schema.parent.mkdir(
+        parents=True, exist_ok=True
+    )
+    ctx.paths.data_ingestion.data_blocks.schema.write_text(
+        '{"schema_id": "schema"}', encoding='utf-8'
+    )
+
+    monkeypatch.setattr(
+        artifacts.Controller,
+        'fetch',
+        lambda self: {'schema_id': 'schema'},
+    )
+
+    def _failing_semantics(*args, **kwargs):
+        raise KeyError('Requested feature band not found')
+
+    monkeypatch.setattr(
+        'landseg.geopipe.prepare.validators.dataset_semantics',
+        _failing_semantics,
+    )
+    result = checks.contracts.prepare_semantics(ctx)
+    assert result.category == schema.ProbeCategory.CONTRACT
+    assert result.pid == 'preparation_contract'
+    assert result.status == schema.ProbeStatus.FAIL
+    assert 'Requested feature band not found' in result.message
 
 
 def test_inspect_target():
@@ -211,12 +499,14 @@ def test_inspect_target():
     Then: Return a valid PreflightResult with diagnostic probes.
     '''
     cfg = configs.RootConfig()
-    result = preflight.inspect_target('data-ingest', cfg)
-    assert isinstance(result, preflight.PreflightResult)
+    ctx = context.InspectionContext.from_config(cfg)
+    result = preflight.inspect_target('data-ingest', ctx)
+    assert isinstance(result, schema.PreflightResult)
     assert result.target == 'data-ingest'
     probe_ids = [p.pid for p in result.probes]
     assert 'ingestion_output' in probe_ids
     assert 'collision_policy' in probe_ids
+    assert 'pool_grid_compatibility' in probe_ids
     assert 'past_harmonization_runs' in probe_ids
     assert 'past_ingestion_runs' in probe_ids
     assert 'pending_ingestion' in probe_ids
@@ -225,34 +515,24 @@ def test_inspect_target():
 
 def test_probe_canonical_ordering():
     '''
-    Given: Pipeline targets with multiple diagnostic categories.
+    Given: Pipeline targets with registered diagnostic suites.
     When: Diagnostic probes are inspected.
-    Then: Probes follow canonical category ordering.
+    Then: Probes preserve the exact ordering declared in
+        `catalog.SUITES`.
     '''
     cfg = configs.RootConfig()
-    category_priority = {
-        'Lineage': 0,
-        'Filesystem': 1,
-        'Contract': 2,
-        'Dataset': 2,
-        'Policy': 2,
-        'Model': 2,
-        'Spatial': 2,
-        'Ledger': 3,
-        'Hardware': 4,
-    }
+    ctx = context.InspectionContext.from_config(cfg)
     targets = (
-        'world-grid',
-        'data-harmonize',
-        'data-ingest',
+        'world-grid', 'data-harmonize', 'data-ingest', 'data-prepare',
         'model-train',
     )
+    pid_map = {'hardware': 'cuda_device'}
     for target in targets:
-        result = preflight.inspect_target(target, cfg)
-        priorities = [
-            category_priority.get(p.category, 99) for p in result.probes
-        ]
-        assert priorities == sorted(priorities)
+        result = preflight.inspect_target(target, ctx)
+        specs = catalog.suite_for(target)
+        expected_pids = [pid_map.get(s.pid, s.pid) for s in specs]
+        actual_pids = [p.pid for p in result.probes]
+        assert actual_pids == expected_pids
 
 
 def test_preflight_result_serialization():
@@ -261,20 +541,20 @@ def test_preflight_result_serialization():
     When: `as_dict()` is invoked.
     Then: Return a valid JSON-serializable dictionary representation.
     '''
-    result = preflight.PreflightResult(
+    result = schema.PreflightResult(
         target='test-pipeline',
         status='READY',
         probes=[
-            preflight.ProbeResult(
+            schema.ProbeResult(
                 pid='probe_1',
-                category='hardware',
-                status=preflight.ProbeStatus.PASS,
+                category=schema.ProbeCategory.HARDWARE,
+                status=schema.ProbeStatus.PASS,
                 message='GPU available',
             ),
-            preflight.ProbeResult(
+            schema.ProbeResult(
                 pid='probe_2',
-                category='lineage',
-                status=preflight.ProbeStatus.WARN,
+                category=schema.ProbeCategory.LINEAGE,
+                status=schema.ProbeStatus.WARN,
                 message='Pending batches detected',
             ),
         ],
@@ -361,23 +641,23 @@ def test_format_preflight_report_single():
     When: `format_preflight_report()` is invoked.
     Then: Produce an 80-column ASCII terminal dashboard.
     '''
-    result = preflight.PreflightResult(
+    result = schema.PreflightResult(
         target='model-train',
         status='READY',
         probes=[
-            preflight.ProbeResult(
+            schema.ProbeResult(
                 pid='pipeline_prerequisites',
-                category='lineage',
-                status=preflight.ProbeStatus.PASS,
+                category=schema.ProbeCategory.LINEAGE,
+                status=schema.ProbeStatus.PASS,
                 message='Prerequisites verified for model-train',
             ),
         ],
     )
 
-    text = preflight.format_preflight_report(result)
+    text = reporter.format_preflight_report(result)
 
     assert 'PRE-FLIGHT READINESS CHECK: model-train' in text
-    assert 'lineage' in text
+    assert 'Lineage' in text
     assert 'pipeline_prerequisites' in text
     assert 'PASS' in text
     assert 'STATUS: READY (0 errors, 0 warnings)' in text
@@ -390,26 +670,26 @@ def test_format_preflight_report_multi():
     Then: Include individual reports and an aggregate SYSTEM STATUS summary.
     '''
     results = [
-        preflight.PreflightResult(
+        schema.PreflightResult(
             target='world-grid',
             status='READY',
             probes=[],
         ),
-        preflight.PreflightResult(
+        schema.PreflightResult(
             target='model-train',
             status='BLOCKED',
             probes=[
-                preflight.ProbeResult(
+                schema.ProbeResult(
                     pid='chk',
-                    category='lineage',
-                    status=preflight.ProbeStatus.FAIL,
+                    category=schema.ProbeCategory.LINEAGE,
+                    status=schema.ProbeStatus.FAIL,
                     message='Missing file',
                 )
             ],
         ),
     ]
 
-    text = preflight.format_preflight_report(results)
+    text = reporter.format_preflight_report(results)
 
     assert 'PRE-FLIGHT READINESS CHECK: world-grid' in text
     assert 'PRE-FLIGHT READINESS CHECK: model-train' in text
@@ -427,20 +707,20 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(exp_root)
 
-    result = preflight.PreflightResult(
+    result = schema.PreflightResult(
         target='model-train',
         status='READY',
         probes=[
-            preflight.ProbeResult(
+            schema.ProbeResult(
                 pid='p1',
-                category='lineage',
-                status=preflight.ProbeStatus.PASS,
+                category=schema.ProbeCategory.LINEAGE,
+                status=schema.ProbeStatus.PASS,
                 message='All ok',
             )
         ],
     )
 
-    report_fp, uid = preflight.export_preflight_report(
+    report_fp, uid = reporter.export_preflight_report(
         result, cfg, 'model-train'
     )
 
@@ -468,29 +748,24 @@ def test_run_preflight_dispatch_single_target(tmp_path, dummy_data_paths):
 
     result = preflight.run_preflight(cfg, target='world-grid')
 
-    assert isinstance(result, preflight.PreflightResult)
+    assert isinstance(result, schema.PreflightResult)
     assert result.target == 'world-grid'
     assert result.status == 'READY'
 
 
-def test_run_preflight_dispatch_all_targets(tmp_path, monkeypatch):
+def test_run_preflight_dispatch_all_targets(tmp_path):
     '''
     Given: A valid RootConfig with target='all'.
     When: `run_preflight()` is invoked.
     Then: Return a list of PreflightResults for all supported targets.
     '''
-    monkeypatch.setattr(
-        preflight.prerequisites,
-        'check_target_prerequisites',
-        lambda target, paths: [],
-    )
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
 
     results = preflight.run_preflight(cfg, target='all')
 
     assert isinstance(results, list)
-    assert len(results) == len(engine.SUPPORTED_TARGETS)
+    assert len(results) == len(catalog.SUPPORTED_TARGETS)
     targets = [r.target for r in results]
     assert 'world-grid' in targets
     assert 'model-train' in targets
@@ -498,23 +773,12 @@ def test_run_preflight_dispatch_all_targets(tmp_path, monkeypatch):
     assert 'diagnose-overfit' in targets
 
 
-def test_run_preflight_strict_mode_failure(tmp_path, monkeypatch):
+def test_run_preflight_strict_mode_failure(tmp_path):
     '''
     Given: A failing pipeline and `strict=True`.
     When: `run_preflight()` is invoked.
     Then: Raise a RuntimeError due to strict mode enforcement.
     '''
-    monkeypatch.setattr(
-        preflight.prerequisites,
-        'check_target_prerequisites',
-        lambda target, paths: [
-            preflight.prerequisites.PrerequisiteCheck.failed(
-                target=target,
-                upstream_target='world-grid',
-                message='Missing source dataset',
-            )
-        ],
-    )
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path / 'exp')
     cfg.execution.preflight_strict_mode = True

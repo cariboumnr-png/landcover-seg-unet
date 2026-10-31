@@ -28,8 +28,10 @@ and trains until near-perfect IoU to validate the end-to-end stack.
 
 # standard imports
 import pathlib
+import random
 import typing
 # third-party imports
+import numpy
 import torch
 # local imports
 import landseg._constants as c
@@ -39,7 +41,7 @@ import landseg.core as core
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks.assembler as assembler
-import landseg.geopipe.ingest.blocks.mapper as mapper
+import landseg.geopipe.ingest.blocks.mapper as mapper_mod
 import landseg.knowledge as knowledge
 import landseg.models as models
 import landseg.session as session
@@ -240,7 +242,7 @@ def _create_block(
     datablocks_cfg = config.data.ingestion.datablocks
     assert context.features
     assert context.labels
-    mapped = mapper.map_rasters_to_grid(
+    mapped = mapper_mod.map_rasters_to_grid(
         context.grid,
         context.features,
         context.labels,
@@ -250,31 +252,22 @@ def _create_block(
 
     # retrieve band map and label specs from VRT
     logger.info('Building a single data block')
-    image_band_map = assembler.read_band_map(context.features)
-    label_specs = assembler.read_label_specs(context.labels)
-
-    # construct `RasterReadInput` mapping for mapped windows
-    inputs_map = {
-        geo_core.xy_name(coord): assembler.RasterReadInput(
-            image_fpath=context.features,
-            image_window=mapped.image[coord],
-            image_band_map=image_band_map,
-            image_dem_pad_px=datablocks_cfg.image_dem_pad,
-            label_fpath=context.labels,
-            label_window=mapped.label[coord] if mapped.label else None,
-            label_specs=label_specs,
-        )
-        for coord in mapped.image
-    }
+    raster_ctx = assembler.RasterReadContext.from_rasters(
+        context.features, context.labels
+    )
+    if raster_ctx.label_specs is None:
+        raise ValueError('Label specifications not found in label raster')
 
     # resolve target head for filtering
-    target_head = _resolve_target_head(config, label_specs)
+    target_head = _resolve_target_head(config, raster_ctx.label_specs)
 
     # build single valid test block matching criteria
     logger.debug('Try: valid_px_per=0.95; need_all_class=True')
-    block_fpath = assembler.build_test_block(
+    block_fpath = _build_test_block(
         save_dpath=save_dpath,
-        inputs=inputs_map,
+        mapped=mapped,
+        raster_ctx=raster_ctx,
+        dem_pad_px=datablocks_cfg.image_dem_pad,
         target_head=target_head,
         valid_px_per=0.95,
         need_all_classes=True,
@@ -282,9 +275,11 @@ def _create_block(
     # second try
     if not block_fpath:
         logger.debug('Try: valid_px_per=0.95; need_all_class=False')
-        block_fpath = assembler.build_test_block(
+        block_fpath = _build_test_block(
             save_dpath=save_dpath,
-            inputs=inputs_map,
+            mapped=mapped,
+            raster_ctx=raster_ctx,
+            dem_pad_px=datablocks_cfg.image_dem_pad,
             target_head=target_head,
             valid_px_per=0.95,
             need_all_classes=False,
@@ -295,6 +290,80 @@ def _create_block(
 
     logger.info(f'Single block successfully created: {block_fpath}')
     return block_fpath
+
+
+def _build_test_block(
+    save_dpath: pathlib.Path,
+    mapped: mapper_mod.MappedRasterWindows,
+    raster_ctx: assembler.RasterReadContext,
+    dem_pad_px: int,
+    *,
+    target_head: str,
+    valid_px_per: float,
+    need_all_classes: bool,
+) -> pathlib.Path | None:
+    '''Build, normalize, and persist a single valid block for testing.'''
+    coords = list(mapped.image.keys())
+    random.Random(42).shuffle(coords)
+
+    selected_name = None
+    selected_candidate = None
+
+    for coord in coords:
+        name = geo_core.xy_name(coord)
+        img_win = mapped.image[coord]
+        lbl_win = mapped.label[coord] if mapped.label else None
+
+        try:
+            raster_data = assembler.read_block_raster_data(
+                img_win,
+                lbl_win,
+                raster_ctx,
+                dem_pad=dem_pad_px,
+            )
+            candidate = assembler.build_data_block(
+                name,
+                raster_data,
+            )
+            manifest = candidate.manifest
+
+            # check valid pixel ratios based on image band
+            valid_ratio = manifest['valid_ratios'].get('image', 0.0)
+
+            # check if all classes are present
+            has_all_classes = True
+            if target_head in manifest['label_count']:
+                has_all_classes = all(manifest['label_count'][target_head])
+            else:
+                has_all_classes = False
+
+            if (
+                valid_ratio >= valid_px_per and
+                (has_all_classes or not need_all_classes)
+            ):
+                selected_name = name
+                selected_candidate = candidate
+                break
+
+        except ValueError:
+            continue
+
+    if selected_candidate is None:
+        return None
+
+    candidate = selected_candidate
+    name = selected_name
+
+    # in-place image normalization for debugging block
+    mean = numpy.mean(candidate.data.image)
+    std = numpy.std(candidate.data.image)
+    candidate.data.image = (candidate.data.image - mean) / (std or 1.0)
+
+    dpath = pathlib.Path(save_dpath)
+    dpath.mkdir(parents=True, exist_ok=True)
+    fpath = dpath / f'test_{name}.npz'
+    candidate.save(fpath)
+    return fpath
 
 
 # ----- target head resolution helper

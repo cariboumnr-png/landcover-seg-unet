@@ -30,14 +30,14 @@ import landseg.geopipe.harmonize.manifest.normalizer as normalizer_mod
 import landseg.utils.validator as val
 
 
-Normalizer = normalizer_mod.ManifestEntryNormalizer
+normalize_manifest_entry = normalizer_mod.normalize_manifest_entry
 
 
-# ----- `ManifestEntryNormalizer` features tests
+# ----- `normalize_manifest_entry` features tests
 def test_normalize_features_entry_basic(tmp_path):
     '''
     Given: A valid features manifest entry dictionary.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Return canonical entry with None categorical specs and schemes.
     '''
     sample_file = _create_sample_file(tmp_path)
@@ -47,8 +47,7 @@ def test_normalize_features_entry_basic(tmp_path):
         'band_mapping': {1: 'blue', 2: 'green', 3: 'red'},
         'category': 'features',
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
+    entry = normalize_manifest_entry(raw_entry)
     assert entry['name'] == 's2_sample'
     assert entry['path'] == sample_file
     assert entry['category'] == 'features'
@@ -60,7 +59,7 @@ def test_normalize_features_entry_basic(tmp_path):
 def test_normalize_features_entry_with_schemes(tmp_path):
     '''
     Given: A features entry with valid named feature schemes.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Return canonical entry preserving valid feature schemes.
     '''
     sample_file = _create_sample_file(tmp_path)
@@ -74,16 +73,18 @@ def test_normalize_features_entry_with_schemes(tmp_path):
             'rgb_nir': ['blue', 'green', 'red', 'nir'],
         },
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
-    assert entry['schemes'] == raw_entry['schemes']
+    entry = normalize_manifest_entry(raw_entry)
+    assert entry['schemes'] == {
+        'rgb': ('blue', 'green', 'red'),
+        'rgb_nir': ('blue', 'green', 'red', 'nir'),
+    }
 
 
 def test_normalize_features_entry_invalid_scheme_band(tmp_path):
     '''
     Given: A features entry with scheme band name not in band mapping.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
-    Then: Raise ValueError indicating missing band.
+    When: `normalize_manifest_entry` is evaluated.
+    Then: Raise ValidationError indicating band not in allowed pool.
     '''
     sample_file = _create_sample_file(tmp_path)
     raw_entry = {
@@ -93,15 +94,14 @@ def test_normalize_features_entry_invalid_scheme_band(tmp_path):
         'category': 'features',
         'schemes': {'rgb_swir': ['blue', 'green', 'swir1']},
     }
-    normalizer = Normalizer(raw_entry)
-    with pytest.raises(ValueError, match='not in band_mapping'):
-        _ = normalizer.normalized_entry
+    with pytest.raises(val.ValidationError, match='not in allowed range'):
+        _ = normalize_manifest_entry(raw_entry)
 
 
 def test_normalize_features_entry_empty_scheme(tmp_path):
     '''
     Given: A features entry with an empty scheme band list.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise ValueError indicating non-empty list requirement.
     '''
     sample_file = _create_sample_file(tmp_path)
@@ -112,16 +112,15 @@ def test_normalize_features_entry_empty_scheme(tmp_path):
         'category': 'features',
         'schemes': {'empty': []},
     }
-    normalizer = Normalizer(raw_entry)
     with pytest.raises(ValueError, match='non-empty list'):
-        _ = normalizer.normalized_entry
+        _ = normalize_manifest_entry(raw_entry)
 
 
-# ----- `ManifestEntryNormalizer` labels tests
+# ----- `normalize_manifest_entry` labels tests
 def test_normalize_labels_entry_basic(tmp_path):
     '''
     Given: A valid label entry with required categorical specs.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Return canonical entry with normalized categorical specs.
     '''
     sample_file = _create_sample_file(tmp_path, 'lc.tif')
@@ -142,13 +141,17 @@ def test_normalize_labels_entry_basic(tmp_path):
             },
         },
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
+    entry = normalize_manifest_entry(raw_entry)
     cat_specs = entry['categorical_specs']
     assert cat_specs is not None
     assert cat_specs['index_base'] == 1
     assert cat_specs['num_cls'] == 3
-    assert cat_specs['ignore_cls'] == [255]
+    assert cat_specs['ignore_cls'] == (255,)
+    assert cat_specs.get('color_map') == {
+        '1': (0, 100, 0),
+        '2': (34, 139, 34),
+        '3': (0, 0, 255),
+    }
     assert cat_specs.get('class_name') == {
         '1': 'conifer',
         '2': 'decid',
@@ -159,7 +162,7 @@ def test_normalize_labels_entry_basic(tmp_path):
 def test_normalize_labels_entry_with_schemes(tmp_path):
     '''
     Given: A label entry with valid hierarchical label schemes.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Return canonical entry with validated label schemes.
     '''
     sample_file = _create_sample_file(tmp_path, 'lc.tif')
@@ -180,16 +183,20 @@ def test_normalize_labels_entry_with_schemes(tmp_path):
             },
         },
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
-    assert entry['schemes'] == raw_entry['schemes']
+    entry = normalize_manifest_entry(raw_entry)
+    assert entry['schemes'] == {
+        'binary': {
+            'reclass': {'1': (1, 2), '2': (3,)},
+            'reclass_name': {'1': 'forest', '2': 'water'},
+        },
+    }
 
 
 def test_normalize_labels_entry_scheme_class_out_of_range(tmp_path):
     '''
     Given: A label scheme with class ID outside valid index range.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
-    Then: Raise ValueError indicating class ID is outside range.
+    When: `normalize_manifest_entry` is evaluated.
+    Then: Raise ValidationError indicating class ID is outside range.
     '''
     sample_file = _create_sample_file(tmp_path, 'lc.tif')
     raw_entry = {
@@ -209,16 +216,15 @@ def test_normalize_labels_entry_scheme_class_out_of_range(tmp_path):
             },
         },
     }
-    normalizer = Normalizer(raw_entry)
-    with pytest.raises(ValueError, match='outside valid class range'):
-        _ = normalizer.normalized_entry
+    with pytest.raises(val.ValidationError, match='> maximum 2'):
+        _ = normalize_manifest_entry(raw_entry)
 
 
 def test_normalize_labels_entry_scheme_reclass_name_mismatch(tmp_path):
     '''
     Given: A label scheme with reclass_name group not in reclass.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
-    Then: Raise ValueError indicating group mismatch.
+    When: `normalize_manifest_entry` is evaluated.
+    Then: Raise ValidationError indicating group mismatch.
     '''
     sample_file = _create_sample_file(tmp_path, 'lc.tif')
     raw_entry = {
@@ -238,16 +244,15 @@ def test_normalize_labels_entry_scheme_reclass_name_mismatch(tmp_path):
             },
         },
     }
-    normalizer = Normalizer(raw_entry)
-    with pytest.raises(ValueError, match='does not exist in reclass'):
-        _ = normalizer.normalized_entry
+    with pytest.raises(val.ValidationError, match='not in allowed range'):
+        _ = normalize_manifest_entry(raw_entry)
 
 
-# ----- `ManifestEntryNormalizer` domains tests
+# ----- `normalize_manifest_entry` domains tests
 def test_normalize_domains_entry(tmp_path):
     '''
     Given: A valid domain entry with categorical specs.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Return canonical domain entry with categorical specs.
     '''
     sample_file = _create_sample_file(tmp_path, 'eco.tif')
@@ -262,8 +267,7 @@ def test_normalize_domains_entry(tmp_path):
             'ignore_cls': [],
         },
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
+    entry = normalize_manifest_entry(raw_entry)
     assert entry['category'] == 'domains'
     cat_specs = entry['categorical_specs']
     assert cat_specs is not None
@@ -273,7 +277,7 @@ def test_normalize_domains_entry(tmp_path):
 def test_normalize_domains_entry_with_schemes_raises(tmp_path):
     '''
     Given: A domain entry defining schemes.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise ValueError indicating domain cannot define schemes.
     '''
     sample_file = _create_sample_file(tmp_path, 'eco.tif')
@@ -289,15 +293,14 @@ def test_normalize_domains_entry_with_schemes_raises(tmp_path):
         },
         'schemes': {'dummy': ['eco']},
     }
-    normalizer = Normalizer(raw_entry)
     with pytest.raises(ValueError, match='should not define "schemes"'):
-        _ = normalizer.normalized_entry
+        _ = normalize_manifest_entry(raw_entry)
 
 
 def test_normalize_band_mapping_string_keys(tmp_path):
     '''
     Given: A band mapping with string integer keys from JSON.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Convert keys to integer keys contiguous from 1.
     '''
     sample_file = _create_sample_file(tmp_path)
@@ -307,16 +310,15 @@ def test_normalize_band_mapping_string_keys(tmp_path):
         'band_mapping': {'1': 'blue', '2': 'green'},
         'category': 'features',
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
+    entry = normalize_manifest_entry(raw_entry)
     assert entry['band_mapping'] == {1: 'blue', 2: 'green'}
 
 
-# ----- `ManifestEntryNormalizer` taxonomy tests
+# ----- `normalize_manifest_entry` taxonomy tests
 def test_normalize_categorical_specs_with_taxonomy(tmp_path):
     '''
     Given: A label entry with valid taxonomy profile and class names.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Correctly preserve declared taxonomy profile.
     '''
     sample_file = _create_sample_file(tmp_path, 'spc.tif')
@@ -333,8 +335,7 @@ def test_normalize_categorical_specs_with_taxonomy(tmp_path):
             'taxonomy': {'profile': 'ontario_tree_species_grouped_profiles'},
         },
     }
-    normalizer = Normalizer(raw_entry)
-    entry = normalizer.normalized_entry
+    entry = normalize_manifest_entry(raw_entry)
     cat_specs = entry['categorical_specs']
     assert cat_specs is not None
     taxa = cat_specs.get('taxonomy')
@@ -344,7 +345,7 @@ def test_normalize_categorical_specs_with_taxonomy(tmp_path):
 def test_normalize_categorical_specs_taxonomy_missing_class_name(tmp_path):
     '''
     Given: Taxonomy declared without class_name provided.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise ValueError indicating class names required.
     '''
     sample_file = _create_sample_file(tmp_path, 'spc.tif')
@@ -360,16 +361,15 @@ def test_normalize_categorical_specs_taxonomy_missing_class_name(tmp_path):
             'taxonomy': {'profile': 'ontario_tree_species_grouped_profiles'},
         },
     }
-    normalizer = Normalizer(raw_entry)
     with pytest.raises(ValueError, match='Class names not provided'):
-        _ = normalizer.normalized_entry
+        _ = normalize_manifest_entry(raw_entry)
 
 
-# ----- `ManifestEntryNormalizer` validation error tests
+# ----- `normalize_manifest_entry` validation error tests
 def test_normalize_invalid_category(tmp_path):
     '''
     Given: An entry with an unsupported category name.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise ValidationError indicating category must be allowed.
     '''
     sample_file = _create_sample_file(tmp_path)
@@ -379,15 +379,14 @@ def test_normalize_invalid_category(tmp_path):
         'band_mapping': {1: 'band1'},
         'category': 'unsupported_cat',
     }
-    normalizer = Normalizer(raw_entry)
-    with pytest.raises(val.ValidationError, match='not in range'):
-        _ = normalizer.normalized_entry
+    with pytest.raises(val.ValidationError, match='not in allowed range'):
+        _ = normalize_manifest_entry(raw_entry)
 
 
 def test_normalize_band_mapping_non_contiguous(tmp_path):
     '''
     Given: A band mapping with non-contiguous keys starting from 1.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise ValueError indicating non-contiguous integer keys.
     '''
     sample_file = _create_sample_file(tmp_path)
@@ -397,15 +396,14 @@ def test_normalize_band_mapping_non_contiguous(tmp_path):
         'band_mapping': {1: 'blue', 3: 'red'},
         'category': 'features',
     }
-    normalizer = Normalizer(raw_entry)
     with pytest.raises(ValueError, match='contiguous integers from 1'):
-        _ = normalizer.normalized_entry
+        _ = normalize_manifest_entry(raw_entry)
 
 
 def test_normalize_categorical_specs_invalid_bounds(tmp_path):
     '''
     Given: Categorical specs with negative index_base and 0 num_cls.
-    When: `ManifestEntryNormalizer.normalized_entry` is evaluated.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise ValidationError indicating min bound violation.
     '''
     sample_file = _create_sample_file(tmp_path, 'lc.tif')
@@ -422,7 +420,7 @@ def test_normalize_categorical_specs_invalid_bounds(tmp_path):
         },
     }
     with pytest.raises(val.ValidationError, match='< minimum 0'):
-        _ = normalizer_mod.ManifestEntryNormalizer(raw_entry_neg).normalized_entry
+        _ = normalize_manifest_entry(raw_entry_neg)
 
     # 0 num_cls
     raw_entry_zero = {
@@ -437,37 +435,43 @@ def test_normalize_categorical_specs_invalid_bounds(tmp_path):
         },
     }
     with pytest.raises(val.ValidationError, match='< minimum 1'):
-        _ = normalizer_mod.ManifestEntryNormalizer(raw_entry_zero).normalized_entry
+        _ = normalize_manifest_entry(raw_entry_zero)
+
+
+def test_normalize_categorical_specs_invalid_color_map_bounds(tmp_path):
+    '''
+    Given: Categorical specs with RGB values exceeding 255.
+    When: `normalize_manifest_entry` is evaluated.
+    Then: Raise ValidationError indicating color channel > maximum 255.
+    '''
+    sample_file = _create_sample_file(tmp_path, 'lc.tif')
+    raw_entry = {
+        'name': 'lc',
+        'path': sample_file,
+        'band_mapping': {1: 'lc'},
+        'category': 'labels',
+        'categorical_specs': {
+            'index_base': 1,
+            'num_cls': 2,
+            'ignore_cls': [],
+            'color_map': {'1': [0, 100, 300]},
+        },
+    }
+    with pytest.raises(val.ValidationError, match='> maximum 255'):
+        _ = normalize_manifest_entry(raw_entry)
 
 
 def test_normalize_input_types():
     '''
     Given: Non-dictionary or empty dictionary inputs.
-    When: Initializing or evaluating `ManifestEntryNormalizer`.
+    When: `normalize_manifest_entry` is evaluated.
     Then: Raise appropriate TypeError or ValueError.
     '''
-    with pytest.raises(TypeError, match='not a mapping'):
-        normalizer_mod.ManifestEntryNormalizer('not_a_dict')
+    with pytest.raises(TypeError, match='Expected a mapping'):
+        normalizer_mod.normalize_manifest_entry('not_a_dict')
 
-    with pytest.raises(ValueError, match='empty dict'):
-        normalizer_mod.ManifestEntryNormalizer({})
-
-
-def test_normalizer_validate_method(tmp_path):
-    '''
-    Given: A valid manifest entry.
-    When: Calling `validate()`.
-    Then: Complete successfully without raising.
-    '''
-    sample_file = _create_sample_file(tmp_path)
-    raw_entry = {
-        'name': 's2',
-        'path': sample_file,
-        'band_mapping': {1: 'red'},
-        'category': 'features',
-    }
-    normalizer = Normalizer(raw_entry)
-    normalizer.validate()
+    with pytest.raises(ValueError, match='Mapping must not be empty'):
+        normalizer_mod.normalize_manifest_entry({})
 
 
 # ----- private helpers

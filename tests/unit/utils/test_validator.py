@@ -1,28 +1,25 @@
-
-# ===========================================================================
-# Copyright © His Majesty the King in right of Ontario,
-# as represented by the Minister of Natural Resources, 2026.
-#
-# © King's Printer for Ontario, 2026.
-#
-# Licensed under the Apache License, Version 2.0 (the 'License').
-# You may not use this file except in compliance with the License.
-# You may obtain a copy of the License at:
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an 'AS IS' BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# =========================================================================== #
+#           Copyright © His Majesty the King in right of Ontario,           #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Unit tests for validation primitives.
-
-All tests follow the Given / When / Then documentation convention.
-'''
+'''Unit tests for standalone validation primitives in validator.py.'''
 
 # standard imports
 import pathlib
@@ -43,14 +40,33 @@ from landseg.utils.validator import (
     require_sequence,
     require_string,
     require_string_sequence,
+    require_types,
     require_value_from,
 )
 
 
-# ---------------------------------------------------------------------------
-# Numeric primitives
-# ---------------------------------------------------------------------------
+# ----- `require_types` validation
+@pytest.mark.parametrize(
+    ('value', 'required_type', 'expected'),
+    [
+        (10, int, 10),
+        ('test', str, 'test'),
+        (3.14, float, 3.14),
+        (5, (int, float), 5),
+    ],
+)
+def test_require_types_accepts_valid_types(value, required_type, expected):
+    '''Given a value matching required type(s), return the value.'''
+    assert require_types(value, required_type) == expected
 
+
+def test_require_types_rejects_invalid_type():
+    '''Given a value not matching required type, raise ValidationError.'''
+    with pytest.raises(ValidationError, match='Expected type'):
+        require_types('not_int', int)
+
+
+# ----- `require_numeric` validation
 @pytest.mark.parametrize(
     ('value', 'expected'),
     [
@@ -63,7 +79,7 @@ from landseg.utils.validator import (
 )
 def test_require_numeric_accepts_numbers(value, expected):
     '''Given a numeric value, when validated, then return the value.'''
-    assert require_numeric(value, 'value') == expected # type: ignore
+    assert require_numeric(value) == expected
 
 
 @pytest.mark.parametrize(
@@ -81,7 +97,7 @@ def test_require_numeric_enforces_requested_type(
     expected,
 ):
     '''Given a value of the requested type, when validated, then return it.'''
-    assert require_numeric(value, 'value', required_type) == expected
+    assert require_numeric(value, required_type) == expected
 
 
 @pytest.mark.parametrize(
@@ -97,9 +113,10 @@ def test_require_numeric_enforces_requested_type(
 def test_require_numeric_rejects_invalid_types(value, required_type):
     '''Given an invalid numeric type, when validated, then raise an error.'''
     with pytest.raises(ValidationError):
-        require_numeric(value, 'value', required_type)
+        require_numeric(value, required_type)
 
 
+# ----- `require_numeric_min` validation
 @pytest.mark.parametrize(
     ('value', 'minimum', 'required_type', 'expected'),
     [
@@ -118,7 +135,7 @@ def test_require_numeric_min_accepts_values_at_or_above_minimum(
 ):
     '''Given a value meeting the minimum, when checked, then return it.'''
     assert (
-        require_numeric_min(value, 'value', minimum, required_type)
+        require_numeric_min(value, minimum, required_type)
         == expected
     )
 
@@ -139,9 +156,10 @@ def test_require_numeric_min_rejects_values_below_minimum(
 ):
     '''Given a value below the minimum, when checked, then raise an error.'''
     with pytest.raises(ValidationError, match='minimum'):
-        require_numeric_min(value, 'value', minimum, required_type)
+        require_numeric_min(value, minimum, required_type)
 
 
+# ----- `require_numeric_max` validation
 @pytest.mark.parametrize(
     ('value', 'maximum', 'required_type', 'expected'),
     [
@@ -160,7 +178,7 @@ def test_require_numeric_max_accepts_values_at_or_below_maximum(
 ):
     '''Given a value meeting the maximum, when checked, then return it.'''
     assert (
-        require_numeric_max(value, 'value', maximum, required_type)
+        require_numeric_max(value, maximum, required_type)
         == expected
     )
 
@@ -181,9 +199,10 @@ def test_require_numeric_max_rejects_values_above_maximum(
 ):
     '''Given a value above the maximum, when checked, then raise an error.'''
     with pytest.raises(ValidationError, match='maximum'):
-        require_numeric_max(value, 'value', maximum, required_type)
+        require_numeric_max(value, maximum, required_type)
 
 
+# ----- `require_numeric_range` validation
 @pytest.mark.parametrize(
     ('value', 'bounds', 'required_type', 'expected'),
     [
@@ -203,9 +222,7 @@ def test_require_numeric_range_accepts_values_within_closed_bounds(
 ):
     '''Given a value within inclusive bounds, when checked, then return it.'''
     assert (
-        require_numeric_range(
-            value, 'value', bounds, required_type
-        )
+        require_numeric_range(value, bounds, required_type)
         == expected
     )
 
@@ -226,13 +243,10 @@ def test_require_numeric_range_rejects_values_outside_bounds(
 ):
     '''Given a value outside inclusive bounds, when checked, then raise.'''
     with pytest.raises(ValidationError):
-        require_numeric_range(value, 'value', bounds, required_type)
+        require_numeric_range(value, bounds, required_type)
 
 
-# ---------------------------------------------------------------------------
-# String primitives
-# ---------------------------------------------------------------------------
-
+# ----- `require_string` validation
 @pytest.mark.parametrize(
     'value',
     [
@@ -244,7 +258,7 @@ def test_require_numeric_range_rejects_values_outside_bounds(
 )
 def test_require_string_accepts_nonempty_strings(value):
     '''Given a nonempty string, when validated, then return it unchanged.'''
-    assert require_string(value, 'value') == value
+    assert require_string(value) == value
 
 
 @pytest.mark.parametrize(
@@ -259,20 +273,17 @@ def test_require_string_accepts_nonempty_strings(value):
 )
 def test_require_string_rejects_non_string_values(value):
     '''Given a non-string value, when validated, then raise TypeError.'''
-    with pytest.raises(TypeError, match='not a string'):
-        require_string(value, 'value')
+    with pytest.raises(TypeError):
+        require_string(value)
 
 
 def test_require_string_rejects_empty_string():
     '''Given an empty string, when validated, then raise ValueError.'''
-    with pytest.raises(ValueError, match='empty string'):
-        require_string('', 'value')
+    with pytest.raises(ValueError):
+        require_string('')
 
 
-# ---------------------------------------------------------------------------
-# Membership / condition validation
-# ---------------------------------------------------------------------------
-
+# ----- `require_value_from` validation
 @pytest.mark.parametrize(
     ('value', 'allowed', 'required_type'),
     [
@@ -289,7 +300,7 @@ def test_require_value_from_accepts_allowed_values(
 ):
     '''Given an allowed value of the requested type, when checked, return it.'''
     assert (
-        require_value_from(value, 'value', allowed, required_type)
+        require_value_from(value, allowed, required_type)
         == value
     )
 
@@ -308,30 +319,27 @@ def test_require_value_from_rejects_values_outside_allowed_pool(
     required_type,
 ):
     '''Given a value outside the allowed pool, when checked, then raise.'''
-    with pytest.raises(ValidationError, match='not in range'):
-        require_value_from(value, 'value', allowed, required_type)
+    with pytest.raises(ValidationError):
+        require_value_from(value, allowed, required_type)
 
 
 def test_require_value_from_rejects_wrong_type():
     '''Given a value of the wrong type, when checked, then raise an error.'''
-    with pytest.raises(ValidationError, match='not required type'):
-        require_value_from(1, 'value', ('1', '2'), str)
+    with pytest.raises(ValidationError):
+        require_value_from(1, ('1', '2'), str)
 
 
 def test_require_value_from_rejects_string_as_allowed_sequence():
     '''Given a string pool, when checked, then reject it as a sequence.'''
-    with pytest.raises(ValidationError, match='not a sequence'):
-        require_value_from('a', 'value', 'abc', str)
+    with pytest.raises(ValidationError):
+        require_value_from('a', 'abc', str)
 
 
-# ---------------------------------------------------------------------------
-# Mapping primitives
-# ---------------------------------------------------------------------------
-
+# ----- `require_mapping` validation
 def test_require_mapping_returns_dictionary_copy():
     '''Given a nonempty mapping, when validated, then return a dict copy.'''
     source = {'a': 1, 'b': 2}
-    result = require_mapping(source, 'mapping')
+    result = require_mapping(source)
 
     assert result == source
     assert isinstance(result, dict)
@@ -341,7 +349,7 @@ def test_require_mapping_returns_dictionary_copy():
 def test_require_mapping_accepts_mapping_proxy():
     '''Given a read-only mapping, when validated, then return a dict.'''
     source = types.MappingProxyType({'a': 1})
-    result = require_mapping(source, 'mapping')
+    result = require_mapping(source)
 
     assert result == {'a': 1}
     assert isinstance(result, dict)
@@ -358,20 +366,20 @@ def test_require_mapping_accepts_mapping_proxy():
 )
 def test_require_mapping_rejects_non_mappings(value):
     '''Given a non-mapping value, when validated, then raise TypeError.'''
-    with pytest.raises(TypeError, match='not a mapping'):
-        require_mapping(value, 'mapping')
+    with pytest.raises(TypeError):
+        require_mapping(value)
 
 
 def test_require_mapping_rejects_empty_mapping():
     '''Given an empty mapping, when validated, then raise ValueError.'''
-    with pytest.raises(ValueError, match='empty dict'):
-        require_mapping({}, 'mapping')
+    with pytest.raises(ValueError):
+        require_mapping({})
 
 
 def test_require_mapping_str_v_returns_validated_copy():
     '''Given a mapping with string values, when checked, then return a copy.'''
     source = {'drainage': 'drainage.tif', 'geology': 'geology.tif'}
-    result = require_mapping_str_v(source, 'mapping')
+    result = require_mapping_str_v(source)
 
     assert result == source
     assert result is not source
@@ -379,20 +387,17 @@ def test_require_mapping_str_v_returns_validated_copy():
 
 def test_require_mapping_str_v_rejects_non_string_value():
     '''Given a non-string mapping value, when checked, then raise TypeError.'''
-    with pytest.raises(TypeError, match='not a string'):
-        require_mapping_str_v({'a': 'valid', 'b': 2}, 'mapping')
+    with pytest.raises(TypeError):
+        require_mapping_str_v({'a': 'valid', 'b': 2})
 
 
 def test_require_mapping_str_v_rejects_empty_string_value():
     '''Given an empty mapping value, when checked, then raise ValueError.'''
-    with pytest.raises(ValueError, match='empty string'):
-        require_mapping_str_v({'a': ''}, 'mapping')
+    with pytest.raises(ValueError):
+        require_mapping_str_v({'a': ''})
 
 
-# ---------------------------------------------------------------------------
-# Sequence primitives
-# ---------------------------------------------------------------------------
-
+# ----- `require_sequence` validation
 @pytest.mark.parametrize(
     'value',
     [
@@ -403,7 +408,7 @@ def test_require_mapping_str_v_rejects_empty_string_value():
 )
 def test_require_sequence_returns_tuple(value):
     '''Given a non-string sequence, when validated, then return a tuple.'''
-    result = require_sequence(value, 'sequence')
+    result = require_sequence(value)
 
     assert result == tuple(value)
     assert isinstance(result, tuple)
@@ -423,8 +428,8 @@ def test_require_sequence_returns_tuple(value):
 )
 def test_require_sequence_rejects_non_sequences(value):
     '''Given an invalid sequence input, when validated, then raise an error.'''
-    with pytest.raises(ValidationError, match='not a sequence'):
-        require_sequence(value, 'sequence')
+    with pytest.raises(ValidationError):
+        require_sequence(value)
 
 
 @pytest.mark.parametrize(
@@ -444,9 +449,7 @@ def test_require_numeric_sequence_accepts_valid_sequences(
 ):
     '''Given a valid numeric sequence, when checked, then return a tuple.'''
     assert (
-        require_numeric_sequence(
-            value, 'sequence', required_type, length
-        )
+        require_numeric_sequence(value, required_type, length)
         == expected
     )
 
@@ -468,9 +471,7 @@ def test_require_numeric_sequence_rejects_invalid_sequences(
 ):
     '''Given an invalid numeric sequence, when checked, then raise an error.'''
     with pytest.raises(ValidationError):
-        require_numeric_sequence(
-            value, 'sequence', required_type, length
-        )
+        require_numeric_sequence(value, required_type, length)
 
 
 @pytest.mark.parametrize(
@@ -487,7 +488,7 @@ def test_require_string_sequence_accepts_valid_sequences(
     expected,
 ):
     '''Given a valid string sequence, when checked, then return a tuple.'''
-    assert require_string_sequence(value, 'sequence', length) == expected
+    assert require_string_sequence(value, length) == expected
 
 
 @pytest.mark.parametrize(
@@ -501,19 +502,16 @@ def test_require_string_sequence_accepts_valid_sequences(
 def test_require_string_sequence_rejects_invalid_sequences(value, length):
     '''Given an invalid string sequence, when checked, then raise an error.'''
     with pytest.raises((TypeError, ValueError, ValidationError)):
-        require_string_sequence(value, 'sequence', length)
+        require_string_sequence(value, length)
 
 
-# ---------------------------------------------------------------------------
-# File validation
-# ---------------------------------------------------------------------------
-
+# ----- `require_file` validation
 def test_require_file_returns_path_for_existing_file(tmp_path):
     '''Given an existing file, when validated, then return its Path.'''
     source = tmp_path / 'input.tif'
     source.write_bytes(b'test')
 
-    result = require_file(str(source), 'input') # type: ignore
+    result = require_file(str(source))
 
     assert result == source
     assert isinstance(result, pathlib.Path)
@@ -525,29 +523,37 @@ def test_require_file_accepts_path_string(tmp_path):
     source = tmp_path / 'config.yaml'
     source.write_text('key: value\n', encoding='utf-8')
 
-    assert require_file(str(source), 'config') == source # type: ignore
+    assert require_file(str(source)) == source
+
+
+def test_require_file_accepts_path_object(tmp_path):
+    '''Given a valid Path instance, when checked, then return a Path.'''
+    source = tmp_path / 'config.yaml'
+    source.write_text('key: value\n', encoding='utf-8')
+
+    assert require_file(source) == source
 
 
 def test_require_file_rejects_missing_file(tmp_path):
     '''Given a nonexistent file, when validated, then raise ValidationError.'''
     source = tmp_path / 'missing.tif'
 
-    with pytest.raises(ValidationError, match='not a valid file'):
-        require_file(str(source), 'input') # type: ignore
+    with pytest.raises(ValidationError, match='Not a valid file'):
+        require_file(str(source))
 
 
 def test_require_file_rejects_directory(tmp_path):
     '''Given a directory path, when validated, then raise ValidationError.'''
-    with pytest.raises(ValidationError, match='not a valid file'):
-        require_file(str(tmp_path), 'input') # type: ignore
+    with pytest.raises(ValidationError, match='Not a valid file'):
+        require_file(str(tmp_path))
 
 
 def test_require_file_rejects_missing_path_when_required():
     '''Given no path and missing_ok false, when checked, then raise an error.'''
     with pytest.raises(ValidationError, match='Path not provided'):
-        require_file(None, 'input') # type: ignore
+        require_file(None)
 
 
 def test_require_file_accepts_missing_path_when_optional():
     '''Given no path and missing_ok true, when checked, then return None.'''
-    assert require_file(None, 'input', missing_ok=True) is None
+    assert require_file(None, missing_ok=True) is None

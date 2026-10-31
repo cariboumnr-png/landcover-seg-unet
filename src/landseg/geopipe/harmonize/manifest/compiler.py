@@ -32,12 +32,13 @@ Public APIs:
 '''
 
 # standard imports
+import collections
 import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.harmonize.manifest.normalizer as normalizer
-import landseg.geopipe.harmonize.manifest.schema as schema
+import landseg.utils.validator as val
 
 
 # ----- public classes
@@ -49,7 +50,9 @@ class DatasetManifestError(Exception):
 
 
 # ----- public functions
-def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
+def compile_dataset_manifest(
+    fp: pathlib.Path
+) -> tuple[normalizer.ManifestEntry, ...]:
     '''
     Read, validate, and compile dataset manifest from JSON.
 
@@ -58,43 +61,62 @@ def compile_dataset_manifest(fp: pathlib.Path) -> list[schema.ManifestEntry]:
             File path to root dataset manifest JSON.
 
     Returns:
-        list[schema.ManifestEntry]:
-            List of normalized manifest entries.
+        tuple[schema.ManifestEntry, ...]:
+            Tuple of normalized manifest entries.
     '''
     # load JSON via artifact controller
     ctrl = artifacts.Controller[list[dict[str, typing.Any]]](fp)
     ctrl.hash(overwrite=False) # hash once
     mfst = ctrl.fetch()
-
-    # expect JSON read as a list of dicts
-    if not isinstance(mfst, list):
+    # cheap type check: expect JSON read as a list of dicts
+    try:
+        val.require_sequence(mfst)
+        if len(mfst) == 0:
+            raise DatasetManifestError('Manifest JSON read as an empty list')
+        for i, mfst_entry in enumerate(mfst):
+            val.require_mapping(mfst_entry)
+    except val.ValidationError as e:
         raise DatasetManifestError(
             f'Manifest JSON expected to read as a list dictionaries, '
             f'got: {type(mfst)}'
-        )
+        ) from e
 
-    compiled: list[schema.ManifestEntry] = []
-    EntryCtrl = artifacts.Controller[schema.ManifestEntry]
+    compiled: list[normalizer.ManifestEntry] = []
+    fingerprints: list[str] = []
     for i, mfst_entry in enumerate(mfst):
         try:
-            mfst_entry_path = mfst_entry.get('manifest', '')
-            _ctrl = EntryCtrl(mfst_entry_path)
-            _ctrl.hash(overwrite=False) # hash once
-            entry = _ctrl.fetch()
-        except (TypeError, ValueError) as e:
+            name = val.require_string(mfst_entry.get('name'))
+            data = val.require_file(mfst_entry.get('path'))
+            mfst_path = val.require_file(mfst_entry.get('manifest'))
+        except (val.ValidationError, ValueError) as e:
             raise DatasetManifestError(f'Invalid manifest entry {i}') from e
 
         try:
-            norm = normalizer.ManifestEntryNormalizer(entry).normalized_entry
+            _ctrl = artifacts.Controller[normalizer.ManifestEntry](mfst_path)
+            _ctrl.hash(overwrite=False) # hash once
+            entry = _ctrl.fetch()
+        except artifacts.ArtifactError as e:
+            raise DatasetManifestError(f'Error loading {mfst_path}') from e
+
+        try:
+            norm = normalizer.normalize_manifest_entry(entry)
             compiled.append(norm)
-        except(TypeError, ValueError) as e:
-            raise DatasetManifestError(f'Invalid manifest entry {i}') from e
+        except (ValueError, val.ValidationError) as e:
+            raise DatasetManifestError(f'Error validating {mfst_path}') from e
 
-        # matching sanity
-        assert norm['name'] == mfst_entry.get('name')
-        path = mfst_entry.get('path')
-        assert path
-        assert norm['path'].resolve() == pathlib.Path(path)
+        # matching checks
+        if not (
+            name == norm['name'] and
+            data.resolve() == norm['path'].resolve()
+        ):
+            raise DatasetManifestError('Mismatch manifest name/data file path')
 
-    # return a list of entries
-    return compiled
+        fingerprints.append(artifacts.compute_fingerprint(norm))
+
+    # check for collisions
+    dup = {i for i, c in collections.Counter(fingerprints).items() if c > 1}
+    if dup:
+        raise DatasetManifestError(f'Found duplicated manifest entries: {dup}')
+
+    # return a tuple of entries
+    return tuple(compiled)

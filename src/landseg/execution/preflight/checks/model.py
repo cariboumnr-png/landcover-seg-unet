@@ -20,10 +20,10 @@
 # =========================================================================== #
 
 '''
-Model architecture and checkpoint diagnostic probes.
+Model architecture and checkpoint diagnostic checks.
 
-Inspects neural backbone configurations, channel counts, and evaluation
-checkpoint weights prior to model execution.
+Inspects neural backbone configuration, evaluation checkpoints, and
+target dataset splits prior to model execution.
 
 Public APIs:
     - `model_body`: Inspect configured model architecture.
@@ -34,27 +34,24 @@ Public APIs:
 # standard imports
 import pathlib
 # local imports
-import landseg.configs as configs
+import landseg.execution.preflight.context as context
 import landseg.execution.preflight.schema as schema
 
 
+# ----- constants
+_SUPPORTED_SPLITS = {'test', 'val', 'train'}
+
+
 # ----- public functions
-def model_body(root_config: configs.RootConfig) -> schema.ProbeResult:
-    '''
-    Inspect configured model body architecture.
-
-    Args:
-        root_config:
-            root configuration containing model specifications.
-
-    Returns:
-        schema.ProbeResult:
-            probe result record with architecture recognition status.
-    '''
-    body = root_config.models.model_body
+def model_body(
+    ctx: context.InspectionContext,
+    pid: str = 'model_body',
+) -> schema.ProbeResult:
+    '''Inspect configured model body architecture.'''
+    body = ctx.config.models.model_body
     return schema.ProbeResult(
-        pid='model_body',
-        category='Model',
+        pid=pid,
+        category=schema.ProbeCategory.MODEL,
         status=schema.ProbeStatus.PASS,
         message=f'Configured architecture: "{body}" recognized in registry',
         details={'model_body': body},
@@ -62,77 +59,54 @@ def model_body(root_config: configs.RootConfig) -> schema.ProbeResult:
 
 
 def checkpoint_ready(
-    root_config: configs.RootConfig,
-    pid: str | None = None,
+    ctx: context.InspectionContext,
+    pid: str = 'checkpoint_ready',
 ) -> schema.ProbeResult:
-    '''
-    Inspect model weights checkpoint file existence and readable size.
+    '''Inspect evaluation checkpoint file existence and readable size.'''
+    checkpoint = ctx.config.session.evaluation.checkpoint
+    ckpt_path = pathlib.Path(checkpoint) if checkpoint else None
 
-    Args:
-        root_config:
-            root configuration containing evaluation checkpoint path.
-        pid:
-            optional probe identifier override.
-
-    Returns:
-        schema.ProbeResult:
-            diagnostic result indicating whether checkpoint is ready.
-    '''
-    checkpoint_path = root_config.session.evaluation.checkpoint
-    if not checkpoint_path or not pathlib.Path(checkpoint_path).is_file():
+    if ckpt_path is None or not ckpt_path.is_file():
         return schema.ProbeResult(
-            pid=pid or 'checkpoint_exists',
-            category='Model',
+            pid=pid,
+            category=schema.ProbeCategory.MODEL,
             status=schema.ProbeStatus.FAIL,
-            message=f'Checkpoint file not found: {checkpoint_path}',
-            details={'checkpoint': checkpoint_path},
+            message=f'Checkpoint file not found: {checkpoint}',
+            details={'checkpoint': str(checkpoint)},
         )
 
-    size_mb = pathlib.Path(checkpoint_path).stat().st_size / (1024 ** 2)
+    size_mb = ckpt_path.stat().st_size / (1024 ** 2)
     return schema.ProbeResult(
-        pid=pid or 'checkpoint_exists',
-        category='Model',
+        pid=pid,
+        category=schema.ProbeCategory.MODEL,
         status=schema.ProbeStatus.PASS,
         message=f'Checkpoint exists ({size_mb:.1f} MB)',
-        details={'checkpoint': checkpoint_path, 'size_mb': round(size_mb, 2)},
+        details={'checkpoint': str(ckpt_path), 'size_mb': round(size_mb, 2)},
     )
 
 
 def eval_split(
-    root_config: configs.RootConfig,
-    pid: str | None = None,
+    ctx: context.InspectionContext,
+    pid: str = 'eval_split',
 ) -> schema.ProbeResult:
-    '''
-    Validate configured evaluation dataset partition split.
-
-    Args:
-        root_config:
-            root configuration containing evaluation split setting.
-        pid:
-            optional probe identifier override.
-
-    Returns:
-        schema.ProbeResult:
-            diagnostic result indicating whether split is supported.
-    '''
-    split_name = root_config.session.evaluation.split
-    supported_splits = {'test', 'val', 'train'}
-    if split_name in supported_splits:
+    '''Validate configured evaluation dataset partition split.'''
+    split = ctx.config.session.evaluation.split
+    if split in _SUPPORTED_SPLITS:
         return schema.ProbeResult(
-            pid=pid or 'eval_split_configured',
-            category='Model',
+            pid=pid,
+            category=schema.ProbeCategory.MODEL,
             status=schema.ProbeStatus.PASS,
-            message=f"Evaluation target split '{split_name}' configured",
-            details={'split': split_name},
+            message=f"Evaluation target split '{split}' configured",
+            details={'split': split},
         )
 
     return schema.ProbeResult(
-        pid=pid or 'eval_split_configured',
-        category='Model',
+        pid=pid,
+        category=schema.ProbeCategory.MODEL,
         status=schema.ProbeStatus.FAIL,
         message=(
-            f"Unsupported evaluation split '{split_name}'; "
-            f"expected one of {sorted(supported_splits)}"
+            f"Unsupported evaluation split '{split}'; "
+            f'expected one of {sorted(_SUPPORTED_SPLITS)}'
         ),
-        details={'split': split_name},
+        details={'split': split},
     )

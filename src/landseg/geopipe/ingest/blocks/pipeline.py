@@ -74,7 +74,8 @@ class BlockPipelineRuntimeContext:
 
 # ----- public functions
 def run_blocks_building(
-    inputs: assembler.BlockBuildingInputs,
+    image_fpath: pathlib.Path,
+    label_fpath: pathlib.Path | None,
     config: assembler.BlockBuildingConfig,
     context: BlockPipelineRuntimeContext,
     *,
@@ -107,10 +108,10 @@ def run_blocks_building(
     artifact_paths = context.block_artifact_paths
 
     # map rasters to the provided world grid
-    ras_windows = mapper.map_rasters_to_grid(
+    mapped_raster_windows = mapper.map_rasters_to_grid(
         context.world_grid,
-        inputs.image_fpath,
-        inputs.label_fpath,
+        image_fpath,
+        label_fpath,
         context.block_windowns_artifact_fapth,
         policy=config.artifacts_policy,
     )
@@ -125,19 +126,18 @@ def run_blocks_building(
         pass
 
     # build data blocks
-    building_context = assembler.BlockBuildingContext(
-        image=ras_windows.image,
-        label=ras_windows.label,
-        block_size=ras_windows.tile_shape,
-        image_band_map=assembler.read_band_map(inputs.image_fpath),
-        label_specs=assembler.read_label_specs(inputs.label_fpath),
-        incumbent_catalog=incumbent_catalog,
+    building_inputs = assembler.BlockBuildingInputs(
+        image_fpath=image_fpath,
+        image_windows=mapped_raster_windows.image,
+        label_fpath=label_fpath,
+        label_windows=mapped_raster_windows.label,
+        expected_block_size=mapped_raster_windows.tile_shape,
     )
     block_building_result = assembler.build_blocks(
-        inputs,
+        building_inputs,
         config,
-        building_context,
         output_dir=artifact_paths.blocks,
+        incumbent_catalog=incumbent_catalog,
     )
 
     # persist collision manifest
@@ -156,8 +156,8 @@ def run_blocks_building(
     provenance = manifest.ManifestProvenance(
         grid_id=context.world_grid.gid,
         block_identity=context.world_grid.block_identity,
-        source_image=inputs.image_fpath,
-        source_label=inputs.label_fpath,
+        source_image=image_fpath,
+        source_label=label_fpath,
         harmonize_run_id=context.harmonize_run_id,
         ingest_run_id=context.ingest_run_id,
     )
@@ -173,11 +173,9 @@ def run_blocks_building(
     stats = block_building_result.running_stats
 
     logger.set_data_blocks({
-        'image_filepath': str(inputs.image_fpath.resolve()),
+        'image_filepath': str(image_fpath.resolve()),
         'label_filepath': (
-            str(inputs.label_fpath.resolve())
-            if inputs.label_fpath is not None
-            else None
+            str(label_fpath.resolve()) if label_fpath is not None else None
         ),
         'duration_sec': time.perf_counter() - start_time,
         'stats': stats,

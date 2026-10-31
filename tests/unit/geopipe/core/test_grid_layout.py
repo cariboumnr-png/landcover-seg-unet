@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 '''Unit tests for world-grid tiling utility (grid_layout.py).'''
 
 # third-party imports
@@ -32,21 +31,22 @@ import landseg.geopipe.core.grid_layout as grid_layout
 
 
 # ----- `GridSpec` tests
-def test_gridspec_validation():
+def test_gridspec_as_dict():
     '''
-    Given: An invalid overlap specification.
-    When: `GridSpec` is initialized.
-    Then: Raise a ValueError in post-init.
+    Given: A valid GridSpec instance.
+    When: Converting to a dictionary.
+    Then: Return a dictionary matching all specification fields.
     '''
-    with pytest.raises(ValueError, match='Overlap must be smaller'):
-        grid_layout.GridSpec(
-            crs='EPSG:32617',
-            origin=(500000.0, 5000000.0),
-            pixel_size=(10.0, 10.0),
-            tile_size=(256, 256),
-            tile_stride=(300, 128),
-            grid_extent=(5120.0, 5120.0),
-        )
+    spec = grid_layout.GridSpec(
+        crs='EPSG:32617',
+        origin=(500000.0, 5000000.0),
+        pixel_size=(10.0, 10.0),
+        tile_size=(256, 256),
+        tile_stride=(128, 128),
+        grid_extent=(5120.0, 5120.0),
+    )
+    assert spec.as_dict()['crs'] == 'EPSG:32617'
+    assert spec.as_dict()['tile_stride'] == (128, 128)
 
 
 # ----- `GridLayout` tests

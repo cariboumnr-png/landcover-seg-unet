@@ -95,6 +95,7 @@ def test_data_ingest_pipeline_success(tmp_path, mocker):
     )
     mock_run = mocker.patch.object(ingest, 'run_data_ingestion')
 
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
     pipeline = pipelines.DataIngestion(config)
     pipeline.run()
 
@@ -151,6 +152,7 @@ def test_data_ingest_pipeline_failure(tmp_path, mocker):
         side_effect=RuntimeError('Ingestion failed unexpectedly')
     )
 
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
     pipeline = pipelines.DataIngestion(config)
     with pytest.raises(RuntimeError, match='Ingestion failed unexpectedly'):
         pipeline.run()

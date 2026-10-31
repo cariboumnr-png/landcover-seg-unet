@@ -119,6 +119,7 @@ def test_train_pipeline_success(tmp_path, mocker):
         return_value=mock_runner,
     )
 
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
     pipeline = train_pipeline.ModelTraining(config)
     pipeline.run()
 
@@ -161,6 +162,7 @@ def test_train_pipeline_failure(tmp_path, mocker):
         return_value=mock_runner,
     )
 
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
     pipeline = train_pipeline.ModelTraining(config)
     with pytest.raises(RuntimeError, match='CUDA out of memory'):
         pipeline.run()

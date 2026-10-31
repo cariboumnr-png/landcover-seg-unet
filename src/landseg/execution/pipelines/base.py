@@ -109,9 +109,10 @@ class BasePipeline(abc.ABC):
 
     def _validate(self) -> typing.Any:
         '''Validate pipeline environment and upstream requirements.'''
-        preflight.assert_target_prerequisites(
+        preflight.assert_target_ready(
             self.pipeline_name,
-            self.artifact_paths,
+            self.config,
+            artifact_paths=self.artifact_paths,
         )
 
 

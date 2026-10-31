@@ -67,20 +67,21 @@ def test_evaluate_invalid_split_raises_value_error(tmp_path):
 def test_evaluate_validate_missing_checkpoint(tmp_path):
     '''
     Given: Evaluation configuration with non-existent checkpoint path.
-    When: Calling `config.session.evaluation.validate()` on RootConfig.
-    Then: Raise a ConfigValidationError.
+    When: Calling `_validate()` on `ModelEvaluation`.
+    Then: Raise a RuntimeError indicating missing checkpoint.
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     schema.execution.exp_root = tmp_path
-    schema.session.evaluation.checkpoint = tmp_path / 'missing.pt'
+    schema.session.evaluation.checkpoint = str(tmp_path / 'missing.pt')
     schema.session.evaluation.split = 'val'
 
     config = typing.cast(
         configs.RootConfig,
         omegaconf.OmegaConf.to_object(schema)
     )
-    with pytest.raises(configs.schema.base.ConfigValidationError):
-        config.session.evaluation.validate()
+    pipeline = eval_pipeline.ModelEvaluation(config)
+    with pytest.raises(RuntimeError, match='Checkpoint file not found'):
+        pipeline._validate()
 
 
 def test_evaluate_validate_missing_prep_report(tmp_path):

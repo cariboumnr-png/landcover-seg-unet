@@ -33,33 +33,16 @@ Public APIs:
 '''
 
 # standard imports
-import dataclasses
-import pathlib
-import typing
+import re
 # local imports
+import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.rasters as rasters
-
-
-# ----- Public dataclasses
-@dataclasses.dataclass
-class GridConfigs:
-    '''Grid building configurations'''
-    crs_string: str
-    origin: tuple[float, float]
-    pixel_size: tuple[float, float]
-    extent_in_crs_units: tuple[float, float]
+import landseg.utils.validator as val
 
 
 # ----- public functions
-def build_grid(
-    *,
-    tile_size: tuple[int, int],
-    tile_stride: tuple[int, int],
-    mode: typing.Literal['ref', 'manual'] | str,
-    ref_fpath: pathlib.Path | None = None,
-    manual_specs: GridConfigs | None = None,
-) -> geo_core.GridLayout:
+def build_grid(config: contracts.WorldGridPrepConfig) -> geo_core.GridLayout:
     '''
     Build a world grid layout from reference raster or manual parameters.
 
@@ -74,39 +57,34 @@ def build_grid(
         geo_core.GridLayout:
             Constructed world grid layout instance.
     '''
-    # derive from reference raster
-    if mode == 'ref':
-        if not (ref_fpath and ref_fpath.exists()):
-            raise ValueError(f'Invalid reference raster: {ref_fpath}')
+    grid_specs = compile_inputs(config)
+    return geo_core.GridLayout(grid_specs)
 
+
+def compile_inputs(config: contracts.WorldGridPrepConfig) -> geo_core.GridSpec:
+    '''Validate world grid generation configuration.'''
+    if config.mode == 'ref':
+        ref_fpath = val.require_file(config.ref_fpath)
         raster_info = rasters.get_info(ref_fpath)
         l, b, r, t = raster_info.bounds
-
-        grid_spec = geo_core.GridSpec(
+        return geo_core.GridSpec(
             crs=str(raster_info.crs),
             origin=(l, t),                  # left, top as x, y
-            pixel_size=raster_info.res,     # pixel size in x, y
-            tile_size=tile_size,
-            tile_stride=tile_stride,
+            pixel_size=raster_info.res,
+            tile_size=config.tile_size,
+            tile_stride=config.tile_stride,
             grid_extent=(t - b, r - l)      # top-bottom as H, right-left as W
         )
-
-    # manually define the extent
-    elif mode == 'manual':
-        if not manual_specs:
-            raise ValueError('Manual grid specs not provided')
-
-        grid_spec = geo_core.GridSpec(
-            crs=manual_specs.crs_string,
-            origin=manual_specs.origin,
-            pixel_size=manual_specs.pixel_size,
-            tile_size=tile_size,
-            tile_stride=tile_stride,
-            grid_extent=manual_specs.extent_in_crs_units
+    manual_specs = config.manual_specs
+    if not bool(re.fullmatch(r'epsg:\d+', manual_specs.crs_string, re.I)):
+        raise val.ValidationError(
+            f'CRS string must be EPSG:xxxx, got {manual_specs.crs_string}'
         )
-
-    else:
-        raise ValueError(f'Invalid extent mode: {mode}')
-
-    output_grid = geo_core.GridLayout(grid_spec)
-    return output_grid
+    return geo_core.GridSpec(
+        crs=manual_specs.crs_string,
+        origin=manual_specs.origin,
+        pixel_size=manual_specs.pixel_size,
+        tile_size=config.tile_size,
+        tile_stride=config.tile_stride,
+        grid_extent=manual_specs.extent_in_crs_units
+    )

@@ -43,6 +43,7 @@ V = typing.TypeVar('V')
 # ----- typing aliases
 NumericRange: typing.TypeAlias = tuple[int | float, int | float]
 
+
 # ----- public classes
 class ValidationError(Exception):
     '''Raised when configuration or attribute validation fails.'''
@@ -51,7 +52,6 @@ class ValidationError(Exception):
 # ----- public functions
 def require_types(
     value: object,
-    name: str,
     required_type: type[V] | tuple[type[V], ...]
 ) -> V:
     '''Require a type or a tuple of types.'''
@@ -62,7 +62,7 @@ def require_types(
             required = required_type.__name__
 
         raise ValidationError(
-            f'Expected type: {required} for {name}, '
+            f'Expected type: {required}, '
             f'got {value} with type: {type(value)} instead'
         )
     return value
@@ -72,7 +72,6 @@ def require_types(
 @typing.overload
 def require_numeric(
     value: object,
-    value_name: str,
     require_type: None = None,
 ) -> float | int: ...
 
@@ -80,34 +79,31 @@ def require_numeric(
 @typing.overload
 def require_numeric(
     value: object,
-    value_name: str,
     require_type: type[T],
 ) -> T: ...
 
 
 def require_numeric(
     value: object,
-    value_name: str,
     require_type: type[T] | None = None,
 ) -> T | float | int:
     '''Require an integer and a float.'''
     if require_type is float:
         if not isinstance(value, float):
-            raise ValidationError(f'{value_name} not an float')
+            raise ValidationError(f'Expected a float: got {type(value)}')
         return value
     if require_type is int:
         if not isinstance(value, int):
-            raise ValidationError(f'{value_name} not an integer')
+            raise ValidationError(f'Expected an integer: got {type(value)}')
         return value
     if not isinstance(value, (int, float)):
-        raise ValidationError(f'{value_name} not a number')
+        raise ValidationError(f'Expected a number: got {type(value)}')
     return value
 
 
 @typing.overload
 def require_numeric_min(
     value: object,
-    value_name: str,
     value_min: float | int,
     require_type: None = None,
 ) -> float | int: ...
@@ -116,7 +112,6 @@ def require_numeric_min(
 @typing.overload
 def require_numeric_min(
     value: object,
-    value_name: str,
     value_min: float | int,
     require_type: type[T],
 ) -> T: ...
@@ -124,22 +119,20 @@ def require_numeric_min(
 
 def require_numeric_min(
     value: object,
-    value_name: str,
     value_min: float | int,
     require_type: type[T] | None = None,
 ) -> T | float | int:
     '''Require a number >= minimum.'''
-    _value_min = require_numeric(value_min, 'minimum')
-    _value = require_numeric(value, value_name, require_type)
+    _value_min = require_numeric(value_min)
+    _value = require_numeric(value, require_type)
     if _value < _value_min:
-        raise ValidationError(f'{value_name}: {_value} < minimum {_value_min}')
+        raise ValidationError(f'{_value} < minimum {_value_min}')
     return _value
 
 
 @typing.overload
 def require_numeric_max(
     value: object,
-    value_name: str,
     value_max: float | int,
     require_type: None = None,
 ) -> float | int: ...
@@ -148,7 +141,6 @@ def require_numeric_max(
 @typing.overload
 def require_numeric_max(
     value: object,
-    value_name: str,
     value_max: float | int,
     require_type: type[T],
 ) -> T: ...
@@ -156,22 +148,20 @@ def require_numeric_max(
 
 def require_numeric_max(
     value: object,
-    value_name: str,
     value_max: float | int,
     require_type: type[T] | None = None,
 ) -> T | float | int:
     '''Require a number <= maximum.'''
-    _value_max = require_numeric(value_max, 'maximum')
-    _value = require_numeric(value, value_name, require_type)
+    _value_max = require_numeric(value_max)
+    _value = require_numeric(value, require_type)
     if _value > _value_max:
-        raise ValidationError(f'{value_name}: {_value} > maximum {_value_max}')
+        raise ValidationError(f'{_value} > maximum {_value_max}')
     return _value
 
 
 @typing.overload
 def require_numeric_range(
     value: object,
-    value_name: str,
     require_range: NumericRange,
     require_type: None = None,
 ) -> float | int: ...
@@ -180,7 +170,6 @@ def require_numeric_range(
 @typing.overload
 def require_numeric_range(
     value: object,
-    value_name: str,
     require_range: NumericRange,
     require_type: type[T],
 ) -> T: ...
@@ -188,78 +177,74 @@ def require_numeric_range(
 
 def require_numeric_range(
     value: object,
-    value_name: str,
     require_range: NumericRange,
     require_type: type[T] | None = None,
 ) -> T | float | int:
-    '''Require a number within closed range (min, max).'''
-    _value = require_numeric(value, value_name, require_type)
-    _require_range = require_numeric_sequence(require_range, 'range', k=2)
+    '''Require a number within closed range (min <= x <= max).'''
+    _value = require_numeric(value, require_type)
+    _require_range = require_numeric_sequence(require_range, k=2)
     mmin, mmax = _require_range
-    require_numeric_min(_value, value_name, mmin, require_type)
-    require_numeric_max(_value, value_name, mmax, require_type)
+    require_numeric_min(_value, mmin, require_type)
+    require_numeric_max(_value, mmax, require_type)
     return _value
 
 
 # strings
 def require_string(
     value: object,
-    value_name: str,
 ) -> str:
     '''Require a non-empty string; return as a str.'''
     if not isinstance(value, str):
-        raise TypeError(f'{value_name} not a string: {type(value).__name__}')
+        raise TypeError(f'Expected a string, got {type(value).__name__}')
     if not value:
-        raise ValueError(f'{value_name} is an empty string')
+        raise ValueError('String must not be empty')
     return value
 
 
 # conditions
 def require_value_from(
     value: object,
-    value_name: str,
     require_from: typing.Sequence[V],
     require_type: type[V]
 ) -> V:
     '''Require an object from a pool, e.g., allowed literals.'''
     if not isinstance(value, require_type):
         actual_type = type(value).__name__
-        raise ValidationError(f'{value_name} not required type: {actual_type}')
-    _range = require_sequence(require_from, 'required_range')
+        raise ValidationError(
+            f'Expected type {require_type.__name__}, got {actual_type}'
+        )
+    _range = require_sequence(require_from)
     if value not in _range:
-        raise ValidationError(f'{value_name} not in range: {require_from}')
+        raise ValidationError(f'Value not in allowed range: {require_from}')
     return value
 
 
 # mappings
 def require_mapping(
     value: object,
-    value_name: str,
 ) -> dict:
     '''Require a non-empty mapping; return as a dict.'''
     if not isinstance(value, collections.abc.Mapping):
-        raise TypeError(f'{value_name} not a mapping: {type(value).__name__}')
+        raise TypeError(f'Expected a mapping, got {type(value).__name__}')
     if not value:
-        raise ValueError(f'{value_name} is an empty dict')
+        raise ValueError('Mapping must not be empty')
     return dict(value)
 
 
 def require_mapping_str_v(
     value: object,
-    value_name: str,
 ) -> dict[typing.Any, str]:
     '''Require mapping with string values; return as a dict.'''
-    _value = require_mapping(value, value_name)
+    _value = require_mapping(value)
     _validated: dict[typing.Any, str] = {}
     for k, v in _value.items():
-        _validated[k] = require_string(v, f'value@key{k}')
+        _validated[k] = require_string(v)
     return _validated
 
 
 # sequences
 def require_sequence(
     value: object,
-    value_name: str,
     k: int | None = None,
 ) -> tuple:
     '''Require a sequence of objects; return as a tuple.'''
@@ -267,16 +252,15 @@ def require_sequence(
         isinstance(value, collections.abc.Sequence) and
         not isinstance(value, (str, bytes, bytearray))
     ):
-        raise ValidationError(f'{value_name} not a sequence of objects.')
+        raise ValidationError('Expected a sequence of objects')
     if k is not None and len(value) != k:
-        raise ValidationError(f'{value_name}: len={len(value)} != required {k}')
+        raise ValidationError(f'Length {len(value)} != required {k}')
     return tuple(value)
 
 
 @typing.overload
 def require_numeric_sequence(
     value: object,
-    value_name: str,
     require_type: None = None,
     k: int | None = None,
 ) -> tuple[int | float, ...]: ...
@@ -285,7 +269,6 @@ def require_numeric_sequence(
 @typing.overload
 def require_numeric_sequence(
     value: object,
-    value_name: str,
     require_type: type[T],
     k: int | None = None,
 ) -> tuple[T, ...]: ...
@@ -293,34 +276,31 @@ def require_numeric_sequence(
 
 def require_numeric_sequence(
     value: object,
-    value_name: str,
     require_type: type[T] | None = None,
     k: int | None = None,
 ) -> tuple[T, ...] | tuple[int | float, ...]:
     '''Require a sequence of numbers of optional specified length (k).'''
-    _value = require_sequence(value, value_name, k=k)
-    for i, v in enumerate(_value):
-        require_numeric(v, f'value_{i}', require_type)
+    _value = require_sequence(value, k=k)
+    for v in _value:
+        require_numeric(v, require_type)
     return _value
 
 
 def require_string_sequence(
     value: object,
-    value_name: str,
     k: int | None = None,
 ) -> tuple[str, ...]:
     '''Require a sequence of strings of optional specified length (k).'''
-    _value = require_sequence(value, value_name, k=k)
-    for i, v in enumerate(_value):
-        require_string(v, f'value_{i}')
+    _value = require_sequence(value, k=k)
+    for v in _value:
+        require_string(v)
     return _value
 
 
 # files
 @typing.overload
 def require_file(
-    path: str | None,
-    file_name: str,
+    path: str | pathlib.Path | None,
     *,
     missing_ok: typing.Literal[False] = False,
 ) -> pathlib.Path: ...
@@ -328,8 +308,7 @@ def require_file(
 
 @typing.overload
 def require_file(
-    path: str | None,
-    file_name: str,
+    path: str | pathlib.Path | None,
     *,
     missing_ok: typing.Literal[True],
 ) -> pathlib.Path | None: ...
@@ -337,16 +316,14 @@ def require_file(
 
 @typing.overload
 def require_file(
-    path: str | None,
-    file_name: str,
+    path: str | pathlib.Path | None,
     *,
     missing_ok: bool = False,
 ) -> pathlib.Path | None: ...
 
 
 def require_file(
-    path: str | None,
-    file_name: str,
+    path: str | pathlib.Path | None,
     *,
     missing_ok: bool = False,
 ) -> pathlib.Path | None:
@@ -354,11 +331,14 @@ def require_file(
     if path is None:
         if missing_ok:
             return None
-        raise ValidationError(f'Path not provided for {file_name}')
+        raise ValidationError('Path not provided')
+
     try:
         _path = pathlib.Path(path)
     except (TypeError, ValueError) as e:
-        raise ValidationError(f'{file_name} not a valid path: {path}') from e
-    if not pathlib.Path(_path).is_file():
-        raise ValidationError(f'{file_name} not a valid file: {path}')
+        raise ValidationError(f'Invalid path: {path}') from e
+
+    if not _path.is_file():
+        raise ValidationError(f'Not a valid file: {path}')
+
     return _path

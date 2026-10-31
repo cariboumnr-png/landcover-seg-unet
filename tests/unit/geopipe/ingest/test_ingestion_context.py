@@ -31,6 +31,7 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest as ingest_mod
 import landseg.geopipe.ingest.context as ingest_context
 
 
@@ -368,6 +369,13 @@ def test_verify_pool_grid_compatibility(tmp_path):
     }
     artifacts.Controller[dict](schema_fp).persist(schema_data)
     ingest_context.verify_pool_grid_compatibility(schema_fp, layout)
+    ingest_context.verify_pool_grid_compatibility(
+        schema_fp, pathlib.Path(grid_fp)
+    )
+    ingest_mod.validators.pool_compatibility(schema_fp, layout)
+    ingest_mod.validators.pool_compatibility(
+        schema_fp, pathlib.Path(grid_fp)
+    )
 
     # when schema has mismatched block_identity -> raises ArtifactError
     mismatched_spec = geo_core.GridSpec(
@@ -379,12 +387,24 @@ def test_verify_pool_grid_compatibility(tmp_path):
         grid_extent=(160.0, 160.0),
     )
     mismatched_layout = geo_core.GridLayout(mismatched_spec)
+    mismatched_fp = tmp_path / 'mismatched_grid.json'
+    ctrl = artifacts.Controller[geo_core.GridPayload](mismatched_fp)
+    ctrl.persist(mismatched_layout.to_payload())
+
     with pytest.raises(
         artifacts.ArtifactError,
         match='Grid compatibility mismatch',
     ):
         ingest_context.verify_pool_grid_compatibility(
             schema_fp, mismatched_layout
+        )
+
+    with pytest.raises(
+        artifacts.ArtifactError,
+        match='Grid compatibility mismatch',
+    ):
+        ingest_mod.validators.pool_compatibility(
+            schema_fp, mismatched_fp
         )
 
 

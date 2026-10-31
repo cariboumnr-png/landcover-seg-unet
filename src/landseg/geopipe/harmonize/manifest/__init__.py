@@ -40,6 +40,7 @@ __all__ = [
     'DatasetManifestError',
     # functions
     'compile_dataset_manifest',
+    'normalize_manifest_entry',
     # typing
     'ManifestEntry',
 ]
@@ -51,8 +52,9 @@ if typing.TYPE_CHECKING:
         DatasetManifestError,
         compile_dataset_manifest,
     )
-    from .schema import (
+    from .normalizer import (
         ManifestEntry,
+        normalize_manifest_entry,
     )
 
 
@@ -64,8 +66,11 @@ def __getattr__(name: str):
         obj = importlib.import_module('.compiler', __package__)
         return getattr(obj, name)
 
-    if name in {'ManifestEntry'}:
-        obj = importlib.import_module('.schema', __package__)
+    if name in {
+        'ManifestEntry',
+        'normalize_manifest_entry',
+    }:
+        obj = importlib.import_module('.normalizer', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

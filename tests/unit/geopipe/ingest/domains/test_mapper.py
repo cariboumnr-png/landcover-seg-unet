@@ -41,14 +41,14 @@ def test_map_domain_to_grid_success(dummy_geotiff_factory):
         tile dictionary package.
     '''
     tf = rasterio.transform.from_origin(0.5, 0.5, 1.0, 1.0)
-    raster_path = str(dummy_geotiff_factory(
+    raster_path = dummy_geotiff_factory(
         filename='categorical.tif',
         width=16,
         height=16,
         bands=1,
         transform=tf,
         dtype=numpy.int16
-    ))
+    )
 
     # override raster content to contain explicit integer categories 10 and 11
     # write to band 1
@@ -67,7 +67,7 @@ def test_map_domain_to_grid_success(dummy_geotiff_factory):
         origin=(0.5, 0.5), # top-left origin matching dummy raster
         pixel_size=(1.0, 1.0),
         tile_size=(8, 8),
-        tile_stride=(0, 0),
+        tile_stride=(8, 8),
         grid_extent=(16.0, 16.0)
     )
     grid = geo_core.GridLayout(spec)
@@ -94,14 +94,14 @@ def test_map_domain_to_grid_wrong_base(dummy_geotiff_factory):
     Then: Raise a ValueError indicating base mismatch.
     '''
     tf = rasterio.transform.from_origin(0.5, 0.5, 1.0, 1.0)
-    raster_path = str(dummy_geotiff_factory(
+    raster_path = dummy_geotiff_factory(
         filename='categorical.tif',
         width=16,
         height=16,
         bands=1,
         transform=tf,
         dtype=numpy.int16
-    ))
+    )
     with rasterio.open(raster_path, 'r+') as dst:
         arr = dst.read(1)
         arr[...] = 10
@@ -114,7 +114,7 @@ def test_map_domain_to_grid_wrong_base(dummy_geotiff_factory):
         origin=(0.5, 0.5),
         pixel_size=(1.0, 1.0),
         tile_size=(8, 8),
-        tile_stride=(0, 0),
+        tile_stride=(8, 8),
         grid_extent=(16.0, 16.0)
     )
     grid = geo_core.GridLayout(spec)
@@ -131,14 +131,14 @@ def test_map_domain_to_grid_empty(dummy_geotiff_factory):
     Then: Raise a ValueError due to lack of valid categories.
     '''
     tf = rasterio.transform.from_origin(0.5, 0.5, 1.0, 1.0)
-    raster_path = str(dummy_geotiff_factory(
+    raster_path = dummy_geotiff_factory(
         filename='categorical.tif',
         width=16,
         height=16,
         bands=1,
         transform=tf,
         dtype=numpy.int16
-    ))
+    )
     with rasterio.open(raster_path, 'r+') as dst:
         nodata_val = int(dst.nodata) if dst.nodata is not None else -1
         arr = dst.read(1)
@@ -151,7 +151,7 @@ def test_map_domain_to_grid_empty(dummy_geotiff_factory):
         origin=(0.5, 0.5),
         pixel_size=(1.0, 1.0),
         tile_size=(8, 8),
-        tile_stride=(0, 0),
+        tile_stride=(8, 8),
         grid_extent=(16.0, 16.0)
     )
     grid = geo_core.GridLayout(spec)

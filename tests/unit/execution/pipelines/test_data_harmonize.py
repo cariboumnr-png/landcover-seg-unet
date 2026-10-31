@@ -89,6 +89,7 @@ def test_data_harmonize_pipeline_success(tmp_path, mocker):
         return_value=mock_context,
     )
     mock_run = mocker.patch.object(harmonize, 'run_data_harmonization')
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
 
     pipeline = pipelines.DataHarmonization(config)
     pipeline.run()
@@ -142,6 +143,7 @@ def test_data_harmonize_pipeline_failure(tmp_path, mocker):
         'run_data_harmonization',
         side_effect=RuntimeError('Harmonization failed unexpectedly')
     )
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
 
     pipeline = pipelines.DataHarmonization(config)
     with pytest.raises(RuntimeError, match='Harmonization failed unexpectedly'):

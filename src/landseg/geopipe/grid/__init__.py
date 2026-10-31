@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=import-outside-toplevel
+
 '''
 Top-level namespace for `landseg.geopipe.grid`.
 
@@ -35,28 +37,39 @@ from __future__ import annotations
 import importlib
 import typing
 
+
+class _Validators: # pylint: disable=R0903
+
+    @staticmethod
+    def grid_specs(config: contracts.WorldGridPrepConfig):
+        '''Validate grid generation configurations.'''
+        import landseg.geopipe.grid.builder as builder
+        return builder.compile_inputs(config)
+
+validators = _Validators()
+
+
 __all__ = [
     # classes
     'GridLogger',
     # functions
     'prepare_world_grid',
+    # validators
+    'validators',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .lifecycle import (
-        prepare_world_grid,
-    )
-    from .logger import (
-        GridLogger,
-    )
+    import landseg.geopipe.contracts as contracts
+    
+    from .lifecycle import prepare_world_grid
+    from .logger import GridLogger
 
 
 def __getattr__(name: str):
-    if name in {
-        'prepare_world_grid',
-    }:
+
+    if name in {'prepare_world_grid'}:
         obj = importlib.import_module('.lifecycle', __package__)
         return getattr(obj, name)
 

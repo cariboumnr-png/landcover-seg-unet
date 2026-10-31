@@ -43,10 +43,10 @@ class CategoricalSpec(typing.TypedDict):
     # required
     index_base: int
     num_cls: int
-    ignore_cls: list[int]
+    ignore_cls: tuple[int, ...]
     # optional
     class_name: typing.NotRequired[dict[str, str]]
-    color_map: typing.NotRequired[dict[str, list[int]]] # requires RGB
+    color_map: typing.NotRequired[dict[str, tuple[int, int, int]]] # RGB
     taxonomy: typing.NotRequired[TaxonomySpec]
 
 
@@ -58,5 +58,5 @@ class TaxonomySpec(typing.TypedDict):
 
 class LabelScheme(typing.TypedDict):
     '''Named reclassification scheme for label raster.'''
-    reclass: dict[str, list[int]]
+    reclass: dict[str, tuple[int, ...]]
     reclass_name: dict[str, str]

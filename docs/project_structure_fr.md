@@ -125,12 +125,13 @@ src/landseg/
 |   |   |-- data_prepare.py       Pipeline de préparation des données
 |   |   |-- model_train.py        Pipeline d'entrainement
 |   |   `-- model_evaluate.py     Pipeline d'evaluation
-|   |-- preflight/                Moteur de sondes et répartiteur d'inspection préliminaire
-|   |   |-- probes/               Sondes diagnostiques (matériel, stockage, spatial, registre, etc.)
-|   |   |-- engine.py             Moteur d'inspection et répartiteur de cibles
-|   |   |-- prerequisites.py      Vérification de lignage et prérequis amont
+|   |-- preflight/                Moteur de diagnostic d'exécution piloté par catalogue
+|   |   |-- checks/               Vérifications catégorisées (contrats, système de fichiers, matériel, registre, lignage, modèle, politique)
+|   |   |-- catalog.py            Registre déclaratif des suites par cible et ProbeSpec
+|   |   |-- context.py            InspectionContext regroupant configuration et chemins
+|   |   |-- engine.py             Moteur d'inspection unifié et assertions fail-fast
 |   |   |-- reporter.py           Formatage du tableau de bord terminal et export de rapport
-|   |   `-- schema.py             Modèles de données des résultats de sondes et préparation
+|   |   `-- schema.py             Modèles de résultats de sondes et statut de préparation
 |   `-- workflows/                Workflows d'orchestration composites multi-etapes
 |       |-- batch_ingest.py       Ingestion par lots vers le pool de blocs
 |       |-- diagnose_overfit.py   Workflow de diagnostic de surapprentissage
@@ -142,20 +143,20 @@ src/landseg/
 |-- geopipe/
 |   |-- contracts/                Schémas centraux de rapports et de transfert
 |   |-- core/                     Abstractions clés, catalogues, coords et grille monde
-|   |-- grid/                     Construction, cycle de vie et logger de grille
-|   |-- harmonize/                Reprojection, composition du processeur et manifeste
+|   |-- grid/                     Construction, cycle de vie, logger et validateurs de grille
+|   |-- harmonize/                Reprojection, compilateur de manifeste, contexte, logger et validateurs
 |   |   |-- manifest/             Schéma de manifeste, normaliseur, compilateur
 |   |   |-- processor/            Routage de composition, lecteurs de features/labels, processeur
 |   |   |-- context.py            Constructeur de contexte amont d'harmonisation
 |   |   |-- logger.py             Logger structuré d'étape d'harmonisation
 |   |   `-- pipeline.py           Exécuteur d'étape d'harmonisation
-|   |-- ingest/                   Cartes de domaine et blocs canoniques
+|   |-- ingest/                   Cartes de domaine, blocs canoniques, contexte, logger et validateurs
 |   |   |-- blocks/               Assemblage de blocs, manifestes et mapping
 |   |   |-- domains/              Mapping de raster domaine, PCA et cycle de vie
 |   |   |-- context.py            Constructeur de contexte amont d'ingestion
 |   |   |-- logger.py             Logger structuré d'étape d'ingestion
 |   |   `-- pipeline.py           Exécuteur d'étape d'ingestion
-|   |-- prepare/                  Vue en mémoire, partitionnement et écriture
+|   |-- prepare/                  Vue en mémoire, partitionnement, écriture et validateurs
 |   |   |-- dataset/              Vue de jeu de données en mémoire et sémantique
 |   |   |-- partition/            Intégration AOI spatiale, split et scoring
 |   |   |-- materialize/          Stats Welford, piles de cibles et écriture
@@ -219,7 +220,8 @@ src/landseg/
 |
 |-- utils/
 |   |-- logger.py                 Configuration du logging
-|   `-- multip.py                 Helpers de multiprocessing
+|   |-- multip.py                 Helpers de multiprocessing
+|   `-- validator.py              Primitives de validation sans dépendance externe
 ```
 
 ### Notes Sur Les Frontieres Actuelles
@@ -256,3 +258,15 @@ src/landseg/
   régies par les contrats centraux dans `contracts/`.
 - Les recettes orientées tâches sous `configs/*.yaml` se résolvent directement
   dans les contrats Hydra structurés sans couche de traduction intermédiaire.
+- `execution/preflight/` est un moteur d'inspection déclaratif piloté par catalogue.
+  Les suites de préparation par cible sont définies comme données dans `catalog.py`
+  et évaluées via des vérifications catégorisées dans `checks/`. Les sondes de contrat
+  de domaine délèguent directement aux `validators` de chaque étape.
+- La validation avant vol est diagnostique : réussir preflight confirme la présence
+  des prérequis mais ne garantit pas la réussite de l'exécution. Le filtrage effectif
+  est assuré par la validation des schémas de configuration (`configs/schema/`) et
+  les constructeurs de contexte d'exécution (`build_*_context`).
+- Les étapes de `geopipe/` (`grid`, `harmonize`, `ingest`, `prepare`) exposent des
+  espaces de noms publics et purs `validators` sur la racine de leur module
+  (`__init__.py`), fournissant un contrat de validation partagé pour les sondes et
+  l'exécution interne.

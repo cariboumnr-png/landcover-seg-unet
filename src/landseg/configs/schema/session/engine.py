@@ -39,7 +39,7 @@ class EngineExec(base.BaseConfigSection):
     logit_adjust_alpha: float = 1.0
 
     def validate(self):
-        self.require_float_min(self.logit_adjust_alpha, 'LA_alpha', 0.0)
+        self.val.require_numeric_min(self.logit_adjust_alpha, 0.0)
 
 
 @dataclasses.dataclass
@@ -52,10 +52,10 @@ class EngineOptim(base.BaseConfigSection):
     grad_clip_norm: float | None = 1.0
 
     def validate(self):
-        self.require_float_min(self.lr, 'lr', 0.0)
-        self.require_float_min(self.weight_decay, 'weight_decay', 0.0)
+        self.val.require_numeric_min(self.lr, 0.0)
+        self.val.require_numeric_min(self.weight_decay, 0.0)
         if self.grad_clip_norm is not None:
-            self.require_float_min(self.grad_clip_norm, 'grad_clip_norm', 0.0)
+            self.val.require_numeric_min(self.grad_clip_norm, 0.0)
 
         if self.sched_cls == 'CosAnneal':
             if 'T_max' not in self.sched_args:
@@ -70,7 +70,7 @@ class EngineSchedule(base.BaseConfigSection):
 
     def validate(self):
         for f in dataclasses.fields(self):
-            self.require_int_min(getattr(self, f.name), f.name, 1)
+            self.val.require_numeric_min(getattr(self, f.name), 1, int)
 
 
 @dataclasses.dataclass
@@ -80,8 +80,8 @@ class FocalLoss(base.BaseConfigSection):
     reduction: str = 'mean'
 
     def validate(self) -> None:
-        self.require_float_min(self.weight, 'weight', 0.0)
-        self.require_float_min(self.gamma, 'gamma', 0.0)
+        self.val.require_numeric_min(self.weight, 0.0)
+        self.val.require_numeric_min(self.gamma, 0.0)
 
 
 @dataclasses.dataclass
@@ -90,8 +90,8 @@ class DiceLoss(base.BaseConfigSection):
     smooth: float = 1.0
 
     def validate(self) -> None:
-        self.require_float_min(self.weight, 'weight', 0.0)
-        self.require_float_min(self.smooth, 'smooth', 0.0)
+        self.val.require_numeric_min(self.weight, 0.0)
+        self.val.require_numeric_min(self.smooth, 0.0)
 
 
 @dataclasses.dataclass
@@ -101,9 +101,9 @@ class SpectralLoss(base.BaseConfigSection):
     neighbour: int = 4
 
     def validate(self) -> None:
-        self.require_float_min(self.weight, 'weight', 0.0)
-        self.require_float_min(self.alpha, 'alpha', 0.0)
-        self.require_allowed_int(self.neighbour, 'neighbour', [4, 8])
+        self.val.require_numeric_min(self.weight, 0.0)
+        self.val.require_numeric_min(self.alpha, 0.0)
+        self.val.require_value_from(self.neighbour, [4, 8], int)
         # pixel neighbourhood can only be 4 or 8
 
 
@@ -112,7 +112,7 @@ class TVLoss(base.BaseConfigSection):
     weight: float = 1e-4
 
     def validate(self) -> None:
-        self.require_float_min(self.weight, 'weight', 0.0)
+        self.val.require_numeric_min(self.weight, 0.0)
 
 
 @dataclasses.dataclass
@@ -121,7 +121,7 @@ class EcologicalLoss(base.BaseConfigSection):
     profile: str | None = None
 
     def validate(self) -> None:
-        self.require_float_min(self. weight, 'weight', 0.0)
+        self.val.require_numeric_min(self. weight, 0.0)
 
 
 @dataclasses.dataclass
@@ -168,15 +168,15 @@ class EngineTask(base.BaseConfigSection):
     def validate(self):
         match self.alpha_fn:
             case 'effective_n':
-                self.require_float_range(self.en_beta, 'en_beta', (0.0, 1.0))
+                self.val.require_numeric_range(self.en_beta, (0.0, 1.0))
             case 'inverse':
                 pass
             case _:
                 raise base.ConfigValidationError('Invalid loss alpha function')
 
         if self.head_weights:
-            for k, v in self.head_weights.items():
-                self.require_float_min(v, f'{k} head_w', 0.0)
+            for v in self.head_weights.values():
+                self.val.require_numeric_min(v, 0.0)
 
 
 @dataclasses.dataclass

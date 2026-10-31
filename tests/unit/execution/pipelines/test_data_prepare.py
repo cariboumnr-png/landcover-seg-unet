@@ -93,6 +93,7 @@ def test_data_prepare_pipeline_success(tmp_path, mocker):
     )
     mock_run = mocker.patch.object(prepare, 'run_data_preparation')
 
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
     pipeline = pipelines.DataPreparation(config)
     pipeline.run()
 
@@ -144,6 +145,7 @@ def test_data_prepare_pipeline_failure(tmp_path, mocker):
         side_effect=RuntimeError('partitioning failure'),
     )
 
+    mocker.patch('landseg.execution.preflight.assert_target_ready')
     pipeline = pipelines.DataPreparation(config)
     with pytest.raises(RuntimeError, match='partitioning failure'):
         pipeline.run()

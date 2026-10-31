@@ -64,8 +64,8 @@ class DomainTargetConfig(base.BaseConfigSection):
             raise ValueError(...)
 
     def validate(self) -> None:
-        self.require_int_min(self.ids_embd_dims, 'ids_embd_dims', 1)
-        self.require_int_min(self.vec_proj_dims, 'vec_proj_dims', 1)
+        self.val.require_numeric_min(self.ids_embd_dims, 1, int)
+        self.val.require_numeric_min(self.vec_proj_dims, 1, int)
 
 
 def _concat_proj() -> ProjectionConfig:

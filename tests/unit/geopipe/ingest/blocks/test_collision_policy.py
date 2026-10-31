@@ -30,6 +30,7 @@ import pytest
 import rasterio
 # local imports
 import landseg.artifacts as artifacts
+import landseg.configs.schema.data.world_grid as wg_config
 import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks as blocks
@@ -54,7 +55,6 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    inputs1 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config1 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -72,7 +72,8 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
         ingest_run_id='run_0001',
     )
     blocks.run_blocks_building(
-        inputs1,
+        img,
+        lbl,
         config1,
         context1,
         logger=logger1,
@@ -95,7 +96,6 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    inputs2 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config2 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -114,7 +114,8 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
         ingest_run_id='run_0002',
     )
     blocks.run_blocks_building(
-        inputs2,
+        img,
+        lbl,
         config2,
         context2,
         logger=logger2,
@@ -165,7 +166,6 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    inputs1 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config1 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -183,7 +183,8 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
         ingest_run_id='run_0001',
     )
     blocks.run_blocks_building(
-        inputs1,
+        img,
+        lbl,
         config1,
         context1,
         logger=logger1,
@@ -196,7 +197,6 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    inputs2 = blocks.BlockBuildingInputs(image_fpath=img, label_fpath=lbl)
     config2 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -215,7 +215,8 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
         ingest_run_id='run_0002',
     )
     blocks.run_blocks_building(
-        inputs2,
+        img,
+        lbl,
         config2,
         context2,
         logger=logger2,
@@ -263,10 +264,6 @@ def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger1.init_summary(run_id='run_0001')
-    inputs1 = blocks.BlockBuildingInputs(
-        image_fpath=img,
-        label_fpath=lbl,
-    )
     config1 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -284,7 +281,8 @@ def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
         ingest_run_id='run_0001',
     )
     blocks.run_blocks_building(
-        inputs1,
+        img,
+        lbl,
         config1,
         context1,
         logger=logger1,
@@ -297,10 +295,6 @@ def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
         enable_file_log=False,
     )
     logger2.init_summary(run_id='run_0002')
-    inputs2 = blocks.BlockBuildingInputs(
-        image_fpath=img,
-        label_fpath=lbl,
-    )
     config2 = blocks.BlockBuildingConfig(
         dem_pad_px=8,
         ignore_index=255,
@@ -320,7 +314,8 @@ def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
 
     with pytest.raises(artifacts.ArtifactError, match='Intra-pool block'):
         blocks.run_blocks_building(
-            inputs2,
+            img,
+            lbl,
             config2,
             context2,
             logger=logger2,
@@ -357,10 +352,12 @@ def _create_test_setup(tmp_path, dummy_geotiff_factory):
         dataset.update_tags(1, num_cls=2, ignore_cls='[255]', index_base=1)
 
     world_grid = grid_builder.build_grid(
-        mode='ref',
-        ref_fpath=img,
-        tile_size=(256, 256),
-        tile_stride=(128, 128),
+        wg_config.WorldGridConfig(
+            mode='ref',
+            ref_fpath=str(img),
+            tile_size=(256, 256),
+            tile_stride=(128, 128),
+        )
     )
     paths = artifacts.IngestionPaths(tmp_path)
     return world_grid, paths, img, lbl

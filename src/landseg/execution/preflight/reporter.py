@@ -14,7 +14,7 @@
 #    Unless required by applicable law or agreed to in writing, software      #
 #     distributed under the License is distributed on an 'AS IS' BASIS,       #
 #      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
-#                                   implied.                                  #
+#       implied.                                  #
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
@@ -41,10 +41,11 @@ import landseg.configs as configs
 import landseg.execution.preflight.schema as schema
 
 
-# constants
+# ----- constants
 MAX_WIDTH = 120
 HEADER_ROW = f' {"CATEGORY":<15}{"PROBE ID":<30}{"STATUS":<9}{"DETAILS"}'
-MSG_MAX_LEN = MAX_WIDTH - 15 - 30 - 9 - 3 # 3 as the len of "..."
+MSG_MAX_LEN = MAX_WIDTH - 15 - 30 - 9 - 3 # 3 for the trailing '...'
+
 
 # ----- public functions
 def format_preflight_report(
@@ -77,20 +78,18 @@ def format_preflight_report(
         for p in result.probes:
             m = p.message
             if len(m) > MSG_MAX_LEN:
-                m = m[:MSG_MAX_LEN - 1] + '...'
+                m = m[:MSG_MAX_LEN - 3] + '...'
             lns.append(f' {p.category:<15}{p.pid:<30}{p.status.value:<9}{m}')
-
         lns.append(sep)
 
         if result.telemetry:
             lns.append(' Telemetry:')
-            for k, v in result.telemetry.items():
-                lns.append(f'   - {k:<15}\t{v}')
+            for key, value in result.telemetry.items():
+                lns.append(f'   - {key:<15}\t{value}')
 
         e_n = len(result.errors)
         w_n = len(result.warnings)
         lns.append(f' STATUS: {result.status} ({e_n} errors, {w_n} warnings)')
-
         lns.append(sep)
 
     if len(result_list) > 1:
@@ -129,32 +128,15 @@ def export_preflight_report(
     result_list = results if isinstance(results, list) else [results]
 
     now = datetime.datetime.now()
-    uid = f'{now.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}'
+    uid = f'{now.strftime("%Y%m%d_%H%M%S")}_{uuid.uuid4().hex[:6]}'
 
     effective_exp_root = exp_root or root_config.execution.exp_root
     report_dir = pathlib.Path(effective_exp_root) / 'preflight'
     report_fp = report_dir / f'preflight_report_{uid}.json'
-
     report_dir.mkdir(parents=True, exist_ok=True)
 
     all_ready = all(r.is_ready for r in result_list)
-
-    pass_count = sum(
-        sum(1 for p in r.probes if p.status == schema.ProbeStatus.PASS)
-        for r in result_list
-    )
-    warn_count = sum(
-        sum(1 for p in r.probes if p.status == schema.ProbeStatus.WARN)
-        for r in result_list
-    )
-    fail_count = sum(
-        sum(1 for p in r.probes if p.status == schema.ProbeStatus.FAIL)
-        for r in result_list
-    )
-    skip_count = sum(
-        sum(1 for p in r.probes if p.status == schema.ProbeStatus.SKIP)
-        for r in result_list
-    )
+    summary = _status_summary(result_list)
 
     artifacts.Controller[dict](report_fp).persist({
         'timestamp': now.strftime(c.TF_ISO8601),
@@ -163,14 +145,24 @@ def export_preflight_report(
         'status': 'READY' if all_ready else 'BLOCKED',
         'strict': bool(root_config.execution.preflight_strict_mode),
         'is_ready': all_ready,
-        'summary': {
-            'total_probes': pass_count + warn_count + fail_count + skip_count,
-            'pass': pass_count,
-            'warn': warn_count,
-            'fail': fail_count,
-            'skip': skip_count,
-        },
+        'summary': summary,
         'targets': [r.as_dict() for r in result_list],
     })
 
     return report_fp, uid
+
+
+# ----- private helpers
+def _status_summary(results: list[schema.PreflightResult]) -> dict[str, int]:
+    '''Return aggregate probe status counts across all results.'''
+    counts = {status: 0 for status in schema.ProbeStatus}
+    for result in results:
+        for probe in result.probes:
+            counts[probe.status] += 1
+    return {
+        'total_probes': sum(counts.values()),
+        'pass': counts[schema.ProbeStatus.PASS],
+        'warn': counts[schema.ProbeStatus.WARN],
+        'fail': counts[schema.ProbeStatus.FAIL],
+        'skip': counts[schema.ProbeStatus.SKIP],
+    }

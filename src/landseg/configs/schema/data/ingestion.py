@@ -39,8 +39,8 @@ class Domains(base.BaseConfigSection):
     target_variance: float = 0.9
 
     def validate(self) -> None:
-        self.require_float_max(self.valid_threshold, 'valid_threshold', 1.0)
-        self.require_float_max(self.target_variance, 'target_variance', 1.0)
+        self.val.require_numeric_range(self.valid_threshold, (0, 1))
+        self.val.require_numeric_range(self.target_variance, (0, 1))
 
 
 @dataclasses.dataclass
@@ -53,19 +53,19 @@ class DataBlocks(base.BaseConfigSection):
     add_spectral: list[str] | None = None
 
     def validate(self) -> None:
-        self.require_int(self.ignore_index, 'ignore_index')
-        self.require_int_min(self.image_dem_pad, 'image_dem_pad', 1)
-        self.require_allowed_str(self.collision_policy, 'collision_policy', POLICY)
+        self.val.require_numeric(self.ignore_index, int)
+        self.val.require_numeric_min(self.image_dem_pad, 1, int)
+        self.val.require_value_from(self.collision_policy, POLICY, str)
 
         if self.add_topo is not None:
-            self.require_sequence(self.add_topo, 'add_topo')
+            self.val.require_sequence(self.add_topo)
             for v in self.add_topo:
-                self.require_allowed_str(v, 'topo_feature', TOPO)
+                self.val.require_value_from(v, TOPO, str)
 
         if self.add_spectral is not None:
-            self.require_sequence(self.add_spectral, 'add_spectral')
+            self.val.require_sequence(self.add_spectral)
             for v in self.add_spectral:
-                self.require_allowed_str(v, 'spectral_feature', SPECTRAL)
+                self.val.require_value_from(v, SPECTRAL, str)
 
 
 @dataclasses.dataclass
@@ -82,11 +82,11 @@ class DataIngestionConfig(base.BaseConfigSection):
         self.datablocks.validate()
 
         if self.harmonization_run is not None:
-            try:
-                self.require_int_min(self.harmonization_run, 'harmonization_run', 1)
-            except base.ConfigValidationError:
-                self.require_str(self.harmonization_run, 'harmonization_run')
-            except Exception as e:
+            if isinstance(self.harmonization_run, (int, float)):
+                self.val.require_numeric_min(self.harmonization_run, 1)
+            elif isinstance(self.harmonization_run, str):
+                self.val.require_string(self.harmonization_run)
+            else:
                 raise base.ConfigValidationError(
                     'Failed to validate "harmonization_run" attribute'
-                ) from e
+                )

@@ -35,6 +35,6 @@ class DataSpecificationConfig(base.BaseConfigSection):
 
     def validate(self) -> None:
         if self.domain_ids_name is not None:
-            self.require_str(self.domain_ids_name, 'domain_ids_name')
+            self.val.require_string(self.domain_ids_name)
         if self.domain_vec_name is not None:
-            self.require_str(self.domain_vec_name, 'domain_vec_name')
+            self.val.require_string(self.domain_vec_name)

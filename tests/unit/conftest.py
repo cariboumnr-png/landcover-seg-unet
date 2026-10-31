@@ -45,35 +45,31 @@ def _shared_block_files(tmp_path_factory):
     label_specs: dict[str, geo_core.CategoricalSpec] = {
         'head_1': {
             'num_cls': 2,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 1,
             'class_name': {'1': 'bg', '2': 'fg'},
         },
         'head_2': {
             'num_cls': 3,
-            'ignore_cls': [255],
+            'ignore_cls': (255,),
             'index_base': 1,
             'class_name': {'1': 'c0', '2': 'c1', '3': 'c2'},
         },
     }
-    cfg = assembler.DataBlockConfig(
-        image_dem_pad_px=0,
-        label_ignore_index=255,
-    )
-    context = assembler.DataBlockContext(
-        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
+    raster_data = assembler.RasterReadOutput(
+        image_array=img,
         image_nodata=numpy.nan,
+        image_band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
+        image_padded_dem=None,
+        label_array=lbl,
+        label_nodata=255,
         label_specs=label_specs,
     )
     paths: dict[str, pathlib.Path] = {}
     for name in ('train_block', 'val_block', 'test_block'):
-        inputs = assembler.DataBlockInputs(
-            block_name=name,
-            image_array=img,
-            image_padded_dem=None,
-            label_array=lbl,
+        block = assembler.build_data_block(
+            name, raster_data, ignore_index=255
         )
-        block = assembler.build_data_block(inputs, cfg, context)
         fpath = block_dir / f'{name}.npz'
         block.save(fpath)
         paths[name] = fpath

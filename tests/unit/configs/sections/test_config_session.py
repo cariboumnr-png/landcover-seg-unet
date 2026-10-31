@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 '''
 Unit tests for `landseg.configs.schema.session`.
 '''
@@ -119,30 +118,25 @@ def test_session_subsections_validation():
 
 
 # ----- `EvaluationConfig` tests
-def test_evaluation_config_validation(tmp_path):
+def test_evaluation_config_validation():
     '''
-    Given: `EvaluationConfig` with various checkpoint paths and splits.
+    Given: `EvaluationConfig` with various split configurations.
     When: `EvaluationConfig.validate()` is called.
-    Then: Pass for None or valid files, and raise ConfigValidationError.
+    Then: Pass for valid splits and raise ConfigValidationError for
+        invalid.
     '''
-    # default None checkpoint raises
-    with pytest.raises(
-        base.ConfigValidationError,
-        match='Checkpoint is required',
-    ):
-        eval_sec.EvaluationConfig().validate()
+    # default split 'test' passes
+    eval_sec.EvaluationConfig().validate()
 
-    # existing checkpoint passes
-    dummy_ckpt = tmp_path / 'model.pt'
-    dummy_ckpt.write_text('dummy')
-    eval_sec.EvaluationConfig(checkpoint=str(dummy_ckpt)).validate()
-
-    # missing checkpoint raises
-    with pytest.raises(base.ConfigValidationError):
-        eval_sec.EvaluationConfig(
-            checkpoint=str(tmp_path / 'missing.pt')
-        ).validate()
+    # 'val' split passes
+    eval_sec.EvaluationConfig(split='val').validate()
 
     # invalid split raises
     with pytest.raises(base.ConfigValidationError):
         eval_sec.EvaluationConfig(split='invalid').validate()
+
+    # valid_split property
+    cfg = eval_sec.EvaluationConfig(split='val')
+    assert cfg.valid_split == 'val'
+    with pytest.raises(base.ConfigValidationError):
+        _ = eval_sec.EvaluationConfig(split='invalid').valid_split
