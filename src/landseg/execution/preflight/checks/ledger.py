@@ -27,7 +27,7 @@ blocks artifacts. These are informational state probes, distinct from
 lineage (which asserts upstream readiness).
 
 Public APIs:
-    - `pool_state`: Inspect canonical block pool catalog state.
+    - `ingested_pool_state`: Inspect canonical block pool catalog state.
     - `prepared_blocks_state`: Inspect prepared blocks state.
 '''
 

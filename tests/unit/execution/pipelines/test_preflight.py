@@ -446,16 +446,8 @@ def test_probe_preparation_contract_success(monkeypatch, tmp_path):
     mock_features = types.SimpleNamespace(names=('b1', 'b2'))
     mock_targets = types.SimpleNamespace(head_names=('h1',))
     monkeypatch.setattr(
-        'landseg.geopipe.prepare.validators.feature_channels',
-        lambda schm, cfg_f: mock_features,
-    )
-    monkeypatch.setattr(
-        'landseg.geopipe.prepare.validators.target_heads',
-        lambda schm, cfg_t: mock_targets,
-    )
-    monkeypatch.setattr(
-        'landseg.geopipe.prepare.validators.focal_head',
-        lambda targets, focal: 'h1',
+        'landseg.geopipe.prepare.validators.dataset_semantics',
+        lambda schm, cfg=None, **kw: (mock_features, mock_targets, 'h1'),
     )
     result = checks.contracts.prepare_semantics(ctx)
     assert result.category == schema.ProbeCategory.CONTRACT
@@ -486,12 +478,12 @@ def test_probe_preparation_contract_failure(monkeypatch, tmp_path):
         lambda self: {'schema_id': 'schema'},
     )
 
-    def _failing_features(schm, cfg_f):
+    def _failing_semantics(*args, **kwargs):
         raise KeyError('Requested feature band not found')
 
     monkeypatch.setattr(
-        'landseg.geopipe.prepare.validators.feature_channels',
-        _failing_features,
+        'landseg.geopipe.prepare.validators.dataset_semantics',
+        _failing_semantics,
     )
     result = checks.contracts.prepare_semantics(ctx)
     assert result.category == schema.ProbeCategory.CONTRACT

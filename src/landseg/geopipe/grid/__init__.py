@@ -40,7 +40,6 @@ import typing
 
 class _Validators: # pylint: disable=R0903
 
-    import landseg.geopipe.contracts as contracts
     @staticmethod
     def grid_specs(config: contracts.WorldGridPrepConfig):
         '''Validate grid generation configurations.'''
@@ -48,7 +47,6 @@ class _Validators: # pylint: disable=R0903
         return builder.compile_inputs(config)
 
 validators = _Validators()
-
 
 
 __all__ = [
@@ -63,6 +61,8 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    import landseg.geopipe.contracts as contracts
+    
     from .lifecycle import prepare_world_grid
     from .logger import GridLogger
 

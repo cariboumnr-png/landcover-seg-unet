@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Stage contract diagnostic checks backed by authoritative domain handlers.
+Stage contract diagnostic checks backed by stage validators.
 
 Each check is a thin adapter: it reconstructs the same inputs the
 target pipeline assembles at runtime, delegates the actual validation
@@ -35,8 +35,7 @@ Public APIs:
     - `pool_compatibility`: Validate pool grid compatibility.
     - `raster_alignment`: Validate raster/grid alignment for ingestion.
     - `feature_specs`: Validate requested feature engineering specs.
-    - `preparation_contract`: Validate feature/target resolution.
-    - `partition_config`: Validate partition ratios, stride, and AOIs.
+    - `prepare_semantics`: Validate feature and target resolution.
 '''
 
 # standard imports
@@ -350,9 +349,7 @@ def prepare_semantics(
         schm = Ctrl(schema_fp, schema_id=geo_core.data_schema.SCHEMA_ID).fetch()
 
         cfg = ctx.config.data.preparation.datasetview
-        features = prepare.validators.feature_channels(schm, cfg.features)
-        targets = prepare.validators.target_heads(schm, cfg.targets)
-        focal_head = prepare.validators.focal_head(targets, cfg.focal_target)
+        fts, targets, focal = prepare.validators.dataset_semantics(schm, cfg)
 
     except Exception as err:  # pylint: disable=broad-exception-caught
         return _fail(
@@ -367,13 +364,13 @@ def prepare_semantics(
         category=_CATEGORY,
         status=schema.ProbeStatus.PASS,
         message=(
-            f'Preparation contract verified (focal_head: {focal_head}, '
-            f'features: {len(features.names)}, '
+            f'Preparation contract verified (focal_head: {focal}, '
+            f'features: {len(fts.names)}, '
             f'target_heads: {len(targets.head_names)})'
         ),
         details={
-            'focal_head': focal_head,
-            'features': list(features.names),
+            'focal_head': focal,
+            'features': list(fts.names),
             'target_heads': list(targets.head_names),
             'schema_fpath': str(schema_fp),
         },

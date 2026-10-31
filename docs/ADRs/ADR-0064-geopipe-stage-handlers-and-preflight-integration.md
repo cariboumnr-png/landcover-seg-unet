@@ -139,9 +139,7 @@ Validators adhere to the following principles:
 | `ingest` | `feature_specs(image_fpath, label_fpath, *, add_spectral, add_topo)` | Verifies requested spectral indices and topographic features against available raster bands without loading full imagery arrays. | `geopipe.ingest.blocks.assembler.io.RasterReadContext.validate_feature_specs()` |
 | `ingest` | `pool_compatibility(schema_fpath, grid_fpath)` | Validates incoming world grid block identity against existing dataset schema pool identity. Accepts `pathlib.Path` or `GridLayout`. | `geopipe.ingest.context.verify_pool_grid_compatibility()` |
 | `ingest` | `raster_alignment(image_fpath, grid_fpath, label_fpath)` | Reads raster headers to verify CRS compatibility, pixel resolution, and spatial extent intersection with the world grid. | `geopipe.ingest.blocks.mapper.mapper.validate_raster_alignment()` |
-| `prepare` | `feature_channels(schema, requested_features)` | Resolves requested input feature channel names and zero-based indices against the ingested dataset schema. | `geopipe.prepare.dataset.semantics.resolve_feature_channels()` |
-| `prepare` | `target_heads(schema, requested_targets)` | Resolves multi-head target hierarchy, class names, reclassification mappings, and ignore indices against the ingested dataset schema. | `geopipe.prepare.dataset.semantics.resolve_target_heads()` |
-| `prepare` | `focal_head(target_heads_context, focal_target)` | Validates that the focal target head designated for spatial partitioning exists in the resolved target heads. | `geopipe.prepare.dataset.semantics.resolve_focal_head()` |
+| `prepare` | `dataset_semantics(schema, config=None, *, ...)` | Validates requested feature channels, multi-head target hierarchy, and focal head against ingested schema. | `geopipe.prepare.dataset.semantics.resolve_*` |
 
 *Note on Partition Configuration*: Validation of partition ratios,
 buffer strides, and AOI metadata is enforced directly within the

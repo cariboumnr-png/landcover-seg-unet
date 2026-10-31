@@ -21,10 +21,13 @@
 
 '''Unit tests for data context semantics resolution.'''
 
+# standard imports
+import types
 # third-party imports
 import pytest
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.dataset.semantics as semantics
 
 
@@ -361,6 +364,47 @@ def test_resolve_focal_head():
     # unknown target error
     with pytest.raises(KeyError, match='Focal target "unknown" not found'):
         semantics.resolve_focal_head(heads_ctx, 'unknown')
+
+
+# ----- `prepare.validators.dataset_semantics` tests
+def test_dataset_semantics_validator_with_kwargs():
+    '''
+    Given: A valid schema and keyword parameters.
+    When: `prepare.validators.dataset_semantics` is invoked.
+    Then: Resolve features, target heads, and focal head successfully.
+    '''
+    schema = _make_dummy_schema()
+    features, targets, focal_head = prepare.validators.dataset_semantics(
+        schema,
+        features=['blue', 'red'],
+        targets=None,
+        focal_target=None,
+    )
+    assert features.names == ('blue', 'red')
+    assert targets.head_names == ['landcover']
+    assert focal_head == 'landcover'
+
+
+def test_dataset_semantics_validator_with_config():
+    '''
+    Given: A valid schema and mock configuration object.
+    When: `prepare.validators.dataset_semantics` is invoked with config.
+    Then: Correctly extract fields and resolve semantics.
+    '''
+    schemes = {'rgb': ['blue', 'green', 'red']}
+    schema = _make_dummy_schema(image_schemes={'user': schemes})
+    cfg = types.SimpleNamespace(
+        features={'user': 'rgb'},
+        targets={'landcover': 'base'},
+        focal_target='landcover',
+    )
+    features, targets, focal_head = prepare.validators.dataset_semantics(
+        schema,
+        cfg,  # type: ignore[arg-type]
+    )
+    assert features.names == ('blue', 'green', 'red')
+    assert targets.head_names == ['landcover']
+    assert focal_head == 'landcover'
 
 
 # ----- private helpers

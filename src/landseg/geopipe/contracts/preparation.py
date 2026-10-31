@@ -34,6 +34,7 @@ Public APIs:
     - `NormalizationReport`: Report for block materialization.
     - `PartitionSummary`: Summary of raw splits and hydration.
     - `PREPARED_SCHEMA_ID`: Constant string for prepared schema ID.
+    - `PreparationDatasetViewConfig`: Protocol for dataset view configs.
     - `PreparationPipelineConfig`: Protocol for pipeline configs.
     - `PreparationReportSchema`: Root summary schema for prepare runs.
     - `PreparedSchema`: TypedDict for dataset preparation schema.
@@ -59,7 +60,7 @@ PREPARED_SCHEMA_ID = geo_core.prepared_schema.SCHEMA_ID
 class PreparationPipelineConfig(typing.Protocol):
     '''Shape of the Preparation pipeline configurations.'''
     @property
-    def datasetview(self) -> _DatasetViewConfig: ...
+    def datasetview(self) -> PreparationDatasetViewConfig: ...
     @property
     def partition(self) -> _PartitionConfig: ...
     @property
@@ -72,7 +73,7 @@ class PreparationPipelineConfig(typing.Protocol):
     def output_dpath(self) -> str: ...
 
 
-class _DatasetViewConfig(typing.Protocol):
+class PreparationDatasetViewConfig(typing.Protocol):
     @property
     def valid_pxs(self) -> dict[str, float]: ...
     @property
