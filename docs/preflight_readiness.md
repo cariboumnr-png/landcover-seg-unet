@@ -21,6 +21,16 @@ workflow prerequisites in dry-run mode prior to execution, emitting standardized
 120-column ASCII terminal dashboards and persisting structured JSON report
 artifacts.
 
+> [!IMPORTANT]
+> **Diagnostic Scope vs. Authoritative Stage Gating**:
+> Preflight checks lean towards diagnostic verification rather than authoritative
+> execution guarantees: `preflight checks passed != geopipe stage guarantees to run`.
+> Actual execution gating is enforced during stage dispatch via configuration schema
+> validation (`landseg.configs.schema`) and runtime context building
+> (`build_*_context`). Hoisting full context construction into preflight was
+> intentionally avoided to prevent scope creep and maintain fast, non-destructive
+> dry-run audits.
+
 ---
 
 ## Contents
@@ -121,7 +131,9 @@ Each probe evaluates to one of four canonical states:
 
 An execution target is considered **`READY`** only when all probes evaluate to
 `PASS` or `WARN` (in non-strict mode). If any probe evaluates to `FAIL`, the target
-is marked **`BLOCKED`**.
+is marked **`BLOCKED`**. Note that a `READY` status reflects diagnostic readiness rather than an absolute
+guarantee that the stage execution will succeed, as deep schema validations
+and runtime context assembly take place during stage initialization.
 
 ---
 

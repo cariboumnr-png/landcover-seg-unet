@@ -1,393 +1,292 @@
-# ADR-0064: Geopipe Stage Handlers and Preflight Integration
+# ADR-0064: Geopipe Stage Validators and Catalog-Driven Preflight Integration
 
-**Status:** Proposed<br>
-**Date:** 2026-10-27
+**Status:** Accepted — Implemented<br>
+**Date:** 2026-10-27 (Implemented: 2026-10-31)
 
 ---
 
 ## 1. Context
 
-### 1.1. Foundation Laid by the Validator Primitives Branch
+### 1.1. Foundation Laid by Validator Primitives
 
-The four most recent commits on `main` introduced
-`landseg.utils.validator` -- a zero-dependency module of primitive
-validation functions (`require_types`, `require_numeric_range`,
-`require_value_from`, `require_mapping_str_v`, `require_file`, etc.)
-that raise a canonical `ValidationError`. These primitives were then
-adopted across `landseg.configs.schema` and
-`geopipe.harmonize.manifest.normalizer` / `compiler`, replacing ad-hoc
-`isinstance` checks, bare `ValueError` raises, and inline guard clauses
-with a uniform, composable validation vocabulary.
+The introduction of `landseg.utils.validator` established a
+zero-dependency module of primitive validation functions
+(`require_types`, `require_numeric_range`, `require_value_from`,
+`require_mapping_str_v`, `require_file`, `require_string`,
+`require_sequence`, `require_numeric_sequence`, etc.) that raise a
+canonical `ValidationError`. These primitives were adopted across
+`landseg.configs.schema` and `geopipe.harmonize.manifest.normalizer` /
+`compiler`, replacing ad-hoc `isinstance` checks, bare `ValueError`
+raises, and inline guard clauses with a uniform validation vocabulary.
 
-Key changes already on `main`:
+Subsequent refactoring simplified primitive signatures by removing
+superfluous parameter name arguments (`name`, `value_name`, `file_name`),
+relying on concise, standardized error messages and type-annotated
+overloads. In addition, `BaseConfigSection` aliases `val = validator`
+directly, allowing configuration dataclasses to perform schema
+validations cleanly without boilerplate wrapper staticmethods.
 
-- `ManifestEntry` and `AllowedCategory` colocated into
-  `normalizer.py`; the redundant `schema.py` was removed.
-- `ManifestEntryNormalizer` class was converted to a functional
-  `normalize_manifest_entry()`.
-- `compile_dataset_manifest()` now guards root JSON structure and
-  individual entries with validator primitives, and rejects empty
-  manifests.
-- Immutable `tuple` schemas were adopted across `CategoricalSpec`,
+Key foundations established on the branch:
+- `ManifestEntry` and `AllowedCategory` colocated in `normalizer.py`;
+  redundant `schema.py` eliminated.
+- Functional `normalize_manifest_entry()` and
+  `compile_dataset_manifest()` guard root JSON structure and entries
+  with validator primitives while rejecting empty manifests and
+  duplicate entries.
+- Immutable `tuple` schemas adopted across `CategoricalSpec`,
   `LabelScheme`, and `FeatureSchemes`.
+- Simplified validation primitive signatures across
+  `landseg.utils.validator` with type-annotated overloads.
 
-### 1.2. Current Preflight Architecture Gap
+### 1.2. Preflight Architecture Gaps
 
-ADR-0060 established the pre-flight validation engine
-(`landseg.execution.preflight`) with a probe-based diagnostic
-framework. Today, the engine works well for its supported categories
-(lineage, filesystem, ledger, hardware, spatial, dataset, policy,
-model), but its **domain-contract probes rely on external heuristics
-rather than the authoritative validation logic living inside each
-geopipe stage module**.
+[ADR-0060](./ADR-0060-higher-level-workflow-orchestration-and-preflight-validation.md)
+established the pre-flight validation engine (`landseg.execution.preflight`)
+with a probe-based diagnostic framework. However, two architectural
+shortcomings emerged in practice:
 
-Concretely:
+1. **Coupling of Stage Validation and Execution Logic**:
+   - **`geopipe.grid`**: Mode checks, reference raster existence, and
+     extent calculations were interleaved inside `GridLayout`
+     construction and `lifecycle.prepare_world_grid()`, preventing
+     preflight from probing grid specification validity without
+     triggering full artifact persistence.
+   - **`geopipe.harmonize`**: Manifest validation, grid report loading,
+     and collision hashing were coupled with pipeline initialization
+     and I/O.
+   - **`geopipe.ingest`**: Raster alignment, feature feasibility, and
+     pool grid compatibility checks were spread across `blocks.mapper`,
+     `blocks.assembler.builder`, and `context.py`, often interleaved with
+     array reading or memory allocations.
+   - **`geopipe.prepare`**: Preflight lacked a standard entry point to
+     validate requested features and multi-head target hierarchies
+     against upstream ingested schema artifacts prior to preparation.
 
-- **`geopipe.grid`**: The builder validates mode, reference raster
-  existence, and manual-specs presence inline. These checks are
-  interleaved with `GridLayout` construction, so preflight cannot
-  probe grid-definition validity without triggering the full artifact
-  lifecycle in `lifecycle.prepare_world_grid()`.
-- **`geopipe.harmonize`**: The manifest compiler and normalizer are
-  now clean validation boundaries, but the compiler calls
-  `artifacts.Controller.hash(overwrite=False)` and issues I/O, and
-  no explicit output-name-uniqueness guard exists yet. The
-  processor's defensive checks (e.g., `_tag_label_metadata()`
-  rejecting missing categorical specs) are duplicated rather than
-  shared with the normalizer.
-- **`geopipe.ingest`**: Raster alignment checks, block-config
-  feasibility checks, domain-build parameter validation, and
-  block-pool compatibility are spread across `blocks.mapper`,
-  `blocks.assembler.builder`, `domains.builder`, and `context`.
-  Some are interleaved with computation (window mapping, PCA, block
-  writing), and `_structural_validation()` in
-  `blocks.assembler.lifecycle` has side effects (file deletion) that
-  preflight must not trigger.
-- **`geopipe.prepare`**: Feature/target resolvers in
-  `dataset.semantics` are excellent shared APIs, but inline
-  target-override validation is incomplete, preparation-context
-  artifact/schema cross-checks are ad-hoc, and partition splitter
-  input validation has a check-ordering bug (`shape` indexed before
-  `ndim`).
+2. **Divergent Preflight Engine and Duplicate Validation Paths**:
+   - The preflight engine maintained separate subsystems:
+     `prerequisites.py` (imperative gate-checks) and `probes/`
+     (heuristic diagnostic evaluations).
+   - Target inspection was hardcoded through procedural match-arms
+     rather than a declarative suite.
+   - `assert_target_ready()` and `inspect_target()` checked different
+     subsets of conditions, creating duplicate code paths and subtle
+     contract drift between pre-flight assertions and execution gating.
 
-The overarching problem is that **each stage's validation logic and
-execution logic are coupled inside the same functions**, making it
-impossible for preflight to call the validation path without also
-triggering artifact I/O, mutation, or heavy computation.
+### 1.3. Practical Design Evolution: Handlers to Validators
 
-### 1.3. Design Objective
+The initial draft of this ADR envisioned creating standalone
+`handlers.py` modules within each geopipe stage containing paired
+`validate_<noun>` and `execute_<verb>` functions. During implementation,
+practical codebase constraints led to an ad-hoc simplification:
 
-Let each geopipe stage module expose **stable handlers** -- thin,
-public functions whose sole job is to encapsulate either validation
-logic or execution logic for that stage. Preflight probes will call
-the validation handlers directly, using the same code path as the
-stage pipeline itself, guaranteeing that preflight and execution
-enforce identical contracts.
+- **Intermediate `execute_*` wrappers were dropped**: Each stage already
+  possesses authoritative lifecycle entry points and pipeline runners
+  (`prepare_world_grid()`, `run_data_harmonization()`,
+  `run_data_ingestion()`, `run_data_preparation()`). Introducing an extra
+  `execute_*` layer added boilerplate indirection without architectural
+  benefit.
+- **Dedicated `handlers.py` files dissolved into `validators` namespace**:
+  Instead of adding new submodules, each geopipe stage package exposes a
+  clean, public `validators` namespace object directly on its module
+  `__init__.py`.
+- **Preflight restructured into a catalog-driven engine**: Rather than
+  appending probes onto the legacy engine, preflight was restructured into
+  a catalog-driven readiness engine (`catalog.py`, `context.py`,
+  `engine.py`, `checks/contracts.py`), deprecating `prerequisites.py` and
+  unifying diagnostic inspection with fail-fast execution gating.
 
 ---
 
 ## 2. Decision
 
-We will introduce a **handler-based contract surface** within each
-`geopipe.<stage>` package, split cleanly into validation handlers
-and execution handlers. Validation handlers will leverage
-`landseg.utils.validator` primitives wherever applicable, and each
-handler will be a pure, read-only function that raises
-`ValidationError` (or a stage-specific domain error wrapping it) on
-failure, returning normalized/validated data on success.
+We established a **stage-level validation surface** exposed via a
+`validators` namespace in each `geopipe.<stage>` module, backed by a
+**declarative catalog-driven readiness engine** in
+`landseg.execution.preflight`.
 
-The preflight engine will call these validation handlers instead of
-reimplementing equivalent checks as independent probes.
+Validation functions are pure, read-only helpers that use
+`landseg.utils.validator` primitives. The preflight engine organizes all
+target checks into declarative suites in `catalog.py`, delegating domain
+contract verification directly to stage `validators` through standardized
+contract probes in `checks/contracts.py`.
 
-### 2.1. Handler Protocol
+### 2.1. Stage `validators` Namespace Architecture
 
-Each geopipe stage (`grid`, `harmonize`, `ingest`, `prepare`) will
-expose its handlers through a `handlers.py` module (or a `handlers/`
-sub-package if the stage requires it). Every handler will follow
-these conventions:
+Each geopipe stage (`grid`, `harmonize`, `ingest`, `prepare`) exposes a
+public `validators` singleton on its `__init__.py`, instantiated from an
+internal `_Validators` class.
 
-1. **Validation handlers** are pure, read-only functions.
-   - Named `validate_<noun>` (e.g., `validate_grid_inputs`,
-     `validate_data_block_config`).
-   - Accept only the minimal inputs needed for the check (config
-     objects, metadata, file paths), never raw arrays or open file
-     handles.
-   - Return a normalized/validated value or `None`; raise
-     `ValidationError` on failure.
-   - Have zero side effects: no file writes, no artifact mutations,
-     no expensive computation.
-   - Use `landseg.utils.validator` primitives for type, range,
-     membership, and file-existence checks, expanding the primitive
-     set as needed.
+Validators adhere to the following principles:
+1. **Purity and Read-Only Operation**: Validators never mutate disk
+   artifacts, allocate compute arrays, or perform destructive operations.
+2. **Primitive Input Contracts**: Validators accept minimal
+   configurations, metadata, or path arguments (`pathlib.Path`), avoiding
+   coupling to instantiated pipeline runtime containers.
+3. **Fail-Fast Error Propagation**: Failures raise `val.ValidationError`
+   or stage-specific domain errors (e.g., `artifacts.ArtifactError`,
+   `DatasetManifestError`).
+4. **Direct Execution Reuse**: Stage pipeline runners invoke these same
+   validation functions prior to processing, guaranteeing preflight and
+   execution share an identical domain contract.
 
-2. **Execution handlers** are the stage's authoritative entry points
-   for producing artifacts.
-   - Named `execute_<verb>` (e.g., `execute_grid_build`,
-     `execute_block_ingestion`).
-   - Call the corresponding validation handler(s) first, then
-     proceed with I/O and computation.
-   - May have side effects (writes, deletes, artifact registration).
+### 2.2. Unified Stage Validator Inventory
 
-3. The stage's existing `pipeline.py` (or runner) will delegate to
-   execution handlers. Existing internal functions remain as private
-   helpers.
+| Stage | Validator | Responsibility | Delegated Implementation |
+|---|---|---|---|
+| `grid` | `grid_specs(config)` | Validates grid generation specs: checks reference raster bounds (`'ref'` mode) or enforces CRS pattern, origin, pixel size, and tile/stride bounds (`'manual'` mode). | `geopipe.grid.builder.compile_inputs()` |
+| `harmonize` | `grid_reference(grid_report_path)` | Loads and validates world grid reference artifact from upstream grid report JSON, returning restored `GridLayout`, `grid_id`, and path. | `geopipe.harmonize.context.load_grid_reference()` |
+| `harmonize` | `manifest_contract(manifest_path)` | Reads, validates, and compiles dataset manifest JSON; enforces non-empty entries and source file existence; rejects duplicate collisions. | `geopipe.harmonize.manifest.compiler.compile_dataset_manifest()` |
+| `ingest` | `feature_specs(image_fpath, label_fpath, *, add_spectral, add_topo)` | Verifies requested spectral indices and topographic features against available raster bands without loading full imagery arrays. | `geopipe.ingest.blocks.assembler.io.RasterReadContext.validate_feature_specs()` |
+| `ingest` | `pool_compatibility(schema_fpath, grid_fpath)` | Validates incoming world grid block identity against existing dataset schema pool identity. Accepts `pathlib.Path` or `GridLayout`. | `geopipe.ingest.context.verify_pool_grid_compatibility()` |
+| `ingest` | `raster_alignment(image_fpath, grid_fpath, label_fpath)` | Reads raster headers to verify CRS compatibility, pixel resolution, and spatial extent intersection with the world grid. | `geopipe.ingest.blocks.mapper.mapper.validate_raster_alignment()` |
+| `prepare` | `feature_channels(schema, requested_features)` | Resolves requested input feature channel names and zero-based indices against the ingested dataset schema. | `geopipe.prepare.dataset.semantics.resolve_feature_channels()` |
+| `prepare` | `target_heads(schema, requested_targets)` | Resolves multi-head target hierarchy, class names, reclassification mappings, and ignore indices against the ingested dataset schema. | `geopipe.prepare.dataset.semantics.resolve_target_heads()` |
+| `prepare` | `focal_head(target_heads_context, focal_target)` | Validates that the focal target head designated for spatial partitioning exists in the resolved target heads. | `geopipe.prepare.dataset.semantics.resolve_focal_head()` |
 
-```text
-geopipe.<stage>.handlers
-    +-- validate_<A>(...)   ->  normalized value | raises ValidationError
-    +-- validate_<B>(...)   ->  normalized value | raises ValidationError
-    +-- execute_<X>(...)    ->  calls validate_*, then computes & persists
+*Note on Partition Configuration*: Validation of partition ratios,
+buffer strides, and AOI metadata is enforced directly within the
+configuration schema (`PreparationPartitionConfig`) via validator
+primitives, eliminating redundant probe layers.
 
-execution.preflight.probes
-    +-- probe_<stage>_<A>(...)  ->  calls validate_<A>(...),
-                                   catches ValidationError,
-                                   returns ProbeResult(PASS|FAIL)
-```
+### 2.3. Catalog-Driven Preflight Engine
 
-### 2.2. Stage-Specific Handler Inventory
+`landseg.execution.preflight` was restructured into a modular,
+catalog-driven readiness engine:
 
-#### 2.2.1. `geopipe.grid.handlers`
+1. **Declarative Target Suites (`catalog.py`)**: Single source of truth
+   defining ordered `ProbeSpec(pid, run)` tuples for each target in
+   `SUPPORTED_TARGETS` (`'world-grid'`, `'data-harmonize'`,
+   `'data-ingest'`, `'data-prepare'`, `'model-train'`, `'model-evaluate'`,
+   `'diagnose-overfit'`). Each suite executes in strict phase order:
+   - **Filesystem**: Output directory writability (`checks.filesystem`).
+   - **Lineage**: Upstream reports, manifests, and run history (`checks.lineage`).
+   - **Policy**: Execution rules such as collision policies (`checks.policy`).
+   - **Contract**: Domain validation backed by stage `validators` (`checks.contracts`).
+   - **Ledger**: Informational summaries of block pools and prepared datasets (`checks.ledger`).
+   - **Hardware & Model**: GPU/RAM resources and model checkpoints (`checks.hardware`, `checks.model`).
+2. **Unified Inspection & Fail-Fast Assertions (`engine.py`)**:
+   - `inspect_target(target, ctx)`: Executes the target's declarative probe
+     suite against an `InspectionContext`. Probe exceptions are contained
+     as failing `ProbeResult` entries with category `EXECUTION`, ensuring
+     an unexpected probe crash does not abort the diagnostic report.
+   - `assert_target_ready(target, config, ...)`: Replaced legacy
+     `prerequisites.py` by delegating directly to `inspect_target()`. If
+     any probe returns `ProbeStatus.FAIL`, it raises a fail-fast
+     `RuntimeError` listing all failure reasons.
+3. **Contract Probe Adapters (`checks/contracts.py`)**: Thin adapters
+   that invoke stage `validators` and map outcomes into `ProbeResult`
+   instances (`grid_specs`, `grid_artifact`, `manifest_contract`,
+   `feature_specs`, `pool_compatibility`, `raster_alignment`,
+   `prepare_semantics`).
 
-| Handler | Responsibility | Validator primitives |
-|---|---|---|
-| `validate_grid_inputs(mode, tile_size, tile_stride, ref_fpath, manual_specs)` | Validate mode is `'ref'` or `'manual'`; validate tile dimensions are positive integers; in `ref` mode validate reference raster exists and is readable via `require_file`; in `manual` mode validate CRS string, origin, pixel size, extent via `require_string`, `require_numeric_sequence`, `require_numeric_min` | `require_value_from`, `require_numeric_sequence`, `require_numeric_min`, `require_file` |
-| `validate_grid_reference_metadata(ref_fpath)` | Inspect reference raster spatial metadata (CRS present, resolution valid, bounds non-degenerate) without constructing `GridLayout` | `require_file`, `require_string` |
-| `execute_grid_build(...)` | Call both validators, then delegate to `builder.build_grid()` and `lifecycle.prepare_world_grid()` | -- |
+### 2.4. Ingestion Assembler Streamlining & Primitive Paths
 
-#### 2.2.2. `geopipe.harmonize.handlers`
+To support read-only feature validation and simplify assembler data flow:
+- Consolidated fragmented builder dataclasses into `RasterReadContext` and
+  unified `BlockBuildingInputs`.
+- `build_data_block()` consumes `RasterReadOutput` directly, eliminating
+  the previous intermediate builder triad.
+- Ingestion validators accept primitive path arguments (`pathlib.Path` or
+  `GridLayout`), enabling modular verification on arbitrary inputs without
+  instantiating session or pipeline containers.
+- Relocated diagnostic block generation (`build_test_block()`) from
+  production lifecycle to `landseg.execution.workflows.diagnose_overfit`.
 
-| Handler | Responsibility | Validator primitives |
-|---|---|---|
-| `validate_manifest_contract(manifest_fp)` | Compile and validate the complete manifest through the existing `compiler.compile_dataset_manifest()` plus new guards: check effective output-name uniqueness across entries, and verify read-only compiler behavior | `require_file`, existing compiler/normalizer (which already use validator primitives) |
-| `validate_harmonization_inputs(manifest_entries, grid)` | Verify that compiled manifest entries are compatible with the target grid (CRS agreement, band-mapping completeness) | `require_string`, `require_sequence` |
-| `execute_harmonization(...)` | Call validators, then delegate to `pipeline.exec_harmonize_data()` | -- |
+### 2.5. Validator Primitives Simplification
 
-#### 2.2.3. `geopipe.ingest.handlers`
+- Removed verbose parameter name arguments (`name`, `value_name`,
+  `file_name`) across `landseg.utils.validator` functions.
+- Retained type-annotated `@typing.overload` signatures for static analysis.
+- Aliased `val = validator` on `BaseConfigSection`, streamlining schema
+  validation across configuration dataclasses.
 
-| Handler | Responsibility | Validator primitives |
-|---|---|---|
-| `validate_raster_alignment(image_fpath, label_fpath, grid)` | Extract raster metadata and check CRS, resolution compatibility, and spatial overlap with the target grid -- without computing tile-window mappings | `require_file`, `require_string` |
-| `validate_data_block_config(config, context, has_label)` | Check spectral index support, required bands, topo feature support, DEM availability, and label categorical specs -- without computing arrays | `require_value_from`, `require_sequence`, `require_numeric_range` |
-| `validate_domain_build_config(valid_threshold, target_variance)` | Enforce valid-threshold in (0, 1] and target-variance in (0, 1]; replace assertions on integer dtype/nodata with explicit `ValidationError` | `require_numeric_range` |
-| `inspect_existing_blocks(pool_dpath, grid)` | Read-only integrity and collision inventory: check NPZ readability and report damaged/colliding blocks without deleting any files | `require_file` |
-| `validate_pool_grid_compatibility(schema_fpath, grid)` | Expose the existing `verify_pool_grid_compatibility()` as a stable handler, making unknown-identity handling explicit | `require_file` |
-| `execute_block_ingestion(...)` | Call validators, then run `blocks.pipeline`, domain builds, and manifest updates | -- |
+### 2.6. Diagnostic Character vs. Authoritative Stage Gating
 
-#### 2.2.4. `geopipe.prepare.handlers`
+A critical architectural distinction must be emphasized: current stage
+`validators` and preflight contract probes lean towards **diagnostic**
+inspection rather than **authoritative execution guarantees**. A passing
+preflight check confirms prerequisite presence, path validity, and
+lightweight schema compliance, but:
 
-| Handler | Responsibility | Validator primitives |
-|---|---|---|
-| `validate_preparation_inputs(schema_fpath, catalog_fpath, mapped_windows_fpath, config)` | Cross-artifact consistency: schema exists and is loadable, catalog structure matches schema, tile dimensions are positive, overlap is compatible with tile shape, at least one image source path exists with a valid CRS | `require_file`, `require_numeric_min`, `require_numeric_sequence`, `require_mapping` |
-| `validate_feature_target_resolution(schema, config)` | Delegate to existing `resolve_feature_channels()`, `resolve_target_heads()`, `resolve_focal_head()` and additionally validate inline target-override schemes (source class indices, group ID contiguity, class-name mapping completeness) | `require_mapping`, `require_numeric_range`, `require_sequence` |
-| `validate_partition_config(val_ratio, test_ratio, buffer_step, aoi_config)` | Validate ratio ranges, positive stride (fix zero-stride acceptance), AOI raster availability and spatial metadata; fix `_validate_inputs()` check ordering (`ndim` before `shape` indexing) | `require_numeric_range`, `require_numeric_min`, `require_file` |
-| `execute_preparation(...)` | Call validators, then run partitioning, normalization, and schema emission | -- |
+$$\text{preflight checks passed} \not\equiv \text{geopipe stage guaranteed to run}$$
 
-### 2.3. Preflight Integration
+Authoritative gating remains strictly enforced during actual pipeline
+execution through two sequential barriers:
+1. **Configuration Schema Validation**: Strong typing and value bounds
+   enforced by dataclasses in `landseg.configs.schema` via `val = validator`
+   primitives.
+2. **Runtime Context Building**: Domain-specific context builders
+   (`build_harmonization_context()`, `build_ingestion_context()`,
+   `build_preparation_context()`, `GridLayout.from_specs()`) that load full
+   artifacts, inspect rasters, and assemble in-memory execution state.
 
-The preflight engine will introduce new **stage-contract probes**
-that call the validation handlers:
-
-```text
-execution.preflight.probes
-    +-- filesystem.py       (existing)
-    +-- hardware.py         (existing)
-    +-- ledger.py           (existing)
-    +-- spatial.py          (existing -- grid spatial metadata)
-    +-- dataset.py          (existing)
-    +-- model.py            (existing)
-    +-- policy.py           (existing)
-    +-- stage_contracts.py  (NEW -- handler-backed domain validation)
-```
-
-`stage_contracts.py` will contain probe functions of the form:
-
-```python
-def probe_grid_inputs(
-    root_config: configs.RootConfig,
-) -> schema.ProbeResult:
-    '''Validate grid definition through authoritative handler.'''
-    try:
-        grid_handlers.validate_grid_inputs(
-            mode=root_config.data.world_grid.mode,
-            tile_size=...,
-            tile_stride=...,
-            ref_fpath=...,
-            manual_specs=...,
-        )
-    except val.ValidationError as exc:
-        return schema.ProbeResult(
-            pid='grid_inputs',
-            category='Stage Contract',
-            status=schema.ProbeStatus.FAIL,
-            message=str(exc),
-        )
-    return schema.ProbeResult(
-        pid='grid_inputs',
-        category='Stage Contract',
-        status=schema.ProbeStatus.PASS,
-        message='Grid definition inputs validated.',
-    )
-```
-
-The engine (`engine.py`) will wire these new probes into the existing
-`inspect_target()` dispatch under each target's match arm,
-supplementing (and where appropriate replacing) existing spatial and
-dataset probes that currently perform equivalent checks independently.
-
-### 2.4. New Validator Primitives (Expansion)
-
-During handler implementation, the following additions to
-`landseg.utils.validator` are anticipated:
-
-| Primitive | Purpose |
-|---|---|
-| `require_directory(path, name, *, must_exist)` | Validate a directory path exists and is a directory; return `Path` |
-| `require_nonempty_sequence(value, name)` | Shorthand combining `require_sequence` + non-empty check |
-| `require_positive_int(value, name)` | Shorthand for `require_numeric_min(value, name, 1, int)` |
-
-These will be added conservatively and only when multiple handlers
-share the same compound check.
+During branch development, there was a temptation to hoist runtime context
+building into preflight checks to achieve fully authoritative preflight
+guarantees. However, this was deliberately dropped to prevent scope creep:
+context building reads extensive rasters, scans file trees, and prepares
+runtime objects, which conflicts with preflight's core mandate of being a
+fast, non-destructive, zero-footprint dry-run inspection. Hoisting context
+construction may be considered in a future refactoring, but was intentionally
+not proceeded with on this branch.
 
 ---
 
 ## 3. Architecture
 
-### 3.1. Layered Responsibility Model
-
 ```text
-+----------------------------------------------------------+
-|                   execution.preflight                    |
-|  probes/stage_contracts.py calls validation handlers     |
-|  translates ValidationError -> ProbeResult(PASS|FAIL)    |
-+-------------------------+--------------------------------+
-                          | calls
-                          v
-+----------------------------------------------------------+
-|              geopipe.<stage>.handlers                    |
-|  validate_*()  -- pure, read-only, uses validator prims  |
-|  execute_*()   -- calls validate_*, then computes/writes |
-+-------------------------+--------------------------------+
-                          | delegates to
-                          v
-+----------------------------------------------------------+
-|          geopipe.<stage>.{builder,pipeline,...}           |
-|  existing computation, I/O, lifecycle management         |
-+-------------------------+--------------------------------+
-                          | uses
-                          v
-+----------------------------------------------------------+
-|              landseg.utils.validator                     |
-|  require_types, require_numeric_range, require_file, ... |
-+----------------------------------------------------------+
-```
-
-### 3.2. Module Layout After Implementation
-
-```text
-src/landseg/
-+-- utils/
-|   +-- validator.py                   (expanded with new primitives)
-+-- geopipe/
-|   +-- grid/
-|   |   +-- handlers.py                (NEW)
-|   |   +-- builder.py                 (delegates to handlers)
-|   |   +-- lifecycle.py
-|   +-- harmonize/
-|   |   +-- handlers.py                (NEW)
-|   |   +-- manifest/
-|   |   |   +-- compiler.py            (strengthened, called by handler)
-|   |   |   +-- normalizer.py          (unchanged -- already refactored)
-|   |   +-- context.py
-|   |   +-- pipeline.py
-|   +-- ingest/
-|   |   +-- handlers.py                (NEW)
-|   |   +-- blocks/
-|   |   |   +-- assembler/
-|   |   |   |   +-- builder.py         (config checks extracted)
-|   |   |   |   +-- lifecycle.py       (split: inspect vs. mutate)
-|   |   |   |   +-- io.py
-|   |   |   +-- mapper/
-|   |   +-- domains/
-|   |   |   +-- builder.py             (assertions -> ValidationError)
-|   |   +-- context.py                 (verify_pool_grid -> handler)
-|   |   +-- pipeline.py
-|   +-- prepare/
-|       +-- handlers.py                (NEW)
-|       +-- context.py                 (delegates to handler)
-|       +-- dataset/
-|       |   +-- semantics.py           (inline-override validation added)
-|       |   +-- normalizer.py
-|       |   +-- view.py
-|       +-- partition/
-+-- execution/
-    +-- preflight/
-        +-- probes/
-            +-- stage_contracts.py     (NEW -- handler-backed probes)
++-------------------------------------------------------------------------+
+|                       execution.preflight                               |
+|  catalog.py      -- declarative target suites (SUITES, ProbeSpec)       |
+|  engine.py       -- inspect_target(), assert_target_ready()             |
+|  context.py      -- InspectionContext (config, artifact paths)          |
+|  checks/         -- categorized checks (filesystem, lineage, policy...) |
+|     contracts.py -- thin adapters calling geopipe.<stage>.validators    |
++-----------------------------------+-------------------------------------+
+                                    | calls
+                                    v
++-------------------------------------------------------------------------+
+|                       geopipe.<stage>                                   |
+|  __init__.py     -- exposes validators = _Validators() namespace        |
+|                     pure, read-only domain validation functions         |
+|  pipeline.py / lifecycle.py -- authoritative execution entry points     |
++-----------------------------------+-------------------------------------+
+                                    | uses
+                                    v
++-------------------------------------------------------------------------+
+|                     landseg.utils.validator                             |
+|  require_types, require_numeric_range, require_file, require_sequence...|
++-------------------------------------------------------------------------+
 ```
 
 ---
 
-## 4. Implementation Plan
+## 4. Implementation & Migration Summary
 
-### Phase 1: Harmonization Handlers (Lowest Risk -- Already Refactored)
+All planned capabilities were implemented across five phases:
 
-1. Create `geopipe.harmonize.handlers` with
-   `validate_manifest_contract()` wrapping
-   `compile_dataset_manifest()` plus new effective output-name
-   uniqueness check.
-2. Add `validate_harmonization_inputs()` for grid-manifest CRS
-   agreement.
-3. Wire `probes.stage_contracts.probe_manifest_contract()` in
-   preflight for `data-harmonize` target.
-4. Add unit tests for both handlers.
-
-### Phase 2: Grid Handlers
-
-1. Create `geopipe.grid.handlers` with `validate_grid_inputs()` and
-   `validate_grid_reference_metadata()`.
-2. Refactor `builder.build_grid()` to call `validate_grid_inputs()`
-   first.
-3. Wire `probes.stage_contracts.probe_grid_inputs()` in preflight
-   for `world-grid` target.
-4. Add unit tests.
-
-### Phase 3: Ingestion Handlers (Largest Scope)
-
-1. Create `geopipe.ingest.handlers` with:
-   - `validate_raster_alignment()` -- extracted from
-     `blocks.mapper.map_rasters()`.
-   - `validate_data_block_config()` -- extracted from
-     `blocks.assembler.builder.build_data_block()`.
-   - `validate_domain_build_config()` -- extracted from
-     `domains.builder.build_domain()`, replacing assertions with
-     `ValidationError`.
-   - `inspect_existing_blocks()` -- read-only split from
-     `blocks.assembler.lifecycle._structural_validation()`.
-   - `validate_pool_grid_compatibility()` -- thin wrapper around
-     existing `context.verify_pool_grid_compatibility()`.
-2. Split `_structural_validation()` in `lifecycle.py` into read-only
-   inspection and destructive lifecycle operations.
-3. Wire probes for `data-ingest` target.
-4. Add unit tests.
-
-### Phase 4: Preparation Handlers
-
-1. Create `geopipe.prepare.handlers` with:
-   - `validate_preparation_inputs()` -- cross-artifact consistency.
-   - `validate_feature_target_resolution()` -- delegating to existing
-     `semantics` resolvers plus inline-override validation.
-   - `validate_partition_config()` -- fix `_validate_inputs()` check
-     ordering and zero-stride acceptance.
-2. Wire probes for `data-prepare` target.
-3. Add unit tests.
-
-### Phase 5: Validator Primitive Expansion and Polish
-
-1. Add new `validator.py` primitives as identified during Phases 1-4.
-2. Sweep remaining `assert` guards on external inputs across all four
-   stages and replace with `ValidationError` where the input comes
-   from user configuration, file metadata, or upstream artifacts.
-3. Run full unit and integration test suites.
+1. **Validator Primitives Simplification & Schema Aliasing**: Dropped
+   parameter name arguments across `landseg.utils.validator`, introduced
+   direct `val = validator` aliasing on `BaseConfigSection`, and aligned
+   schema validation across all config dataclasses.
+2. **Geopipe Stage Validator Namespaces**: Created `_Validators` classes
+   and exposed public `validators` namespaces on `geopipe.grid`,
+   `geopipe.harmonize`, `geopipe.ingest`, and `geopipe.prepare` package
+   inits; eliminated redundant intermediate `handlers.py` modules.
+3. **Ingestion Assembler Streamlining & Primitive Paths**: Consolidated
+   assembler data structures into `RasterReadContext` and
+   `BlockBuildingInputs`; updated ingestion validators to accept primitive
+   `pathlib.Path` or `GridLayout` arguments; relocated `build_test_block()`
+   to `diagnose_overfit`.
+4. **Preflight Catalog Restructuring & Prerequisites Retirement**:
+   Implemented declarative `SUITES` in `catalog.py`, migrated probe
+   implementations into categorized `checks/` modules, wired
+   `checks.contracts` to stage `validators`, unified `assert_target_ready()`
+   with `inspect_target()` in `engine.py`, and removed legacy
+   `prerequisites.py` and `probes/`.
+5. **Test Suite Realignment & Verification**: Rewrote preflight unit tests
+   in `test_preflight.py` to assert against catalog suites and categorized
+   checks without prerequisite mocks; aligned stage tests to verify the
+   public `validators` namespaces; confirmed full passing test coverage.
 
 ---
 
@@ -395,41 +294,38 @@ src/landseg/
 
 ### Positive
 
-- **Single Source of Truth**: Every domain validation rule lives in
-  exactly one handler function. Preflight and execution share the
-  same code path -- no duplicated or divergent checks.
-- **Safe Preflight Probing**: Validation handlers are pure and
-  read-only by construction. Preflight can call them without risk of
-  file deletion, artifact mutation, or expensive computation.
-- **Composable Validator Stack**: The handler layer composes
-  `landseg.utils.validator` primitives into domain-specific checks.
-  New primitives can be added conservatively when multiple handlers
-  share a pattern.
-- **Clearer Module Boundaries**: Each stage's `handlers.py` becomes
-  the stable public API surface for both internal pipeline use and
-  external preflight integration.
-- **Incremental Adoption**: Each phase targets one stage and can be
-  merged independently. The branch already includes the four
-  foundation commits (validator primitives + harmonize manifest
-  refactoring), so Phases 1-2 are low-risk continuations of
-  completed work.
+- **Single Source of Truth**: Domain validation rules reside strictly
+  inside owning geopipe stage modules. Preflight probes and pipeline
+  execution share identical validation functions.
+- **Safe, Read-Only Diagnostics**: Preflight diagnostic checks never
+  invoke heavy array operations, window mapping, block writing, or
+  destructive artifact manipulation.
+- **Zero Handler Boilerplate**: Exposing `stage.validators` on package
+  inits eliminated intermediate `handlers.py` and `execute_*` wrapper
+  indirection.
+- **Declarative Readiness**: Target readiness is defined as declarative
+  data in `catalog.py`. `assert_target_ready()` and `inspect_target()`
+  share identical logic, eliminating prerequisite divergence.
+- **Streamlined Validation Primitives**: Leaner validator signatures
+  reduce visual noise and call-site complexity across schemas and stages.
+- **Primitive Path Contracts**: Ingestion validators operate directly on
+  `pathlib.Path` or `GridLayout`, enabling modular validation without
+  heavy container dependencies.
 
 ### Negative / Considerations
 
-- **Additional Module per Stage**: Four new `handlers.py` files
-  increase the module count, though each is a thin coordination
-  layer rather than a new subsystem.
-- **Potential Over-Extraction**: Not every internal `if`/`assert`
-  should become a handler. Guards protecting internal invariants
-  during numerical computation should remain as defensive assertions
-  at their point of use; only checks expressing a meaningful input
-  contract that another caller needs to rely on should be promoted.
-- **Existing Probe Overlap**: Some current preflight probes (e.g.,
-  `spatial_reference`, `raw_dataset`) perform lightweight checks
-  that may now overlap with handler-backed probes. These will be
-  evaluated case-by-case: retire the probe if the handler subsumes
-  it, or keep it if the probe provides complementary information
-  (e.g., telemetry details for the dashboard).
+- **Diagnostic Rather Than Authoritative Gating**: Preflight validation
+  guarantees prerequisite sanity and fast diagnostics, but is not an
+  authoritative execution guarantee (`preflight passed != stage execution
+  guaranteed`). Authoritative gating remains within config validation and
+  stage context building (`build_*_context`). Converting context building into
+  preflight checks was deferred to avoid scope creep.
+- **Unit Test Migration Required**: Preflight tests that mocked
+  `prerequisites.py` or old `probes/` had to be rewritten to target
+  `catalog.py` and `checks/`.
+- **Top-Level Lazy Resolution**: `validators` namespaces on `__init__.py`
+  must be exported in `__all__` and documented to preserve clean static
+  analysis and IDE autocompletion.
 
 ---
 
@@ -437,7 +333,9 @@ src/landseg/
 
 | ADR | Relationship |
 |---|---|
-| ADR-0060 (Preflight Engine) | This ADR extends ADR-0060 by providing authoritative stage-level validation entry points that preflight probes will call, replacing independent heuristic checks. |
-| ADR-0059 (Incremental Batch Ingestion) | Ingestion handlers formalize the collision-inspection / pool-compatibility checks introduced in ADR-0059 as stable, read-only APIs. |
-| ADR-0057 (Dynamic Dataset Semantics) | Preparation handlers delegate to the feature/target resolvers introduced in ADR-0057, adding inline-override validation. |
-| ADR-0056 (World Grid Pipeline) | Grid handlers encapsulate the grid-definition validation that is currently inline in the builder introduced by ADR-0056. |
+| [ADR-0060 (Preflight Engine)](./ADR-0060-higher-level-workflow-orchestration-and-preflight-validation.md) | Restructures the probe-based preflight engine into a declarative, catalog-driven readiness engine with unified fail-fast gating and authoritative contract checks. |
+| [ADR-0059 (Incremental Batch Ingestion)](./ADR-0059-incremental-batch-ingestion-and-block-collision-lifecycle.md) | Ingestion validators formalize pool grid compatibility and feature engineering feasibility as pure, path-based validation entry points. |
+| [ADR-0057 (Dynamic Dataset Semantics)](./ADR-0057-dynamic-dataset-semantics-in-memory-data-context-and-decoupled-preparation-pipeline.md) | Preparation validators directly wrap the feature channel and multi-head target resolvers introduced in ADR-0057. |
+| [ADR-0056 (World Grid Pipeline)](./ADR-0056-first-class-world-grid-pipeline-and-geopipe-modularization.md) | Grid validator encapsulates the grid input compilation and CRS validation previously embedded inside the builder. |
+| [ADR-0054 (ETL-First Architecture)](./ADR-0054-etl-first-architecture-and-artifact-renaming.md) | Harmonization validators formalize manifest compilation and grid reference verification for ETL pipelines. |
+| [ADR-0050 (Decouple Datablock Assembly)](./ADR-0050-decouple-datablock-assembly.md) | Streamlines assembler containers into `RasterReadContext` and `BlockBuildingInputs`. |

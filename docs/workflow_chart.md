@@ -141,7 +141,9 @@ Last updated: 2026-10-24
 - Pre-flight readiness validation (`execution.preflight`) provides a
   non-destructive inspection engine capable of validating prerequisites,
   storage writability, domain contracts, ledgers, and compute resources
-  before any heavy pipeline or workflow compute is dispatched.
+  before any heavy pipeline or workflow compute is dispatched. These checks
+  are diagnostic rather than authoritative; actual execution gating is
+  enforced by configuration schemas and stage context builders (`build_*_context`).
 
 - The execution layer enforces a clear bifurcation between:
   - **Atomic pipelines** (`execution.pipelines`): dedicated runner classes

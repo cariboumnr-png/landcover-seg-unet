@@ -125,12 +125,13 @@ src/landseg/
 |   |   |-- data_prepare.py       Data preparation pipeline
 |   |   |-- model_train.py        Training pipeline
 |   |   `-- model_evaluate.py     Evaluation pipeline
-|   |-- preflight/                Readiness probe engine and inspection dispatcher
-|   |   |-- probes/               Diagnostic probes for hardware, storage, spatial, ledger, etc.
-|   |   |-- engine.py             Inspection engine and target dispatcher
-|   |   |-- prerequisites.py      Upstream lineage and prerequisite checks
+|   |-- preflight/                Declarative catalog-driven readiness engine
+|   |   |-- checks/               Categorized checks (contracts, filesystem, hardware, ledger, lineage, model, policy)
+|   |   |-- catalog.py            Declarative target suite registry and ProbeSpec
+|   |   |-- context.py            InspectionContext bundling config and resolved paths
+|   |   |-- engine.py             Unified inspection engine and fail-fast assertions
 |   |   |-- reporter.py           Terminal dashboard formatting and report export
-|   |   `-- schema.py             Probe result and readiness data models
+|   |   `-- schema.py             Probe result, preflight result, and status models
 |   `-- workflows/                Composite multi-stage orchestration workflows
 |       |-- batch_ingest.py       Batch harmonization to block pool ingestion
 |       |-- diagnose_overfit.py   Overfit diagnostic workflow
@@ -142,20 +143,20 @@ src/landseg/
 |-- geopipe/
 |   |-- contracts/                Central pipeline summary and report schemas
 |   |-- core/                     Core abstractions, catalogs, coords, and grid layout
-|   |-- grid/                     World grid construction, lifecycle, and logger
-|   |-- harmonize/                Reprojection, processor composition, and manifest
+|   |-- grid/                     World grid construction, lifecycle, logger, and validators
+|   |-- harmonize/                Reprojection, manifest compiler, context, logger, and validators
 |   |   |-- manifest/             Manifest schema, normalizer, and compiler
 |   |   |-- processor/            Composition routing, feature/label readers, processor
 |   |   |-- context.py            Harmonization upstream context builder
 |   |   |-- logger.py             Harmonization stage structured logger
 |   |   `-- pipeline.py           Harmonization stage runner
-|   |-- ingest/                   Canonical data blocks and domain maps
+|   |-- ingest/                   Canonical data blocks, domain maps, context, logger, and validators
 |   |   |-- blocks/               Block assembly, manifests, mapping, pipeline
 |   |   |-- domains/              Domain raster mapping, PCA, and lifecycle
 |   |   |-- context.py            Ingestion upstream context builder
 |   |   |-- logger.py             Ingestion stage structured logger
 |   |   `-- pipeline.py           Ingestion stage runner
-|   |-- prepare/                  In-memory view, partitioning, materialization
+|   |-- prepare/                  In-memory view, partitioning, materialization, and validators
 |   |   |-- dataset/              In-memory dataset view, catalog, semantics
 |   |   |-- partition/            Spatial AOI integration, splitting, scoring
 |   |   |-- materialize/          Welford image stats, label stacks, saving
@@ -219,7 +220,8 @@ src/landseg/
 |
 |-- utils/
 |   |-- logger.py                 Logging setup
-|   `-- multip.py                 Multiprocessing helpers
+|   |-- multip.py                 Multiprocessing helpers
+|   `-- validator.py              Zero-dependency primitive validation functions
 ```
 
 ### Current Boundary Notes
@@ -252,3 +254,14 @@ src/landseg/
   (`context.py`, `logger.py`, `pipeline.py`) governed by central `contracts/`.
 - Task-oriented recipes in `configs/*.yaml` resolve directly into structured
   Hydra contracts without an intermediate translation layer.
+- `execution/preflight/` is a declarative, catalog-driven readiness engine.
+  Target readiness suites are defined as data in `catalog.py` and evaluated via
+  categorized checks in `checks/`. Domain contract probes delegate directly to
+  stage `validators`.
+- Preflight validation is diagnostic: passing preflight confirms prerequisite
+  presence and path readiness but does not guarantee execution success. True
+  execution gating is enforced by configuration schema validation (`configs/schema/`)
+  and stage runtime context builders (`build_*_context`).
+- `geopipe/` stages (`grid`, `harmonize`, `ingest`, `prepare`) expose public,
+  read-only `validators` namespaces on their module roots (`__init__.py`),
+  providing a shared validation contract for preflight probes and internal execution.

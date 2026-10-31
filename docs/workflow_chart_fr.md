@@ -136,6 +136,9 @@ Dernière mise à jour : 2026-10-24
 - La validation avant vol (`execution.preflight`) offre un moteur d'inspection
   non destructif capable de valider les prérequis, l'écriture du stockage, les
   contrats de domaine, les registres et le matériel avant tout traitement lourd.
+  Ces vérifications demeurent diagnostiques plutôt qu'autoritaires ; le filtrage
+  effectif d'exécution reste assuré par la validation des configurations et la
+  construction des contextes d'étape (`build_*_context`).
 
 - La couche d'exécution applique une séparation nette entre :
   - **Pipelines atomiques** (`execution.pipelines`) : classes de runner dédiées

@@ -115,6 +115,11 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     manifest schemas, and model dimension parity.
   - **Hardware**: CUDA availability, device detection, and VRAM headroom.
 - Emits standardized 120-column terminal dashboards and structured JSON reports.
+- **Diagnostic, not authoritative**: Preflight passed does not guarantee stage
+  execution success (`preflight checks passed != geopipe stage guarantees to run`).
+  Authoritative gating occurs via config schema validation and runtime context
+  building (`build_*_context`); converting context building into preflight checks
+  was dropped to prevent scope creeping.
 
 ---
 

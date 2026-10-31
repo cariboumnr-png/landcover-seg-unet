@@ -23,6 +23,16 @@ prérequis des pipelines et des workflows en mode simulation (dry-run) avant
 l'exécution, affichant des tableaux de bord ASCII normalisés de 120 colonnes dans
 le terminal et générant des artefacts de rapport JSON structurés.
 
+> [!IMPORTANT]
+> **Portée diagnostique vs barrières d'exécution autoritaires** :
+> Les vérifications préliminaires ont une vocation principalement diagnostique plutôt
+> qu'une garantie d'exécution infaillible (`tests préliminaires réussis != garantie d'exécution de l'étape geopipe`).
+> Les véritables barrières d'exécution pour chaque étape restent la validation des schémas de configuration
+> (`landseg.configs.schema`) et la construction du contexte d'exécution à chaud (`build_*_context`).
+> Bien que l'intégration de la construction complète du contexte au sein de preflight ait été envisagée,
+> elle a été délibérément écartée afin d'éviter toute dérive de périmètre (scope creep) et de préserver la
+> légèreté des audits préventifs.
+
 ---
 
 ## Sommaire
@@ -122,7 +132,10 @@ Chaque sonde est évaluée selon l'un des quatre états canoniques :
 
 Une cible d'exécution est considérée comme **`READY`** uniquement lorsque toutes
 ses sondes affichent `PASS` ou `WARN` (en mode non strict). Si une seule sonde
-affiche `FAIL`, la cible est marquée **`BLOCKED`**.
+affiche `FAIL`, la cible est marquée **`BLOCKED`**. Ce statut `READY` reflète une préparation diagnostique et ne constitue pas
+une garantie absolue de réussite d'exécution, car la validation approfondie
+des configurations et la construction du contexte d'exécution s'opèrent lors
+de l'initialisation de l'étape.
 
 ---
 
