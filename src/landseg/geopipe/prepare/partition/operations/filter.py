@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -29,7 +29,6 @@ buffer steps to reduce spatial autocorrelation leakage.
 Public APIs:
     - filter_safe_tiles: keep candidate tile coordinates safely.
 '''
-
 
 # ----- public functions
 def filter_safe_tiles(

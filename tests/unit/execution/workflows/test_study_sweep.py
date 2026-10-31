@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -22,9 +22,7 @@
 # pylint: disable=protected-access
 # pylint: disable=missing-class-docstring
 
-'''
-Unit tests for study sweep pipeline (study_sweep.py).
-'''
+'''Unit tests for study sweep workflow.'''
 
 # standard imports
 import dataclasses

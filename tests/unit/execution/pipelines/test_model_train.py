@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -21,13 +21,7 @@
 
 # pylint: disable=protected-access
 
-'''
-Unit tests for the model training execution pipeline.
-
-These tests verify pipeline lifecycle, configuration validation, and the
-session runner interaction contract. Complete end-to-end training with
-real tensors, losses, and checkpoints is tested in integration tests.
-'''
+'''Unit tests for model training execution pipeline.'''
 
 # standard imports
 import typing

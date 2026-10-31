@@ -44,8 +44,6 @@ Public APIs:
     - `ImageBandStats`: TypedDict for image band statistics.
     - `LabelScheme`: TypedDict for named reclassification scheme.
     - `PreparedSchema`: TypedDict for dataset preparation schema.
-    - `RasterReader`: Type alias for raster reader protocol.
-    - `RasterWindow`: Type alias for raster window definition.
     - `RasterWindowDict`: TypedDict for raster window serialized dict.
     - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
     - `TaxonomySpec`: TypedDict for domain taxonomy specification.

@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -22,9 +22,7 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=redefined-outer-name
 
-'''
-Fixtures for testing `landseg.session.engine.batch` module.
-'''
+'''Fixtures for testing `landseg.session.engine.batch` module.'''
 
 # standard imports
 import dataclasses

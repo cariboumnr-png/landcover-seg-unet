@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 # pylint: disable=too-many-return-statements
 
 '''

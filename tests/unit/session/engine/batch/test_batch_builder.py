@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -21,7 +21,7 @@
 
 # pylint: disable=missing-function-docstring
 
-'''Unit tests for batch engine builder (session/engine/batch/builder.py).'''
+'''Unit tests for batch engine builder.'''
 
 # local imports
 import landseg.session.engine.batch as batch_mod

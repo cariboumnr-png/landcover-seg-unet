@@ -1,8 +1,8 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      (c) King's Printer for Ontario, 2026.                  #
+#                      © King's Printer for Ontario, 2026.                    #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -19,8 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
-'''Unit tests for optim module (optimization.py, builder.py, __init__.py).'''
+'''Unit tests for session engine optimization.'''
 
 # standard imports
 import dataclasses

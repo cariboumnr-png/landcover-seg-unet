@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -27,7 +27,7 @@ Public APIs:
     - `WorldGridReport`: Summary report for world grid layout.
     - `HarmonizationReportSchema`: Report schema for harmonization.
     - `ProvenanceRecord`: Provenance record for raw source raster.
-    - `BlockBuildingStats`: Data block build statistics.
+    - `BlocksBuildingStats`: Data block build statistics.
     - `DataBlocksReport`: Execution report for data block partitioning.
     - `DomainMapReport`: Execution report for domain map preparation.
     - `DomainStats`: Re-indexing statistics for a domain layer.

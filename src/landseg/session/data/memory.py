@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -31,7 +31,6 @@ Public APIs:
     - `get_memory_strategy`: infer `MemoryFlags` from `DataSpecs`
       and available system memory.
 '''
-
 
 # standard imports
 import dataclasses

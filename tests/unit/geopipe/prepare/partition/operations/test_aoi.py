@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -19,10 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Unit tests for spatial AOI raster block intersection and split
-resolution.
-'''
+'''Unit tests for spatial AOI intersection and split resolution.'''
 
 # standard imports
 import os

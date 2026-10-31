@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for shared GDAL Virtual Raster (VRT) utility primitives.'''
+'''Unit tests for GDAL Virtual Raster (VRT) utility primitives.'''
 
 # standard imports
 import xml.etree.ElementTree

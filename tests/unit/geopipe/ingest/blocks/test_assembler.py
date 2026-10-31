@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -32,11 +32,10 @@ import landseg.artifacts as artifacts
 import landseg.execution.workflows.diagnose_overfit as diagnose_overfit
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler as assembler
-import landseg.geopipe.ingest.blocks.mapper as mapper
-import landseg.geopipe.ingest.blocks.mapper.mapper as mapper_mod
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
+import landseg.geopipe.ingest.blocks.mapper as mapper_mod
 import landseg.geopipe.rasters as rasters
 
 

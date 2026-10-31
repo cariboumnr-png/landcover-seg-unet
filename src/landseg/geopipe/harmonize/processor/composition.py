@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -26,7 +26,7 @@ This module provides functionality to combine multiple feature and label
 rasters into unified multi-band GDAL Virtual Raster (VRT) composites.
 
 Public APIs:
-    - `stack_rasters`: Stack feature and label rasters into composite VRTs.
+    - `compose_rasters`: Stack feature and label rasters into VRTs.
 '''
 
 # standard imports

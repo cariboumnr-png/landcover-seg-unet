@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -19,10 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
-'''
-Unit tests for `landseg.configs.schema.models`.
-'''
+'''Unit tests for `landseg.configs.schema.models`.'''
 
 # third-party imports
 import pytest

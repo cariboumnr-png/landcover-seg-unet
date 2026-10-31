@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Unit tests for `landseg.knowledge.resolver`.
-'''
+'''Unit tests for `landseg.knowledge.resolver`.'''
 
 # third-party imports
 import pytest

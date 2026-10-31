@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -35,7 +35,6 @@ This module prepares:
 The main entry point is `build_dataloaders`, returning a structured
 DataLoaders object containing train/val/test loaders and metadata.
 '''
-
 
 # standard imports
 from __future__ import annotations

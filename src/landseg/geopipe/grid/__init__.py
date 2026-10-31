@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -62,7 +62,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     import landseg.geopipe.contracts as contracts
-    
+
     from .lifecycle import prepare_world_grid
     from .logger import GridLogger
 

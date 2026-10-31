@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Unit tests for `landseg.knowledge.embeddings`.
-'''
+'''Unit tests for `landseg.knowledge.embeddings`.'''
 
 # standard imports
 import unittest.mock

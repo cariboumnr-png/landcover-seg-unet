@@ -20,8 +20,6 @@
 # =========================================================================== #
 
 # pylint: disable=not-callable
-# Note: this is to suppress pylint complaining `avg_pool2d`` not callable,
-# which **IS** callable
 
 '''
 UNet3+ backbone implementing full-scale dense skip aggregation.

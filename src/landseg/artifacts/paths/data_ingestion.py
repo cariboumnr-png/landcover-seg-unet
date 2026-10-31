@@ -25,7 +25,6 @@
 Canonical filesystem paths for data ingestion artifacts.
 '''
 
-
 # standard imports
 import dataclasses
 import pathlib

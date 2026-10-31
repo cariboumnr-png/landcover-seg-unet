@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -28,7 +28,6 @@ predictions, promoting spatial coherence in outputs.
 This module defines a single loss primitive used by higher-level loss
 composition components in the execution pipeline.
 '''
-
 
 # third-party imports
 import torch

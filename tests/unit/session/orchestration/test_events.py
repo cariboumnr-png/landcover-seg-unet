@@ -1,8 +1,8 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
-#                      (c) King's Printer for Ontario, 2026.                  #
+#                      © King's Printer for Ontario, 2026.                    #
 #                                                                             #
 #       Licensed under the Apache License, Version 2.0 (the 'License');       #
 #          you may not use this file except in compliance with the            #
@@ -18,7 +18,6 @@
 #       See the License for the specific language governing permissions       #
 #                       and limitations under the License.                    #
 # =========================================================================== #
-
 
 '''Unit tests for orchestration events module (events.py).'''
 

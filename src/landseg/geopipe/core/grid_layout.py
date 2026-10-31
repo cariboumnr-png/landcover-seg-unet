@@ -30,13 +30,11 @@ structures and utilities for generating, indexing, and serializing grid
 layouts independent of any specific raster dataset.
 
 Public APIs:
+    - `RasterWindowDict`: Mapping of coordinates to raster windows.
     - `GridPayload`: TypedDict for serialized grid payload.
     - `GridMeta`: TypedDict for grid metadata.
     - `GridSpec`: Dataclass specifying world grid parameters.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
-    - `get_grid_report_fpath`: Canonical path to grid report artifact.
-    - `load_grid_from_fpath`: Load world grid layout directly from file.
-    - `read_grid_report`: Read grid report JSON and extract summary.
 '''
 
 # standard imports

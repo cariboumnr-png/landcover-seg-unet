@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -26,7 +26,6 @@ This module provides functions to prepare, load, and persist world grid
 layouts with verification and lifecycle policy handling.
 
 Public APIs:
-    - `get_grid_report_fpath`: Return canonical grid report file path.
     - `prepare_world_grid`: Build or load a persisted grid artifact.
 '''
 

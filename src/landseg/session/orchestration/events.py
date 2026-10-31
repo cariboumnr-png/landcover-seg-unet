@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -63,15 +63,14 @@ evolves toward a generator model and additional phase schemas
 are introduced.
 
 Public APIs:
-    - `Event`: base class for all orchestration events.
-    - `PhaseStart`: event emitted at the start of a training phase.
-    - `PhaseEnd`: event emitted at the end of a training phase.
-    - `EpochStart`: event emitted at the start of an epoch.
-    - `EpochEnd`: event emitted at the end of an epoch.
-    - `OptimizationMetrics`: metrics from optimizer and scheduler.
-    - `LossBreakdown`: detailed per-head and composite loss breakdown.
-    - `MetricsReport`: snapshot of validation and test metrics.
-    - `StopRun`: command event requesting training termination.
+    - `Event`: Base class for all orchestration events.
+    - `PhaseStart`: Event emitted at start of a training phase.
+    - `PhaseEnd`: Event emitted at end of a training phase.
+    - `EpochStart`: Event emitted at start of an epoch.
+    - `EpochEnd`: Event emitted at end of an epoch.
+    - `MetricsReport`: Snapshot of validation and test metrics.
+    - `StopRun`: Command event requesting training termination.
+    - `CheckpointRequest`: Command event requesting checkpoint.
 '''
 
 # standard imports

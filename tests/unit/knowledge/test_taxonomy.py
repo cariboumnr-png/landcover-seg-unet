@@ -21,7 +21,6 @@
 
 # pylint: disable=protected-access
 
-
 '''Unit tests for taxonomy resolver and gatekeeper validation.'''
 
 # standard imports

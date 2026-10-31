@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -28,11 +28,11 @@ This module provides schemas for serializing execution reports, source
 provenance, and raster metadata for data harmonization runs.
 
 Public APIs:
-    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
+    - `StatusLiteral`: Harmonization run status literal.
     - `HarmonizationPipelineConfig`: Protocol for pipeline configs.
-    - `HarmonizationReportSchema`: TypedDict for pipeline run report.
     - `HarmonizationRunRecord`: TypedDict for harmonization run entry.
-    - `HarmonizationRunManifest`: Type alias for runs ledger mapping.
+    - `HarmonizationReportSchema`: TypedDict for pipeline run report.
+    - `ProvenanceRecord`: TypedDict for raw raster file provenance.
 '''
 
 # standard imports

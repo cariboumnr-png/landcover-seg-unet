@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -29,7 +29,6 @@ Public APIs:
     - `xy_name`: convert (x, y) coords to canonical block name.
     - `name_xy`: convert canonical block name to (x, y) coords.
 '''
-
 
 # ----- public functions
 def xy_name(coords: tuple[int, int]) -> str:

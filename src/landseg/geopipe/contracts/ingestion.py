@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -30,18 +30,18 @@ statistics, block generation metrics, and catalog update summaries.
 
 Public APIs:
     - `CollisionPolicyType`: Literal type for collision policies.
-    - `CollisionRecord`: TypedDict for block collision entry.
-    - `RunCollisionManifest`: TypedDict for run-level collision report.
-    - `CollisionStats`: TypedDict for aggregate collision metrics.
-    - `DomainStats`: TypedDict for domain layer re-indexing statistics.
-    - `DomainMapReport`: TypedDict for domain map execution report.
-    - `BlockStats`: TypedDict for data block mapping and build stats.
-    - `ManifestStats`: TypedDict for catalog/schema update details.
-    - `DataBlocksReport`: TypedDict for data block execution report.
+    - `StatusLiteral`: Ingestion run status literal.
     - `IngestionPipelineConfig`: Protocol for pipeline configs.
-    - `IngestReportSchema`: TypedDict for root data ingestion report.
-    - `IngestionRunRecord`: TypedDict for ingestion run manifest entry.
-    - `IngestionRunManifest`: Type alias for runs ledger mapping.
+    - `CollisionRecord`: TypedDict for block collision entry.
+    - `RunCollisionManifest`: TypedDict for run collision report.
+    - `BlocksBuildingStats`: Aggregate metrics on block collisions.
+    - `IngestionRunRecord`: TypedDict for ingestion run entry.
+    - `IngestReportSchema`: Root report for data ingestion run.
+    - `DomainMapReport`: TypedDict for domain map execution report.
+    - `DomainStats`: TypedDict for domain layer re-indexing statistics.
+    - `DataBlocksReport`: TypedDict for data block execution report.
+    - `ManifestStats`: TypedDict for catalog/schema update details.
+    - `MappedRasterWindowsPayload`: Payload for window mappings.
 '''
 
 # standard imports

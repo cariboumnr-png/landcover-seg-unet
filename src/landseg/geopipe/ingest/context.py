@@ -1,5 +1,5 @@
 # =========================================================================== #
-#           Copyright © His Majesty the King in right of Ontario,           #
+#            Copyright © His Majesty the King in right of Ontario,            #
 #         as represented by the Minister of Natural Resources, 2026.          #
 #                                                                             #
 #                      © King's Printer for Ontario, 2026.                    #
@@ -27,12 +27,10 @@ and harmonized raster inputs for the ingestion pipeline from upstream
 harmonization artifacts.
 
 Public APIs:
+    - `HarmonizationRecords`: Mapping of run UIDs to run records.
     - `IngestionContext`: Container holding resolved grid and rasters.
-    - `build_ingestion_context`: Load ingestion context from report.
-    - `discover_successful_harmonization_runs`: Load successful runs.
-    - `discover_ingested_harmonization_uids`: Ingested harm UIDs.
-    - `resolve_harmonization_run`: Resolve target run record.
     - `resolve_pending_ingestion_batches`: Determine batches to ingest.
+    - `build_ingestion_context`: Load ingestion context from report.
     - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 
