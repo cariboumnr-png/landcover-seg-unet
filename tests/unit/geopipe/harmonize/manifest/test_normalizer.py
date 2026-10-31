@@ -94,7 +94,7 @@ def test_normalize_features_entry_invalid_scheme_band(tmp_path):
         'category': 'features',
         'schemes': {'rgb_swir': ['blue', 'green', 'swir1']},
     }
-    with pytest.raises(val.ValidationError, match='not in range'):
+    with pytest.raises(val.ValidationError, match='not in allowed range'):
         _ = normalize_manifest_entry(raw_entry)
 
 
@@ -244,7 +244,7 @@ def test_normalize_labels_entry_scheme_reclass_name_mismatch(tmp_path):
             },
         },
     }
-    with pytest.raises(val.ValidationError, match='not in range'):
+    with pytest.raises(val.ValidationError, match='not in allowed range'):
         _ = normalize_manifest_entry(raw_entry)
 
 
@@ -379,7 +379,7 @@ def test_normalize_invalid_category(tmp_path):
         'band_mapping': {1: 'band1'},
         'category': 'unsupported_cat',
     }
-    with pytest.raises(val.ValidationError, match='not in range'):
+    with pytest.raises(val.ValidationError, match='not in allowed range'):
         _ = normalize_manifest_entry(raw_entry)
 
 
@@ -467,10 +467,10 @@ def test_normalize_input_types():
     When: `normalize_manifest_entry` is evaluated.
     Then: Raise appropriate TypeError or ValueError.
     '''
-    with pytest.raises(TypeError, match='not a mapping'):
+    with pytest.raises(TypeError, match='Expected a mapping'):
         normalizer_mod.normalize_manifest_entry('not_a_dict')
 
-    with pytest.raises(ValueError, match='empty dict'):
+    with pytest.raises(ValueError, match='Mapping must not be empty'):
         normalizer_mod.normalize_manifest_entry({})
 
 

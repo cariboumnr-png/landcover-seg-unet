@@ -26,6 +26,7 @@ Exposes raster-to-grid mapping and window caching utilities via lazy
 module resolution.
 
 Public APIs:
+    - `MappedRasterWindows`: Dataclass container for read windows.
     - `map_rasters_to_grid`: Maps rasters onto grid with caching.
     - `validate_raster_alignment`: Validates raster alignment with grid.
 '''
@@ -36,6 +37,8 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
+    'MappedRasterWindows',
     # functions
     'map_rasters_to_grid',
     'validate_raster_alignment',
@@ -48,6 +51,7 @@ if typing.TYPE_CHECKING:
         map_rasters_to_grid,
     )
     from .mapper import (
+        MappedRasterWindows,
         validate_raster_alignment,
     )
 
@@ -57,7 +61,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('.lifecycle', __package__)
         return getattr(obj, name)
 
-    if name in {'validate_raster_alignment'}:
+    if name in {'MappedRasterWindows', 'validate_raster_alignment'}:
         obj = importlib.import_module('.mapper', __package__)
         return getattr(obj, name)
 

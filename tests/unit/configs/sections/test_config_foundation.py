@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 '''
 Unit tests for data foundation configuration schemas.
 '''
@@ -42,7 +41,7 @@ def test_grid_parameters_validation():
     '''
     params = grid_sec.WorldGridConfig(
         tile_size=(256, 256),
-        tile_stride=(0, 0),
+        tile_stride=(128, 128),
         mode='manual',
         manual_specs=grid_sec.GridSpecs(),
     )
@@ -57,15 +56,13 @@ def test_grid_parameters_validation():
             tile_stride=(10, 20),
         ).validate()
 
-    with pytest.raises(ValueError, match='Block size must be positive'):
+    with pytest.raises(base.ConfigValidationError, match='< minimum 1'):
         grid_sec.WorldGridConfig(tile_size=(0, 0)).validate()
 
-    with pytest.raises(
-        ValueError, match='Block stride must be zero or positive'
-    ):
+    with pytest.raises(base.ConfigValidationError, match='< minimum 1'):
         grid_sec.WorldGridConfig(
             tile_size=(256, 256),
-            tile_stride=(-1, -1),
+            tile_stride=(0, 0),
         ).validate()
 
 
@@ -79,13 +76,12 @@ def test_grid_cfg_validation(tmp_path):
     ref_file = tmp_path / 'ref.tif'
     ref_file.write_text('dummy')
 
-    # missing reference file
-    grid_missing_ref = grid_sec.WorldGridConfig(
-        mode='ref',
-        ref_fpath=str(tmp_path / 'non_existent.tif'),
+    # invalid mode
+    grid_invalid_mode = grid_sec.WorldGridConfig(
+        mode='unsupported',
     )
     with pytest.raises(base.ConfigValidationError):
-        grid_missing_ref.validate()
+        grid_invalid_mode.validate()
 
     # manual mode validation
     grid_manual = grid_sec.WorldGridConfig(
@@ -99,18 +95,18 @@ def test_grid_cfg_validation(tmp_path):
     )
     grid_manual.validate()
 
-    # invalid manual CRS
-    grid_invalid_crs = grid_sec.WorldGridConfig(
+    # invalid manual non-square pixel size
+    grid_invalid_px = grid_sec.WorldGridConfig(
         mode='manual',
         manual_specs=grid_sec.GridSpecs(
-            crs_string='INVALID_CRS',
+            crs_string='EPSG:32617',
             origin=(0.0, 0.0),
-            pixel_size=(10.0, 10.0),
+            pixel_size=(10.0, 20.0),
             extent_in_crs_units=(100.0, 100.0),
         )
     )
-    with pytest.raises(base.ConfigValidationError, match='CRS string must be'):
-        grid_invalid_crs.validate()
+    with pytest.raises(ValueError, match='Only square pixels are supported'):
+        grid_invalid_px.validate()
 
 
 # ----- `Domains` tests
@@ -157,11 +153,11 @@ def test_datablocks_add_features_validation():
         ing_sec.DataBlocks(add_topo='invalid').validate()  # type: ignore
 
     # invalid topo item type
-    with pytest.raises(base.ConfigValidationError, match='not required type'):
+    with pytest.raises(base.ConfigValidationError, match='Expected type'):
         ing_sec.DataBlocks(add_topo=[123]).validate()  # type: ignore
 
     # invalid topo feature name
-    with pytest.raises(base.ConfigValidationError, match='not in range'):
+    with pytest.raises(base.ConfigValidationError, match='not in allowed range'):
         ing_sec.DataBlocks(add_topo=['unknown']).validate()
 
     # invalid spectral type
@@ -169,11 +165,11 @@ def test_datablocks_add_features_validation():
         ing_sec.DataBlocks(add_spectral='ndvi').validate()  # type: ignore
 
     # invalid spectral item type
-    with pytest.raises(base.ConfigValidationError, match='not required type'):
+    with pytest.raises(base.ConfigValidationError, match='Expected type'):
         ing_sec.DataBlocks(add_spectral=[123]).validate()  # type: ignore
 
     # invalid spectral index name
-    with pytest.raises(base.ConfigValidationError, match='not in range'):
+    with pytest.raises(base.ConfigValidationError, match='not in allowed range'):
         ing_sec.DataBlocks(add_spectral=['unknown']).validate()
 
 

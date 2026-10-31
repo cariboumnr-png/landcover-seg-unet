@@ -82,7 +82,7 @@ def _upstream_report(pid: str, report_attr: str, target: str) -> ProbeSpec:
     '''Build an report lineage probe from a report path attribute.'''
     def run(ctx):
         fp = _resolve_path_attr(ctx, report_attr)
-        return checks.lineage.upstream_report(fp, target)
+        return checks.lineage.upstream_report(fp, target, pid=pid)
     return _spec(pid, run)
 
 
@@ -90,7 +90,7 @@ def _upstream_manifest(pid: str, manifest_attr: str, target: str) -> ProbeSpec:
     '''Build an manifest lineage probe from a manifest path attribute.'''
     def run(ctx):
         fp = _resolve_path_attr(ctx, manifest_attr)
-        return checks.lineage.upstream_manifest(fp, target)
+        return checks.lineage.upstream_manifest(fp, target, pid=pid)
     return _spec(pid, run)
 
 
@@ -160,6 +160,7 @@ SUITES: dict[str, tuple[ProbeSpec, ...]] = {
                     ctx.paths.data_ingestion.data_blocks.schema,
                 ],
                 'data-ingest',
+                pid='upstream_data_ingest_artifacts',
             ),
         ),
         _upstream_manifest(
@@ -167,7 +168,7 @@ SUITES: dict[str, tuple[ProbeSpec, ...]] = {
             'data_ingestion.runs_manifest',
             'data-ingest',
         ),
-        _spec('preparation_semantics', checks.contracts.prepare_semantics),
+        _spec('preparation_contract', checks.contracts.prepare_semantics),
         _spec('ingested_blocks_pool', checks.ledger.ingested_pool_state),
         _spec('prepared_blocks_state', checks.ledger.prepared_blocks_state),
     ),

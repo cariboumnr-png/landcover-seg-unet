@@ -23,23 +23,12 @@
 
 '''Unit tests for world grid builder (builder.py).'''
 
-# standard imports
-import dataclasses
 # third-party imports
 import pytest
 # local imports
+import landseg.configs.schema.base as base
+import landseg.configs.schema.data.world_grid as wg_config
 import landseg.geopipe.grid.builder as grid_builder
-
-
-@dataclasses.dataclass
-class _Params:
-    tile_size: tuple[int, int] = (8, 8)
-    tile_stride: tuple[int, int] = (4, 4)
-    ref_fpath: str | None = None
-    crs_string: str | None = None
-    origin: tuple[float, float] | None = None
-    pixel_size: tuple[float, float] | None = None
-    extent_in_crs_units: tuple[float, float] | None = None
 
 
 # ----- `build_grid` tests
@@ -57,16 +46,16 @@ def test_build_grid_ref(dummy_geotiff_factory):
         bands=1,
         crs='EPSG:32617',
     )
-
-    grid = grid_builder.build_grid(
+    config = wg_config.WorldGridConfig(
         tile_size=(8, 8),
         tile_stride=(4, 4),
         mode='ref',
-        ref_fpath=ref_path,
+        ref_fpath=str(ref_path),
     )
+    grid = grid_builder.build_grid(config)
 
-    # 16x16 pixels image, tiles specs of 8x8 with 4 overlap.
-    # step size = 8-4 = 4.
+    # 16x16 pixels image, tiles specs of 8x8 with 4 stride.
+    # step size = 4.
     # coordinates range in range(0, 16, 4) -> [0, 4, 8, 12] (4 steps)
     # total tiles = 4 * 4 = 16 tiles
     assert len(grid) == 16
@@ -80,17 +69,18 @@ def test_build_grid_manual():
     Then: Create the GridLayout matching the provided spatial
         extent bounds.
     '''
-    grid = grid_builder.build_grid(
+    config = wg_config.WorldGridConfig(
         tile_size=(8, 8),
         tile_stride=(4, 4),
         mode='manual',
-        manual_specs=grid_builder.GridConfigs(
+        manual_specs=wg_config.GridSpecs(
             crs_string='EPSG:32617',
             origin=(500000.0, 5000000.0),
             pixel_size=(10.0, 10.0),
             extent_in_crs_units=(160.0, 160.0),
         ),
     )
+    grid = grid_builder.build_grid(config)
     assert len(grid) == 16
 
 
@@ -98,11 +88,12 @@ def test_build_grid_invalid():
     '''
     Given: An invalid configuration mode.
     When: `build_grid` is executed.
-    Then: Raise a ValueError.
+    Then: Raise a validation error.
     '''
-    with pytest.raises(ValueError, match='Invalid extent mode'):
-        grid_builder.build_grid(
+    with pytest.raises(base.ConfigValidationError, match='Grid mode'):
+        config = wg_config.WorldGridConfig(
             tile_size=(8, 8),
             tile_stride=(4, 4),
             mode='invalid',
         )
+        config.validate()

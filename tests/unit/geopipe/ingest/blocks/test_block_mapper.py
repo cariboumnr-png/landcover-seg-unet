@@ -26,7 +26,9 @@ import pathlib
 # third-party imports
 import pytest
 # local imports
-import landseg.geopipe.grid.handlers as grid_handlers
+import landseg.configs.schema.data.world_grid as wg_config
+import landseg.geopipe.core as geo_core
+import landseg.geopipe.grid.builder as grid_builder
 import landseg.geopipe.ingest.blocks.mapper as mapper
 import landseg.geopipe.ingest.blocks.mapper.mapper as raw_mapper
 import landseg.geopipe.rasters as rasters
@@ -48,12 +50,7 @@ def test_validate_raster_alignment_matching_rasters(dummy_geotiff_factory):
     lbl_fp = dummy_geotiff_factory(
         filename='lbl.tif', width=32, height=32, crs='EPSG:32617'
     )
-    grid = grid_handlers.validate_grid_inputs(
-        tile_size=(16, 16),
-        tile_stride=(8, 8),
-        mode='ref',
-        ref_fpath=pathlib.Path(ref_fp),
-    )
+    grid = _build_test_grid(pathlib.Path(ref_fp))
 
     with rasters.read_rasters(
         pathlib.Path(img_fp), pathlib.Path(lbl_fp)
@@ -77,12 +74,7 @@ def test_validate_raster_alignment_crs_mismatch(dummy_geotiff_factory):
     img_fp = dummy_geotiff_factory(
         filename='img_mismatch.tif', width=32, height=32, crs='EPSG:32618'
     )
-    grid = grid_handlers.validate_grid_inputs(
-        tile_size=(16, 16),
-        tile_stride=(8, 8),
-        mode='ref',
-        ref_fpath=pathlib.Path(ref_fp),
-    )
+    grid = _build_test_grid(pathlib.Path(ref_fp))
 
     with rasters.read_rasters(pathlib.Path(img_fp), None) as (img, _):
         with pytest.raises(ValueError, match='Data CRS .* != world CRS'):
@@ -98,12 +90,7 @@ def test_validate_raster_alignment_missing_image(dummy_geotiff_factory):
     ref_fp = dummy_geotiff_factory(
         filename='ref.tif', width=32, height=32, crs='EPSG:32617'
     )
-    grid = grid_handlers.validate_grid_inputs(
-        tile_size=(16, 16),
-        tile_stride=(8, 8),
-        mode='ref',
-        ref_fpath=pathlib.Path(ref_fp),
-    )
+    grid = _build_test_grid(pathlib.Path(ref_fp))
 
     with pytest.raises(ValueError, match='A valid image raster is required'):
         mapper.validate_raster_alignment(grid, None)
@@ -122,15 +109,22 @@ def test_map_rasters_success(dummy_geotiff_factory):
     img_fp = dummy_geotiff_factory(
         filename='img.tif', width=32, height=32, crs='EPSG:32617'
     )
-    grid = grid_handlers.validate_grid_inputs(
-        tile_size=(16, 16),
-        tile_stride=(8, 8),
-        mode='ref',
-        ref_fpath=pathlib.Path(ref_fp),
-    )
+    grid = _build_test_grid(pathlib.Path(ref_fp))
 
     windows = raw_mapper.map_rasters(grid, pathlib.Path(img_fp), None)
 
     assert windows.grid_id == grid.gid
     assert len(windows.image) > 0
     assert len(windows.label) == 0
+
+
+# ----- private helpers
+def _build_test_grid(ref_fpath: pathlib.Path) -> geo_core.GridLayout:
+    '''Build reference-mode world grid layout for tests.'''
+    config = wg_config.WorldGridConfig(
+        tile_size=(16, 16),
+        tile_stride=(8, 8),
+        mode='ref',
+        ref_fpath=str(ref_fpath),
+    )
+    return grid_builder.build_grid(config)

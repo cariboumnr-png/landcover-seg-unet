@@ -19,7 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-
 '''
 Unit tests for data preparation configuration schemas.
 '''
@@ -76,7 +75,7 @@ def test_dataset_view_threshold_validation():
     catalog.validate()
 
     invalid_catalog = prep_sec.DatasetViewConfig(valid_pxs={'image': 1.5})
-    with pytest.raises(base.ConfigValidationError, match='valid threshold'):
+    with pytest.raises(base.ConfigValidationError, match='> maximum 1'):
         invalid_catalog.validate()
 
 

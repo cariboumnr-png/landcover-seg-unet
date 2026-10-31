@@ -82,11 +82,11 @@ class DataIngestionConfig(base.BaseConfigSection):
         self.datablocks.validate()
 
         if self.harmonization_run is not None:
-            try:
+            if isinstance(self.harmonization_run, (int, float)):
                 self.val.require_numeric_min(self.harmonization_run, 1)
-            except base.ConfigValidationError:
+            elif isinstance(self.harmonization_run, str):
                 self.val.require_string(self.harmonization_run)
-            except Exception as e:
+            else:
                 raise base.ConfigValidationError(
                     'Failed to validate "harmonization_run" attribute'
-                ) from e
+                )
