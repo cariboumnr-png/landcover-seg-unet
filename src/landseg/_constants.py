@@ -37,7 +37,10 @@ def _get_device_name() -> str:
         return 'cuda (unavailable)'
     return DEVICE
 
+
 # ----- constants
+__version__: str = '0.1.0'
+
 PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
 
 DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'

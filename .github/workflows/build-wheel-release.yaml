@@ -30,7 +30,15 @@ jobs:
       - name: Build wheel
         run: python -m build
 
-      - name: Create GitHub Release + upload wheel
+      - name: Verify build
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.whl
+          generate_release_notes: true
+          files: |
+            dist/*.whl
+            dist/*.tar.gz

@@ -28,6 +28,7 @@ order simple and circular-free.
 Public APIs:
     - `DEVICE`: Canonical torch device selector.
     - `TF_ISO8601`: Canonical timestamp format specification.
+    - `__version__`: Package release version string.
 '''
 
 # standard imports
@@ -39,6 +40,7 @@ __all__ = [
     # constants
     'DEVICE',
     'TF_ISO8601',
+    '__version__',
 ]
 
 
@@ -47,6 +49,7 @@ if typing.TYPE_CHECKING:
     from ._constants import (
         DEVICE,
         TF_ISO8601,
+        __version__,
     )
 
 
@@ -54,6 +57,7 @@ def __getattr__(name: str):
     if name in {
         'DEVICE',
         'TF_ISO8601',
+        '__version__',
     }:
         obj = importlib.import_module('._constants', __package__)
         return getattr(obj, name)

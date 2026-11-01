@@ -1,10 +1,13 @@
 [build-system]
-requires = ["setuptools>=61", "wheel", "build"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "landseg"
 version = "0.1.0"
+description = "Multi-Modal Landcover Classification Framework"
+readme = "README.md"
+license = { text = "Apache-2.0" }
 requires-python = ">=3.12"
 dependencies = [
     "hydra-core>=1.3",
