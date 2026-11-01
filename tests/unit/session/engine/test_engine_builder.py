@@ -26,7 +26,7 @@
 # third-party imports
 import pytest
 # local imports
-import landseg.session.engine as engine_mod
+import landseg.session.engine.builder as builder
 import landseg.session.engine.epoch as epoch_mod
 
 
@@ -46,7 +46,7 @@ def test_build_engine_patch_size_divisibility_error(
     mock_model.spatial_divisor = 18
     session_config.dataloader.patch_size = 128
 
-    context = engine_mod.EngineContext(
+    context = builder.EngineContext(
         dataspecs=dataspecs,
         model=mock_model,
         dataloaders=mock_dataloaders,
@@ -54,7 +54,7 @@ def test_build_engine_patch_size_divisibility_error(
     )
 
     with pytest.raises(ValueError, match='Invalid patch dimension'):
-        engine_mod.build_engine(
+        builder.build_engine(
             context,
             session_config.engine,
             mode='train_eval',
@@ -75,14 +75,14 @@ def test_build_engine_success(
     When: Calling `build_engine`.
     Then: Return populated `EpochRunner`.
     '''
-    context = engine_mod.EngineContext(
+    context = builder.EngineContext(
         dataspecs=dataspecs,
         model=mock_model,
         dataloaders=mock_dataloaders,
         dispatcher=mock_dispatcher,
     )
 
-    runner = engine_mod.build_engine(
+    runner = builder.build_engine(
         context,
         session_config.engine,
         mode='train_eval',

@@ -37,7 +37,7 @@ Public APIs:
 import dataclasses
 import pathlib
 # local imports
-import landseg.geopipe.prepare as prepare
+import landseg.geopipe.prepare.logger as logger_mod
 import landseg.geopipe.rasters as rasters
 
 
@@ -104,7 +104,7 @@ def resolve_aoi_partitions(
     crs: str,
     transform: rasters.Affine,
     min_overlap: float = 0.5,
-    logger: prepare.PreparationLogger | None = None,
+    logger: logger_mod.PreparationLogger | None = None,
 ) -> AoiSplitsResult:
     '''
     Resolve split partitions from AOI rasters with priority resolution.
@@ -251,7 +251,7 @@ def _resolve_conflicts(
     val_raw: list[tuple[int, int]],
     train_raw: list[tuple[int, int]],
     assigned_test: set[tuple[int, int]],
-    logger: prepare.PreparationLogger | None,
+    logger: logger_mod.PreparationLogger | None,
 ) -> tuple[set[tuple[int, int]], set[tuple[int, int]]]:
     '''Resolve overlap conflicts using priority: test > val > train.'''
     assigned_val: set[tuple[int, int]] = set()

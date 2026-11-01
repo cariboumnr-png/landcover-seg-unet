@@ -22,7 +22,7 @@
 '''Unit tests for artifact ledger hashing and run collisions.'''
 
 # local imports
-import landseg.artifacts as artifacts
+import landseg.artifacts.controller as controller
 import landseg.artifacts.ledger as ledger
 
 
@@ -83,7 +83,7 @@ def test_find_run_collision_status_filtering(tmp_path):
             'status': 'SKIPPED',
         },
     }
-    artifacts.Controller[dict](manifest_fp).persist(manifest_data)
+    controller.Controller[dict](manifest_fp).persist(manifest_data)
 
     # successful run matches
     found = ledger.find_run_collision('hash_success', manifest_fp)

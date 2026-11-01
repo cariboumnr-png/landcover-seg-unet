@@ -43,10 +43,10 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.manifest as manifest
 import landseg.geopipe.ingest.blocks.mapper as mapper
+import landseg.geopipe.ingest.logger as logger_mod
 
 
 # ----- private types
@@ -79,7 +79,7 @@ def run_blocks_building(
     config: assembler.BlockBuildingConfig,
     context: BlockPipelineRuntimeContext,
     *,
-    logger: ingest.IngestionLogger,
+    logger: logger_mod.IngestionLogger,
 ) -> None:
     '''
     Build canonical data blocks from rasters aligned to a world grid.

@@ -40,7 +40,7 @@ subsystem.
 import torch
 import torch.nn
 # local imports
-import landseg.models.core as model_core
+import landseg.models.core.domains as domains
 
 class ConcatAdapter(torch.nn.Module):
     '''
@@ -76,7 +76,7 @@ class ConcatAdapter(torch.nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        payload: model_core.DomainTargetPayload | None,
+        payload: domains.DomainTargetPayload | None,
     ) -> torch.Tensor:
         '''
         Concatenate domain conditioning to input tensor.

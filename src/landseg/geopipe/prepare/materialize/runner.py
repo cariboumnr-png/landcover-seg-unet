@@ -40,8 +40,8 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
-import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.dataset as dataset
+import landseg.geopipe.prepare.logger as logger_mod
 import landseg.geopipe.prepare.materialize.materialize as materialize
 import landseg.geopipe.prepare.materialize.schema as schema
 import landseg.geopipe.prepare.materialize.stats as stats
@@ -73,7 +73,7 @@ def run_materialize_blocks(
     context: dataset.DatasetView,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: prepare.PreparationLogger,
+    logger: logger_mod.PreparationLogger,
 ) -> None:
     '''
     Build normalized data blocks from raw block splits.
@@ -173,7 +173,7 @@ def _materialize(
     context: dataset.DatasetView,
     paths: _PipelinePaths,
     *,
-    logger: prepare.PreparationLogger,
+    logger: logger_mod.PreparationLogger,
 ) -> tuple[contracts.BlocksPartition, int]:
     '''Materialize and normalize train, validation, and test splits.'''
     train_split, val_split, test_split = splits

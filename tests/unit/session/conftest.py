@@ -31,7 +31,7 @@ import landseg.artifacts as artifacts
 import landseg.configs.schema.session as session_schema
 import landseg.session.data.builder as data_loader
 import landseg.session.engine.batch as batch_mod
-import landseg.session.engine.epoch as epoch_mod
+import landseg.session.engine.epoch.policy.base as policy_base
 import landseg.session.engine.epoch.policy.evaluator as eval_mod
 import landseg.session.engine.epoch.policy.trainer as trainer
 import landseg.session.engine.optim as optim_mod
@@ -71,7 +71,7 @@ def mock_runtime(dataspecs, mock_dataloaders, mock_model, session_config):
         dataspecs,
         session_config.engine_tasks,
     )
-    return epoch_mod.EngineRuntime(
+    return policy_base.EngineRuntime(
         engine=batch_engine,
         engine_optim=optimization,
         engine_tasks=engine_tasks,

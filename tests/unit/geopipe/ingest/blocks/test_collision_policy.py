@@ -32,8 +32,8 @@ import rasterio
 import landseg.artifacts as artifacts
 import landseg.configs.schema.data.world_grid as wg_config
 import landseg.geopipe.grid.builder as grid_builder
-import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.blocks as blocks
+import landseg.geopipe.ingest.logger as logger_mod
 
 
 # ----- collision policy tests
@@ -49,7 +49,7 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
 
     # run initial batch (run 1)
     rep1_fpath = str(tmp_path / 'rep1.json')
-    logger1 = ingest.IngestionLogger(
+    logger1 = logger_mod.IngestionLogger(
         name='test_ingest',
         log_file=rep1_fpath,
         enable_file_log=False,
@@ -90,7 +90,7 @@ def test_collision_policy_skip(tmp_path, dummy_geotiff_factory):
 
     # run overlapping batch (run 2) with skip policy
     rep2_fpath = str(tmp_path / 'rep2.json')
-    logger2 = ingest.IngestionLogger(
+    logger2 = logger_mod.IngestionLogger(
         name='test_ingest',
         log_file=rep2_fpath,
         enable_file_log=False,
@@ -160,7 +160,7 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
     )
 
     # run initial batch (run 1)
-    logger1 = ingest.IngestionLogger(
+    logger1 = logger_mod.IngestionLogger(
         name='test_ingest',
         log_file=str(tmp_path / 'rep1.json'),
         enable_file_log=False,
@@ -191,7 +191,7 @@ def test_collision_policy_overwrite(tmp_path, dummy_geotiff_factory):
     )
 
     # run overlapping batch (run 2) with overwrite policy
-    logger2 = ingest.IngestionLogger(
+    logger2 = logger_mod.IngestionLogger(
         name='test_ingest',
         log_file=str(tmp_path / 'rep2.json'),
         enable_file_log=False,
@@ -258,7 +258,7 @@ def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
     )
 
     # run initial batch (run 1)
-    logger1 = ingest.IngestionLogger(
+    logger1 = logger_mod.IngestionLogger(
         name='test_ingest',
         log_file=str(tmp_path / 'rep1.json'),
         enable_file_log=False,
@@ -289,7 +289,7 @@ def test_collision_policy_error(tmp_path, dummy_geotiff_factory):
     )
 
     # run overlapping batch (run 2) with error policy
-    logger2 = ingest.IngestionLogger(
+    logger2 = logger_mod.IngestionLogger(
         name='test_ingest',
         log_file=str(tmp_path / 'rep2.json'),
         enable_file_log=False,

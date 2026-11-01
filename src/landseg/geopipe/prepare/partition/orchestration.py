@@ -39,7 +39,7 @@ import dataclasses
 import pathlib
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
-import landseg.geopipe.prepare as prepare
+import landseg.geopipe.prepare.logger as logger_mod
 import landseg.geopipe.prepare.partition.operations as operations
 import landseg.geopipe.rasters as rasters
 
@@ -105,7 +105,7 @@ def create_blocks_partition(
     ext_test_blks: list[pathlib.Path] | None,
     config: PartitionConfig,
     *,
-    logger: prepare.PreparationLogger | None = None,
+    logger: logger_mod.PreparationLogger | None = None,
 ) -> PartitionResults:
     '''
     Split blocks with spatial safety, AOI selection, and class balance.
@@ -208,7 +208,7 @@ def _split_by_aoi(
     config: PartitionConfig,
     *,
     ext_test_blks: list[pathlib.Path] | None,
-    logger: prepare.PreparationLogger | None,
+    logger: logger_mod.PreparationLogger | None,
 ) -> operations.SplitsResult:
     '''Resolve AOI partitions and split remaining blocks.'''
     aoi_res = operations.resolve_aoi_partitions(

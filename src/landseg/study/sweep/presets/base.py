@@ -24,12 +24,12 @@
 # third-party imports
 import optuna
 # local imports
-import landseg.study.sweep as sweep
+import landseg.study.sweep.mutator as mutator
 
 def obj_base(
-    trial_cfg: sweep.TrialMutator,
+    trial_cfg: mutator.TrialMutator,
     trial: optuna.Trial,
-) -> sweep.TrialMutator:
+) -> mutator.TrialMutator:
     '''
     Base preset mutations:
       - Learning rate (`float`)

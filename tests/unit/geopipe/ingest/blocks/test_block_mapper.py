@@ -29,8 +29,7 @@ import pytest
 import landseg.configs.schema.data.world_grid as wg_config
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.grid.builder as grid_builder
-import landseg.geopipe.ingest.blocks.mapper as mapper
-import landseg.geopipe.ingest.blocks.mapper.mapper as raw_mapper
+import landseg.geopipe.ingest.blocks.mapper.mapper as mapper
 import landseg.geopipe.rasters as rasters
 
 
@@ -111,7 +110,7 @@ def test_map_rasters_success(dummy_geotiff_factory):
     )
     grid = _build_test_grid(pathlib.Path(ref_fp))
 
-    windows = raw_mapper.map_rasters(grid, pathlib.Path(img_fp), None)
+    windows = mapper.map_rasters(grid, pathlib.Path(img_fp), None)
 
     assert windows.grid_id == grid.gid
     assert len(windows.image) > 0

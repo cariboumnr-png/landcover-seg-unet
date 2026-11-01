@@ -43,7 +43,7 @@ import optuna
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
-import landseg.study.sweep as sweep
+import landseg.study.sweep.mutator as sweep_mutator
 import landseg.study.sweep.presets as presets
 
 # aliases
@@ -75,7 +75,7 @@ def make_objective(
         # get trial config depending on the objective preset
         objectives_fn = presets.resolve(cfg.study.sweep.preset_name)
         _cfg = copy.deepcopy(cfg)
-        mutator = sweep.TrialMutator(_cfg)
+        mutator = sweep_mutator.TrialMutator(_cfg)
         objectives_fn(mutator, trial)
 
         # build the runner with trial config

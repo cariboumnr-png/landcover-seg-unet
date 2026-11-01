@@ -26,7 +26,6 @@
 # third-party imports
 import pytest
 # local imports
-import landseg.core as core
 import landseg.core.session_results as session_results
 
 
@@ -37,14 +36,14 @@ def test_session_step_summary_as_dict():
     When: Accessing as_dict property.
     Then: Serialize correctly and produce immutable dictionary snapshots.
     '''
-    training = core.TrainStepResults(
+    training = session_results.TrainStepResults(
         total_objective=1.5,
         head_losses={'loss': 0.4},
     )
-    validation = core.ValStepResults(
-        head_metrics={'head1': core.AccumulatedMetrics(mean=0.6)}
+    validation = session_results.ValStepResults(
+        head_metrics={'head1': session_results.AccumulatedMetrics(mean=0.6)}
     )
-    summary_full = core.SessionStepSummary(
+    summary_full = session_results.SessionStepSummary(
         phase_name='train',
         phase_index=0,
         phase_max_epoch=10,
@@ -58,7 +57,7 @@ def test_session_step_summary_as_dict():
         best_value_so_far=0.6,
         best_epoch_so_far=3,
         is_best_epoch=True,
-        raw_metrics=core.SessionStepResults(
+        raw_metrics=session_results.SessionStepResults(
             training=training,
             validation=validation,
         ),
@@ -81,10 +80,10 @@ def test_session_step_results_target_objective_default():
     When: Fetching target_objective.
     Then: Return default validation metric name.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(head_1={'mean': 0.5})
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
 
     # as no track head is specified
     assert results.target_objective == 'IoU from [head_1] (simple mean)'
@@ -96,10 +95,10 @@ def test_session_step_results_target_objective_weighted():
     When: Fetching target_objective.
     Then: Return the weighted combination metric name.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(head1={}, head2={})
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
     results.track('iou', {'head1': 0.25, 'head2': 0.75})
 
     # two heads specified
@@ -112,11 +111,11 @@ def test_session_step_results_target_objective_gem():
     When: Fetching target_objective.
     Then: Return MTL Global Exact Match objective description.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(head1={}, head2={}),
         mtl_metrics={'gem': 0.9},
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
     results.track('gem', None)
 
     assert results.target_objective == 'Global Exact Match over [head1 & head2]'
@@ -128,10 +127,10 @@ def test_session_step_results_target_objective_invalid_metric():
     When: Fetching target_objective.
     Then: Raise a ValueError.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(head1={}, head2={})
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
     object.__setattr__(results, '_metric_name', 'foo')
 
     with pytest.raises(ValueError, match='Invalid metric name'):
@@ -144,7 +143,7 @@ def test_session_step_results_target_metrics_no_validation():
     When: Fetching target_metrics.
     Then: Return negative infinity.
     '''
-    results = core.SessionStepResults()
+    results = session_results.SessionStepResults()
 
     assert results.target_metrics == -float('inf')
 
@@ -155,13 +154,13 @@ def test_session_step_results_target_metrics_default_mean():
     When: Fetching target_metrics.
     Then: Return target metrics as the simple mean of all heads.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(
             head1={'mean': 0.6},
             head2={'mean': 0.9}
         )
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
 
     assert results.target_metrics == pytest.approx(0.75)
 
@@ -172,7 +171,7 @@ def test_session_step_results_inference_metrics_no_inference():
     When: Fetching inference_metrics.
     Then: Return negative infinity.
     '''
-    results = core.SessionStepResults()
+    results = session_results.SessionStepResults()
 
     assert results.inference_metrics == -float('inf')
 
@@ -183,13 +182,13 @@ def test_session_step_results_inference_metrics_default_mean():
     When: Fetching inference_metrics.
     Then: Return target metrics as a simple mean of all heads.
     '''
-    inference = core.InferStepResults(
+    inference = session_results.InferStepResults(
         head_metrics=_make_head_metrics(
             head1={'mean': 0.7},
             head2={'mean': 0.9}
         )
     )
-    results = core.SessionStepResults(inference=inference)
+    results = session_results.SessionStepResults(inference=inference)
 
     assert results.inference_metrics == pytest.approx(0.8)
 
@@ -200,13 +199,13 @@ def test_session_step_results_track_weighted_heads():
     When: Tracking a weighted metric selection.
     Then: Evaluate the target metric value correctly.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(
             head1={'mean': 0.6},
             head2={'mean': 0.9}
         )
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
     results.track('iou', {'head2': 2.0})
 
     assert results.target_metrics == pytest.approx(0.9)
@@ -218,10 +217,10 @@ def test_session_step_results_track_gem():
     When: Tracking MTL gem metric.
     Then: Evaluate the target metric value correctly.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         mtl_metrics={'gem': 0.94},
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
     results.track('gem', None)
 
     assert results.target_metrics == pytest.approx(0.94)
@@ -233,10 +232,10 @@ def test_session_step_results_track_single_head_forces_iou():
     When: Requesting a gem metric tracker.
     Then: Force target_objective back to single-head IoU format.
     '''
-    validation = core.ValStepResults(
+    validation = session_results.ValStepResults(
         head_metrics=_make_head_metrics(head1={'mean': 0.8})
     )
-    results = core.SessionStepResults(validation=validation)
+    results = session_results.SessionStepResults(validation=validation)
     results.track('gem', None)
 
     assert results.target_objective == 'IoU from [head1] (simple mean)'
@@ -250,7 +249,7 @@ def test_train_step_results_clear():
     When: Clearing the results.
     Then: Reset all losses and regularizations to baseline.
     '''
-    results = core.TrainStepResults(
+    results = session_results.TrainStepResults(
         total_objective=3.14,
         head_losses={'focal': 1.2, 'dice': 0.8},
         regularization={'consistency': 0.01},
@@ -274,7 +273,7 @@ def test_accumulated_metrics_as_str_list():
     When: Formatting metrics string lists.
     Then: Return formatted string representations for all and active classes.
     '''
-    metrics_all = core.AccumulatedMetrics(
+    metrics_all = session_results.AccumulatedMetrics(
         mean=0.5,
         ious={'1': 0.4, '2': 0.6},
     )
@@ -283,7 +282,7 @@ def test_accumulated_metrics_as_str_list():
         'Class IoU (all): cls1=0.4000|cls2=0.6000',
     ]
 
-    metrics_active = core.AccumulatedMetrics(
+    metrics_active = session_results.AccumulatedMetrics(
         mean=0.5,
         ious={'1': 0.4},
         ac_mean=0.7,
@@ -304,7 +303,7 @@ def test_accumulated_metrics_lock():
     When: Locking the metrics.
     Then: Freeze internal properties and raise AttributeError on edit.
     '''
-    metrics = core.AccumulatedMetrics()
+    metrics = session_results.AccumulatedMetrics()
     metrics.lock()
 
     with pytest.raises(AttributeError):
@@ -495,9 +494,11 @@ def test_get_mean_iou_active_mean_selected_per_head():
 
 
 # ----- builders
-def _make_head_metrics(**heads) -> dict[str, core.AccumulatedMetrics]:
+def _make_head_metrics(
+    **heads,
+) -> dict[str, session_results.AccumulatedMetrics]:
     '''Construct a head_metrics dictionary.'''
     return {
-        name: core.AccumulatedMetrics(**kwargs)
+        name: session_results.AccumulatedMetrics(**kwargs)
         for name, kwargs in heads.items()
     }

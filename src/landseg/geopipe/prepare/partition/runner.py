@@ -41,8 +41,8 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
-import landseg.geopipe.prepare as prepare
 import landseg.geopipe.prepare.dataset as dataset
+import landseg.geopipe.prepare.logger as logger_mod
 import landseg.geopipe.prepare.partition.orchestration as orchestration
 
 
@@ -61,7 +61,7 @@ def run_datablocks_partition(
     partition_config: orchestration.PartitionConfig,
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: prepare.PreparationLogger,
+    logger: logger_mod.PreparationLogger,
 ) -> None:
     '''
     Partition canonical data blocks into train/val/test splits.

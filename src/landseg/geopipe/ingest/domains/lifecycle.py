@@ -40,9 +40,9 @@ import time
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest as ingest
 import landseg.geopipe.ingest.domains.builder as builder
 import landseg.geopipe.ingest.domains.mapper as mapper
+import landseg.geopipe.ingest.logger as logger_mod
 
 
 # ----- public dataclasses
@@ -67,7 +67,7 @@ def prepare_domain_maps(
     domain_configs: list[DomainBuildingConfig],
     *,
     policy: artifacts.LifecyclePolicy,
-    logger: ingest.IngestionLogger,
+    logger: logger_mod.IngestionLogger,
 ) -> None:
     '''
     Prepare and persist domain tile maps for categorical rasters.

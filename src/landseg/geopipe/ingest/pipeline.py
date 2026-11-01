@@ -28,7 +28,6 @@ the immutable raw block catalogue for later experiments.
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.artifacts.paths as paths
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.ingest.blocks as ingest_blocks
 import landseg.geopipe.ingest.context as ingest_context
@@ -39,7 +38,7 @@ import landseg.geopipe.ingest.logger as ingest_logger
 # ----- public functions
 def run_data_ingestion(
     context: ingest_context.IngestionContext,
-    ingestion_paths: paths.IngestionPaths,
+    ingestion_paths: artifacts.IngestionPaths,
     config: contracts.IngestionPipelineConfig,
     *,
     policy: artifacts.LifecyclePolicy,

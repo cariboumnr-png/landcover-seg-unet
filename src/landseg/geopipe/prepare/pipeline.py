@@ -28,7 +28,6 @@ statistics, normalizes all splits, and emits the final dataset schema.
 
 # local imports
 import landseg.artifacts as artifacts
-import landseg.artifacts.paths as paths
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.prepare.context as prepare_context
 import landseg.geopipe.prepare.dataset as prepare_dataset
@@ -40,7 +39,7 @@ import landseg.geopipe.prepare.partition as prepare_partition
 # ----- public functions
 def run_data_preparation(
     context: prepare_context.PreparationContext,
-    prep_paths: paths.PreparationPaths,
+    prep_paths: artifacts.PreparationPaths,
     config: contracts.PreparationPipelineConfig,
     *,
     policy: artifacts.LifecyclePolicy,

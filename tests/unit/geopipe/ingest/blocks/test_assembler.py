@@ -29,13 +29,10 @@ import numpy
 import rasterio
 # local imports
 import landseg.artifacts as artifacts
-import landseg.execution.workflows.diagnose_overfit as diagnose_overfit
 import landseg.geopipe.core as geo_core
-import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.ingest.blocks.assembler.lifecycle as lifecycle
-import landseg.geopipe.ingest.blocks.mapper as mapper_mod
 import landseg.geopipe.rasters as rasters
 
 
@@ -252,7 +249,7 @@ def test_build_blocks_orchestrator(
         'nir': 3,
         'dem': 4,
     }
-    inputs = assembler.BlockBuildingInputs(
+    inputs = lifecycle.BlockBuildingInputs(
         image_fpath=img_path,
         image_windows=image_windows,
         label_fpath=lbl_path,
@@ -262,7 +259,7 @@ def test_build_blocks_orchestrator(
         label_specs=label_specs,
     )
 
-    config = assembler.BlockBuildingConfig(
+    config = lifecycle.BlockBuildingConfig(
         dem_pad_px=2,
         ignore_index=255,
         add_spectral=['ndvi'],
@@ -271,7 +268,7 @@ def test_build_blocks_orchestrator(
         collision_policy='skip',
     )
 
-    result = assembler.build_blocks(
+    result = lifecycle.build_blocks(
         inputs=inputs,
         config=config,
         output_dir=out_dir,
@@ -285,63 +282,6 @@ def test_build_blocks_orchestrator(
     for coord in image_windows:
         name = geo_core.xy_name(coord)
         assert os.path.exists(os.path.join(out_dir, f'{name}.npz'))
-
-
-# ----- test block construction
-def test_build_test_block_success(dummy_geotiff_factory, tmp_path):
-    '''
-    Given: Large label and image inputs meeting coverage requirements.
-    When: Running diagnostic test block builder.
-    Then: Return path to serialized DataBlock with valid coverage.
-    '''
-    img_path = dummy_geotiff_factory(
-        filename='image.tif',
-        width=16,
-        height=16,
-        bands=5
-    )
-    lbl_path = dummy_geotiff_factory(
-        filename='label.tif',
-        width=16,
-        height=16,
-        bands=1
-    )
-
-    with rasterio.open(lbl_path, 'r+') as src:
-        arr = numpy.ones((1, 16, 16), dtype=numpy.uint8)
-        arr[0, 0:8, :] = 1
-        arr[0, 8:16, :] = 2
-        src.write(arr)
-        src.set_band_description(1, 'class_head')
-        src.update_tags(
-            num_cls='2',
-            ignore_cls='[255]',
-            index_base='1',
-        )
-
-    window = rasters.Window(0, 0, 16, 16) # type: ignore
-    mapped = mapper_mod.MappedRasterWindows(
-        grid_id='test_grid',
-        image={(0, 0): window},
-        label={(0, 0): window},
-        tile_shape=(16, 16),
-        tile_overlap=(0, 0),
-    )
-    raster_ctx = assembler.RasterReadContext.from_rasters(img_path, lbl_path)
-
-    # pylint: disable=protected-access
-    fpath = diagnose_overfit._build_test_block(
-        save_dpath=tmp_path / 'test_blocks',
-        mapped=mapped,
-        raster_ctx=raster_ctx,
-        dem_pad_px=2,
-        target_head='class_head',
-        valid_px_per=0.5,
-        need_all_classes=False,
-    )
-
-    assert fpath is not None
-    assert os.path.exists(fpath)
 
 
 # ----- `read_label_specs` and `read_schemes` tests
@@ -394,6 +334,6 @@ def test_read_schemes_nested_and_flat(dummy_geotiff_factory):
     with rasterio.open(feat_path, 'r+') as src:
         src.update_tags(schemes="{'s2': {'rgb': ['blue', 'green', 'red']}}")
 
-    schemes = assembler.read_schemes(feat_path)
+    schemes = io.read_schemes(feat_path)
     assert 's2' in schemes
     assert schemes['s2']['rgb'] == ['blue', 'green', 'red']
