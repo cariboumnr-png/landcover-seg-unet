@@ -43,8 +43,10 @@ class MonitorConfig(base.BaseConfigSection):
     min_delta: float | None = 0.0005
 
     def validate(self):
-        self.val.require_numeric_min(self.patience, 0)
-        self.val.require_numeric_min(self.min_delta, 0)
+        if self.patience is not None:
+            self.val.require_numeric_min(self.patience, 0)
+        if self.min_delta is None:
+            self.val.require_numeric_min(self.min_delta, 0)
 
 
 @dataclasses.dataclass
@@ -59,7 +61,8 @@ class PhaseConfig(base.BaseConfigSection):
     def validate(self):
         self.val.require_numeric_min(self.num_epochs, 1, int)
         self.val.require_numeric_range(self.start_epoch, (1, self.num_epochs))
-        self.val.require_numeric_range(self.lr_scale, (1e-3, 1))
+        if self.lr_scale is not None:
+            self.val.require_numeric_range(self.lr_scale, (1e-3, 1))
 
 
 @dataclasses.dataclass
