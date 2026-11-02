@@ -48,6 +48,7 @@ class BaseConfigurator:
         self._cfg.data.harmonization.output_dpath = f'{_r}/harmonized_data'
         self._cfg.data.ingestion.output_dpath = f'{_r}/ingested_data'
         self._cfg.data.preparation.output_dpath = f'{_r}/prepared_data'
+        self._cfg.session.output_dpath = f'{experiment_root}/results'
         # set command name
         self._cfg.command = command_name
 
