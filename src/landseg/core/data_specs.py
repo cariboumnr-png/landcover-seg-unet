@@ -141,7 +141,6 @@ class Meta:
     @dataclasses.dataclass
     class Image:
         '''Image related.'''
-        num_channels: int
         height_width: int
         array_key: str
         band_map: dict[str, int]
@@ -155,6 +154,11 @@ class Meta:
                     self.spec_channels.append(v)
                 elif k.lower() in TOPO_BAND_NAMES:
                     self.topo_channels.append(v)
+
+        @property
+        def num_channels(self) -> int:
+            '''Return the number of image channels.'''
+            return len(self.band_map)
 
     @dataclasses.dataclass
     class Label:

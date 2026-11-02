@@ -148,10 +148,9 @@ def _get_meta(
         blk_bytes=img_b * img_px + lbl_b * lbl_px,
         label_color_map=data_schema['labels']['label_class_color_map'],
         image_specs=core.Meta.Image(
-            num_channels=data_schema['tensor_shapes']['image']['C'],
             height_width=data_schema['tensor_shapes']['image']['H'],
             array_key=prepared_schema['image_array_key'],
-            band_map=data_schema['io_conventions']['image_band_map'],
+            band_map=prepared_schema['image_band_mapping'],
         ),
         label_specs=core.Meta.Label(
             array_key=prepared_schema['label_array_key'],

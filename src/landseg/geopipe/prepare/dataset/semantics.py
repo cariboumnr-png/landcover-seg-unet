@@ -57,6 +57,11 @@ class FeatureSelection:
     def __iter__(self) -> typing.Iterator[list[str] | list[int]]:
         return iter([list(self.names), list(self.indices)])
 
+    @property
+    def image_band_mapping(self) -> dict[str, int]:
+        '''Return names mapping to 0-based indices.'''
+        return {n: i for i, n in enumerate(self.names)}
+
 
 @dataclasses.dataclass(frozen=True)
 class TargetHeadsContext:

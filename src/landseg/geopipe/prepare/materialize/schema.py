@@ -142,7 +142,7 @@ def build_schema(
         }
 
         # populate schema dict
-        schema = {
+        schema: geo_core.prepared_schema.PreparedSchema = {
             'schema_id': geo_core.prepared_schema.SCHEMA_ID,
             'creation_time': datetime.datetime.now().strftime(c.TF_ISO8601),
             'artifacts': collected_artifacts,
@@ -154,6 +154,7 @@ def build_schema(
             'image_stats': image_stats,
             'image_array_key': 'image', # current convention
             'label_array_key': 'label', # current convention
+            'image_band_mapping': context.features.image_band_mapping,
             'heads': heads_schema,
         }
         schema_ctrl.persist(schema)

@@ -36,7 +36,7 @@ from __future__ import annotations
 import typing
 
 
-SCHEMA_ID = 'prepared_schema/v0.1.0'
+SCHEMA_ID = 'prepared_schema/v0.1.1'
 
 
 # ----- public types
@@ -47,7 +47,7 @@ class PreparedSchema(typing.TypedDict):
     Captures metadata and statistics generated during preparation,
     including splits, checksums, label counts, and image stats.
 
-    Schema: SCHEMA_ID = 'prepared_schema/v0.1.0'
+    Schema: SCHEMA_ID = 'prepared_schema/v0.1.1'
     '''
     schema_id: str
     creation_time: str
@@ -60,6 +60,7 @@ class PreparedSchema(typing.TypedDict):
     image_stats: dict[str, ImageBandStats]
     image_array_key: str
     label_array_key: str
+    image_band_mapping: dict[str, int]
     heads: typing.NotRequired[TargetHeadsSchema]
 
 
