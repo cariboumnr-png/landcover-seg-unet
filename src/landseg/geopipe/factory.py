@@ -187,7 +187,15 @@ def _get_heads(
 ) -> core.Heads:
     '''Populate core.Heads dataclass from schema dictionary.'''
     raw_counts: dict[str, list[int]] = prepared_schema['label_stats']
-    counts = {k: v for k, v in raw_counts.items() if k != 'original'}
+    heads_schema = prepared_schema.get('heads', {})
+    head_order = heads_schema.get('head_names')
+    if head_order:
+        counts = {k: raw_counts[k] for k in head_order if k in raw_counts}
+        for k, v in raw_counts.items():
+            if k not in counts and k != 'original':
+                counts[k] = v
+    else:
+        counts = {k: v for k, v in raw_counts.items() if k != 'original'}
     taxonomy: dict[str, dict[str, typing.Any]] = {
         k: dict(v)
         for k, v in data_schema['labels'].get('label_taxonomy', {}).items()

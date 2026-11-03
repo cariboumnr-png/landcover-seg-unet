@@ -233,14 +233,14 @@ def _reclassify_labels(
         for group_id, classes in reclass_cfg.items():
             source_pixels = [c + 1 for c in classes]
             mask = numpy.isin(arr, source_pixels)
-            group_layer[mask] = int(group_id)
+            group_layer[mask] = int(group_id) + 1
         stack.append(group_layer)
 
         # 3. child slices (sub-groups)
         for group_id, classes in reclass_cfg.items():
             child_arr = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
             for k, cls_id in enumerate(classes):
-                child_arr[arr == (cls_id + 1)] = int(k)
+                child_arr[arr == (cls_id + 1)] = int(k) + 1
             stack.append(child_arr)
 
     return numpy.stack(stack, axis=0)

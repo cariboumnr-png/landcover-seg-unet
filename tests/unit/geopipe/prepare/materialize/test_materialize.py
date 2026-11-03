@@ -101,21 +101,21 @@ def test_reclassify_labels_multi_head():
     assert numpy.array_equal(stack[0], raw_arr)
 
     # grouping layer
-    assert stack[1, 0, 0] == 0
-    assert stack[1, 0, 1] == 0
-    assert stack[1, 1, 0] == 1
+    assert stack[1, 0, 0] == 1
+    assert stack[1, 0, 1] == 1
+    assert stack[1, 1, 0] == 2
     assert stack[1, 1, 1] == 255
 
-    # child slice 0 (VEG: 1 -> 0, 2 -> 1, others -> 255)
-    assert stack[2, 0, 0] == 0
-    assert stack[2, 0, 1] == 1
+    # child slice 0 (VEG: 1 -> 1, 2 -> 2, others -> 255)
+    assert stack[2, 0, 0] == 1
+    assert stack[2, 0, 1] == 2
     assert stack[2, 1, 0] == 255
     assert stack[2, 1, 1] == 255
 
-    # child slice 1 (WAT: 3 -> 0, others -> 255)
+    # child slice 1 (WAT: 3 -> 1, others -> 255)
     assert stack[3, 0, 0] == 255
     assert stack[3, 0, 1] == 255
-    assert stack[3, 1, 0] == 0
+    assert stack[3, 1, 0] == 1
     assert stack[3, 1, 1] == 255
 
 

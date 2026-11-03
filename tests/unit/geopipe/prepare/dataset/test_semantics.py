@@ -310,6 +310,14 @@ def test_derive_head_class_counts():
     raw_counts = {'landcover': [50, 100, 200, 300]}
     derived = semantics.derive_head_class_counts(heads_ctx, raw_counts)
 
+    # verify head order: base -> grouping -> child slices
+    assert list(derived.keys()) == [
+        'landcover',
+        'landcover_group',
+        'landcover_VEG',
+        'landcover_WAT',
+    ]
+
     # 1. base head
     assert derived['landcover'] == [50, 100, 200, 300]
     # 2. child slices

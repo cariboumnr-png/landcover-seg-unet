@@ -131,8 +131,9 @@ def run_materialize_blocks(
     prepared = prep_ctrl.fetch()
     loaded = prepared is not None
 
+    rebuild = policy == artifacts.LifecyclePolicy.REBUILD
     purged_total = 0
-    if policy != artifacts.LifecyclePolicy.REBUILD and prepared:
+    if not rebuild and prepared:
         logger.info('[CHECKPOINT] Loaded normalized dataset blocks')
     else:
         prepared, purged_total = _materialize(
@@ -140,6 +141,7 @@ def run_materialize_blocks(
             agg_stats,
             context,
             paths,
+            rebuild=rebuild,
             logger=logger,
         )
         prep_ctrl.persist(prepared)
@@ -160,7 +162,7 @@ def run_materialize_blocks(
         'status': 'loaded' if loaded else 'created',
         'duration_sec': duration,
         'unwanted_blocks_removed': purged_total,
-        'rebuild': False,
+        'rebuild': rebuild,
         'stats_filepath': str(paths.image_stats.resolve()),
     }
     logger.set_normalization(report)
@@ -173,6 +175,7 @@ def _materialize(
     context: dataset.DatasetView,
     paths: _PipelinePaths,
     *,
+    rebuild: bool = False,
     logger: logger_mod.PreparationLogger,
 ) -> tuple[contracts.BlocksPartition, int]:
     '''Materialize and normalize train, validation, and test splits.'''
@@ -184,6 +187,7 @@ def _materialize(
         aggregated_stats,
         context,
         paths.train_blocks,
+        rebuild=rebuild,
     )
     if purged:
         purged_total += purged
@@ -193,6 +197,7 @@ def _materialize(
         aggregated_stats,
         context,
         paths.val_blocks,
+        rebuild=rebuild,
     )
     if purged:
         purged_total += purged
@@ -202,6 +207,7 @@ def _materialize(
         aggregated_stats,
         context,
         paths.test_blocks,
+        rebuild=rebuild,
     )
     if purged:
         purged_total += purged
