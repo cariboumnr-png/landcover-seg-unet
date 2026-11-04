@@ -73,9 +73,10 @@ def build_harmonization_context(
     # load world grid
     world_grid, grid_id, grid_fpath = load_grid_reference(grid_report_path)
 
-    # compile dataset manifest JOSN
+    # compile dataset manifest
     mfst_path = pathlib.Path(config.dataset_manifest)
-    compiled = manifest.compile_dataset_manifest(mfst_path)
+    builder = manifest.DatasetManifestBuilder.from_file(mfst_path)
+    compiled = builder.compile()
 
     # identify/collision check
     grid_identity = artifacts.compute_fingerprint(world_grid.affine_identity)

@@ -41,13 +41,16 @@ import zlib
 import numpy
 import pandas
 import torch
+import yaml
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
 
-# type
+# ----- typing aliases
 T = typing.TypeVar('T')
 
+
+# ----- public classes
 class Controller(typing.Generic[T]):
     '''
     Manage loading, validation, and persistence of disk-based artifacts.
@@ -83,7 +86,7 @@ class Controller(typing.Generic[T]):
         self.dir = path.parent
         self.fname = path.name
         self.hash_fpath = path.parent / '_hash.json'
-        self.type = self._get_file_type(path)
+        self.type = self._get_file_type()
         self.policy = (
             policy if policy is not None
             else artifacts.LifecyclePolicy.LOAD_OR_FAIL
@@ -227,6 +230,8 @@ class Controller(typing.Generic[T]):
                 self._csv_write(self.fp, src)
             case 'pt':
                 self._pt_write(self.fp, src)
+            case 'yaml':
+                self._yaml_write(self.fp, src)
         self.hash()
 
     def hash(self, overwrite: bool = True):
@@ -264,6 +269,7 @@ class Controller(typing.Generic[T]):
                 case 'npz_dict': loaded = self._npz_read_dict(self.fp)
                 case 'csv': loaded = self._csv_read(self.fp)
                 case 'pt': loaded = self._pt_read(self.fp)
+                case 'yaml': loaded = self._yaml_read(self.fp)
                 case _: raise ValueError(f'Unsupported type: {self.type}')
             if self._check_sha256():
                 return loaded
@@ -272,6 +278,7 @@ class Controller(typing.Generic[T]):
             raise _ArtifactMissing from exc
         except (
             json.JSONDecodeError,
+            yaml.YAMLError,
             zipfile.error,
             zlib.error,
             pandas.errors.ParserError,
@@ -291,30 +298,26 @@ class Controller(typing.Generic[T]):
         except (FileNotFoundError, json.JSONDecodeError):
             return False
 
-    @staticmethod
-    def _get_file_type(fp: pathlib.Path) -> str:
-        name = fp.name
-        if name.endswith(('.json', 'json')):
-            return 'json'
-        if name.endswith(('.npz', 'npz')):
-            return 'npz_dict'
-        if name.endswith(('.csv', 'csv')):
-            return 'csv'
-        if name.endswith(('.pt', 'pt')):
-            return 'pt'
-        raise ValueError(f'Unsupported file type: {fp}')
+    def _get_file_type(self) -> str:
+        '''Get file type by suffix.'''
+        suffix = self.fp.suffix.lower()
+        match suffix:
+            case '.csv': return 'csv'
+            case '.json': return 'json'
+            case '.npz': return 'npz_dict'
+            case '.pt': return 'pt'
+            case '.yaml' | '.yml': return 'yaml'
+            case _: raise ArtifactError(f'Unsupported file type: {self.fp}')
 
     @staticmethod
     def _json_read(fp: pathlib.Path):
         '''Read JSON data from disk.'''
-
         with open(fp, 'r', encoding='UTF-8') as src:
             return json.load(src)
 
     @staticmethod
     def _json_write(fp: pathlib.Path, src: typing.Any):
         '''Write JSON data or formatted JSON string to disk.'''
-
         if isinstance(src, str): # special case: formatted JSON string
             with open(fp, 'w', encoding='UTF-8') as file:
                 file.write(src)
@@ -362,7 +365,6 @@ class Controller(typing.Generic[T]):
     @staticmethod
     def _npz_write_dict(fp: pathlib.Path, src: typing.Any):
         '''Persist a dictionary of NumPy arrays as a compressed NPZ.'''
-
         # early exits
         if not src:
             raise ValueError('Cannot save empty dict')
@@ -391,6 +393,27 @@ class Controller(typing.Generic[T]):
 
         # write src to npz
         numpy.savez_compressed(fp, keys=keys, values=values)
+
+    @staticmethod
+    def _yaml_read(fp: pathlib.Path) -> typing.Any:
+        '''Read YAML data from disk.'''
+        with open(fp, 'r', encoding='UTF-8') as src:
+            return yaml.safe_load(src)
+
+    @staticmethod
+    def _yaml_write(fp: pathlib.Path, src: typing.Any) -> None:
+        '''Write data to disk.'''
+        class _Dumper(yaml.SafeDumper):
+            pass
+
+        _Dumper.add_multi_representer(
+            pathlib.PurePath,
+            lambda dumper, data: dumper.represent_scalar(
+                'tag:yaml.org,2002:str', str(data)
+            ),
+        )
+        with open(fp, 'w', encoding='utf-8') as f:
+            yaml.dump(src, f, Dumper=_Dumper, sort_keys=False)
 
 
 class ArtifactError(Exception):

@@ -27,7 +27,6 @@ Dummy dataset generator for landseg integration testing and local execution.
 
 # standard imports
 import dataclasses
-import json
 import pathlib
 import typing
 # third-party imports
@@ -36,6 +35,7 @@ import rasterio
 import rasterio.transform
 import rasterio.warp
 # local imports
+import landseg.artifacts as artifacts
 import landseg.testing.tiff as tiff
 
 
@@ -375,7 +375,7 @@ def generate_pre_harmonization_data(input_root: str | pathlib.Path) -> None:
         'schemes': None,
     })
 
-    _write_jsons(data_configs, paths.manifest)
+    _write_manifests(data_configs, paths.manifest)
 
 
 # ----- private functions
@@ -384,25 +384,32 @@ def _get_transform(x: float, y: float, res: float) -> rasterio.transform.Affine:
     return rasterio.transform.from_origin(x, y, res, res)
 
 
-def _write_jsons(
+def _write_manifests(
     src: list[dict[str, typing.Any]],
     manifest: str | pathlib.Path,
 ) -> None:
-    '''Write per file sidecar JSON and manifest JSON.'''
+    '''Write single-document manifest JSON and readable YAML.'''
+    manifest_path = pathlib.Path(manifest)
     # clear existing hash record if regenerating
-    hash_path = pathlib.Path(manifest).parent / '_hash.json'
+    hash_path = manifest_path.parent / '_hash.json'
     hash_path.unlink(missing_ok=True)
 
-    manifest_list: list[dict[str, typing.Any]] = []
+    manifest_entries: list[dict[str, typing.Any]] = []
     for cfg in src:
         path_obj = pathlib.Path(cfg['path'])
-        json_fpath = path_obj.with_suffix('.json')
-        with open(json_fpath, 'w', encoding='utf-8') as f:
-            json.dump(cfg, f, indent=4, default=str)
-        manifest_list.append({
-            'name': cfg['name'],
-            'path': str(path_obj.resolve()),
-            'manifest': str(json_fpath.resolve()),
-        })
-    with open(manifest, 'w', encoding='utf-8') as f:
-        json.dump(manifest_list, f, indent=4)
+        # clean up legacy sidecar JSON if present
+        sidecar_path = path_obj.with_suffix('.json')
+        sidecar_path.unlink(missing_ok=True)
+
+        entry = dict(cfg)
+        try:
+            entry['path'] = str(path_obj.relative_to(manifest_path.parent))
+        except ValueError:
+            entry['path'] = str(path_obj)
+        manifest_entries.append(entry)
+
+    # persist single-document manifest in JSON and readable YAML
+    artifacts.Controller(manifest_path).persist(manifest_entries)
+    artifacts.Controller(manifest_path.with_suffix('.yaml')).persist(
+        manifest_entries
+    )

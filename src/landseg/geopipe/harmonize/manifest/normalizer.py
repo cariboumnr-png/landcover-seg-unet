@@ -28,43 +28,19 @@ band mappings, categorical specifications, schemes, and taxonomy
 references.
 
 Public APIs:
-    - `AllowedCategory`: Type alias for valid raster categories.
-    - `ManifestEntry`: TypedDict defining per-raster configuration.
     - `normalize_manifest_entry`: Validate and normalize manifest entry.
 '''
 
 # standard imports
-import pathlib
 import typing
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.harmonize.manifest.schema as schema
 import landseg.utils.validator as val
 
 
-# ----- typing aliases
-AllowedCategory: typing.TypeAlias = typing.Literal[
-    'domains',
-    'domain',
-    'features',
-    'feature',
-    'labels',
-    'label',
-]
-
-
-# ----- public types
-class ManifestEntry(typing.TypedDict):
-    '''Expected shape of dataset config (per raster).'''
-    name: str
-    path: pathlib.Path
-    band_mapping: dict[int, str]
-    category: AllowedCategory
-    categorical_specs: geo_core.CategoricalSpec | None
-    schemes: dict[str, geo_core.LabelScheme] | dict[str, tuple[str, ...]] | None
-
-
 # ----- public functions
-def normalize_manifest_entry(entry: typing.Any) -> ManifestEntry:
+def normalize_manifest_entry(entry: typing.Any) -> schema.ManifestEntry:
     '''
     Normalize and validate a single dataset manifest entry.
 
@@ -122,11 +98,11 @@ def normalize_manifest_entry(entry: typing.Any) -> ManifestEntry:
 
 
 # ----- private helpers
-def _normalize_category(category: typing.Any) -> AllowedCategory:
+def _normalize_category(category: typing.Any) -> schema.AllowedCategory:
     '''Validate and cast raster category string.'''
-    allowed = typing.get_args(AllowedCategory)
+    allowed = typing.get_args(schema.AllowedCategory)
     return typing.cast(
-        AllowedCategory,
+        schema.AllowedCategory,
         val.require_value_from(category, allowed, str),
     )
 
@@ -137,7 +113,7 @@ def _normalize_band_mapping(raw: typing.Any) -> dict[int, str]:
     normalized: dict[int, str] = {}
     for k, v in mapping.items():
         k_int = val.require_numeric_min(int(k), 1, int)
-        # int conversion will throw if not an int and propegate to compiler.py
+        # int conversion will throw if not an int and propagate to builder
         normalized[k_int] = v
     if set(normalized.keys()) != set(range(1, len(normalized) + 1)):
         raise ValueError(

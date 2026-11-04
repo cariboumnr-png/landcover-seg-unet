@@ -29,6 +29,10 @@ quatre étapes séquentielles :
 > assembler au préalable en un raster virtuel (`.vrt`) avec
 > `scripts/build_raster_mosaic.py` ou `notebooks/00_raster_mosaic.ipynb` avant
 > d'exécuter `data-harmonize`.
+>
+> **Assemblage interactif de manifestes** : Utilisez `notebooks/00_dataset_manifest.ipynb`
+> pour inspecter interactivement les en-têtes GeoTIFF, définir les correspondances
+> de bandes et compiler votre manifeste au format JSON ou YAML à document unique.
 
 Les utilisateurs peuvent fournir leurs propres fichiers GeoTIFF avec un
 manifeste de jeu de données, ou utiliser le script de génération de données
@@ -71,17 +75,13 @@ experiment/input/
 │   ├── sample_extent.tif        # Étendue définissant le canevas spatial
 │   └── sample_test_aoi.tif      # Masque géographique optionnel de test
 ├── raw_data/
-│   ├── manifest.json            # Manifeste central du jeu de données
+│   ├── manifest.json            # Manifeste central (document unique)
+│   ├── manifest.yaml            # Spécification YAML lisible
 │   ├── sample_dev_sentinel2.tif # Imagerie optique multi-bandes (10m)
-│   ├── sample_dev_sentinel2.json
 │   ├── sample_dev_dem.tif       # Raster d'élévation MNA (10m)
-│   ├── sample_dev_dem.json
 │   ├── sample_dev_landcover.tif # Vérité terrain couverture du sol
-│   ├── sample_dev_landcover.json
 │   ├── sample_dev_leadspc.tif   # Vérité terrain essences forestières
-│   ├── sample_dev_leadspc.json
 │   ├── sample_domain_1.tif      # Masque de contexte de domaine
-│   ├── sample_domain_1.json
 │   └── ...
 └── utm_rasters/                 # Tuiles factices cross-UTM pour tests de mosaïque
     ├── image_17n.tif            # GeoTIFF de caractéristiques UTM 17N
@@ -134,36 +134,87 @@ Cela génère l'artefact canonique sous :
 
 ## Manifeste et configurations de métadonnées
 
-Le pipeline d'harmonisation (`data-harmonize`) lit un fichier central
-`manifest.json`. Chaque raster brut référencé dans le manifeste est
-accompagné d'un fichier manifeste de raster JSON individuel (sidecar).
+Le pipeline d'harmonisation (`data-harmonize`) lit un manifeste de jeu de
+données à document unique (`manifest.json` ou `manifest.yaml`). Chaque entrée
+de raster brut est déclarée directement dans le document central, éliminant
+les fichiers sidecars redondants.
 
-### Manifeste central (`manifest.json`)
+> [!TIP]
+> **Construction interactive de manifeste** : Suivez l'inspection interactive
+> de GeoTIFF, le mappage des bandes et la compilation du manifeste dans
+> [`notebooks/00_dataset_manifest.ipynb`](../notebooks/00_dataset_manifest.ipynb).
 
-Le manifeste est un tableau d'objets associant chaque raster brut à son
-manifeste de raster :
+### Spécification du manifeste
+
+Le manifeste est une liste de spécifications de rasters déclarant des
+caractéristiques continues, des masques de contexte de domaine discrets ou
+des étiquettes de cible catégorielles. Les chemins relatifs sont résolus par
+rapport au répertoire parent du fichier manifeste.
+
+**Exemple : Manifeste JSON à document unique (`manifest.json`)**
 
 ```json
 [
   {
     "name": "sentinel2",
-    "path": "./experiment/input/raw_data/sample_dev_sentinel2.tif",
-    "manifest": "./experiment/input/raw_data/sample_dev_sentinel2.json"
+    "path": "sample_dev_sentinel2.tif",
+    "category": "features",
+    "band_mapping": {
+      "1": "blue",
+      "2": "green",
+      "3": "red",
+      "4": "red_edge1",
+      "5": "red_edge2",
+      "6": "red_edge3",
+      "7": "nir",
+      "8": "narrow_nir",
+      "9": "swir1",
+      "10": "swir2"
+    },
+    "categorical_specs": null,
+    "schemes": {
+      "rgb": ["blue", "green", "red"],
+      "rgb_nir": ["blue", "green", "red", "nir"]
+    }
   },
   {
     "name": "dem",
-    "path": "./experiment/input/raw_data/sample_dev_dem.tif",
-    "manifest": "./experiment/input/raw_data/sample_dev_dem.json"
-  },
-  {
-    "name": "landcover",
-    "path": "./experiment/input/raw_data/sample_dev_landcover.tif",
-    "manifest": "./experiment/input/raw_data/sample_dev_landcover.json"
+    "path": "sample_dev_dem.tif",
+    "category": "features",
+    "band_mapping": {"1": "dem"},
+    "categorical_specs": null,
+    "schemes": null
   },
   {
     "name": "domain_1",
-    "path": "./experiment/input/raw_data/sample_domain_1.tif",
-    "manifest": "./experiment/input/raw_data/sample_domain_1.json"
+    "path": "sample_domain_1.tif",
+    "category": "domains",
+    "band_mapping": {"1": "domain_1"},
+    "categorical_specs": {
+      "index_base": 1,
+      "num_cls": 4,
+      "ignore_cls": [255]
+    },
+    "schemes": null
+  },
+  {
+    "name": "landcover",
+    "path": "sample_dev_landcover.tif",
+    "category": "labels",
+    "band_mapping": {"1": "landcover"},
+    "categorical_specs": {
+      "index_base": 1,
+      "num_cls": 2,
+      "ignore_cls": [255],
+      "class_name": {"1": "coniferous", "2": "deciduous"},
+      "color_map": {"1": [34, 139, 34], "2": [218, 165, 32]}
+    },
+    "schemes": {
+      "binary": {
+        "reclass": {"1": [1, 2]},
+        "reclass_name": {"1": "forest"}
+      }
+    }
   }
 ]
 ```

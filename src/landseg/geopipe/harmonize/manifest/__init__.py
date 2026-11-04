@@ -25,9 +25,10 @@ Top-level namespace for `landseg.geopipe.harmonize.manifest`.
 Exposes dataset manifest schemas, compilers, and normalizers.
 
 Public APIs:
+    - `DatasetManifestBuilder`: Fluent builder for dataset manifests.
     - `DatasetManifestError`: Error raised during manifest compilation.
-    - `compile_dataset_manifest`: Read and validate dataset manifest.
     - `ManifestEntry`: TypedDict defining per-raster configuration.
+    - `SensorPreset`: Standard sensor band definitions and presets.
 '''
 
 # standard imports
@@ -38,39 +39,49 @@ import typing
 __all__ = [
     # classes
     'DatasetManifestError',
+    'DatasetManifestBuilder',
     # functions
-    'compile_dataset_manifest',
     'normalize_manifest_entry',
     # typing
     'ManifestEntry',
+    'SensorPreset',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .compiler import (
+    from .builder import (
         DatasetManifestError,
-        compile_dataset_manifest,
+        DatasetManifestBuilder,
     )
     from .normalizer import (
-        ManifestEntry,
         normalize_manifest_entry,
+    )
+    from .schema import (
+        ManifestEntry,
+        SensorPreset,
     )
 
 
 def __getattr__(name: str):
     if name in {
         'DatasetManifestError',
-        'compile_dataset_manifest',
+        'DatasetManifestBuilder',
     }:
-        obj = importlib.import_module('.compiler', __package__)
+        obj = importlib.import_module('.builder', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'normalize_manifest_entry',
+    }:
+        obj = importlib.import_module('.normalizer', __package__)
         return getattr(obj, name)
 
     if name in {
         'ManifestEntry',
-        'normalize_manifest_entry',
+        'SensorPreset',
     }:
-        obj = importlib.import_module('.normalizer', __package__)
+        obj = importlib.import_module('.schema', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
