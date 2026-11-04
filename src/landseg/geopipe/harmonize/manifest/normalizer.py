@@ -113,7 +113,7 @@ def _normalize_band_mapping(raw: typing.Any) -> dict[int, str]:
     normalized: dict[int, str] = {}
     for k, v in mapping.items():
         k_int = val.require_numeric_min(int(k), 1, int)
-        # int conversion will throw if not an int and propegate to compiler.py
+        # int conversion will throw if not an int and propagate to builder
         normalized[k_int] = v
     if set(normalized.keys()) != set(range(1, len(normalized) + 1)):
         raise ValueError(

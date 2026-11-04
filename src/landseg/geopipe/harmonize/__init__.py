@@ -50,7 +50,7 @@ class _Validators:
 
     @staticmethod
     def manifest_contract(manifest_path: pathlib.Path):
-        '''Validate input dataset manifest JSON.'''
+        '''Validate input dataset manifest (JSON or YAML).'''
         import landseg.geopipe.harmonize.manifest.builder as builder
         return builder.DatasetManifestBuilder.from_file(manifest_path).compile()
 

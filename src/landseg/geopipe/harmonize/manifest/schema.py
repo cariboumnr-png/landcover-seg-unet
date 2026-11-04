@@ -20,6 +20,11 @@
 # =========================================================================== #
 
 '''
+Schemas and type contracts for dataset manifests.
+
+Defines canonical TypedDict specifications, category aliases, and standard
+sensor preset enumerations for raw raster registration.
+
 Public APIs:
     - `AllowedCategory`: Type alias for valid raster categories.
     - `ManifestEntry`: TypedDict defining per-raster configuration.

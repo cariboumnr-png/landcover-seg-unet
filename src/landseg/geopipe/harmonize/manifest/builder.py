@@ -23,10 +23,11 @@
 Fluent programmatic dataset manifest builder.
 
 Provides type-safe construction, validation, and serialization of raw
-dataset manifests and sidecar configuration bundles.
+dataset manifests into single-document JSON and YAML specifications.
 
 Public APIs:
-    - `DatasetManifestCompiler`: Compiler for dataset manifests.
+    - `DatasetManifestBuilder`: Fluent builder for dataset manifests.
+    - `DatasetManifestError`: Base error raised during compilation.
 '''
 
 # standard imports
@@ -41,7 +42,7 @@ import landseg.utils.validator as val
 
 # ----- public classes
 class DatasetManifestError(Exception):
-    '''Base class for errors when compiling dataset manifest JSON.'''
+    '''Base class for errors when compiling dataset manifest.'''
 
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
@@ -277,11 +278,11 @@ class DatasetManifestBuilder:
         Validate all configured raster entries against normalizer schemas.
 
         Returns:
-            tuple[normalizer.ManifestEntry, ...]:
+            tuple[schema.ManifestEntry, ...]:
                 Tuple of canonical, validated manifest entries.
 
         Raises:
-            compiler.DatasetManifestError:
+            DatasetManifestError:
                 If entries are empty, duplicate, or fail schema checks.
         '''
         if not self._entries:
@@ -318,9 +319,29 @@ class DatasetManifestBuilder:
         save_dir: str | pathlib.Path,
         name: str = 'dataset_manifest',
     ) -> None:
-        '''Materialize into a JSON, optional with a readable YAML.'''
-        data = self._compiled or self.compile()
+        '''
+        Materialize manifest into single-document JSON and readable YAML.
+
+        Args:
+            save_dir:
+                Directory where JSON and YAML manifest files will be written.
+            name:
+                Base filename without suffix (defaults to 'dataset_manifest').
+        '''
+        compiled = self._compiled or self.compile()
+        target_dir = pathlib.Path(save_dir).resolve()
+
+        payload: list[dict[str, typing.Any]] = []
+        for entry in compiled:
+            item = dict(entry)
+            p = pathlib.Path(entry['path']).resolve()
+            try:
+                item['path'] = str(p.relative_to(target_dir))
+            except ValueError:
+                item['path'] = str(p)
+            payload.append(item)
+
         json_path = pathlib.Path(save_dir) / f'{name}.json'
-        artifacts.Controller(json_path).persist(data)
+        artifacts.Controller(json_path).persist(payload)
         yaml_path = pathlib.Path(save_dir) / f'{name}.yaml'
-        artifacts.Controller(yaml_path).persist(data)
+        artifacts.Controller(yaml_path).persist(payload)

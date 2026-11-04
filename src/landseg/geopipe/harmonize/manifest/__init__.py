@@ -25,9 +25,10 @@ Top-level namespace for `landseg.geopipe.harmonize.manifest`.
 Exposes dataset manifest schemas, compilers, and normalizers.
 
 Public APIs:
+    - `DatasetManifestBuilder`: Fluent builder for dataset manifests.
     - `DatasetManifestError`: Error raised during manifest compilation.
-    - `compile_dataset_manifest`: Read and validate dataset manifest.
     - `ManifestEntry`: TypedDict defining per-raster configuration.
+    - `SensorPreset`: Standard sensor band definitions and presets.
 '''
 
 # standard imports
