@@ -74,7 +74,7 @@ def resolve_pending_ingestion_batches(
     harmonization_run_manifest: pathlib.Path,
     ingestion_run_manifest: pathlib.Path,
     *,
-    target: int | str | None = None,
+    target: int | str = 'latest',
     rebuild: bool = False,
 ) -> list[contracts.HarmonizationRunRecord]:
     '''
@@ -116,7 +116,7 @@ def resolve_pending_ingestion_batches(
     ingested_uids = _resolve_ingestion_runs(ingestion_run_manifest)
 
     # catch-up / pending mode
-    if target in (None, 'pending', 'all'):
+    if target in ('pending', 'all'):
         if rebuild:
             return list(successful_runs.values())
         return [

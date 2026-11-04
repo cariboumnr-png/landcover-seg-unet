@@ -74,19 +74,18 @@ class DataIngestionConfig(base.BaseConfigSection):
     domains: Domains = dataclasses.field(default_factory=Domains)
     datablocks: DataBlocks = dataclasses.field(default_factory=DataBlocks)
     rebuild: bool = False
-    harmonization_run: int | str | None = None
+    harmonization_run: int | str = 'latest'
     output_dpath: str = '${execution.exp_root}/artifacts/ingested_data'
 
     def validate(self) -> None:
         self.domains.validate()
         self.datablocks.validate()
 
-        if self.harmonization_run is not None:
-            if isinstance(self.harmonization_run, (int, float)):
-                self.val.require_numeric_min(self.harmonization_run, 1)
-            elif isinstance(self.harmonization_run, str):
-                self.val.require_string(self.harmonization_run)
-            else:
-                raise base.ConfigValidationError(
-                    'Failed to validate "harmonization_run" attribute'
-                )
+        if isinstance(self.harmonization_run, (int, float)):
+            self.val.require_numeric_min(self.harmonization_run, 1)
+        elif isinstance(self.harmonization_run, str):
+            self.val.require_string(self.harmonization_run)
+        else:
+            raise base.ConfigValidationError(
+                'Failed to validate "harmonization_run" attribute'
+            )

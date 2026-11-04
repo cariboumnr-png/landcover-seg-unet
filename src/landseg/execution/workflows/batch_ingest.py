@@ -57,14 +57,16 @@ def execute_batch_ingest(config: configs.RootConfig) -> None:
         rebuild=config.data.ingestion.rebuild,
     )
 
+    logger = utils.Logger(name='data-ingest', enable_file_log=False)
     if not planned_batches:
-        logger = utils.Logger(name='data-ingest', enable_file_log=False)
         logger.log_sep()
         logger.info('No pending batches to ingest, ingestion pool is up to date')
         logger.log_sep()
         logger.close()
         return
 
+    logger.log_sep()
+    logger.info(f'Planned {len(planned_batches)} harmonization record(s)')
     for batch_record in planned_batches:
         pp = pipelines.DataIngestion(config)
         pp.run(batch_record)

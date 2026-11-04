@@ -111,7 +111,7 @@ class DataIngestion(base.GeoPipeline):
         )
 
     def _resolve_target_record(self) -> contracts.HarmonizationRunRecord:
-        target = self.config.data.ingestion.harmonization_run or 'latest'
+        target = self.config.data.ingestion.harmonization_run # default: latest
         batches = ingest.resolve_pending_ingestion_batches(
             self.artifact_paths.data_harmonization.runs_manifest,
             self.pipeline_paths.runs_manifest,
