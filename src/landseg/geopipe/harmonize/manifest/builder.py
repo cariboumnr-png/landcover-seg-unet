@@ -133,7 +133,7 @@ class DatasetManifestBuilder:
         name: str,
         path: str | pathlib.Path,
         bands: list[str],
-        schemes: dict[str, tuple[str]] | None = None,
+        schemes: dict[str, list[str]] | None = None,
     ) -> typing.Self:
         '''
         Add a multi-band continuous feature raster layer.

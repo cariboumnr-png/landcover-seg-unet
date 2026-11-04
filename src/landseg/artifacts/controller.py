@@ -403,8 +403,17 @@ class Controller(typing.Generic[T]):
     @staticmethod
     def _yaml_write(fp: pathlib.Path, src: typing.Any) -> None:
         '''Write data to disk.'''
+        class _Dumper(yaml.SafeDumper):
+            pass
+
+        _Dumper.add_multi_representer(
+            pathlib.PurePath,
+            lambda dumper, data: dumper.represent_scalar(
+                'tag:yaml.org,2002:str', str(data)
+            ),
+        )
         with open(fp, 'w', encoding='utf-8') as f:
-            yaml.safe_dump(src, f, sort_keys=False)
+            yaml.dump(src, f, Dumper=_Dumper, sort_keys=False)
 
 
 class ArtifactError(Exception):
