@@ -368,53 +368,6 @@ def test_validate_block_feature_specs_invalid_features():
         ctx.validate_feature_specs(add_topo=['unknown'])
 
 
-# ----- `_Calc` tests
-def test_calc_slope_and_aspect():
-    '''
-    Given: Padded 3x3 DEM window.
-    When: Computing slope and aspect.
-    Then: Output matches trigonometric gradients.
-    '''
-    # plane sloping east: z = x (dz/dx = 1, dz/dy = 0)
-    flat = numpy.array([
-        [0.0, 1.0, 2.0],
-        [0.0, 1.0, 2.0],
-        [0.0, 1.0, 2.0]
-    ])
-    slope, cos_a, sin_a = builder._Calc.slope_n_aspect(flat, -999.9)
-
-    # slope gradient magnitude is 1.0
-    assert slope == pytest.approx(1.0, rel=1e-3)
-    assert cos_a == pytest.approx(-1.0, abs=1e-3)
-    assert sin_a == pytest.approx(0.0, abs=1e-3)
-
-    # nodata handling: invalid center
-    flat[1, 1] = numpy.nan
-    s, c, sn = builder._Calc.slope_n_aspect(flat, -999.9)
-    assert s == -999.9
-    assert c == -999.9
-    assert sn == -999.9
-
-
-def test_calc_tpi():
-    '''
-    Given: Padded (2k-1)x(2k-1) DEM window.
-    When: Computing Topographic Position Index (TPI).
-    Then: Center pixel minus mean of neighbors.
-    '''
-    # 3x3 window: center is 10, mean of all 9 is (8*20 + 10)/9 = 170/9 = 18.888
-    pit = numpy.full((3, 3), 20.0)
-    pit[1, 1] = 10.0
-    assert builder._Calc.tpi(pit, -999.9) == pytest.approx(-10.0)
-
-    flat = numpy.full((3, 3), 42.0)
-    assert builder._Calc.tpi(flat, -999.9) == pytest.approx(0.0)
-
-    # invalid center cell returns nodata
-    pit[1, 1] = numpy.nan
-    assert builder._Calc.tpi(pit, -999.9) == -999.9
-
-
 # ----- private helpers
 def _make_raster_data(**overrides):
     base = io.RasterReadOutput(

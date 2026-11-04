@@ -31,12 +31,11 @@ Public APIs:
     - build_data_block: construct a DataBlock with derived features.
 '''
 
-# standard imports
-import math
 # third-party imports
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
+import landseg.geopipe.ingest.blocks.assembler.calc as calc
 import landseg.geopipe.ingest.blocks.assembler.io as io
 
 
@@ -129,27 +128,27 @@ def _image_add_spectral(
     '''Add spectral indices if related bands are available.'''
     band_idx = manifest['image_band_map']
     nodata = manifest['image_nodata']
-    red = _Calc.mask(image[band_idx['red']], nodata)
+    red = calc.mask(image[band_idx['red']], nodata)
     spectrals: list[numpy.ndarray] = []
     next_idx = image.shape[0]
 
     if 'ndvi' in indices:
-        nir = _Calc.mask(image[band_idx['nir']], nodata)
-        spectrals.append(_Calc.ndvi(nir, red, nodata))
+        nir = calc.mask(image[band_idx['nir']], nodata)
+        spectrals.append(calc.ndvi(nir, red, nodata))
         band_idx['ndvi'] = next_idx
         next_idx += 1
 
     if 'ndmi' in indices:
-        nir = _Calc.mask(image[band_idx['nir']], nodata)
-        swir1 = _Calc.mask(image[band_idx['swir1']], nodata)
-        spectrals.append(_Calc.ndmi(nir, swir1, nodata))
+        nir = calc.mask(image[band_idx['nir']], nodata)
+        swir1 = calc.mask(image[band_idx['swir1']], nodata)
+        spectrals.append(calc.ndmi(nir, swir1, nodata))
         band_idx['ndmi'] = next_idx
         next_idx += 1
 
     if 'nbr' in indices:
-        nir = _Calc.mask(image[band_idx['nir']], nodata)
-        swir2 = _Calc.mask(image[band_idx['swir2']], nodata)
-        spectrals.append(_Calc.nbr(nir, swir2, nodata))
+        nir = calc.mask(image[band_idx['nir']], nodata)
+        swir2 = calc.mask(image[band_idx['swir2']], nodata)
+        spectrals.append(calc.nbr(nir, swir2, nodata))
         band_idx['nbr'] = next_idx
         next_idx += 1
 
@@ -171,18 +170,18 @@ def _compute_topo_windows(
     for y in range(pad, max_h - pad):
         for x in range(pad, max_w - pad):
             if 'slope' in features:
-                pxs = _Calc.get_px_group(padded_dem, x, y, 1)
+                pxs = calc.get_px_group(padded_dem, x, y, 1)
                 assert pxs.shape == (3, 3)
                 (
                     arrs['slope'][y - pad, x - pad],
                     arrs['cos_a'][y - pad, x - pad],
                     arrs['sin_a'][y - pad, x - pad]
-                ) = _Calc.slope_n_aspect(pxs, nodata)
+                ) = calc.slope_n_aspect(pxs, nodata)
 
             if 'tpi' in features:
-                pxs = _Calc.get_px_group(padded_dem, x, y, pad - 1)
+                pxs = calc.get_px_group(padded_dem, x, y, pad - 1)
                 assert pxs.shape == (2 * pad - 1, 2 * pad - 1)
-                arrs['tpi'][y - pad, x - pad] = _Calc.tpi(pxs, nodata)
+                arrs['tpi'][y - pad, x - pad] = calc.tpi(pxs, nodata)
 
 
 def _image_add_topography(
@@ -320,7 +319,7 @@ def _canonicalize_single_head(
     counts = numpy.bincount(valids, minlength=n_cls + 1)[1:n_cls + 1]
     manifest['label_count'][name] = [int(c) for c in counts]
 
-    manifest['label_entropy'][name] = float(_Calc.entropy(counts))
+    manifest['label_entropy'][name] = float(calc.entropy(counts))
 
     if 'class_name' in spec and spec['class_name']:
         manifest['label_cls_names'][name] = list(spec['class_name'].values())
@@ -330,100 +329,3 @@ def _canonicalize_single_head(
         manifest['label_taxonomy'][name] = spec['taxonomy']
 
     return normalized
-
-
-# ----- private classes
-class _Calc:
-    '''Calculator namespace.'''
-
-    @staticmethod
-    def mask(band: numpy.ndarray, nodata: float | None):
-        '''Return a masked array where band == nodata.'''
-        band_f64 = band.astype(numpy.float64)
-        if nodata is None:
-            return numpy.ma.array(band_f64, mask=False)
-        return numpy.ma.masked_where(
-            numpy.isclose(band_f64, nodata), band_f64
-        )
-
-    @staticmethod
-    def entropy(counts: numpy.ndarray | list[int]) -> float:
-        '''Return Shannon entropy.'''
-        ent = 0.0
-        ss = sum(counts)
-        for c in counts:
-            if c > 0:
-                p = c / ss
-                ent -= p * math.log2(p)
-        return ent
-
-    @staticmethod
-    def ndvi(nir, red, nodata):
-        '''Return Normalized Difference Vegetation Index.'''
-        out = (nir - red) / (nir + red)
-        return out.filled(nodata)
-
-    @staticmethod
-    def ndmi(nir, swir1, nodata):
-        '''Return Normalized Difference Moisture Index.'''
-        out = (nir - swir1) / (nir + swir1)
-        return out.filled(nodata)
-
-    @staticmethod
-    def nbr(nir, swir2, nodata):
-        '''Return Normalized Burn Ratio.'''
-        out = (nir - swir2) / (nir + swir2)
-        return out.filled(nodata)
-
-    @staticmethod
-    def get_px_group(arr: numpy.ndarray, x: int, y: int, rr: int):
-        '''Get neighbouring pixels as an array.'''
-        return arr[slice(y - rr, y + rr + 1), slice(x - rr, x + rr + 1)]
-
-    @staticmethod
-    def slope_n_aspect(arr: numpy.ndarray, nodata: float | None):
-        '''Return slope and aspect (in radians) from DEM.'''
-        invalid = numpy.isnan(arr).any() or numpy.isinf(arr).any()
-        if nodata is not None:
-            invalid = invalid or numpy.any(numpy.isclose(arr, nodata))
-        if invalid:
-            return nodata, nodata, nodata
-
-        dz_dx = (
-            (arr[0, 2] + 2 * arr[1, 2] + arr[2, 2]) -
-            (arr[0, 0] + 2 * arr[1, 0] + arr[2, 0])
-        ) / 8.0
-        dz_dy = (
-            (arr[2, 0] + 2 * arr[2, 1] + arr[2, 2]) -
-            (arr[0, 0] + 2 * arr[0, 1] + arr[0, 2])
-        ) / 8.0
-
-        slope = numpy.sqrt(dz_dx ** 2 + dz_dy ** 2)
-        if slope == 0.0:
-            return 0.0, 1.0, 0.0
-
-        aspect_rad = numpy.arctan2(dz_dy, -dz_dx)
-        if aspect_rad < 0:
-            aspect_rad += 2 * numpy.pi
-        cos_aspect = numpy.cos(aspect_rad)
-        sin_aspect = numpy.sin(aspect_rad)
-        return slope, cos_aspect, sin_aspect
-
-    @staticmethod
-    def tpi(arr: numpy.ndarray, nodata: float | None):
-        '''Return Topographical Position Index (TPI) from a DEM.'''
-        h, w = arr.shape
-        c_row, c_col = h // 2, w // 2
-        centre = arr[c_row, c_col]
-        if numpy.isnan(centre) or numpy.isinf(centre):
-            return nodata
-        if nodata is not None and numpy.isclose(centre, nodata):
-            return nodata
-
-        invalid_mask = numpy.isnan(arr) | numpy.isinf(arr)
-        if nodata is not None:
-            invalid_mask |= numpy.isclose(arr, nodata)
-        masked = numpy.ma.masked_where(invalid_mask, arr)
-        if masked.count() == 1:
-            return nodata
-        return centre - (masked.sum() - centre) / (masked.count() - 1)
