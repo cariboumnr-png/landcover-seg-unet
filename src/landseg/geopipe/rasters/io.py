@@ -80,7 +80,7 @@ class DatasetInfo: # pylint: disable=too-many-instance-attributes
             names.append(name)
 
         if len(set(names)) != len(names):
-            return {}
+            raise ValueError(f'Duplicated band names detected in {names}')
 
         return {name: index for index, name in enumerate(names)}
 

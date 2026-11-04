@@ -30,6 +30,7 @@ import pytest
 from landseg.utils.validator import (
     ValidationError,
     require_file,
+    require_finite,
     require_mapping,
     require_mapping_str_v,
     require_numeric,
@@ -108,12 +109,51 @@ def test_require_numeric_enforces_requested_type(
         ('1', None),
         (None, None),
         ([], None),
+        (True, None),
+        (False, int),
     ],
 )
 def test_require_numeric_rejects_invalid_types(value, required_type):
     '''Given an invalid numeric type, when validated, then raise an error.'''
     with pytest.raises(ValidationError):
         require_numeric(value, required_type)
+
+
+
+# ----- `require_finite` validation
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        (0, 0),
+        (12, 12),
+        (-3, -3),
+        (1.5, 1.5),
+        (-2.75, -2.75),
+    ],
+)
+def test_require_finite_accepts_finite_numbers(value, expected):
+    '''Given a finite numeric value, return the value.'''
+    assert require_finite(value) == expected
+
+
+@pytest.mark.parametrize(
+    'value',
+    [
+        float('nan'),
+        float('inf'),
+        float('-inf'),
+    ],
+)
+def test_require_finite_rejects_non_finite(value):
+    '''Given a non-finite value, raise ValidationError.'''
+    with pytest.raises(ValidationError, match='Expected a finite number'):
+        require_finite(value)
+
+
+def test_require_finite_rejects_boolean():
+    '''Given a boolean value, raise ValidationError.'''
+    with pytest.raises(ValidationError, match='Expected a number'):
+        require_finite(True)
 
 
 # ----- `require_numeric_min` validation

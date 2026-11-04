@@ -32,6 +32,8 @@ Exception conventions:
 
 # standard imports
 import collections.abc
+import math
+import numbers
 import pathlib
 import typing
 
@@ -73,6 +75,8 @@ def require_types(
 def require_numeric(
     value: object,
     require_type: None = None,
+    *,
+    finite: bool = False,
 ) -> float | int: ...
 
 
@@ -80,25 +84,61 @@ def require_numeric(
 def require_numeric(
     value: object,
     require_type: type[T],
+    *,
+    finite: bool = False,
 ) -> T: ...
 
 
 def require_numeric(
     value: object,
     require_type: type[T] | None = None,
+    *,
+    finite: bool = False,
 ) -> T | float | int:
-    '''Require an integer and a float.'''
+    '''Require an integer or a float.'''
+    if isinstance(value, bool):
+        raise ValidationError('Expected a number: got bool')
     if require_type is float:
-        if not isinstance(value, float):
+        if not (
+            isinstance(value, float)
+            or (
+                isinstance(value, numbers.Real)
+                and not isinstance(value, numbers.Integral)
+            )
+        ):
             raise ValidationError(f'Expected a float: got {type(value)}')
-        return value
-    if require_type is int:
-        if not isinstance(value, int):
+    elif require_type is int:
+        if not isinstance(value, (int, numbers.Integral)):
             raise ValidationError(f'Expected an integer: got {type(value)}')
-        return value
-    if not isinstance(value, (int, float)):
-        raise ValidationError(f'Expected a number: got {type(value)}')
-    return value
+    else:
+        if not isinstance(value, (int, float, numbers.Real)):
+            raise ValidationError(f'Expected a number: got {type(value)}')
+
+    if finite and not math.isfinite(typing.cast(float | int, value)):
+        raise ValidationError(f'Expected a finite number: got {value}')
+    return value  # type: ignore[return-value]
+
+
+@typing.overload
+def require_finite(
+    value: object,
+    require_type: None = None,
+) -> float | int: ...
+
+
+@typing.overload
+def require_finite(
+    value: object,
+    require_type: type[T],
+) -> T: ...
+
+
+def require_finite(
+    value: object,
+    require_type: type[T] | None = None,
+) -> T | float | int:
+    '''Require a finite number.'''
+    return require_numeric(value, require_type, finite=True)
 
 
 @typing.overload
@@ -106,6 +146,8 @@ def require_numeric_min(
     value: object,
     value_min: float | int,
     require_type: None = None,
+    *,
+    finite: bool = False,
 ) -> float | int: ...
 
 
@@ -114,6 +156,8 @@ def require_numeric_min(
     value: object,
     value_min: float | int,
     require_type: type[T],
+    *,
+    finite: bool = False,
 ) -> T: ...
 
 
@@ -121,10 +165,12 @@ def require_numeric_min(
     value: object,
     value_min: float | int,
     require_type: type[T] | None = None,
+    *,
+    finite: bool = False,
 ) -> T | float | int:
     '''Require a number >= minimum.'''
-    _value_min = require_numeric(value_min)
-    _value = require_numeric(value, require_type)
+    _value_min = require_numeric(value_min, finite=finite)
+    _value = require_numeric(value, require_type, finite=finite)
     if _value < _value_min:
         raise ValidationError(f'{_value} < minimum {_value_min}')
     return _value
@@ -135,6 +181,8 @@ def require_numeric_max(
     value: object,
     value_max: float | int,
     require_type: None = None,
+    *,
+    finite: bool = False,
 ) -> float | int: ...
 
 
@@ -143,6 +191,8 @@ def require_numeric_max(
     value: object,
     value_max: float | int,
     require_type: type[T],
+    *,
+    finite: bool = False,
 ) -> T: ...
 
 
@@ -150,10 +200,12 @@ def require_numeric_max(
     value: object,
     value_max: float | int,
     require_type: type[T] | None = None,
+    *,
+    finite: bool = False,
 ) -> T | float | int:
     '''Require a number <= maximum.'''
-    _value_max = require_numeric(value_max)
-    _value = require_numeric(value, require_type)
+    _value_max = require_numeric(value_max, finite=finite)
+    _value = require_numeric(value, require_type, finite=finite)
     if _value > _value_max:
         raise ValidationError(f'{_value} > maximum {_value_max}')
     return _value
@@ -164,6 +216,8 @@ def require_numeric_range(
     value: object,
     require_range: NumericRange,
     require_type: None = None,
+    *,
+    finite: bool = False,
 ) -> float | int: ...
 
 
@@ -172,6 +226,8 @@ def require_numeric_range(
     value: object,
     require_range: NumericRange,
     require_type: type[T],
+    *,
+    finite: bool = False,
 ) -> T: ...
 
 
@@ -179,13 +235,15 @@ def require_numeric_range(
     value: object,
     require_range: NumericRange,
     require_type: type[T] | None = None,
+    *,
+    finite: bool = False,
 ) -> T | float | int:
     '''Require a number within closed range (min <= x <= max).'''
-    _value = require_numeric(value, require_type)
+    _value = require_numeric(value, require_type, finite=finite)
     _require_range = require_numeric_sequence(require_range, k=2)
     mmin, mmax = _require_range
-    require_numeric_min(_value, mmin, require_type)
-    require_numeric_max(_value, mmax, require_type)
+    require_numeric_min(_value, mmin, require_type, finite=finite)
+    require_numeric_max(_value, mmax, require_type, finite=finite)
     return _value
 
 
