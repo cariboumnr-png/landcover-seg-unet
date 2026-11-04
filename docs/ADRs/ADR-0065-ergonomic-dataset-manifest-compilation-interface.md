@@ -1,59 +1,64 @@
 # ADR-0065: Ergonomic Dataset Manifest Compilation Interface
 
-**Status:** Proposed<br>
-**Date:** 2026-11-02
+**Status:** Accepted — Implemented<br>
+**Date:** 2026-11-02 (Implemented: 2026-11-03)
 
 ---
 
 ## 1. Context
 
-To run data harmonization (`data-harmonize`), users must provide a dataset manifest describing input geospatial rasters. Under the current implementation in `landseg.geopipe.harmonize.manifest`, compiling this manifest requires assembling a root `manifest.json` indexing separate per-raster sidecar JSON files (e.g., `sample_sentinel2.json`, `sample_landcover.json`).
+To run data harmonization (`data-harmonize`), users must provide a dataset manifest describing input geospatial rasters. Under the legacy implementation in `landseg.geopipe.harmonize.manifest`, compiling this manifest required assembling a root `manifest.json` indexing separate per-raster sidecar JSON files (e.g., `sample_sentinel2.json`, `sample_landcover.json`).
 
-In practice, manually authoring and maintaining these JSON manifests introduces frequent user errors:
+In practice, manually authoring and maintaining these dual-file JSON manifests introduced frequent user errors:
 
 1. **Dual-File Redundancy & Desynchronization Traps**:
-   - The user must maintain both the root manifest array and individual sidecar JSON documents.
-   - Raster `name` and `path` are duplicated in both files. Any minor mismatch between the root entry and sidecar metadata causes `compiler.py` to immediately abort with `DatasetManifestError('Mismatch manifest name/data file path')`.
-   - Managing $N$ input rasters requires manually editing $N + 1$ JSON documents.
+   - The user had to maintain both the root manifest array and individual sidecar JSON documents.
+   - Raster `name` and `path` were duplicated in both files. Any minor mismatch between the root entry and sidecar metadata caused `compiler.py` to abort with `DatasetManifestError('Mismatch manifest name/data file path')`.
+   - Managing $N$ input rasters required manually editing and keeping synchronized $N + 1$ JSON documents.
 2. **Tedious, Rigid Syntax Requirements**:
-   - `band_mapping`: Requires 1-based, contiguous, integer keys serialized as strings (`"1": "blue"`, `"2": "green"`). Hand-indexing 10+ bands for satellite imagery (e.g., Sentinel-2) is tedious and error-prone.
+   - `band_mapping`: Required 1-based, contiguous integer keys serialized as strings (`"1": "blue"`, `"2": "green"`). Hand-indexing 10+ bands for satellite imagery (e.g., Sentinel-2) was tedious and error-prone.
    - **Asymmetric Category Rules**:
-     - `domain`: `schemes` must be omitted or `null` (defining any scheme raises `ValueError`), but `categorical_specs` is mandatory.
-     - `feature`: `categorical_specs` must be `null`, while `schemes` must strictly map names to band strings declared in `band_mapping`.
-     - `label`: Requires complex nested mappings (`index_base`, `num_cls`, `ignore_cls`, `reclass`, `reclass_name`) where reclass class IDs must strictly fall within `[index_base, index_base + num_cls - 1]`.
+     - `domain`: `schemes` had to be omitted or `null` (defining any scheme raised `ValueError`), while `categorical_specs` was mandatory.
+     - `feature`: `categorical_specs` had to be `null`, while `schemes` strictly mapped names to band strings declared in `band_mapping`.
+     - `label`: Required complex nested mappings (`index_base`, `num_cls`, `ignore_cls`, `reclass`, `reclass_name`) where reclass class IDs strictly fell within `[index_base, index_base + num_cls - 1]`.
 3. **No Automatic Raster Inspection**:
-   - Manifest authoring is detached from the rasters on disk. Users must manually open external GIS tools to check band counts, nodata values, and bounds, with no automated verification against the GeoTIFF before harmonization runs.
+   - Manifest authoring was completely detached from the rasters on disk. Users had to manually open external GIS tools to check band counts, nodata values, and bounds, with no automated verification against the physical GeoTIFF before harmonization runs.
 4. **Machine-Specific Path Fragility**:
-   - Manifests frequently encode hardcoded absolute paths, preventing datasets from being shared across workstations, remote compute nodes, or CI/CD environments.
+   - Manifests frequently encoded hardcoded absolute paths, preventing datasets from being shared across workstations, remote compute nodes, or CI/CD environments.
 
 ---
 
 ## 2. Decision
 
-We will introduce a focused, ergonomic dataset manifest compilation interface that provides a single source of truth for raw dataset manifests, eliminates dual-file synchronization hazards, and validates raster contracts upfront.
+We have introduced a focused, ergonomic dataset manifest compilation interface that establishes a single source of truth for raw dataset manifests, eliminates dual-file synchronization hazards, and validates raster contracts upfront.
 
-The solution will consist of four focused components:
-1. A **Fluent Python Builder API** (`DatasetManifestBuilder`).
-2. A **Unified Single-Document Manifest Specification** (YAML/JSON).
-3. Focused **CLI Diagnostic and Compilation Utilities** (`landseg manifest`).
+The solution consists of four primary components:
+1. Complete retirement of legacy dual-file sidecars in favor of a **Unified Single-Document Manifest Specification** (JSON and YAML).
+2. A **Fluent Python Builder API** (`DatasetManifestBuilder`).
+3. **Native YAML Support** in `landseg.artifacts.Controller` with automatic relative path resolution.
 4. A **User-Oriented Preprocessing Helper Notebook** (`notebooks/00_dataset_manifest.ipynb`).
 
-### 2.1. Fluent Python Builder API (`DatasetManifestBuilder`)
+### 2.1. Retirement of Dual-File Sidecars
 
-We will introduce `DatasetManifestBuilder` under `landseg.geopipe.harmonize.manifest.builder` to provide a type-safe, programmatic builder with IDE autocompletion:
+We have completely removed the legacy dual-file sidecar pattern and retired `compiler.py`. The single file `manifest.json` (or human-readable `manifest.yaml`) directly contains all raster specifications. Managing $N$ input rasters now requires exactly 1 document.
 
-- **Simplified Band Mapping**: Users will provide a simple list of band names (`bands=['blue', 'green', 'red']`), which the builder will automatically index into canonical 1-based dictionaries (`{1: 'blue', 2: 'green', 3: 'red'}`).
+Downstream harmonization validators (`harmonize.validators.manifest_contract`) and context builders (`build_harmonization_context`) consume the compiled manifest directly from `DatasetManifestBuilder.from_file(manifest_path).compile()`.
+
+### 2.2. Fluent Python Builder API (`DatasetManifestBuilder`)
+
+We have introduced `DatasetManifestBuilder` under `landseg.geopipe.harmonize.manifest.builder` to provide a type-safe, programmatic builder with IDE autocompletion and category-specific configuration methods:
+
+- **Simplified Band Mapping**: Users provide an intuitive sequence of band names (`bands=['blue', 'green', 'red']`), which the builder automatically indexes into canonical 1-based dictionaries (`{1: 'blue', 2: 'green', 3: 'red'}`). Canonical presets such as `SensorPreset.SENTINEL_2` provide out-of-the-box standard band names.
 - **Category-Specialized Methods**:
   - `add_feature(name, path, bands, schemes=None)`: Automatically sets `categorical_specs=None` and validates scheme references against declared bands.
-  - `add_domain(name, path, band_name, num_cls, index_base=1, ignore_cls=None)`: Enforces `schemes=None` and builds valid domain categorical specs.
-  - `add_label(name, path, band_name, num_cls, index_base=1, ignore_cls=None, classes=None, color_map=None, schemes=None)`: Simplifies reclassification syntax, automatically generating matching `reclass` and `reclass_name` mappings.
-- **One-Call Synchronized Compilation**:
-  Calling `.compile_bundle(output_dir)` will validate all entries and write both the root `manifest.json` and all sidecar JSONs simultaneously, guaranteeing 100% path and name synchronization.
-- **Relative Path Resolution**: Paths will be resolved relative to a configurable base directory, ensuring portability.
+  - `add_domain(name, path, num_cls, band_name=None, index_base=1, ignore_cls=None)`: Enforces `schemes=None` and constructs valid domain categorical specs.
+  - `add_label(name, path, num_cls, band_name=None, index_base=1, ignore_cls=None, classes=None, color_map=None, taxonomy_profile=None, schemes=None)`: Simplifies reclassification syntax, automatically formatting matching `reclass` and `reclass_name` mappings, color maps, and taxonomy profile lookups.
+- **In-Memory Contract Validation**: Calling `.compile()` validates all entries against `normalizer.py` schemas, checks physical file presence on disk, audits class index bounds, and guards against duplicate layer configurations.
+- **Dual JSON/YAML Materialization with Relative Paths**: Calling `.materialize(save_dir, name)` exports both `manifest.json` and `manifest.yaml` while converting paths relative to `save_dir`, guaranteeing complete portability across environments.
 
-### 2.2. Unified Single-Document Dataset Specification
+### 2.3. Unified Single-Document Dataset Specification
 
-We will define a single-file document schema (supporting both YAML and JSON) that consolidates all raster entries into a single human-readable file:
+The manifest supports both YAML and JSON single-document representations. It accepts either a top-level list of raster entries or a top-level mapping with a `rasters` sequence and optional `base_dir`:
 
 ```yaml
 version: "1.0"
@@ -61,74 +66,85 @@ base_dir: "."
 
 rasters:
   - name: sentinel2
-    category: feature
+    category: features
     path: rasters/sentinel2.tif
-    bands: [blue, green, red, red_edge1, red_edge2, red_edge3, nir, narrow_nir, swir1, swir2]
+    band_mapping:
+      1: blue
+      2: green
+      3: red
+      4: red_edge1
+      5: red_edge2
+      6: red_edge3
+      7: nir
+      8: narrow_nir
+      9: swir1
+      10: swir2
     schemes:
       rgb: [blue, green, red]
       rgb_nir: [blue, green, red, nir]
 
   - name: geology
-    category: domain
+    category: domains
     path: rasters/geology.tif
-    band_name: geology
-    categorical:
+    band_mapping:
+      1: geology
+    categorical_specs:
       index_base: 1
       num_cls: 4
       ignore_cls: [255]
 
   - name: landcover
-    category: label
+    category: labels
     path: rasters/landcover.tif
-    band_name: landcover
-    categorical:
+    band_mapping:
+      1: landcover
+    categorical_specs:
       index_base: 1
       num_cls: 2
       ignore_cls: [255]
-      classes:
+      class_name:
         1: coniferous
         2: deciduous
+      color_map:
+        1: [34, 139, 34]
+        2: [218, 165, 32]
     schemes:
       binary:
-        forest: [1, 2]
+        reclass:
+          1: [1, 2]
+        reclass_name:
+          1: forest
 ```
 
-A dedicated compiler function `compile_single_manifest(spec_path, output_dir)` will parse this single document and generate the canonical bundle expected by the harmonization pipeline.
+`DatasetManifestBuilder.from_file(path)` parses this unified document, resolves relative paths against the manifest file location, and populates the builder instance.
 
-### 2.3. Raster-Aware Pre-Validation & Inspection
+### 2.4. Native YAML Support in Artifact Controller
 
-We will integrate lightweight `rasterio` checks into the builder and compiler:
-- Verify that referenced files exist on disk before generating manifest files.
-- Verify that the declared band count matches the number of bands physically present in the GeoTIFF.
-- Inspect raster metadata (CRS, data type, nodata) to alert users to potential discrepancies early.
-
-### 2.4. Focused CLI Commands (`landseg manifest`)
-
-We will expose targeted subcommands under the CLI entrypoint:
-- `landseg manifest validate <manifest_path>`: Audits a manifest file, validating paths, schema rules, and raster band counts.
-- `landseg manifest inspect <raster.tif>`: Probes a GeoTIFF and outputs a recommended manifest entry snippet.
-- `landseg manifest compile <spec.yaml> -o <output_dir>`: Converts a unified single-document YAML/JSON specification into the harmonization bundle.
+We have extended `landseg.artifacts.Controller` to natively support reading and writing YAML files (`.yaml` and `.yml`):
+- Uses `yaml.safe_load` for secure deserialization.
+- Employs an isolated `_Dumper(yaml.SafeDumper)` in `_yaml_write` with multi-representer support for `pathlib.PurePath` instances, matching `json.dump(..., default=str)` semantics.
+- Generates SHA256 integrity hash tracking records in `_hash.json` automatically.
 
 ### 2.5. User-Oriented Preprocessing Helper Notebook (`notebooks/00_dataset_manifest.ipynb`)
 
-On par with [`notebooks/00_raster_mosaic.ipynb`](../../notebooks/00_raster_mosaic.ipynb), we will provide an interactive, user-facing helper notebook for dataset manifest assembly:
-- **Guided Raster Discovery**: Scans local directories or remote cloud storage mounts (e.g., Databricks Unity Catalog Volumes or DBFS) for raw candidate GeoTIFFs.
-- **Visual Inspection & Band Verification**: Leverages `rasterio` and `matplotlib` to render quick RGB false-color band previews, check CRS/transform alignments, and inspect categorical value distributions.
+On par with [`notebooks/00_raster_mosaic.ipynb`](../../notebooks/00_raster_mosaic.ipynb), we have provided an interactive helper notebook for dataset manifest assembly:
+- **Guided Raster Discovery**: Scans local directories or remote cloud mounts (e.g., Databricks Unity Catalog Volumes or DBFS) for raw candidate GeoTIFFs.
+- **Visual Inspection & Band Verification**: Leverages `rasterio` to inspect raster headers (CRS, dimensions, band count, data type, nodata, resolution) before registering layers.
 - **Interactive Builder Configuration**: Walks users through constructing their `DatasetManifestBuilder` configuration, selecting band schemes, and configuring label reclass tables.
-- **Preflight Validation & One-Click Compilation**: Validates the manifest against actual rasters on disk and compiles the final root `manifest.json` and sidecars, establishing a clean, verified entrypoint for [`01_data_preparation.ipynb`](../../notebooks/01_data_preparation.ipynb) and harmonization pipelines.
+- **Validation & Dual Materialization**: Compiles and writes `manifest.json` and human-readable `manifest.yaml`, establishing a clean, verified entrypoint for [`01_data_preparation.ipynb`](../../notebooks/01_data_preparation.ipynb) and harmonization pipelines.
 
 ---
 
 ## 3. Consequences
 
 ### Positive
-- **Zero Synchronization Errors**: Eliminates manual copy-pasting of names and paths between root manifests and sidecars.
-- **Improved Ergonomics**: Simplifies 1-based band mappings and reclassification schemes into intuitive lists and dictionaries.
-- **Fail-Fast Validation**: Catches raster missing-file errors, band count mismatches, and index bounds violations before launching harmonization.
-- **Interactive Visual Feedback**: The companion helper notebook provides instant visual confirmation (band previews, class palettes) without the complexity or maintenance overhead of a dedicated GUI application.
-- **Full Backward Compatibility**: Downstream harmonization ETL (`run_data_harmonization`) and `compile_dataset_manifest` will consume the exact same canonical `ManifestEntry` structures without modification.
+- **Zero Synchronization Errors**: Dual-file sidecars are completely eliminated; the manifest document is the single source of truth.
+- **Improved Ergonomics**: Simplifies 1-based band mappings and reclassification schemes into intuitive lists and dictionaries with IDE autocompletion.
+- **Fail-Fast Upstream Validation**: Catches raster missing-file errors, band count mismatches, and index bounds violations before launching long ETL harmonization jobs.
+- **Single-Document Portability**: Relative path serialization allows dataset directories to be copied across local workstations, remote nodes, and CI runners without path breakage.
+- **Dual Representation**: Supports both machine-optimized JSON and version-controllable, human-readable YAML.
+- **Interactive Visual Feedback**: The companion helper notebook provides instant visual confirmation without the overhead of a dedicated GUI application.
 
 ### Neutral / Trade-Offs
-- Adds a small set of builder utilities and CLI subcommands in the harmonization manifest package.
-- YAML parsing will require `pyyaml` (already standard in Python data science environments).
-
+- Adds `pyyaml` dependency (standard in Python data science environments).
+- Legacy projects using sidecar JSONs must migrate to single-document manifests (supported directly by `DatasetManifestBuilder.from_file()`).
