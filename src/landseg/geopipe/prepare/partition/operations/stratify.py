@@ -181,9 +181,15 @@ def _validate_inputs(
             f'Counts must be of integer dtype, got: {counts.dtype}'
         )
 
-    if val_ratio < 0 or test_ratio < 0:
+    if (
+        not numpy.isfinite(val_ratio)
+        or not numpy.isfinite(test_ratio)
+        or val_ratio < 0
+        or test_ratio < 0
+    ):
         raise ValueError(
-            f'Ratios must be > 0, got val: {val_ratio}, test: {test_ratio}'
+            f'Ratios must be finite numbers >= 0, got val: {val_ratio}, '
+            f'test: {test_ratio}'
         )
 
     if val_ratio + test_ratio >= 1.0:

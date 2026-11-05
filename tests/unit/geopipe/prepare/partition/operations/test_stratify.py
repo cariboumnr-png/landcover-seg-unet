@@ -104,9 +104,11 @@ def test_stratified_splitter_invalid_inputs():
     with pytest.raises(ValueError, match='val \\+ test ratios must be < 1'):
         stratify.stratified_splitter(base_counts, val_ratio=0.5, test_ratio=0.5)
 
-    # ratios must be >= 0
-    with pytest.raises(ValueError, match='Ratios must be > 0'):
+    # ratios must be finite and >= 0
+    with pytest.raises(ValueError, match='Ratios must be finite numbers >= 0'):
         stratify.stratified_splitter(base_counts, val_ratio=-0.1)
+    with pytest.raises(ValueError, match='Ratios must be finite numbers >= 0'):
+        stratify.stratified_splitter(base_counts, val_ratio=float('nan'))
 
 
 def test_stratified_splitter_reproducibility():

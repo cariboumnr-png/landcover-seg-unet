@@ -368,6 +368,17 @@ def test_validate_block_feature_specs_invalid_features():
         ctx.validate_feature_specs(add_topo=['unknown'])
 
 
+def test_get_image_invalid_mask_detects_nan_and_inf():
+    '''
+    Given: An image array containing finite, NaN, and Inf values.
+    When: Evaluating image invalidity mask.
+    Then: Mark NaN, +Inf, -Inf, and nodata pixels as invalid.
+    '''
+    arr = numpy.array([1.0, numpy.nan, numpy.inf, -numpy.inf, -9999.0])
+    mask = builder._get_image_invalid_mask(arr, -9999.0)
+    assert numpy.array_equal(mask, [False, True, True, True, True])
+
+
 # ----- private helpers
 def _make_raster_data(**overrides):
     base = io.RasterReadOutput(

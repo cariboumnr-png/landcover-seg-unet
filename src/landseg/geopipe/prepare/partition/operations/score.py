@@ -73,6 +73,17 @@ def score_blocks(
             mapping of block coordinates to counts, sorted by score
             in descending order.
     '''
+    if not global_class_count or not input_blocks:
+        return {}
+
+    num_classes = len(global_class_count)
+    for r in reward:
+        if r < 0 or r >= num_classes:
+            raise IndexError(
+                f'Reward class index {r} out of range for {num_classes} '
+                f'classes'
+            )
+
     # target inverse probability (p) from global class distribution
     p = _count_to_prob_w_temp(global_class_count, alpha=1.0)
     # scoring kwargs
@@ -87,7 +98,11 @@ def score_blocks(
     scores: list[tuple[tuple[int, int], float | None, list[int]]]
     scores = utils.ParallelExecutor(desc=' - Scoring data blocks').run(jobs)
     # sort blocks to rank in descending order
-    sorted_scores = sorted(scores, key=lambda x: x[1] or -1e9, reverse=True)
+    sorted_scores = sorted(
+        scores,
+        key=lambda x: x[1] if x[1] is not None else float('-inf'),
+        reverse=True,
+    )
 
     # return just the ranked blocks with count
     return {n: c for n, _, c in sorted_scores}
@@ -139,10 +154,10 @@ def _count_to_prob_w_temp(
 ) -> numpy.ndarray:
     '''Convert class counts to smoothed probabilities with alpha.'''
     # safe count to probability distribution
-    arr = numpy.asarray(cls_counts)
+    arr = numpy.asarray(cls_counts, dtype=numpy.float64)
     total = arr.sum()
-    if total == 0.0:
-        return numpy.zeros_like(cls_counts)
+    if total <= 0.0:
+        return numpy.zeros_like(arr)
     # re-normalize to have probability sum==1
     p = arr / total
     p = numpy.clip(p, EPS, None) # avoid downstream log(0)
@@ -166,7 +181,9 @@ def _log_lift_on_reward(
     if sum(q) == 0:
         return None
     return sum(
-        q[i] * math.log((q[i] + EPS) / (p[i] + EPS)) for i in reward_cls
+        q[i] * math.log((q[i] + EPS) / (p[i] + EPS))
+        for i in reward_cls
+        if 0 <= i < len(p)
     )
 
 
@@ -187,5 +204,7 @@ def _weighted_l1_w_reward(
     w_l1 = sum(
         abs(a - b) * (1 + abs(math.log(a + EPS))) for a, b in zip(p, q)
     )
-    bonus = sum(max(0, q[i] - p[i]) for i in reward_cls) * beta
+    bonus = sum(
+        max(0.0, float(q[i] - p[i])) for i in reward_cls if 0 <= i < len(p)
+    ) * beta
     return float(w_l1 - bonus)

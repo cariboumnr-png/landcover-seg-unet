@@ -40,6 +40,7 @@ import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset as dataset
 import landseg.utils as utils
+import landseg.utils.validator as val
 
 
 # ----- public functions
@@ -168,21 +169,36 @@ def _normalize_image(
     global_stats: dict[str, contracts.ImageBandStats],
 ) -> numpy.ndarray:
     '''Apply per-band normalization using global stats.'''
-    # assertion
-    assert raw_image_arr.ndim == 3
-    assert len(global_stats) == len(raw_image_arr)
-    assert valid_mask.shape == raw_image_arr.shape[-2:]
+    if raw_image_arr.ndim != 3:
+        raise ValueError(
+            f'Expected 3D image array [C, H, W], got shape '
+            f'{raw_image_arr.shape}'
+        )
+    if valid_mask.shape != raw_image_arr.shape[-2:]:
+        raise ValueError(
+            f'valid_mask shape {valid_mask.shape} does not match '
+            f'image spatial dimensions {raw_image_arr.shape[-2:]}'
+        )
+    val.require_mapping(global_stats)
 
     # init data attribute, inherit dtype float32
     image_normalized = numpy.empty_like(raw_image_arr)
+    num_channels = raw_image_arr.shape[0]
 
-    # normalize each band
-    for i, (band, stats) in enumerate(global_stats.items()):
-        # sanity check - dict keys from band_0
-        assert band.lstrip('band_') == str(i)
-        # get global stats from input
-        g_mean = stats['current_mean']
-        g_std = stats['std'] if stats['std'] != 0 else 1
+    # normalize each band by explicit channel index lookup
+    for i in range(num_channels):
+        band_key = f'band_{i}'
+        if band_key not in global_stats:
+            raise KeyError(
+                f'Missing statistics for "{band_key}" in global_stats'
+            )
+        stats = val.require_mapping(global_stats[band_key])
+        g_mean = float(val.require_finite(stats['current_mean'], float))
+        raw_std = float(val.require_numeric_min(
+            stats['std'], 0.0, float, finite=True
+        ))
+        g_std = raw_std if raw_std > 0.0 else 1.0
+
         # get image band and replace invalid pixels with global mean
         img_band = raw_image_arr[i]
         img_band = numpy.where(valid_mask, img_band, g_mean)
@@ -223,24 +239,32 @@ def _reclassify_labels(
         reclass_cfg = target_reclass.get(name)
         if not reclass_cfg:
             stack.append(arr)
-            continue
-
-        # 1. base layer
-        stack.append(arr)
-
-        # 2. grouping layer (parent)
-        group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
-        for group_id, classes in reclass_cfg.items():
-            source_pixels = [c + 1 for c in classes]
-            mask = numpy.isin(arr, source_pixels)
-            group_layer[mask] = int(group_id) + 1
-        stack.append(group_layer)
-
-        # 3. child slices (sub-groups)
-        for group_id, classes in reclass_cfg.items():
-            child_arr = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
-            for k, cls_id in enumerate(classes):
-                child_arr[arr == (cls_id + 1)] = int(k) + 1
-            stack.append(child_arr)
+        else:
+            stack.extend(_build_reclass_layers(arr, reclass_cfg, ignore_index))
 
     return numpy.stack(stack, axis=0)
+
+
+def _build_reclass_layers(
+    arr: numpy.ndarray,
+    reclass_cfg: dict[int, tuple[int, ...]],
+    ignore_index: int,
+) -> list[numpy.ndarray]:
+    '''Build parent grouping and child slice layers for reclass config.'''
+    layers: list[numpy.ndarray] = [arr]
+
+    # grouping layer (parent)
+    group_layer = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+    for group_id, classes in reclass_cfg.items():
+        source_pixels = [c + 1 for c in classes]
+        group_layer[numpy.isin(arr, source_pixels)] = int(group_id) + 1
+    layers.append(group_layer)
+
+    # child slices (sub-groups)
+    for _, classes in reclass_cfg.items():
+        child_arr = numpy.full_like(arr, ignore_index, dtype=arr.dtype)
+        for k, cls_id in enumerate(classes):
+            child_arr[arr == (cls_id + 1)] = int(k) + 1
+        layers.append(child_arr)
+
+    return layers

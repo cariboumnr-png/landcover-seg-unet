@@ -341,14 +341,16 @@ def derive_head_class_counts(
             group_head_name = f'{base_name}_group'
 
             # 1. grouping head (parent)
-            max_gid = max(reclass.groups.keys())    # keys are 0-based
-            group_counts = [0] * (max_gid + 1)      # so need to + 1
-            for group_id, child_classes in reclass.groups.items():
-                gid = int(group_id)
-                group_counts[gid] = sum(
-                    raw[c] for c in child_classes if 0 <= c < len(raw)
-                )
-            derived[group_head_name] = group_counts
+            if not reclass.groups:
+                derived[group_head_name] = []
+            else:
+                max_gid = max(reclass.groups.keys())    # keys are 0-based
+                group_counts = [0] * (max_gid + 1)      # so need to + 1
+                for gid, child_classes in reclass.groups.items():
+                    group_counts[gid] = sum(
+                        raw[c] for c in child_classes if 0 <= c < len(raw)
+                    )
+                derived[group_head_name] = group_counts
 
             # 2. child slices (sub-groups)
             for group_id, child_classes, grp_name in reclass:
@@ -357,11 +359,10 @@ def derive_head_class_counts(
                     if grp_name
                     else f'{base_name}_sub{group_id}'
                 )
-                child_counts = [0] * len(child_classes)
-                for k, cls_id in enumerate(child_classes):
-                    if 0 <= cls_id < len(raw):
-                        child_counts[k] = raw[cls_id]
-                derived[child_head] = child_counts
+                derived[child_head] = [
+                    raw[c] if 0 <= c < len(raw) else 0
+                    for c in child_classes
+                ]
 
     return derived
 

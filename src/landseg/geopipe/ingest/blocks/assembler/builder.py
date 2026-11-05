@@ -231,7 +231,7 @@ def _get_image_invalid_mask(
     nodata: float | None,
 ) -> numpy.ndarray:
     '''Return True where image values are invalid.'''
-    invalid = numpy.isnan(image)
+    invalid = ~numpy.isfinite(image)
     if nodata is not None:
         if not (isinstance(nodata, float) and numpy.isnan(nodata)):
             invalid |= numpy.isclose(image, nodata)

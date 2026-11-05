@@ -200,11 +200,16 @@ def read_window(
         nw_y = max(window.row_off - padding, 0)
         se_x = min(window.col_off + window.width + padding, canvas_w)
         se_y = min(window.row_off + window.height + padding, canvas_h)
+        if se_x <= nw_x or se_y <= nw_y:
+            raise ValueError(
+                f'Computed raster window has non-positive extent '
+                f'({se_x - nw_x}x{se_y - nw_y}) with padding {padding}'
+            )
         try:
             _window = t.Window(nw_x, nw_y, se_x - nw_x, se_y - nw_y) # type: ignore
         except ValueError as e:
             raise ValueError(
-                f'Error reading DEM with pad ({padding}), padded raster window: '
+                f'Error reading raster with pad ({padding}), padded window: '
                 f'{nw_x}, {nw_y}, {se_x - nw_x}, {se_y - nw_y}'
             ) from e
 

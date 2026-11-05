@@ -286,9 +286,11 @@ def test_resolve_pending_ingestion_batches(tmp_path):
         ingest_manifest
     )
 
-    # pending / auto mode (target=None) -> only harm_2
+    # pending mode (target='pending') -> only harm_2
     pending = ingest_context.resolve_pending_ingestion_batches(
-        harm_paths.runs_manifest, ingest_paths.runs_manifest, target=None
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+        target='pending',
     )
     assert len(pending) == 1
     assert pending[0]['run_uid'] == 'harm_2'
@@ -297,7 +299,7 @@ def test_resolve_pending_ingestion_batches(tmp_path):
     rebuild_all = ingest_context.resolve_pending_ingestion_batches(
         harm_paths.runs_manifest,
         ingest_paths.runs_manifest,
-        target=None,
+        target='pending',
         rebuild=True,
     )
     assert len(rebuild_all) == 2
@@ -338,6 +340,14 @@ def test_resolve_pending_ingestion_batches(tmp_path):
     )
     assert len(latest) == 1
     assert latest[0]['run_uid'] == 'harm_2'
+
+    # default mode (latest) -> [harm_2]
+    default_latest = ingest_context.resolve_pending_ingestion_batches(
+        harm_paths.runs_manifest,
+        ingest_paths.runs_manifest,
+    )
+    assert len(default_latest) == 1
+    assert default_latest[0]['run_uid'] == 'harm_2'
 
 
 def test_verify_pool_grid_compatibility(tmp_path):

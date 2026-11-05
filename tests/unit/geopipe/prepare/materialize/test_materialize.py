@@ -29,6 +29,7 @@ import pytest
 # local imports
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.prepare.materialize.materialize as mat
+import landseg.utils.validator as val
 
 
 # ----- `_normalize_image` tests
@@ -61,6 +62,135 @@ def test_normalize_image_math():
         [[[-2.0, 0.0], [2.0, 0.0]]], dtype=numpy.float32
     )
     assert numpy.allclose(norm_img, expected)
+
+
+def test_normalize_image_key_order_independent():
+    '''
+    Given: Multi-channel image and global_stats with reversed key order.
+    When: Running _normalize_image.
+    Then: Correctly map band statistics by channel index key.
+    '''
+    raw_img = numpy.zeros((2, 2, 2), dtype=numpy.float32)
+    raw_img[0, :, :] = 10.0
+    raw_img[1, :, :] = 20.0
+    mask = numpy.ones((2, 2), dtype=bool)
+
+    # reversed dict key insertion order: band_1 before band_0
+    global_stats = {
+        'band_1': {
+            'total_count': 10,
+            'current_mean': 20.0,
+            'accum_m2': 0.0,
+            'std': 2.0,
+        },
+        'band_0': {
+            'total_count': 10,
+            'current_mean': 10.0,
+            'accum_m2': 0.0,
+            'std': 1.0,
+        },
+    }
+    norm = mat._normalize_image(raw_img, mask, global_stats)
+    # both channels should be exactly 0.0 ((10-10)/1 and (20-20)/2)
+    assert numpy.allclose(norm[0], 0.0)
+    assert numpy.allclose(norm[1], 0.0)
+
+
+def test_normalize_image_zero_std_fallback():
+    '''
+    Given: Image band with std=0.0 in global_stats.
+    When: Running _normalize_image.
+    Then: Fallback to divisor 1.0 without division by zero.
+    '''
+    raw_img = numpy.full((1, 2, 2), 5.0, dtype=numpy.float32)
+    mask = numpy.ones((2, 2), dtype=bool)
+    global_stats = {
+        'band_0': {
+            'total_count': 4,
+            'current_mean': 5.0,
+            'accum_m2': 0.0,
+            'std': 0.0,
+        }
+    }
+    norm = mat._normalize_image(raw_img, mask, global_stats)
+    assert numpy.allclose(norm, 0.0)
+
+
+def test_normalize_image_missing_band_key():
+    '''
+    Given: 2-channel image but global_stats missing band_1.
+    When: Running _normalize_image.
+    Then: Raise KeyError for the missing band key.
+    '''
+    raw_img = numpy.zeros((2, 2, 2), dtype=numpy.float32)
+    mask = numpy.ones((2, 2), dtype=bool)
+    global_stats = {
+        'band_0': {
+            'total_count': 4,
+            'current_mean': 0.0,
+            'accum_m2': 0.0,
+            'std': 1.0,
+        }
+    }
+    with pytest.raises(KeyError, match='Missing statistics for "band_1"'):
+        mat._normalize_image(raw_img, mask, global_stats)
+
+
+def test_normalize_image_invalid_shape():
+    '''
+    Given: 2D image array and mismatched mask.
+    When: Running _normalize_image.
+    Then: Raise ValueError for dimensionality and shape mismatches.
+    '''
+    raw_2d = numpy.zeros((2, 2), dtype=numpy.float32)
+    mask = numpy.ones((2, 2), dtype=bool)
+    global_stats = {
+        'band_0': {
+            'total_count': 4,
+            'current_mean': 0.0,
+            'accum_m2': 0.0,
+            'std': 1.0,
+        }
+    }
+    with pytest.raises(ValueError, match='Expected 3D image array'):
+        mat._normalize_image(raw_2d, mask, global_stats)
+
+    raw_3d = numpy.zeros((1, 2, 2), dtype=numpy.float32)
+    bad_mask = numpy.ones((3, 3), dtype=bool)
+    with pytest.raises(ValueError, match='valid_mask shape'):
+        mat._normalize_image(raw_3d, bad_mask, global_stats)
+
+
+def test_normalize_image_non_finite_stats():
+    '''
+    Given: global_stats with NaN mean or negative std.
+    When: Running _normalize_image.
+    Then: Raise ValueError on invalid numeric stats.
+    '''
+    raw_img = numpy.zeros((1, 2, 2), dtype=numpy.float32)
+    mask = numpy.ones((2, 2), dtype=bool)
+
+    bad_mean = {
+        'band_0': {
+            'total_count': 4,
+            'current_mean': float('nan'),
+            'accum_m2': 0.0,
+            'std': 1.0,
+        }
+    }
+    with pytest.raises(val.ValidationError, match='Expected a finite number'):
+        mat._normalize_image(raw_img, mask, bad_mean)
+
+    bad_std = {
+        'band_0': {
+            'total_count': 4,
+            'current_mean': 0.0,
+            'accum_m2': 0.0,
+            'std': -0.5,
+        }
+    }
+    with pytest.raises(val.ValidationError, match='minimum 0.0'):
+        mat._normalize_image(raw_img, mask, bad_std)
 
 
 # ----- `_reclassify_labels` tests

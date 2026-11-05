@@ -143,6 +143,18 @@ def test_entropy_returns_expected_value():
     assert ent == pytest.approx(1.0)
 
 
+def test_entropy_returns_zero_for_empty_or_zero_counts():
+    '''
+    Given: Empty, zero-sum, or negative-sum counts.
+    When: Computing entropy.
+    Then: Return zero entropy without zero division errors.
+    '''
+    assert calc.entropy([]) == 0.0
+    assert calc.entropy([0, 0, 0]) == 0.0
+    assert calc.entropy([-5, 5]) == 0.0
+    assert calc.entropy([-10, 0]) == 0.0
+
+
 def test_slope_n_aspect_returns_nodata_for_invalid_window():
     '''
     Given: A DEM window containing invalid values.

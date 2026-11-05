@@ -105,3 +105,61 @@ def test_weighted_l1_w_reward():
 
     val = score._weighted_l1_w_reward(p, q, reward_cls=(0,), beta=0.5)
     assert isinstance(val, float)
+
+
+def test_score_blocks_zero_score_rank(mocker):
+    '''
+    Given: Blocks producing positive, zero, negative, and None scores.
+    When: Running score_blocks.
+    Then: Rank zero score above negative scores, and None at the end.
+    '''
+    # mock ParallelExecutor to return predictable scores: 1.0, 0.0, -0.5, None
+    mocker.patch(
+        'landseg.utils.ParallelExecutor.run',
+        return_value=[
+            ((0, 0), -0.5, [1, 1]),
+            ((0, 1), 0.0, [1, 1]),
+            ((0, 2), 1.0, [1, 1]),
+            ((0, 3), None, [0, 0]),
+        ]
+    )
+
+    result = score.score_blocks(
+        [10, 10],
+        {(0, 0): [1, 1], (0, 1): [1, 1], (0, 2): [1, 1], (0, 3): [0, 0]},
+        reward=(0,),
+        alpha=1.0,
+        beta=0.8,
+    )
+    keys = list(result.keys())
+    assert keys == [(0, 2), (0, 1), (0, 0), (0, 3)]
+
+
+def test_score_blocks_reward_out_of_range():
+    '''
+    Given: Global classes count of 2 classes and reward index 5.
+    When: Running score_blocks.
+    Then: Raise IndexError for out-of-range reward index.
+    '''
+    with pytest.raises(IndexError, match='Reward class index 5 out of range'):
+        score.score_blocks(
+            [10, 20],
+            {(0, 0): [5, 5]},
+            reward=(5,),
+            alpha=1.0,
+            beta=0.8,
+        )
+
+
+def test_score_blocks_empty_inputs():
+    '''
+    Given: Empty global counts or empty input blocks.
+    When: Running score_blocks.
+    Then: Return empty dictionary without error.
+    '''
+    assert score.score_blocks(
+        [], {(0, 0): [1]}, reward=(), alpha=1.0, beta=0.8
+    ) == {}
+    assert score.score_blocks(
+        [10], {}, reward=(), alpha=1.0, beta=0.8
+    ) == {}

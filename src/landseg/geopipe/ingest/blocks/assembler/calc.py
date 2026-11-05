@@ -65,8 +65,10 @@ def mask(
 
 def entropy(counts: numpy.ndarray | list[int]) -> float:
     '''Return Shannon entropy.'''
-    ent = 0.0
     ss = sum(counts)
+    if ss <= 0:
+        return 0.0
+    ent = 0.0
     for c in counts:
         if c > 0:
             p = c / ss

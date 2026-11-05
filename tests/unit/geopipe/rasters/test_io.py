@@ -147,7 +147,7 @@ def test_band_map_fallback_and_duplicates(dummy_geotiff_factory):
     info1 = rasters.get_info(p1)
     assert info1.band_map == {'band_1': 0, 'band_2': 1}
 
-    # duplicate descriptions return empty dict
+    # duplicate descriptions raise ValueError
     p2 = dummy_geotiff_factory(
         filename='dup_desc.tif',
         width=5,
@@ -159,7 +159,8 @@ def test_band_map_fallback_and_duplicates(dummy_geotiff_factory):
         src.set_band_description(2, 'BLUE')
 
     info2 = rasters.get_info(p2)
-    assert info2.band_map == {}
+    with pytest.raises(ValueError, match='Duplicated band names detected'):
+        _ = info2.band_map
 
 
 # ----- `read_window` tests
