@@ -19,47 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg`.
-
-Exposes selected public symbols via lazy resolution to keep import
-order simple and circular-free.
-
-Public APIs:
-    - `DEVICE`: Canonical torch device selector.
-    - `TF_ISO8601`: Canonical timestamp format specification.
-    - `__version__`: Package release version string.
-'''
-
-# standard imports
-from __future__ import annotations
-import importlib
-import typing
+'''Top-level namespace for `landseg`.'''
 
 __all__ = [
-    # constants
-    'DEVICE',
-    'TF_ISO8601',
+    '__author__',
+    '__license__',
     '__version__',
 ]
 
-
-# for static check
-if typing.TYPE_CHECKING:
-    from ._constants import (
-        DEVICE,
-        TF_ISO8601,
-        __version__,
-    )
-
-
-def __getattr__(name: str):
-    if name in {
-        'DEVICE',
-        'TF_ISO8601',
-        '__version__',
-    }:
-        obj = importlib.import_module('._constants', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__version__: str = '0.2.1'
+__author__: str = 'Ontario Ministry of Natural Resources'
+__license__: str = 'Apache-2.0'
