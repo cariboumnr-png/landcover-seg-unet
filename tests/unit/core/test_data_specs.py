@@ -146,7 +146,6 @@ def test_domain_accept_expected_structure():
 # ----- builders
 def _make_image_meta(*, band_map: dict[str, int], **overrides):
     return core.Meta.Image(
-        num_channels=len(band_map),
         height_width=overrides.get('height_width', 256),
         array_key='image',
         band_map=band_map,

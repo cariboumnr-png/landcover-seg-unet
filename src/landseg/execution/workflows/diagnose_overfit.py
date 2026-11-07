@@ -45,6 +45,7 @@ import landseg.geopipe.ingest.blocks.mapper as mapper_mod
 import landseg.knowledge as knowledge
 import landseg.models as models
 import landseg.session as session
+import landseg.utils as utils
 
 
 # ----- overfit test pipeline
@@ -89,7 +90,7 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
             model=model,
             config=config.session,
             context=session.SessionBuildContext(
-                device=c.DEVICE,
+                device=utils.resolve_device(config.session.device),
                 session_paths=artifacts.ArtifactPaths().session, # no ops
                 eval_dataset='val',
                 logger=logger
@@ -184,7 +185,6 @@ def _prepare_dataspecs(
             test_blks_grid=(0, 0),
             label_color_map=None,
             image_specs=core.Meta.Image(
-                num_channels=block.data.image.shape[0],
                 height_width=block.data.image.shape[1],  # assume H == W
                 array_key='image',
                 band_map=block.manifest['image_band_map'],

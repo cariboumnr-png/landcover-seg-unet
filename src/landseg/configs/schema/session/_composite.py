@@ -55,6 +55,7 @@ class SessionConfig(base.BaseConfigSection):
     evaluation: Evaluation = field(default_factory=Evaluation)
     mode: str = 'continuous'
     output_dpath: str = '${execution.exp_root}/results/'
+    device: str = 'auto'
 
     def __post_init__(self):
         if self.mode == 'curriculum':

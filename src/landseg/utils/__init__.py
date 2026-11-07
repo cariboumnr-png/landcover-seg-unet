@@ -35,11 +35,18 @@ __all__ = [
     # classes
     'Logger',
     'ParallelExecutor',
+    # functions
+    'get_device_name',
+    'resolve_device',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .device import (
+        get_device_name,
+        resolve_device,
+    )
     from .logger import (
         Logger,
     )
@@ -55,6 +62,10 @@ def __getattr__(name: str):
 
     if name in {'ParallelExecutor'}:
         obj = importlib.import_module('.multip', __package__)
+        return getattr(obj, name)
+
+    if name in {'get_device_name', 'resolve_device'}:
+        obj = importlib.import_module('.device', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

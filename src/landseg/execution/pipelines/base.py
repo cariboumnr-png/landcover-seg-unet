@@ -38,13 +38,13 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
 import landseg.execution.preflight as preflight
 import landseg.models as models
 import landseg.session as session
+import landseg.utils as utils
 
 
 # ----- public classes
@@ -220,12 +220,14 @@ class SessionPipeline(BasePipeline):
         self.timer['model'] = time.perf_counter() - start_t
         self.logger.info(f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
 
+        target_device = utils.resolve_device(self.config.session.device)
+
         # summarize inputs and log
         total_p = sum(p.numel() for p in model.parameters())
         trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.logger.set_inputs({
             'system': {
-                'device': c.DEVICE_NAME,
+                'device': utils.get_device_name(target_device),
                 'torch_version': torch.__version__
             },
             'model': {
@@ -253,7 +255,7 @@ class SessionPipeline(BasePipeline):
             model=model,
             config=self.config.session,
             context=session.SessionBuildContext(
-                device=c.DEVICE,
+                device=target_device,
                 session_paths=self.pipeline_paths,
                 eval_dataset=eval_split,
                 logger=self.logger

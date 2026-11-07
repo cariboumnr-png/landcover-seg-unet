@@ -89,7 +89,6 @@ def in_memory_dataspecs():
             test_blks_grid=(1, 1),
             label_color_map=None,
             image_specs=core.Meta.Image(
-                num_channels=4,
                 height_width=256,
                 array_key='image',
                 band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},
@@ -146,7 +145,6 @@ def dataspecs(_shared_block_files):
             test_blks_grid=(1, 1),
             label_color_map=None,
             image_specs=core.Meta.Image(
-                num_channels=4,
                 height_width=256,
                 array_key='image',
                 band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3},

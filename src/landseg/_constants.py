@@ -25,25 +25,10 @@ Namespace for project environmental constants.
 
 # standard imports
 import pathlib
-# third-party imports
-import torch
-
-
-# ----- private helpers
-def _get_device_name() -> str:
-    if DEVICE.startswith('cuda'):
-        if torch.cuda.is_available():
-            return torch.cuda.get_device_name(0)
-        return 'cuda (unavailable)'
-    return DEVICE
 
 
 # ----- constants
 PACKAGE_ROOT = pathlib.Path(__file__).resolve().parent
-
-DEVICE: str = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-DEVICE_NAME: str = _get_device_name()
 
 TF_ISO8601: str = '%Y-%m-%dT%H:%M:%S'  # ISO-8601
 

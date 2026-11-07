@@ -60,3 +60,8 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         engine_optim.weight_decay = weight_decay
         engine_optim.sched_cls  = scheduler
         return self
+
+    def set_device(self, device: str) -> typing.Self:
+        '''Set target execution device.'''
+        self._cfg.session.device = device
+        return self

@@ -96,7 +96,6 @@ def test_multihead_unet_incompatible_spatial_size(
     '''
     backbone_cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     dataspecs.meta.image_specs = dataspecs.meta.image_specs.__class__(
-        num_channels=4,
         height_width=15,
         array_key='image',
         band_map={'red': 0, 'green': 1, 'blue': 2, 'dem': 3}

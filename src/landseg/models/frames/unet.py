@@ -78,7 +78,6 @@ Notes:
 # third-party imports
 import torch
 # local imports
-import landseg._constants as c
 import landseg.core as core
 import landseg.models.backbones as backbones
 import landseg.models.core as model_core
@@ -220,10 +219,14 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
             )
 
         # default safety
+        device = kwargs.get('device')
+        if device is None:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
         self.num_safety = model_core.NumericSafety(
             enable_clamp=kwargs.get('enable_clamp', True),
             clamp_range=kwargs.get('clamp_range', (1e-4, 1e4)),
-            device=c.DEVICE
+            device=device
         )
 
         # register logits adjustments

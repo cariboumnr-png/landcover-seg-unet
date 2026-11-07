@@ -32,7 +32,6 @@ Public APIs:
 # third-party imports
 import torch
 # local imports
-import landseg._constants as c
 import landseg.execution.preflight.context as context
 import landseg.execution.preflight.schema as schema
 
@@ -52,7 +51,7 @@ def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
                 details={
                     'device_name': 'cpu',
                     'cuda': False,
-                    'device': c.DEVICE_NAME,
+                    'device': 'cpu',
                     'torch_version': torch.__version__,
                 },
             )
@@ -69,7 +68,7 @@ def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
             details={
                 'device_name': device_name,
                 'cuda': True,
-                'device': c.DEVICE_NAME,
+                'device': f'{device_name} (cuda:0)',
                 'torch_version': torch.__version__,
             },
         )
