@@ -24,6 +24,7 @@ World grid canonical lifecycle configurator.
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -32,7 +33,7 @@ import landseg.adapters.api.configurators as configurators
 class WorldGridConfigurator(configurators.BaseConfigurator):
     '''Configure canonical world grid generation and persistence.'''
 
-    def __init__(self, experiment_root: str):
+    def __init__(self, experiment_root: str | pathlib.Path):
         super().__init__(experiment_root, 'world-grid')
 
     def set_grid(
@@ -41,7 +42,7 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
         tile_stride: int = 0,
         crs: str = '',
         mode: str = 'ref',
-        reference_raster: str | None = None,
+        reference_raster: str | pathlib.Path | None = None,
     ) -> typing.Self:
         '''Set study extent and grid specs.'''
         self._cfg.data.world_grid.mode = mode
@@ -52,10 +53,10 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
             tile_stride,
         )
         if reference_raster:
-            self._cfg.data.world_grid.ref_fpath = reference_raster
+            self._cfg.data.world_grid.ref_fpath = str(reference_raster)
         return self
 
-    def set_output_dpath(self, output_dpath: str) -> typing.Self:
+    def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set output directory path for world grid artifacts.'''
-        self._cfg.data.world_grid.output_dpath = output_dpath
+        self._cfg.data.world_grid.output_dpath = str(output_dpath)
         return self

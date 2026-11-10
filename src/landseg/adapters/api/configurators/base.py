@@ -24,6 +24,7 @@ Configurator base class
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.api as api
@@ -34,7 +35,7 @@ class BaseConfigurator:
 
     def __init__(
         self,
-        experiment_root: str,
+        experiment_root: str | pathlib.Path,
         command_name: str,
     ):
         '''Initialize the configurator'''
@@ -42,13 +43,14 @@ class BaseConfigurator:
         # init a default RootConfig instance
         self._cfg = configs.RootConfig()
         # set artifact output dirpaths
-        _r = f'{experiment_root}/artifacts/'
-        self._cfg.execution.exp_root = experiment_root
+        exp_root_str = str(experiment_root)
+        _r = f'{exp_root_str}/artifacts/'
+        self._cfg.execution.exp_root = exp_root_str
         self._cfg.data.world_grid.output_dpath = f'{_r}/world_grids'
         self._cfg.data.harmonization.output_dpath = f'{_r}/harmonized_data'
         self._cfg.data.ingestion.output_dpath = f'{_r}/ingested_data'
         self._cfg.data.preparation.output_dpath = f'{_r}/prepared_data'
-        self._cfg.session.output_dpath = f'{experiment_root}/results'
+        self._cfg.session.output_dpath = f'{exp_root_str}/results'
         # set command name
         self._cfg.command = command_name
 

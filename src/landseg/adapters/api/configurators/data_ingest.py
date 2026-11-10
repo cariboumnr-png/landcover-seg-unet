@@ -24,6 +24,7 @@ Data ingestion configurator
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -35,7 +36,7 @@ CollisionPolicy = typing.Literal['skip', 'overwrite', 'error']
 class DataIngestionConfigurator(configurators.BaseConfigurator):
     '''Configure data ingestion.'''
 
-    def __init__(self, experiment_root: str):
+    def __init__(self, experiment_root: str | pathlib.Path):
         super().__init__(experiment_root, 'data-ingest')
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:
@@ -43,9 +44,16 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         self._cfg.data.ingestion.rebuild = rebuild
         return self
 
-    def set_harmonization_run(self, target: int | str | None = None) -> typing.Self:
+    def set_harmonization_run(
+        self,
+        target: int | str | pathlib.Path = 'latest',
+    ) -> typing.Self:
         '''Set targeted harmonization run index, folder name, or path.'''
-        self._cfg.data.ingestion.harmonization_run = target
+        self._cfg.data.ingestion.harmonization_run = (
+            str(target)
+            if isinstance(target, pathlib.Path)
+            else target
+        )
         return self
 
     def set_feature_engineering(

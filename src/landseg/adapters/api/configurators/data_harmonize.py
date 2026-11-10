@@ -24,6 +24,7 @@ Data harmonization ETL configurator
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -32,12 +33,15 @@ import landseg.adapters.api.configurators as configurators
 class DataHarmonizationConfigurator(configurators.BaseConfigurator):
     '''Configure data harmonization ETL.'''
 
-    def __init__(self, experiment_root: str):
+    def __init__(self, experiment_root: str | pathlib.Path):
         super().__init__(experiment_root, 'data-harmonize')
 
-    def set_dataset_manifest(self, dataset_manifest: str) -> typing.Self:
+    def set_dataset_manifest(
+        self,
+        dataset_manifest: str | pathlib.Path,
+    ) -> typing.Self:
         '''Set dataset metadata manifest path.'''
-        self._cfg.data.harmonization.dataset_manifest = dataset_manifest
+        self._cfg.data.harmonization.dataset_manifest = str(dataset_manifest)
         return self
 
     def set_resampling(
@@ -54,21 +58,21 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         self,
         tile_size: int = 256,
         tile_stride: int = 0,
-        output_dpath: str | None = None,
+        output_dpath: str | pathlib.Path | None = None,
     ) -> typing.Self:
         '''Set target world grid tile dimensions.'''
         self._cfg.data.world_grid.tile_size = (tile_size, tile_size)
         self._cfg.data.world_grid.tile_stride = (tile_stride, tile_stride)
         if output_dpath:
-            self._cfg.data.world_grid.output_dpath = output_dpath
+            self._cfg.data.world_grid.output_dpath = str(output_dpath)
         return self
 
-    def set_output_dpath(self, output_dpath: str) -> typing.Self:
+    def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set output directory path for harmonized artifacts.'''
-        self._cfg.data.harmonization.output_dpath = output_dpath
+        self._cfg.data.harmonization.output_dpath = str(output_dpath)
         return self
 
-    def set_grid_reference(self, output_dpath: str) -> typing.Self:
+    def set_grid_reference(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''
         Set directory path containing upstream world grid artifacts.
 
@@ -76,5 +80,5 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
             output_dpath:
                 Directory containing the canonical world grid report.
         '''
-        self._cfg.data.world_grid.output_dpath = output_dpath
+        self._cfg.data.world_grid.output_dpath = str(output_dpath)
         return self

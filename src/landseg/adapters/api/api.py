@@ -70,7 +70,7 @@ def run_preflight(
     target: str | None = None,
     *,
     strict: bool | None = None,
-    exp_root: str | None = None,
+    exp_root: str | pathlib.Path | None = None,
 ) -> pre_schema.PreflightResult | list[pre_schema.PreflightResult]:
     '''
     Run pre-flight diagnostic validation checks programmatically.

@@ -24,6 +24,7 @@ Study sweep configurator
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -34,16 +35,16 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str,
+        experiment_root: str | pathlib.Path,
         *,
-        optuna_storage: str,
+        optuna_storage: str | pathlib.Path,
         seed: int = 42
     ):
         super().__init__(experiment_root, 'study-sweep')
 
         #
         self.study = self._cfg.study
-        self._cfg.study.sweep.storage = optuna_storage
+        self._cfg.study.sweep.storage = str(optuna_storage)
         self._cfg.study.sweep.seed = seed
 
     # ----- sweep configs
