@@ -16,9 +16,14 @@ The repository currently includes five interactive Jupyter notebooks under `note
 
 While these notebooks successfully demonstrate standalone pipeline capabilities
 on local workstations, they are structured primarily for demonstration purposes.
-Evolving them towards production-grade execution—particularly within enterprise
-Databricks environments and automated workflow pipelines—reveals several architectural
-gaps:
+In our operating model, local production and automation workflows are canonically
+driven through the CLI (`landseg.adapters.cli` with Hydra recipes) or programmatic
+scripts (`landseg.adapters.api`), whereas interactive and scheduled notebook workflows
+are developed and deployed specifically for enterprise Databricks environments.
+
+Evolving the notebook suite towards production-grade Databricks execution—both for
+interactive researcher exploration on GPU clusters and for headless orchestration via
+Databricks Workflows—reveals several architectural gaps:
 
 ### 1.1. Repetitive Initialization Boilerplate
 Every notebook begins with a duplicate 30-line initialization block that manually
@@ -125,7 +130,8 @@ We will eliminate repetitive boilerplate cells by providing `nb.resolve_exp_root
 It will resolve the workspace root path across environments following a strict
 precedence order:
 1. **Explicit argument**: `exp_root=...` passed directly by caller.
-2. **Databricks Widget**: Interactive UI parameter or Databricks Job task parameter (`dbutils.widgets.get('exp_root')`).
+2. **Databricks Widget**: Interactive UI parameter or Databricks Job task
+   parameter (`dbutils.widgets.get('exp_root')`).
 3. **Environment variable**: `LANDSEG_EXP_ROOT` or `EXP_ROOT`.
 4. **Default fallback**: Safe local directory (`./experiment`).
 
@@ -148,7 +154,8 @@ except ImportError:
 EXP_ROOT = nb.resolve_exp_root()
 ```
 
-In addition, `nb.resolve_notebook_io()` will structure canonical folder relationships for artifacts, results, and raw inputs:
+In addition, `nb.resolve_notebook_io()` will structure canonical folder
+relationships for artifacts, results, and raw inputs:
 ```python
 io_layout = nb.resolve_notebook_io(EXP_ROOT, create_dirs=True)
 # io_layout.artifacts_dir -> EXP_ROOT / 'artifacts'
@@ -158,16 +165,27 @@ io_layout = nb.resolve_notebook_io(EXP_ROOT, create_dirs=True)
 
 ### 2.3. Ergonomic Multi-Runtime Configuration Widgets (`NotebookWidgets`)
 
-To replace manual code cell edits with interactive UI controls, we will introduce
-`NotebookWidgets` in `landseg.notebooks`:
-- **Databricks Runtime**: Automatically interfaces with native `dbutils.widgets`
-(`text`, `dropdown`, `combobox`, `multiselect`), rendering UI dropdowns and input
-fields in the notebook toolbar and capturing parameters passed by Databricks Workflows.
-- **Local Jupyter / VS Code / CI**: Gracefully falls back to environment variables
-(`LANDSEG_<KEY>`) or specified default values. It will never fail with `NameError`
-when `dbutils` is unavailable.
+Because notebooks are canonically developed for and deployed on Databricks, we will
+design `NotebookWidgets` to prioritize Databricks-native ergonomics while keeping local
+execution strictly headless and dependency-free:
+
+- **Databricks as Canonical Interactive Surface**: In Databricks, `NotebookWidgets`
+  natively bridges `dbutils.widgets` (`text`, `dropdown`, `combobox`, `multiselect`).
+  This renders interactive dropdown and text controls in the Databricks notebook
+  toolbar for researchers and seamlessly captures task parameters injected by
+  automated Databricks Workflow Jobs.
+- **Headless Local Execution (No Local Visual Widgets)**: On local developer
+  workstations, complex pipelines are canonically run via the CLI
+  (`landseg.adapters.cli`). When notebooks are opened locally for debugging or
+  run in CI/CD, we will intentionally **not** introduce `ipywidgets` or visual
+  GUI widgets. Instead, `NotebookWidgets` acts as a silent, headless fallback
+  that resolves the specified typed `default` values (with optional
+  `LANDSEG_<KEY>` environment variable overrides). This prevents heavy Jupyter
+  frontend dependencies, avoids browser extension version conflicts in VS Code
+  or JupyterLab, and guarantees 100% deterministic headless testability.
 - **Type Safety**: Provides strongly-typed getters (`int()`, `float()`, `boolean()`,
-`path()`, `multiselect()`), removing repetitive string-to-number casting logic.
+  `path()`, `multiselect()`), removing repetitive string-to-number casting boilerplate
+  caused by Databricks `dbutils.widgets.get()` always returning raw strings.
 
 ```python
 # initialize widgets bridge
@@ -218,8 +236,9 @@ We will formalize a two-tiered storage model for Databricks execution:
 ```
 
 `nb.resolve_optuna_storage()` will inspect the runtime environment:
-- If running on Databricks and no external database URI (e.g. PostgreSQL) is passed,
-it will automatically route SQLite storage to driver-local disk (`sqlite:////tmp/optuna.db`).
+- If running on Databricks and no external database URI (e.g. PostgreSQL)
+  is passed, it will automatically route SQLite storage to driver-local disk
+  (`sqlite:////tmp/optuna.db`).
 - If running locally, it will default to `sqlite:///optuna.db`.
 - Upon sweep completion in `03_study_sweep.ipynb`, study summary dataframes and
 Pareto-optimal checkpoints will be saved to the persistent `EXP_ROOT` volume.
@@ -251,8 +270,9 @@ to the Unity Catalog Model Registry (`models:/<catalog>.<schema>.<model_name>`).
 We will ensure every notebook operates under a dual-mode pattern:
 - **Interactive Exploration Mode**: Researchers run cells step-by-step on interactive
 clusters, tweaking parameters via widgets and inspecting visual outputs.
-- **Automated Workflow Mode**: The exact same notebook can be triggered as a task
-within Databricks Workflows or Databricks Asset Bundles (DABs) without modifying code, receiving parameters via job base parameters.
+- **Automated Workflow Mode**: The exact same notebook can be triggered
+  as a task within Databricks Workflows or Databricks Asset Bundles (DABs)
+  without modifying code, receiving parameters via job base parameters.
 - **Headless CI Testing**: Automated CI pipelines can run notebooks using `papermill`
 or `pytest` with environment variable parameter injection.
 
@@ -295,6 +315,10 @@ directly to `/Volumes/` or `/dbfs/` in Databricks runtime; driver-local paths
 (`/tmp/` or `/local_disk0/`) or managed cloud databases must be used.
 5. **Headless Execution Invariant**: Every notebook must remain capable of executing
 from top to bottom non-interactively with default parameters.
+6. **Databricks as Canonical Notebook Target**: Notebooks are developed and maintained
+canonically for Databricks. Local execution is intentionally headless without visual
+GUI dependencies (e.g. no `ipywidgets`), serving as a zero-friction developer sandbox
+and CI verification layer.
 
 ---
 
@@ -325,6 +349,8 @@ initialization cell and Optuna path configuration with `nb.resolve_exp_root()` a
 `nb.resolve_optuna_storage()`.
 
 ### Phase 3: Databricks Workflow & DABs Assets
-- Author reference Databricks Asset Bundle (`databricks.yml`) in `deploy/databricks/`
-demonstrating automated orchestration of the notebook suite on GPU cluster compute.
-- Introduce optional MLflow Unity Catalog model registration cell in `02_model_train.ipynb`.
+- Author reference Databricks Asset Bundle (`databricks.yml`) in
+  `deploy/databricks/` demonstrating automated orchestration of the notebook
+  suite on GPU cluster compute.
+- Introduce optional MLflow Unity Catalog model registration cell in
+  `02_model_train.ipynb`.
