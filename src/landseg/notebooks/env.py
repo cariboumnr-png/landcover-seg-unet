@@ -22,19 +22,15 @@
 '''
 Notebook runtime environment detection utilities.
 
-Provides runtime detection probes for Databricks cloud clusters and
-interactive notebook kernels.
+Provides runtime detection probes for interactive IPython notebook kernels
+(Jupyter and Databricks notebook shells).
 
 Public APIs:
-    - `get_dbutils`: Locate active dbutils instance.
-    - `is_databricks`: Probe whether runtime is inside Databricks.
     - `is_notebook`: Probe whether code is running inside a notebook.
 '''
 
 # standard imports
-import os
-import sys
-import typing
+from __future__ import annotations
 # third-party imports
 try:
     import IPython
@@ -43,22 +39,6 @@ except ImportError:
 
 
 # ----- public functions
-def is_databricks() -> bool:
-    '''
-    Probe whether code is executing inside a Databricks environment.
-
-    Checks standard Databricks runtime environment variable markers.
-
-    Returns:
-        bool:
-            True if running in Databricks runtime, False otherwise.
-    '''
-    return (
-        'DATABRICKS_RUNTIME_VERSION' in os.environ or
-        'DB_CLUSTER_ID' in os.environ
-    )
-
-
 def is_notebook() -> bool:
     '''
     Probe whether executing within an interactive notebook kernel.
@@ -81,34 +61,3 @@ def is_notebook() -> bool:
         return shell_name in {'ZMQInteractiveShell', 'DatabricksShell'}
     except AttributeError:
         return False
-
-
-def get_dbutils(dbutils: typing.Any = None) -> typing.Any:
-    '''
-    Locate active dbutils instance from argument or caller scopes.
-
-    Args:
-        dbutils:
-            Optional explicit dbutils handle.
-
-    Returns:
-        typing.Any:
-            Active dbutils instance or None if unavailable.
-    '''
-    if dbutils is not None:
-        return dbutils
-
-    main_mod = sys.modules.get('__main__')
-    if main_mod is not None and hasattr(main_mod, 'dbutils'):
-        return getattr(main_mod, 'dbutils')
-
-    if IPython is not None:
-        try:
-            shell = IPython.get_ipython()
-            if shell is not None and hasattr(shell, 'user_ns'):
-                if 'dbutils' in shell.user_ns:
-                    return shell.user_ns['dbutils']
-        except (AttributeError, KeyError):
-            pass
-
-    return None

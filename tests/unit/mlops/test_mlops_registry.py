@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit test suite for `landseg.notebooks.registry` Unity Catalog module.'''
+'''Unit test suite for `landseg.mlops.registry` Unity Catalog module.'''
 
 # standard imports
 import hashlib
@@ -28,7 +28,7 @@ import pathlib
 import mlflow
 import pytest
 # local imports
-import landseg.notebooks as nb
+import landseg.mlops as mlops
 
 
 def test_register_model_local_bypass(
@@ -43,7 +43,7 @@ def test_register_model_local_bypass(
     monkeypatch.delenv('DATABRICKS_RUNTIME_VERSION', raising=False)
     monkeypatch.delenv('DB_CLUSTER_ID', raising=False)
 
-    result = nb.register_unity_catalog_model(
+    result = mlops.register_unity_catalog_model(
         exp_root=tmp_path,
         catalog='dev_cat',
         schema='test_schema',
@@ -74,7 +74,7 @@ def test_register_model_resolves_checkpoint_and_manifest(
     manifest_file.write_bytes(manifest_content)
     expected_hash = hashlib.sha256(manifest_content).hexdigest()
 
-    result = nb.register_unity_catalog_model(exp_root=tmp_path)
+    result = mlops.register_unity_catalog_model(exp_root=tmp_path)
     assert result['checkpoint_path'] == str(best_ckpt)
     assert result['manifest_sha256'] == expected_hash
 
@@ -117,7 +117,7 @@ def test_register_model_databricks_simulation(
     monkeypatch.setattr(mlflow, 'set_tags', lambda tags: None)
     monkeypatch.setattr(mlflow, 'register_model', fake_register_model)
 
-    res = nb.register_unity_catalog_model(
+    res = mlops.register_unity_catalog_model(
         exp_root=tmp_path,
         catalog='prod_catalog',
         schema='landcover',

@@ -33,15 +33,13 @@ Public APIs:
 # standard imports
 from __future__ import annotations
 import hashlib
-import os
 import pathlib
-import subprocess
 import typing
 # third-party imports
 import mlflow
 # local imports
-import landseg.notebooks.env as env
-import landseg.notebooks.io as io_mod
+import landseg.mlops.env as env_mod
+import landseg.mlops.storage as storage_mod
 
 
 # ----- public functions
@@ -85,14 +83,14 @@ def register_unity_catalog_model(
             `mlflow.entities.model_registry.ModelVersion` instance if registered
             in Databricks, or a summary metadata dictionary if executed locally.
     '''
-    resolved_root = io_mod.resolve_exp_root(exp_root, dbutils=dbutils)
+    resolved_root = storage_mod.resolve_exp_root(exp_root, dbutils=dbutils)
     target_ckpt = _resolve_checkpoint(resolved_root, checkpoint_path)
 
     # Collect governance metadata
     manifest_hash = _probe_manifest_hash(resolved_root)
-    git_sha = _probe_git_commit()
-    cluster_id = os.environ.get('DB_CLUSTER_ID', 'local-environment')
-    runtime_version = os.environ.get('DATABRICKS_RUNTIME_VERSION', 'local')
+    git_sha = env_mod.get_git_commit()
+    cluster_id = env_mod.get_cluster_id()
+    runtime_version = env_mod.get_runtime_version()
     full_model_name = f'{catalog}.{schema}.{model_name}'
 
     governance_tags = {
@@ -106,7 +104,7 @@ def register_unity_catalog_model(
         governance_tags.update(tags)
 
     # In local or CI non-Databricks environment: safe bypass
-    if not env.is_databricks():
+    if not env_mod.is_databricks():
         print(
             f'\n[UNITY CATALOG] Model registration bypassed (outside Databricks runtime):\n'
             f'- Target Model: models:/{full_model_name}\n'
@@ -226,29 +224,3 @@ def _probe_manifest_hash(exp_root: pathlib.Path) -> str | None:
             pass
 
     return None
-
-
-def _probe_git_commit() -> str:
-    '''Retrieve git commit SHA from environment or git command.'''
-    env_sha = (
-        os.environ.get('GIT_COMMIT') or
-        os.environ.get('DATABRICKS_GIT_COMMIT') or
-        os.environ.get('GITHUB_SHA')
-    )
-    if env_sha:
-        return env_sha
-
-    try:
-        res = subprocess.run(
-            ['git', 'rev-parse', 'HEAD'],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=3,
-        )
-        if res.returncode == 0 and res.stdout:
-            return res.stdout.strip()
-    except (subprocess.SubprocessError, OSError):
-        pass
-
-    return 'unknown'

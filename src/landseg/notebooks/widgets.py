@@ -35,7 +35,7 @@ import os
 import pathlib
 import typing
 # local imports
-import landseg.notebooks.env as env
+import landseg.mlops.env as mlops_env
 
 
 # ----- public classes
@@ -50,7 +50,7 @@ class NotebookWidgets:
 
     def __init__(self, dbutils: typing.Any = None):
         '''Initialize widget bridge with optional explicit dbutils.'''
-        self._dbutils = env.get_dbutils(dbutils)
+        self._dbutils = mlops_env.get_dbutils(dbutils)
         self._values: dict[str, typing.Any] = {}
 
     @property

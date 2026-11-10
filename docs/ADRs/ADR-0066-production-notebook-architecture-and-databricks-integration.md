@@ -367,5 +367,5 @@ initialization cell and Optuna path configuration with `nb.resolve_exp_root()` a
   automated multi-task orchestration of the notebook suite on GPU cluster compute.
   *(Completed 2026-11-10)*
 - Introduce optional MLflow Unity Catalog model registration cell in
-  `02_model_train.ipynb` backed by `landseg.notebooks.registry.register_unity_catalog_model`.
+  `02_model_train.ipynb` backed by `landseg.mlops.registry.register_unity_catalog_model`.
   *(Completed 2026-11-10)*
