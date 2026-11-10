@@ -1,0 +1,92 @@
+# =========================================================================== #
+#            Copyright © His Majesty the King in right of Ontario,            #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+resources:
+  jobs:
+    landseg_pipeline_workflow:
+      name: "[${bundle.target}] Landseg End-to-End Pipeline"
+
+      parameters:
+        - name: exp_root
+          default: "/Volumes/${var.catalog}/${var.schema}/${var.volume}/experiment"
+
+      job_clusters:
+        - job_cluster_key: gpu_cluster
+          new_cluster:
+            spark_version: 15.4.x-gpu-ml-scala2.12
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*, 4]"
+              spark.databricks.cluster.profile: "singleNode"
+            custom_tags:
+              ResourceClass: "SingleNode"
+
+      tasks:
+        # Task 1: Dataset Manifest Construction & Layer Validation
+        - task_key: 00_dataset_manifest
+          job_cluster_key: gpu_cluster
+          notebook_task:
+            notebook_path: ../../notebooks/00_dataset_manifest.ipynb
+            base_parameters:
+              exp_root: "{{job.parameters.exp_root}}"
+
+        # Task 2: Virtual Raster Mosaic Assembly
+        - task_key: 00_raster_mosaic
+          depends_on:
+            - task_key: 00_dataset_manifest
+          job_cluster_key: gpu_cluster
+          notebook_task:
+            notebook_path: ../../notebooks/00_raster_mosaic.ipynb
+            base_parameters:
+              exp_root: "{{job.parameters.exp_root}}"
+
+        # Task 3: Spatial World Grid Alignment & Ingestion
+        - task_key: 01_data_preparation
+          depends_on:
+            - task_key: 00_raster_mosaic
+          job_cluster_key: gpu_cluster
+          notebook_task:
+            notebook_path: ../../notebooks/01_data_preparation.ipynb
+            base_parameters:
+              exp_root: "{{job.parameters.exp_root}}"
+              crs: "EPSG:3161"
+              tile_size: "256"
+              tile_stride: "128"
+
+        # Task 4: Multi-Head UNet Model Training, Validation & UC Registration
+        - task_key: 02_model_train
+          depends_on:
+            - task_key: 01_data_preparation
+          job_cluster_key: gpu_cluster
+          notebook_task:
+            notebook_path: ../../notebooks/02_model_train.ipynb
+            base_parameters:
+              exp_root: "{{job.parameters.exp_root}}"
+              batch_size: "16"
+              patch_size: "128"
+              max_epochs: "5"
+              model_body: "unet"
+              device: "cuda"
+              register_model: "true"
+              catalog: "${var.catalog}"
+              schema: "${var.schema}"
+              model_name: "landseg_unet"

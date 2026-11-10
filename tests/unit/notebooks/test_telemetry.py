@@ -27,6 +27,8 @@ import json
 import pathlib
 import time
 # third-party imports
+import matplotlib
+matplotlib.use('Agg')
 import numpy
 import pytest
 # local imports

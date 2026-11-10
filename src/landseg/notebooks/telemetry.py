@@ -44,10 +44,19 @@ import sys
 import time
 import typing
 # third-party imports
+import matplotlib
 import matplotlib.pyplot
 import mlflow
 import numpy
 import torch
+# local imports
+import landseg.notebooks.env as env
+
+if not env.is_notebook():
+    try:
+        matplotlib.use('Agg')
+    except Exception:
+        pass
 
 
 # ----- public classes

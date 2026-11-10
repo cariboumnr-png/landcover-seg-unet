@@ -1,7 +1,8 @@
 # ADR-0066: Production Notebook Architecture and Databricks Integration
 
-**Status:** Proposed<br>
-**Date:** 2026-11-09
+**Status:** Accepted — Implemented<br>
+**Date:** 2026-11-09<br>
+**Completed:** 2026-11-10
 
 ---
 
@@ -349,8 +350,10 @@ initialization cell and Optuna path configuration with `nb.resolve_exp_root()` a
 `nb.resolve_optuna_storage()`.
 
 ### Phase 3: Databricks Workflow & DABs Assets
-- Author reference Databricks Asset Bundle (`databricks.yml`) in
-  `deploy/databricks/` demonstrating automated orchestration of the notebook
-  suite on GPU cluster compute.
+- Author reference Databricks Asset Bundle (`databricks.yml` and
+  `resources/landseg_pipeline_workflow.yml`) in `deploy/databricks/` demonstrating
+  automated multi-task orchestration of the notebook suite on GPU cluster compute.
+  *(Completed 2026-11-10)*
 - Introduce optional MLflow Unity Catalog model registration cell in
-  `02_model_train.ipynb`.
+  `02_model_train.ipynb` backed by `landseg.notebooks.registry.register_unity_catalog_model`.
+  *(Completed 2026-11-10)*

@@ -34,6 +34,7 @@ Public APIs:
     - `load_study_trials`: Load persisted sweep trials dataframe.
     - `plot_qualitative_predictions`: Side-by-side segmentation plots.
     - `plot_training_curves`: In-cell training loss and metric curves.
+    - `register_unity_catalog_model`: Register checkpoint to Unity Catalog.
     - `render_prediction_preview`: Automated prediction inspection preview.
     - `resolve_exp_root`: Resolve experiment root path across contexts.
     - `resolve_notebook_io`: Resolve unified notebook I/O structure.
@@ -58,6 +59,7 @@ __all__ = [
     'load_study_trials',
     'plot_qualitative_predictions',
     'plot_training_curves',
+    'register_unity_catalog_model',
     'render_prediction_preview',
     'resolve_exp_root',
     'resolve_notebook_io',
@@ -80,6 +82,9 @@ if typing.TYPE_CHECKING:
         resolve_notebook_io,
         resolve_optuna_storage,
         sync_optuna_study,
+    )
+    from .registry import (
+        register_unity_catalog_model,
     )
     from .telemetry import (
         ThrottledProgress,
@@ -117,6 +122,10 @@ def __getattr__(name: str):
         'safe_training_session',
     }:
         obj = importlib.import_module('.telemetry', __package__)
+        return getattr(obj, name)
+
+    if name in {'register_unity_catalog_model'}:
+        obj = importlib.import_module('.registry', __package__)
         return getattr(obj, name)
 
     if name in {'is_databricks', 'is_notebook'}:
