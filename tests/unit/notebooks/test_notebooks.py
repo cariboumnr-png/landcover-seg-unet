@@ -24,6 +24,7 @@
 # standard imports
 import pathlib
 # third-party imports
+import optuna
 import pytest
 # local imports
 import landseg.notebooks as nb
@@ -51,6 +52,16 @@ def test_is_databricks_true_when_runtime_set(
     '''
     monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '15.4')
     assert nb.is_databricks()
+
+
+# ----- `is_notebook` tests
+def test_is_notebook_false_in_test_process():
+    '''
+    Given: Standard non-interactive test process.
+    When: Probing is_notebook.
+    Then: Returns False.
+    '''
+    assert not nb.is_notebook()
 
 
 # ----- `resolve_exp_root` tests
@@ -257,6 +268,36 @@ def test_resolve_notebook_io(tmp_path: pathlib.Path):
     assert layout.input_dir == root / 'input'
     assert layout.artifacts_dir.is_dir()
     assert layout.results_dir.is_dir()
+
+
+# ----- `sync_optuna_study` and `load_study_trials` tests
+def test_sync_optuna_study_and_load_trials(tmp_path: pathlib.Path):
+    '''
+    Given: An Optuna study completed in SQLite storage.
+    When: Calling sync_optuna_study and load_study_trials.
+    Then: Persists summary JSON, trials CSV, and reads back dataframe.
+    '''
+    db_path = tmp_path / 'optuna_test.db'
+    storage_uri = f'sqlite:///{db_path}'
+    study = optuna.create_study(
+        study_name='test_sweep',
+        storage=storage_uri,
+        direction='maximize',
+    )
+    study.optimize(lambda t: t.suggest_float('param_x', 0.0, 1.0), n_trials=3)
+
+    res = nb.sync_optuna_study(
+        study_name='test_sweep',
+        exp_root=tmp_path,
+        storage=storage_uri,
+    )
+    assert res['study_name'] == 'test_sweep'
+    assert res['total_trials'] == 3
+    assert pathlib.Path(res['summary_file']).is_file()
+    assert pathlib.Path(res['trials_csv']).is_file()
+
+    loaded_df = nb.load_study_trials(exp_root=tmp_path, study_name='test_sweep')
+    assert len(loaded_df) == 3
 
 
 # ----- private helpers

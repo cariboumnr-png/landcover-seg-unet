@@ -23,24 +23,33 @@
 Notebook I/O path, directory layout, and storage backend utilities.
 
 Provides precedence-based resolution of experiment root workspaces,
-canonical artifact/input directory layouts, and safe Optuna storage
-connection resolution across cloud and local runtimes.
+canonical artifact/input directory layouts, safe Optuna storage
+connection resolution, and two-tiered storage synchronization across
+cloud and local runtimes.
 
 Public APIs:
     - `NotebookIOConfig`: Container for resolved notebook I/O paths.
+    - `load_study_trials`: Load persisted sweep trials dataframe.
     - `resolve_exp_root`: Resolve experiment root path across contexts.
     - `resolve_notebook_io`: Resolve unified notebook I/O structure.
     - `resolve_optuna_storage`: Resolve environment-safe Optuna URI.
+    - `sync_optuna_study`: Persist Optuna study trials to volume storage.
 '''
 
 # standard imports
 import dataclasses
+import json
 import os
 import pathlib
+import shutil
 import typing
+# third-party imports
+import optuna
+import pandas
 # local imports
 import landseg.notebooks.env as env
 import landseg.notebooks.widgets as widgets_mod
+import landseg.study.analysis.trials as trials_analysis
 
 
 # ----- public dataclasses
@@ -227,4 +236,164 @@ def resolve_optuna_storage(
         return env_storage
 
     return fallback
+
+
+def sync_optuna_study(
+    study_name: str,
+    exp_root: str | pathlib.Path | None = None,
+    *,
+    storage: str | None = None,
+    top_k: int = 5,
+    dbutils: typing.Any = None,
+) -> dict[str, typing.Any]:
+    '''
+    Synchronize Optuna sweep study summaries and checkpoints to persistent storage.
+
+    When running on Databricks, Optuna SQLite trial databases reside on
+    driver-local scratch storage (/tmp/optuna.db) to avoid distributed FUSE
+    POSIX locking failures on UC Volumes. This utility persists the final study
+    trials dataframe, summary metrics, and Pareto-optimal trial checkpoints
+    to the persistent experiment root volume tier.
+
+    Args:
+        study_name:
+            Identifier of the Optuna study to synchronize.
+        exp_root:
+            Optional persistent experiment root directory.
+        storage:
+            Optional Optuna storage connection URI.
+        top_k:
+            Number of top trials to rank in summary.
+        dbutils:
+            Optional explicit dbutils handle.
+
+    Returns:
+        dict[str, typing.Any]:
+            Summary dictionary recording persisted artifact paths and metrics.
+    '''
+    resolved_root = resolve_exp_root(exp_root, dbutils=dbutils)
+    resolved_storage = resolve_optuna_storage(storage, dbutils=dbutils)
+
+    # Load Optuna study from scratch or remote storage
+    study = optuna.load_study(study_name=study_name, storage=resolved_storage)
+
+    # Prepare persistent volume destination
+    sweeps_dir = resolved_root / 'artifacts' / 'sweeps' / study_name
+    sweeps_dir.mkdir(parents=True, exist_ok=True)
+    checkpoints_dir = resolved_root / 'artifacts' / 'checkpoints'
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Rank top completed trials
+    ranked = trials_analysis.rank_trials(
+        study_name=study_name,
+        storage=resolved_storage,
+        top_k=top_k,
+        ascending=False,
+    )
+
+    # 2. Export trial summary metadata JSON
+    best_value = None
+    best_params = {}
+    best_trial_num = None
+    try:
+        best_value = float(study.best_value)
+        best_params = dict(study.best_params)
+        best_trial_num = int(study.best_trial.number)
+    except ValueError:
+        pass
+
+    summary_data = {
+        'study_name': study_name,
+        'storage': resolved_storage,
+        'total_trials': len(study.trials),
+        'best_trial_number': best_trial_num,
+        'best_value': best_value,
+        'best_params': best_params,
+        'top_trials': ranked,
+    }
+
+    summary_file = sweeps_dir / f'{study_name}_summary.json'
+    with open(summary_file, 'w', encoding='utf-8') as f:
+        json.dump(summary_data, f, indent=2)
+
+    # 3. Export complete trials dataframe (CSV / Parquet)
+    trials_csv = sweeps_dir / f'{study_name}_trials.csv'
+    try:
+        df = study.trials_dataframe()
+        df.to_csv(trials_csv, index=False)
+    except Exception:  # pylint: disable=broad-exception-caught
+        trials_csv = None
+
+    # 4. Search and sync best trial checkpoint to persistent volume
+    best_ckpt_dest = None
+    if best_trial_num is not None:
+        trial_pattern = f'*trial_{best_trial_num:04d}*'
+        candidate_ckpts = list((resolved_root / 'artifacts').glob(f'**/{trial_pattern}*.pt'))
+        if candidate_ckpts:
+            src_ckpt = candidate_ckpts[0]
+            dest_ckpt = checkpoints_dir / f'{study_name}_best.pt'
+            try:
+                shutil.copy2(src_ckpt, dest_ckpt)
+                best_ckpt_dest = str(dest_ckpt)
+            except OSError:
+                best_ckpt_dest = str(src_ckpt)
+
+    print(
+        f'[SWEEP SYNC] Optuna study {study_name!r} successfully synchronized:\n'
+        f'- Total trials: {len(study.trials)} | Best value: {best_value}\n'
+        f'- Summary persisted: {summary_file}\n'
+        f'- Trials table: {trials_csv}'
+    )
+    if best_ckpt_dest:
+        print(f'- Best trial checkpoint: {best_ckpt_dest}')
+
+    return {
+        'study_name': study_name,
+        'storage': resolved_storage,
+        'total_trials': len(study.trials),
+        'best_value': best_value,
+        'best_params': best_params,
+        'summary_file': str(summary_file),
+        'trials_csv': str(trials_csv) if trials_csv else None,
+        'best_checkpoint': best_ckpt_dest,
+    }
+
+
+def load_study_trials(
+    exp_root: str | pathlib.Path | None = None,
+    study_name: str = 'study_base_test',
+    *,
+    dbutils: typing.Any = None,
+) -> typing.Any:
+    '''
+    Load persisted study trials dataframe or summary from experiment volume.
+
+    Args:
+        exp_root:
+            Optional experiment root directory.
+        study_name:
+            Identifier of the study to load.
+        dbutils:
+            Optional explicit dbutils handle.
+
+    Returns:
+        pandas.DataFrame | dict[str, typing.Any]:
+            Loaded trials table or parsed summary dictionary.
+    '''
+    resolved_root = resolve_exp_root(exp_root, dbutils=dbutils)
+    sweeps_dir = resolved_root / 'artifacts' / 'sweeps' / study_name
+    csv_path = sweeps_dir / f'{study_name}_trials.csv'
+    json_path = sweeps_dir / f'{study_name}_summary.json'
+
+    if csv_path.is_file():
+        return pandas.read_csv(csv_path)
+
+    if json_path.is_file():
+        with open(json_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    raise FileNotFoundError(
+        f'No persisted study records found for {study_name!r} under {sweeps_dir}'
+    )
+
 

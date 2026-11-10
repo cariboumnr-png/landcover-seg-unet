@@ -35,6 +35,11 @@ Public APIs:
 import os
 import sys
 import typing
+# third-party imports
+try:
+    import IPython
+except ImportError:
+    IPython = None
 
 
 # ----- public functions
@@ -65,14 +70,16 @@ def is_notebook() -> bool:
         bool:
             True if executing in an interactive notebook kernel.
     '''
+    if IPython is None:
+        return False
+
     try:
-        import IPython  # pylint: disable=import-outside-toplevel
         shell = IPython.get_ipython()
         if shell is None:
             return False
         shell_name = shell.__class__.__name__
         return shell_name in {'ZMQInteractiveShell', 'DatabricksShell'}
-    except (AttributeError, ImportError):
+    except AttributeError:
         return False
 
 
@@ -95,13 +102,13 @@ def get_dbutils(dbutils: typing.Any = None) -> typing.Any:
     if main_mod is not None and hasattr(main_mod, 'dbutils'):
         return getattr(main_mod, 'dbutils')
 
-    try:
-        import IPython  # pylint: disable=import-outside-toplevel
-        shell = IPython.get_ipython()
-        if shell is not None and hasattr(shell, 'user_ns'):
-            if 'dbutils' in shell.user_ns:
-                return shell.user_ns['dbutils']
-    except (AttributeError, ImportError, KeyError):
-        pass
+    if IPython is not None:
+        try:
+            shell = IPython.get_ipython()
+            if shell is not None and hasattr(shell, 'user_ns'):
+                if 'dbutils' in shell.user_ns:
+                    return shell.user_ns['dbutils']
+        except (AttributeError, KeyError):
+            pass
 
     return None
