@@ -266,16 +266,25 @@ ID, and git commit SHA.
 - A standardized registration cell will publish validated model checkpoints directly
 to the Unity Catalog Model Registry (`models:/<catalog>.<schema>.<model_name>`).
 
-### 2.7. Compute Invocation and Headless Production Duality
+### 2.7. Explicit Supported Use Cases & Compute Invocation Duality
 
-We will ensure every notebook operates under a dual-mode pattern:
-- **Interactive Exploration Mode**: Researchers run cells step-by-step on interactive
-clusters, tweaking parameters via widgets and inspecting visual outputs.
-- **Automated Workflow Mode**: The exact same notebook can be triggered
-  as a task within Databricks Workflows or Databricks Asset Bundles (DABs)
-  without modifying code, receiving parameters via job base parameters.
-- **Headless CI Testing**: Automated CI pipelines can run notebooks using `papermill`
-or `pytest` with environment variable parameter injection.
+To eliminate environment ambiguity and eradicate fragile in-notebook package installation, we formalize three explicitly supported execution tiers:
+
+1. **Tier 1: Production Automated Compute (Headless)**:
+   - **Primary Driver**: Terminal CLI (`landseg.adapters.cli`) executed with Hydra / YAML configuration recipes.
+   - **Automated Workflows**: When deployed as tasks in Databricks Workflows or Databricks Asset Bundles (DABs), notebooks execute headlessly from top to bottom. Job parameters are automatically ingested by `NotebookWidgets`.
+   - Environments run on automated job clusters with the pre-built `landseg` wheel pre-installed.
+
+2. **Tier 2: Interactive Researcher Exploration (Enterprise Databricks)**:
+   - **Target Audience**: Geospatial researchers, data scientists, and domain colleagues.
+   - **Environment**: Interactive Databricks GPU compute where the `landseg` wheel is pre-installed cluster-wide via cluster init scripts or cluster-scoped libraries. The repository is accessed directly via Databricks Git Folders (Repos).
+   - **User Experience**: Rich interactive controls (`NotebookWidgets`), in-cell telemetry, and Unity Catalog Model Registry publication.
+   - **Zero-Boilerplate Startup**: Notebooks assume the environment is already prepared. Executable `%pip install` cells are strictly removed to prevent REPL restarts and cluster cache invalidations.
+
+3. **Tier 3: Local Developer Sandbox (VS Code / Workstation)**:
+   - **Target Audience**: Core library developers and CI test runners.
+   - **Environment**: Local repository clone inside the project's canonical root virtual environment (`.venv`) with `pip install -e ".[dev]"`.
+   - **Headless Fallback**: `NotebookWidgets` operates silently using typed defaults and environment overrides without requiring visual `ipywidgets` frontend extensions.
 
 ---
 
@@ -320,6 +329,9 @@ from top to bottom non-interactively with default parameters.
 canonically for Databricks. Local execution is intentionally headless without visual
 GUI dependencies (e.g. no `ipywidgets`), serving as a zero-friction developer sandbox
 and CI verification layer.
+7. **Zero In-Notebook `%pip install` Boilerplate**: Notebooks assume the execution environment
+(cluster init script on Databricks or local virtualenv) already has `landseg` installed.
+In-notebook package installations restart REPL kernels and disrupt cluster library management.
 
 ---
 

@@ -327,8 +327,9 @@ def sync_optuna_study(
     # 4. Search and sync best trial checkpoint to persistent volume
     best_ckpt_dest = None
     if best_trial_num is not None:
-        trial_pattern = f'*trial_{best_trial_num:04d}*'
-        candidate_ckpts = list((resolved_root / 'artifacts').glob(f'**/{trial_pattern}*.pt'))
+        candidate_ckpts = list(
+            (resolved_root / 'artifacts').glob(f'**/*trial_{best_trial_num:04d}*.pt')
+        )
         if candidate_ckpts:
             src_ckpt = candidate_ckpts[0]
             dest_ckpt = checkpoints_dir / f'{study_name}_best.pt'
@@ -395,5 +396,3 @@ def load_study_trials(
     raise FileNotFoundError(
         f'No persisted study records found for {study_name!r} under {sweeps_dir}'
     )
-
-
