@@ -34,10 +34,13 @@ Currently usable:
 - Pre-flight readiness validation and dry-run diagnostics
 - TensorBoard and MLflow dashboard adapter code paths
 - Optuna-oriented study sweep and study analysis command entry points
+- Production notebook architecture, interactive widgets, in-cell telemetry,
+  and interruption safety (`landseg.notebooks`, ADR-0066)
+- Enterprise MLOps, Unity Catalog Volumes & Model Registry integration
+  (`landseg.mlops`, ADR-0066)
 
 Still maturing:
 
-- Notebook-first workflows and examples
 - Public programmatic API ergonomics
 - Study/sweep configuration guarantees
 - Standardized evaluation exports and reporting schemas
@@ -49,6 +52,7 @@ Still maturing:
 - [Workflow chart](./docs/workflow_chart.md)
 - [Data preparation guide](./docs/data_preparation.md)
 - [Pre-flight readiness guide](./docs/preflight_readiness.md)
+- [Interactive notebooks](./notebooks/README.md)
 - [Architecture decision records](./docs/ADRs/)
 
 ## Core Concepts
@@ -287,35 +291,24 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
+- Production notebook architecture and Databricks integration: dedicated
+  `landseg.notebooks` package, multi-runtime `NotebookWidgets`, in-cell visual
+  telemetry, process safety (`safe_training_session`), and multi-task workflow
+  orchestration readiness (ADR-0066).
+- Enterprise MLOps subsystem (`landseg.mlops`): Unity Catalog Volumes and Model
+  Registry integration, runtime environment detection, lineage harvesting, and
+  two-tiered Optuna storage synchronization (ADR-0066).
+- Ergonomic dataset manifest compilation fluent API (`DatasetManifestBuilder`,
+  `notebooks/00_dataset_manifest.ipynb`, ADR-0065).
+- Geopipe stage handlers and non-destructive pre-flight audits (ADR-0064).
 - Centralized raster-ops subsystem (`landseg.geopipe.rasters`) consolidating
-  raster I/O, window reading, geometry/CRS verification, bounds reprojection,
-  masking, stacking, virtual mosaicking, and VRT manipulation (ADR-0062).
-- Decoupled domain knowledge base as an optional external asset
-  (`execution.knowledge_dir`, `landseg.knowledge`) with species profiles and
-  Sentence Transformer vector embeddings (ADR-0053).
-- Virtual raster mosaic utility (`scripts/build_raster_mosaic.py`,
-  `notebooks/00_raster_mosaic.ipynb`) for cross-UTM and multi-tile assembly (#79).
-- Task-oriented modular configuration recipes under `configs/*.yaml`, recipe
-  override support (`--recipe`), and retirement of intermediate translation
-  layers (ADR-0061).
-- Package portability with PEP 561 marker (`py.typed`), unified environment
-  fallbacks (`${oc.env:LANDSEG_*}`), and standardized runner paths.
-- Execution orchestration and pre-flight validation: atomic pipelines,
-  composite workflows (`e2e-intake`, `e2e-experiment`), and preflight
-  inspection engine (`command=preflight`, ADR-0060).
-- Incremental batch ingestion with run ledgers, collision handling policies
-  (`skip` vs. `overwrite`), and canonical block pooling (ADR-0059).
-- Dynamic dataset semantics and decoupled data preparation (`data-prepare`,
-  ADR-0057).
-- Programmatic API surfaces and interactive notebook workflows (ADR-0029).
-- Ecological similarity loss regularization (ADR-0053), multi-head labels,
-  and extended validation metrics (ADR-0042).
-- Optuna study sweep presets and objective metrics integrations (ADR-0044).
+  windowed I/O, reprojection, and virtual GDAL VRT mosaicking (ADR-0062).
 
 Near-term / Medium-term focus:
 
-- Document Optuna sweep workflows and publish end-to-end tutorial notebooks.
 - Stabilize metrics reporting formats and cross-run comparison tools.
+- Extended model evaluation reporting and prediction visualizers across headless
+  runs.
 
 Longer-term goals:
 

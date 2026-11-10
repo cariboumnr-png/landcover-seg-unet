@@ -43,7 +43,9 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- execution/                Pipeline registry and top-level execution dispatch
 |   |-- geopipe/                  Geospatial rasters subsystem, grid, harmonize, ingest, prepare
 |   |-- knowledge/                Domain taxonomy validation, species embeddings, similarity matrices
+|   |-- mlops/                    Cloud volume storage, environment probing, Unity Catalog registry
 |   |-- models/                   Model frames, backbones, heads, conditioning, factories
+|   |-- notebooks/                Interactive widgets, visual telemetry, and cancellation safety
 |   |-- session/                  Runtime session construction, orchestration, and engines
 |   |-- study/                    Sweep and post-run study analysis utilities
 |   |-- utils/                    Shared logging and multiprocessing helpers

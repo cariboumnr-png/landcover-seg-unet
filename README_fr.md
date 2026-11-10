@@ -33,16 +33,20 @@ les API avancees d'etude peuvent encore evoluer.
 Actuellement utilisable:
 
 - Ingestion des donnees et preparation propre a l'experience
-- Construction de grilles, domaines, blocs de donnees, manifestes et datasets a partir d'artefacts
+- Construction de grilles, domaines, blocs de donnees, manifestes et
+  datasets a partir d'artefacts
 - Commandes d'entrainement et d'evaluation autonome des modeles
 - Diagnostics de surapprentissage pour valider la chaine de bout en bout
 - Moteur de validation d'aptitude avant vol
 - Chemins de code pour les adaptateurs TensorBoard et MLflow
 - Points d'entree de commande pour le sweep d'etude et l'analyse d'etude orientes Optuna
+- Architecture de notebooks de production, widgets interactifs, télémétrie en
+  cellule et sécurité d'interruption (`landseg.notebooks`, ADR-0066)
+- Sous-système MLOps d'entreprise, intégration Unity Catalog Volumes & Model
+  Registry (`landseg.mlops`, ADR-0066)
 
 Encore en maturation:
 
-- Workflows et exemples centres sur les notebooks
 - Ergonomie de l'API programmatique publique
 - Garanties de configuration pour les etudes/sweeps
 - Exports d'evaluation et schemas de rapports standardises
@@ -54,6 +58,7 @@ Encore en maturation:
 - [Schema du workflow](./docs/workflow_chart_fr.md)
 - [Guide de preparation des donnees](./docs/data_preparation_fr.md)
 - [Guide de preparation avant vol](./docs/preflight_readiness_fr.md)
+- [Notebooks interactifs](./notebooks/README.md)
 - [Decisions d'architecture](./docs/ADRs/)
 
 ## Concepts Cles
@@ -303,40 +308,26 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
-- Sous-système centralisé d'opérations rasters (`landseg.geopipe.rasters`)
-  consolidant les E/S rasters, la lecture de fenêtres, la validation de
-  géométrie/SCR, la reprojection de limites, le masquage, l'empilement, la
-  mosaïque virtuelle et la manipulation VRT (ADR-0062).
-- Base de connaissances du domaine découplée en ressource externe optionnelle
-  (`execution.knowledge_dir`, `landseg.knowledge`) avec profils d'espèces et
-  plongements vectoriels Sentence Transformer (ADR-0053).
-- Utilitaire de mosaïque raster virtuelle (`scripts/build_raster_mosaic.py`,
-  `notebooks/00_raster_mosaic.ipynb`) pour l'assemblage inter-zones UTM et
-  multi-tuiles (#79).
-- Recettes de configuration modulaires orientées tâches sous `configs/*.yaml`,
-  support de surchage de recette (`--recipe`), et retrait des couches de
-  traduction intermédiaires (ADR-0061).
-- Portabilité du package avec marqueur PEP 561 (`py.typed`), replis uniformes
-  des variables d'environnement (`${oc.env:LANDSEG_*}`) et chemins d'exécuteurs
-  standardisés.
-- Orchestration d'execution et validation avant vol : pipelines atomiques,
-  workflows composites (`e2e-intake`, `e2e-experiment`) et moteur preflight
-  (`command=preflight`, ADR-0060).
-- Ingestion incrementale par lots, registres de runs et politiques de
-  collision (`skip` vs `overwrite`, ADR-0059).
-- Semantique dynamique des donnees et preparation decouplee (`data-prepare`,
-  ADR-0057).
-- Surfaces d'API programmatiques et integration pour notebooks (ADR-0029).
-- Regularisation par similarite ecologique (ADR-0053), tetes multiples et
-  metriques d'evaluation etendues (ADR-0042).
-- Prereglages de sweeps d'etude Optuna et metriques d'objectifs (ADR-0044).
+- Architecture de notebooks de production et intégration Databricks : package
+  dédié `landseg.notebooks`, `NotebookWidgets` multi-environnements, télémétrie
+  visuelle en cellule, sécurité des processus (`safe_training_session`) et
+  préparation à l'orchestration multi-tâches (ADR-0066).
+- Sous-système MLOps d'entreprise (`landseg.mlops`) : intégration Unity Catalog
+  Volumes et Model Registry, détection d'environnement d'exécution, traçabilité
+  de lignée et synchronisation de stockage Optuna à deux niveaux (ADR-0066).
+- API fluide ergonomique de compilation de manifestes : `DatasetManifestBuilder`
+  avec validation rapide des contrats et export YAML/JSON unifié (ADR-0065).
+- Gestionnaires d'étapes geopipe et intégration des audits d'aptitude avant vol
+  (ADR-0064).
+- Sous-système centralisé d'opérations rasters (`landseg.geopipe.rasters`) et
+  mosaïques virtuelles GDAL VRT sans duplication de pixels (ADR-0062).
 
 Objectifs a court et moyen terme :
 
-- Documentation des workflows de sweep Optuna et publication de tutoriels en
-  notebooks.
 - Stabilisation des formats de rapports de metriques et outils de comparaison
   inter-runs.
+- Rapports étendus d'évaluation des modèles et visualisations des prédictions
+  pour exécutions autonomes.
 
 Objectifs a plus long terme :
 

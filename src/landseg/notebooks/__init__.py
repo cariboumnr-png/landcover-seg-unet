@@ -23,11 +23,10 @@
 Top-level namespace for `landseg.notebooks`.
 
 Exposes interactive notebook widgets, display utilities, in-cell visual
-inspection previewers, and throttled training progress telemetry.
+inspection previewers, and interruption-safe training session management.
 
 Public APIs:
     - `NotebookWidgets`: Ergonomic widget wrapper across runtimes.
-    - `ThrottledProgress`: Console emission throttler.
     - `is_notebook`: Probe whether code is running inside a notebook.
     - `plot_qualitative_predictions`: Side-by-side segmentation plots.
     - `plot_training_curves`: In-cell training loss and metric curves.

@@ -198,6 +198,35 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ---
 
+### 10. Enterprise MLOps & Storage Resolution ([`mlops`](../src/landseg/mlops))
+- Provides standardized cloud workspace, environment detection, and governance
+  services across CLI and notebooks:
+  - **Storage Resolution (`mlops.storage`)**: Precedence-based resolution of
+    `exp_root` across Unity Catalog Volumes (`/Volumes/...`) and local POSIX
+    filesystems; environment-safe two-tiered Optuna SQLite storage routing and
+    volume synchronization.
+  - **Runtime & Lineage Probing (`mlops.env`)**: Zero-crash environment
+    discovery for Databricks runtimes, `dbutils` handles, cluster IDs, and
+    git commit SHAs.
+  - **Model Registry Integration (`mlops.registry`)**: Standardized model
+    registration to Unity Catalog (`models:/<catalog>.<schema>.<model_name>`)
+    with governance tags.
+
+---
+
+### 11. Interactive Presentation & Telemetry ([`notebooks`](../src/landseg/notebooks))
+- Encapsulates interactive UI and process safety concerns without polluting
+  headless execution layers:
+  - **Multi-Runtime Widgets (`notebooks.widgets`)**: Native `dbutils.widgets`
+    bridge with silent headless fallbacks and typed getters.
+  - **Process Safety & Interruption Handling (`notebooks.telemetry`)**: Graceful
+    `KeyboardInterrupt` capture, emergency checkpoint flushing, and CUDA
+    memory cleanup.
+  - **In-Cell Visual Telemetry (`notebooks.telemetry`)**: Live loss/metric curves
+    and qualitative side-by-side segmentation previewers.
+
+---
+
 ## Key Rules
 
 - **No implicit recomputation**: All data exchange passes through verified
