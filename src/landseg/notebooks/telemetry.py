@@ -27,7 +27,6 @@ qualitative segmentation comparisons, and graceful cancellation handling
 with emergency checkpoint flushing and GPU memory cleanup.
 
 Public APIs:
-    - `ThrottledProgress`: Console emission throttler.
     - `plot_qualitative_predictions`: Side-by-side segmentation plots.
     - `plot_training_curves`: In-cell training and validation loss/mIoU curves.
     - `render_prediction_preview`: Automated qualitative prediction preview.
@@ -35,79 +34,25 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import contextlib
 import json
 import pathlib
 import shutil
-import sys
 import time
 import typing
 # third-party imports
 import matplotlib
 import matplotlib.pyplot
 import mlflow
+import mlflow.exceptions
 import numpy
 import torch
 # local imports
 import landseg.notebooks.env as env
 
+
 if not env.is_notebook():
-    try:
-        matplotlib.use('Agg')
-    except Exception:
-        pass
-
-
-# ----- public classes
-class ThrottledProgress:
-    '''
-    Console and logging output throttler.
-
-    Limits high-frequency stdout/stderr emission during training loops to
-    prevent notebook cell buffer overflow and browser rendering lag.
-    '''
-
-    def __init__(self, interval_sec: float = 1.0):
-        '''Initialize throttler with minimum interval between emissions.'''
-        self.interval_sec = max(0.0, float(interval_sec))
-        self.last_emit_time: float = 0.0
-
-    def should_emit(self, now: float | None = None) -> bool:
-        '''Check whether sufficient time has elapsed for next emission.'''
-        current = time.perf_counter() if now is None else now
-        if (current - self.last_emit_time) >= self.interval_sec:
-            self.last_emit_time = current
-            return True
-        return False
-
-    def emit(
-        self,
-        message: str,
-        *,
-        end: str = '\r',
-        flush: bool = True,
-        stream: typing.TextIO | None = None,
-    ) -> bool:
-        '''
-        Emit message if throttle interval has elapsed.
-
-        Args:
-            message: Text to display.
-            end: String appended after message (default: carriage return).
-            flush: Whether to force immediate flush.
-            stream: Target output stream (default: sys.stdout).
-
-        Returns:
-            bool: True if message was emitted, False if throttled.
-        '''
-        if self.should_emit():
-            out = stream if stream is not None else sys.stdout
-            out.write(message + end)
-            if flush:
-                out.flush()
-            return True
-        return False
+    matplotlib.use('Agg')
 
 
 # ----- public context managers
@@ -204,7 +149,7 @@ def safe_training_session(
             if active_run is not None:
                 mlflow.set_tag('training_status', 'INTERRUPTED')
                 mlflow.set_tag('interrupted_reason', 'Notebook cell cancellation')
-        except (AttributeError, Exception):
+        except (mlflow.exceptions.MlflowException, AttributeError):
             pass
 
         # 3. Clean up PyTorch GPU memory cache

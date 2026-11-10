@@ -22,36 +22,16 @@
 '''Unit test suite for `landseg.notebooks.telemetry` interactive module.'''
 
 # standard imports
-import io
 import json
 import pathlib
-import time
 # third-party imports
 import matplotlib
-matplotlib.use('Agg')
 import numpy
 import pytest
 # local imports
 import landseg.notebooks as nb
 
-
-def test_throttled_progress_timing():
-    '''
-    Given: A ThrottledProgress instance with 0.1s interval.
-    When: Emitting messages rapidly.
-    Then: Emits only when threshold time has elapsed.
-    '''
-    throttler = nb.ThrottledProgress(interval_sec=0.1)
-    buf = io.StringIO()
-
-    # First emission should succeed
-    assert throttler.emit('First update', stream=buf)
-    # Immediate second emission should be throttled
-    assert not throttler.emit('Second update', stream=buf)
-
-    # After waiting beyond interval, next emission should succeed
-    time.sleep(0.12)
-    assert throttler.emit('Third update', stream=buf)
+matplotlib.use('Agg')
 
 
 def test_safe_training_session_normal_exit(tmp_path: pathlib.Path):

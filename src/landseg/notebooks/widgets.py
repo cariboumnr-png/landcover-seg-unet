@@ -30,7 +30,6 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
 import os
 import pathlib
 import typing
@@ -332,9 +331,6 @@ class NotebookWidgets:
         val = str(raw).strip().lower() in {'true', '1', 'yes', 'y'}
         self._values[name] = val
         return val
-
-    # alias for boolean method
-    bool = boolean
 
     def path(
         self,

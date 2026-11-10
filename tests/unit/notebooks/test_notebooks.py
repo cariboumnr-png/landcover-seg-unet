@@ -125,7 +125,7 @@ def test_notebook_widgets_fallback_types(
     text_val = widgets.text('exp_name', 'run_01')
     int_val = widgets.int('batch_size', 16)
     float_val = widgets.float('lr', 1e-4)
-    bool_val = widgets.bool('use_amp', True)
+    bool_val = widgets.boolean('use_amp', True)
     choice_val = widgets.dropdown(
         'model',
         default='unet',

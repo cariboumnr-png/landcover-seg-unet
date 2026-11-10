@@ -43,7 +43,6 @@ import typing
 __all__ = [
     # classes
     'NotebookWidgets',
-    'ThrottledProgress',
     # functions
     'is_notebook',
     'plot_qualitative_predictions',
@@ -59,7 +58,6 @@ if typing.TYPE_CHECKING:
         is_notebook,
     )
     from .telemetry import (
-        ThrottledProgress,
         plot_qualitative_predictions,
         plot_training_curves,
         render_prediction_preview,
@@ -76,7 +74,6 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-        'ThrottledProgress',
         'plot_qualitative_predictions',
         'plot_training_curves',
         'render_prediction_preview',

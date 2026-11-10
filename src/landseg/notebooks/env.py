@@ -29,8 +29,6 @@ Public APIs:
     - `is_notebook`: Probe whether code is running inside a notebook.
 '''
 
-# standard imports
-from __future__ import annotations
 # third-party imports
 try:
     import IPython
