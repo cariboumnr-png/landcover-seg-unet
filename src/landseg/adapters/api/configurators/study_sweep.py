@@ -38,9 +38,16 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         experiment_root: str | pathlib.Path,
         *,
         optuna_storage: str | pathlib.Path,
-        seed: int = 42
+        seed: int = 42,
+        preparation_dpath: str | pathlib.Path | None = None,
+        session_dpath: str | pathlib.Path | None = None,
     ):
-        super().__init__(experiment_root, 'study-sweep')
+        super().__init__(
+            experiment_root,
+            'study-sweep',
+            preparation_dpath=preparation_dpath,
+            session_dpath=session_dpath,
+        )
 
         #
         self.study = self._cfg.study

@@ -37,20 +37,45 @@ class BaseConfigurator:
         self,
         experiment_root: str | pathlib.Path,
         command_name: str,
+        *,
+        grid_dpath: str | pathlib.Path | None = None,
+        harmonization_dpath: str | pathlib.Path | None = None,
+        ingestion_dpath: str | pathlib.Path | None = None,
+        preparation_dpath: str | pathlib.Path | None = None,
+        session_dpath: str | pathlib.Path | None = None,
     ):
         '''Initialize the configurator'''
 
         # init a default RootConfig instance
         self._cfg = configs.RootConfig()
         # set artifact output dirpaths
-        exp_root_str = str(experiment_root)
-        _r = f'{exp_root_str}/artifacts/'
-        self._cfg.execution.exp_root = exp_root_str
-        self._cfg.data.world_grid.output_dpath = f'{_r}/world_grids'
-        self._cfg.data.harmonization.output_dpath = f'{_r}/harmonized_data'
-        self._cfg.data.ingestion.output_dpath = f'{_r}/ingested_data'
-        self._cfg.data.preparation.output_dpath = f'{_r}/prepared_data'
-        self._cfg.session.output_dpath = f'{exp_root_str}/results'
+        resolved_root = pathlib.Path(experiment_root).resolve()
+        self._cfg.execution.exp_root = str(resolved_root)
+        self._cfg.data.world_grid.output_dpath = (
+            str(grid_dpath)
+            if grid_dpath is not None
+            else str(resolved_root / 'artifacts' / 'world_grids')
+        )
+        self._cfg.data.harmonization.output_dpath = (
+            str(harmonization_dpath)
+            if harmonization_dpath is not None
+            else str(resolved_root / 'artifacts' / 'harmonized_data')
+        )
+        self._cfg.data.ingestion.output_dpath = (
+            str(ingestion_dpath)
+            if ingestion_dpath is not None
+            else str(resolved_root / 'artifacts' / 'ingested_data')
+        )
+        self._cfg.data.preparation.output_dpath = (
+            str(preparation_dpath)
+            if preparation_dpath is not None
+            else str(resolved_root / 'artifacts' / 'prepared_data')
+        )
+        self._cfg.session.output_dpath = (
+            str(session_dpath)
+            if session_dpath is not None
+            else str(resolved_root / 'results')
+        )
         # set command name
         self._cfg.command = command_name
 
@@ -82,7 +107,6 @@ class BaseConfigurator:
     def preflight(self, strict: bool = False) -> typing.Any:
         '''Run pre-flight diagnostic validation for configured command.'''
         return api.run_preflight(self._cfg, self._cfg.command, strict=strict)
-
 
     # ----- shared methods for configuring runtime sessions
     def set_data_loading(

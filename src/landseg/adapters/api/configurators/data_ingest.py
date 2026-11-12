@@ -36,8 +36,19 @@ CollisionPolicy = typing.Literal['skip', 'overwrite', 'error']
 class DataIngestionConfigurator(configurators.BaseConfigurator):
     '''Configure data ingestion.'''
 
-    def __init__(self, experiment_root: str | pathlib.Path):
-        super().__init__(experiment_root, 'data-ingest')
+    def __init__(
+        self,
+        experiment_root: str | pathlib.Path,
+        *,
+        harmonization_dpath: str | pathlib.Path | None = None,
+        ingestion_dpath: str | pathlib.Path | None = None,
+    ):
+        super().__init__(
+            experiment_root,
+            'data-ingest',
+            harmonization_dpath=harmonization_dpath,
+            ingestion_dpath=ingestion_dpath,
+        )
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:
         '''Set whether to force rebuild ingestion artifacts.'''

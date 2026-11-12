@@ -33,8 +33,17 @@ import landseg.adapters.api.configurators as configurators
 class WorldGridConfigurator(configurators.BaseConfigurator):
     '''Configure canonical world grid generation and persistence.'''
 
-    def __init__(self, experiment_root: str | pathlib.Path):
-        super().__init__(experiment_root, 'world-grid')
+    def __init__(
+        self,
+        experiment_root: str | pathlib.Path,
+        *,
+        grid_dpath: str | pathlib.Path | None = None,
+    ):
+        super().__init__(
+            experiment_root,
+            'world-grid',
+            grid_dpath=grid_dpath,
+        )
 
     def set_grid(
         self,

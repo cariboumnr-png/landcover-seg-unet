@@ -32,8 +32,19 @@ import landseg.adapters.api.configurators as configurators
 class TrainingSessionConfigurator(configurators.BaseConfigurator):
     '''Configure a training session.'''
 
-    def __init__(self, experiment_root: str | pathlib.Path):
-        super().__init__(experiment_root, 'model-train')
+    def __init__(
+        self,
+        experiment_root: str | pathlib.Path,
+        *,
+        preparation_dpath: str | pathlib.Path | None = None,
+        session_dpath: str | pathlib.Path | None = None,
+    ):
+        super().__init__(
+            experiment_root,
+            'model-train',
+            preparation_dpath=preparation_dpath,
+            session_dpath=session_dpath,
+        )
 
     def set_model(
         self,
