@@ -22,6 +22,7 @@
 '''Unit test suite for `landseg.notebooks` dedicated package.'''
 
 # standard imports
+import json
 import pathlib
 # third-party imports
 import pytest
@@ -194,3 +195,111 @@ def test_notebook_widgets_with_dbutils():
 
     widgets.remove('batch_size')
     assert fake_db.widgets.get_val('batch_size') is None
+
+
+# ----- `require_widget` tests
+def test_require_widget_raises_on_missing(monkeypatch: pytest.MonkeyPatch):
+    '''
+    Given: Unset required widget and no environment variable.
+    When: Calling require_widget.
+    Then: Raises MissingRequiredInputError with actionable message.
+    '''
+    monkeypatch.delenv('LANDSEG_OUTPUT_ROOT', raising=False)
+    monkeypatch.delenv('OUTPUT_ROOT', raising=False)
+    widgets = nb.NotebookWidgets()
+    widgets.remove_all()
+
+    with pytest.raises(nb.MissingRequiredInputError) as exc_info:
+        nb.require_widget('output_root', widgets=widgets)
+
+    assert "output_root" in str(exc_info.value)
+
+
+def test_require_widget_succeeds_with_value(tmp_path: pathlib.Path):
+    '''
+    Given: Registered widget value.
+    When: Calling require_widget.
+    Then: Returns stored value.
+    '''
+    widgets = nb.NotebookWidgets()
+    widgets.text('output_root', str(tmp_path / 'vol'))
+
+    val = nb.require_widget('output_root', widgets=widgets)
+    assert val == str(tmp_path / 'vol')
+
+
+def test_require_widget_runs_validator(tmp_path: pathlib.Path):
+    '''
+    Given: Widget value and custom validator.
+    When: Calling require_widget.
+    Then: Runs validator and returns transformed result.
+    '''
+    widgets = nb.NotebookWidgets()
+    widgets.text('output_root', str(tmp_path / 'valid'))
+
+    def _validator(v):
+        p = pathlib.Path(v)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    val = nb.require_widget('output_root', validator=_validator, widgets=widgets)
+    assert isinstance(val, pathlib.Path)
+    assert val == tmp_path / 'valid'
+
+
+def test_require_widget_validator_failure():
+    '''
+    Given: Widget value that fails validation.
+    When: Calling require_widget.
+    Then: Wraps failure in MissingRequiredInputError.
+    '''
+    widgets = nb.NotebookWidgets()
+    widgets.text('output_root', '/Workspace/Users/test')
+
+    def _reject_workspace(v):
+        if '/Workspace' in str(v):
+            raise ValueError('Workspace disallowed')
+        return True
+
+    with pytest.raises(nb.MissingRequiredInputError) as exc_info:
+        nb.require_widget(
+            'output_root',
+            validator=_reject_workspace,
+            widgets=widgets,
+        )
+
+    assert 'Workspace disallowed' in str(exc_info.value)
+
+
+def test_02_model_train_notebook_structure():
+    '''
+    Given: 02_model_train.ipynb notebook file.
+    When: Auditing cell definitions and structure.
+    Then: Verifies widgets are isolated, validation precedes training, and no hardcoded cloud paths exist.
+    '''
+    nb_path = pathlib.Path('notebooks/02_model_train.ipynb')
+    assert nb_path.is_file()
+
+    with open(nb_path, encoding='utf-8') as f:
+        data = json.load(f)
+
+    cell_sources = [''.join(c.get('source', [])) for c in data['cells']]
+
+    # 1. Check for separate widget and validation cells
+    widget_cell = next(s for s in cell_sources if "widgets.text" in s and "'output_root'" in s)
+    val_cell = next(s for s in cell_sources if "nb.require_widget" in s and "'output_root'" in s)
+    train_cell = next(s for s in cell_sources if "nb.safe_training_session" in s)
+
+    # 2. Check that output_root defaults to empty string
+    assert "default=''" in widget_cell or 'default=""' in widget_cell
+
+    # 3. Check that validation cell precedes training cell
+    widget_idx = cell_sources.index(widget_cell)
+    val_idx = cell_sources.index(val_cell)
+    train_idx = cell_sources.index(train_cell)
+
+    assert widget_idx < val_idx < train_idx
+
+    # 4. Check no hardcoded workspace or volume paths in widget definitions
+    assert '/Volumes/' not in widget_cell
+    assert '/Workspace/' not in widget_cell
