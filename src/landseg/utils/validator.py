@@ -400,3 +400,31 @@ def require_file(
         raise ValidationError(f'Not a valid file: {path}')
 
     return _path
+
+
+def require_dir(
+    path: str | pathlib.Path | None,
+    *,
+    writable: bool = False,
+) -> pathlib.Path:
+    '''Require an existing directory, optionally require writable.'''
+    if path is None:
+        raise ValidationError('Path not provided')
+
+    try:
+        _path = pathlib.Path(path)
+        if not _path.is_dir():
+            raise ValidationError(f'Path {path} is not a directory')
+    except (TypeError, ValueError) as e:
+        raise ValidationError(f'Invalid path: {path}') from e
+
+    if writable:
+        try:
+            _path.mkdir(parents=True, exist_ok=True)
+            probe_file = _path / '.test'
+            probe_file.write_text('probe', encoding='utf-8')
+            probe_file.unlink(missing_ok=True)
+        except Exception as err:
+            raise ValidationError(f'{_path} is not writable: {err}. ') from err
+
+    return _path

@@ -229,3 +229,145 @@ def test_configurator_preflight(mocker, tmp_path):
     mock_run_preflight.assert_called_once()
     assert mock_run_preflight.call_args.args[1] == 'world-grid'
     assert mock_run_preflight.call_args.kwargs['strict'] is True
+
+
+# ----- Canonical Decoupled & E2E Resolution Tests
+def test_canonical_decoupled_configurators(tmp_path):
+    '''
+    Given: Explicit output and upstream directory paths (without experiment_root).
+    When: Instantiating configurators in canonical standalone recipe mode.
+    Then: Correctly wire output and upstream paths on the underlying RootConfig.
+    '''
+    grid_out = tmp_path / 'grids'
+    harm_out = tmp_path / 'harmonized'
+    ingest_out = tmp_path / 'ingested'
+    prep_out = tmp_path / 'prepared'
+    results_out = tmp_path / 'results'
+
+    # 1. WorldGridConfigurator
+    wg = configurators.WorldGridConfigurator(output_dpath=grid_out)
+    assert wg.running_root_config.data.world_grid.output_dpath == str(grid_out)
+
+    # 2. DataHarmonizationConfigurator
+    dh = configurators.DataHarmonizationConfigurator(
+        output_dpath=harm_out,
+        grid_dpath=grid_out,
+    )
+    assert dh.running_root_config.data.harmonization.output_dpath == str(harm_out)
+    assert dh.running_root_config.data.world_grid.output_dpath == str(grid_out)
+
+    # 3. DataIngestionConfigurator
+    di = configurators.DataIngestionConfigurator(
+        output_dpath=ingest_out,
+        harmonization_dpath=harm_out,
+    )
+    assert di.running_root_config.data.ingestion.output_dpath == str(ingest_out)
+    assert di.running_root_config.data.harmonization.output_dpath == str(harm_out)
+
+    # 4. DataPreparationConfigurator
+    dp = configurators.DataPreparationConfigurator(
+        output_dpath=prep_out,
+        ingestion_dpath=ingest_out,
+    )
+    assert dp.running_root_config.data.preparation.output_dpath == str(prep_out)
+    assert dp.running_root_config.data.ingestion.output_dpath == str(ingest_out)
+
+    # 5. TrainingSessionConfigurator
+    ts = configurators.TrainingSessionConfigurator(
+        output_dpath=results_out,
+        preparation_dpath=prep_out,
+    )
+    ts.set_runtime(
+        max_epochs=1,
+        active_heads=None,
+        patience_epoch=None,
+        track_heads=None,
+    )
+    assert ts.running_root_config.session.output_dpath == str(results_out)
+    assert ts.running_root_config.data.preparation.output_dpath == str(prep_out)
+
+
+def test_study_sweep_configurator_canonical(tmp_path):
+    '''
+    Given: Canonical parameters for study sweep without experiment_root.
+    When: Initializing StudySweepConfigurator with output_dpath and optuna_storage.
+    Then: Correctly sets sweep storage, session output, and upstream preparation paths.
+    '''
+    results_out = tmp_path / 'sweep_results'
+    prep_out = tmp_path / 'prepared_data'
+    storage = 'sqlite:///' + str(tmp_path / 'custom_optuna.db').replace('\\', '/')
+
+    sweep_cfg = configurators.StudySweepConfigurator(
+        output_dpath=results_out,
+        preparation_dpath=prep_out,
+        optuna_storage=storage,
+    )
+    sweep_cfg.set_runtime(
+        max_epochs=1,
+        active_heads=None,
+        patience_epoch=None,
+        track_heads=None,
+    )
+    root = sweep_cfg.running_root_config
+    assert root.command == 'study-sweep'
+    assert root.session.output_dpath == str(results_out)
+    assert root.data.preparation.output_dpath == str(prep_out)
+    assert root.study.sweep.storage == storage
+
+
+def test_configurator_set_output_and_upstream_dpaths(tmp_path):
+    '''
+    Given: An initialized configurator.
+    When: Calling set_output_dpath and set_upstream_dpath fluent methods.
+    Then: Updates the respective target and upstream paths on the underlying config.
+    '''
+    ts = configurators.TrainingSessionConfigurator(experiment_root=tmp_path)
+    new_results = tmp_path / 'custom_results'
+    new_prep = tmp_path / 'custom_prep'
+
+    ts.set_runtime(
+        max_epochs=1,
+        active_heads=None,
+        patience_epoch=None,
+        track_heads=None,
+    )
+    ts.set_output_dpath(new_results).set_upstream_dpath(new_prep)
+    root = ts.running_root_config
+
+    assert root.session.output_dpath == str(new_results)
+    assert root.data.preparation.output_dpath == str(new_prep)
+
+
+def test_e2e_unified_experiment_root_resolution(tmp_path):
+    '''
+    Given: An experiment_root path.
+    When: Initializing configurators with experiment_root (e2e notebook mode).
+    Then: Cascades default artifact paths under <exp_root>/artifacts/... and /results.
+    '''
+    root = tmp_path / 'unified_exp'
+
+    wg = configurators.WorldGridConfigurator(root)
+    assert wg.running_root_config.data.world_grid.output_dpath == str(
+        root / 'artifacts' / 'world_grids'
+    )
+
+    dh = configurators.DataHarmonizationConfigurator(root)
+    assert dh.running_root_config.data.harmonization.output_dpath == str(
+        root / 'artifacts' / 'harmonized_data'
+    )
+    assert dh.running_root_config.data.world_grid.output_dpath == str(
+        root / 'artifacts' / 'world_grids'
+    )
+
+    ts = configurators.TrainingSessionConfigurator(root)
+    ts.set_runtime(
+        max_epochs=1,
+        active_heads=None,
+        patience_epoch=None,
+        track_heads=None,
+    )
+    assert ts.running_root_config.session.output_dpath == str(root / 'results')
+    assert ts.running_root_config.data.preparation.output_dpath == str(
+        root / 'artifacts' / 'prepared_data'
+    )
+

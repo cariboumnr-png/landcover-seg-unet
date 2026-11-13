@@ -35,24 +35,26 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path,
         *,
-        grid_dpath: str | pathlib.Path | None = None,
-        harmonization_dpath: str | pathlib.Path | None = None,
+        upstream_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
-            experiment_root,
             'data-harmonize',
-            grid_dpath=grid_dpath,
-            harmonization_dpath=harmonization_dpath,
+            output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
+        if experiment_root is None:
+            self.cfg.data.harmonization.output_dpath = self.output
+            self.cfg.data.world_grid.output_dpath = self.require_dir(upstream_dpath)
 
     def set_dataset_manifest(
         self,
         dataset_manifest: str | pathlib.Path,
     ) -> typing.Self:
         '''Set dataset metadata manifest path.'''
-        self._cfg.data.harmonization.dataset_manifest = str(dataset_manifest)
+        self.cfg.data.harmonization.dataset_manifest = str(dataset_manifest)
         return self
 
     def set_resampling(
@@ -61,8 +63,8 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         categorical: str = 'nearest',
     ) -> typing.Self:
         '''Set raster resampling methods.'''
-        self._cfg.data.harmonization.resampling_continuous = continuous
-        self._cfg.data.harmonization.resampling_categorical = categorical
+        self.cfg.data.harmonization.resampling_continuous = continuous
+        self.cfg.data.harmonization.resampling_categorical = categorical
         return self
 
     def set_grid(
@@ -72,15 +74,15 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         output_dpath: str | pathlib.Path | None = None,
     ) -> typing.Self:
         '''Set target world grid tile dimensions.'''
-        self._cfg.data.world_grid.tile_size = (tile_size, tile_size)
-        self._cfg.data.world_grid.tile_stride = (tile_stride, tile_stride)
+        self.cfg.data.world_grid.tile_size = (tile_size, tile_size)
+        self.cfg.data.world_grid.tile_stride = (tile_stride, tile_stride)
         if output_dpath:
-            self._cfg.data.world_grid.output_dpath = str(output_dpath)
+            self.cfg.data.world_grid.output_dpath = str(output_dpath)
         return self
 
     def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set output directory path for harmonized artifacts.'''
-        self._cfg.data.harmonization.output_dpath = str(output_dpath)
+        self.cfg.data.harmonization.output_dpath = str(output_dpath)
         return self
 
     def set_grid_reference(self, output_dpath: str | pathlib.Path) -> typing.Self:
@@ -91,5 +93,5 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
             output_dpath:
                 Directory containing the canonical world grid report.
         '''
-        self._cfg.data.world_grid.output_dpath = str(output_dpath)
+        self.cfg.data.world_grid.output_dpath = str(output_dpath)
         return self

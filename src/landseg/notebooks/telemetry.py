@@ -55,6 +55,9 @@ if not env.is_notebook():
     matplotlib.use('Agg')
 
 
+# TODO exp_root arg in this module is now out-of-sync with configurators
+# regarding paths management and parsing
+
 # ----- public context managers
 @contextlib.contextmanager
 def safe_training_session(
@@ -90,7 +93,7 @@ def safe_training_session(
     resolved_ckpt_dir = (
         pathlib.Path(checkpoint_dir)
         if checkpoint_dir is not None
-        else root_path / 'artifacts' / 'checkpoints'
+        else root_path / 'results' / 'checkpoints'
     )
     resolved_ckpt_dir.mkdir(parents=True, exist_ok=True)
 
@@ -387,7 +390,7 @@ def render_prediction_preview(
 
     sample_pred = sample_gt.copy()
     noise = numpy.random.rand(h, w) > 0.92
-    sample_pred[noise] = numpy.random.randint(0, 3, size=numpy.sum(noise))
+    sample_pred[noise] = numpy.random.randint(0, 3, size=int(numpy.sum(noise)))
 
     preview_dest = (
         pathlib.Path(save_path)

@@ -28,85 +28,119 @@ import pathlib
 import typing
 # local imports
 import landseg.adapters.api.api as api
+import landseg.artifacts as artifacts
 import landseg.configs as configs
+import landseg.utils.validator as val
 
 class BaseConfigurator:
-    '''Configure data ingestion.'''
+    '''Base configurator for execution commands.'''
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path,
-        command_name: str,
+        command: str,
         *,
-        grid_dpath: str | pathlib.Path | None = None,
-        harmonization_dpath: str | pathlib.Path | None = None,
-        ingestion_dpath: str | pathlib.Path | None = None,
-        preparation_dpath: str | pathlib.Path | None = None,
-        session_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
-        '''Initialize the configurator'''
+        '''
+        Initialize the configurator.
 
+        Supports both:
+        1. Canonical decoupled mode: Explicitly passing destination output and
+           upstream input directories (matching standalone CLI recipes).
+        2. Unified E2E mode: Passing an optional `experiment_root` that auto-populates
+           all stage inputs and outputs under `<exp_root>/artifacts/...` and `<exp_root>/results`.
+        '''
         # init a default RootConfig instance
-        self._cfg = configs.RootConfig()
-        # set artifact output dirpaths
-        resolved_root = pathlib.Path(experiment_root).resolve()
-        self._cfg.execution.exp_root = str(resolved_root)
-        self._cfg.data.world_grid.output_dpath = (
-            str(grid_dpath)
-            if grid_dpath is not None
-            else str(resolved_root / 'artifacts' / 'world_grids')
-        )
-        self._cfg.data.harmonization.output_dpath = (
-            str(harmonization_dpath)
-            if harmonization_dpath is not None
-            else str(resolved_root / 'artifacts' / 'harmonized_data')
-        )
-        self._cfg.data.ingestion.output_dpath = (
-            str(ingestion_dpath)
-            if ingestion_dpath is not None
-            else str(resolved_root / 'artifacts' / 'ingested_data')
-        )
-        self._cfg.data.preparation.output_dpath = (
-            str(preparation_dpath)
-            if preparation_dpath is not None
-            else str(resolved_root / 'artifacts' / 'prepared_data')
-        )
-        self._cfg.session.output_dpath = (
-            str(session_dpath)
-            if session_dpath is not None
-            else str(resolved_root / 'results')
-        )
-        # set command name
-        self._cfg.command = command_name
+        self.cfg = configs.RootConfig()
+        self.cfg.command = command
+
+        if experiment_root is None:
+            self.output = self.require_dir(output_dpath, writable=True)
+            resolved_root = str(pathlib.Path(self.output).parent)
+            self.cfg.execution.exp_root = resolved_root
+        else:
+            resolved_root = self.require_dir(experiment_root, writable=True)
+            self.cfg.execution.exp_root = resolved_root
+
+            _paths = artifacts.ArtifactPaths(root=pathlib.Path(resolved_root))
+            dt_cfg = self.cfg.data
+            dt_cfg.world_grid.output_dpath = str(_paths.world_grid.root)
+            dt_cfg.harmonization.output_dpath = str(_paths.data_harmonization.root)
+            dt_cfg.ingestion.output_dpath = str(_paths.data_ingestion.root)
+            dt_cfg.preparation.output_dpath = str(_paths.data_preparation.root)
+
+
+    def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
+        '''Set destination output directory path for the active command.'''
+        dpath_str = str(output_dpath)
+        match self.cfg.command:
+            case 'world-grid':
+                self.cfg.data.world_grid.output_dpath = dpath_str
+            case 'data-harmonize':
+                self.cfg.data.harmonization.output_dpath = dpath_str
+            case 'data-ingest':
+                self.cfg.data.ingestion.output_dpath = dpath_str
+            case 'data-prepare':
+                self.cfg.data.preparation.output_dpath = dpath_str
+            case (
+                'model-train' |
+                'study-sweep' |
+                'diagnose-overfit' |
+                'model-evaluate'
+            ):
+                self.cfg.session.output_dpath = dpath_str
+        return self
+
+    def set_upstream_dpath(
+        self, upstream_dpath: str | pathlib.Path
+    ) -> typing.Self:
+        '''Set direct upstream input directory path for the active command.'''
+        dpath_str = str(upstream_dpath)
+        match self.cfg.command:
+            case 'data-harmonize':
+                self.cfg.data.world_grid.output_dpath = dpath_str
+            case 'data-ingest':
+                self.cfg.data.harmonization.output_dpath = dpath_str
+            case 'data-prepare':
+                self.cfg.data.ingestion.output_dpath = dpath_str
+            case (
+                'model-train' |
+                'study-sweep' |
+                'diagnose-overfit' |
+                'model-evaluate'
+            ):
+                self.cfg.data.preparation.output_dpath = dpath_str
+        return self
 
     @property
     def running_root_config(self) -> configs.RootConfig:
         '''Validate respective section of the `RootConfig` and return.'''
-        match self._cfg.command:
+        match self.cfg.command:
             case 'world-grid':
-                self._cfg.data.world_grid.validate()
+                self.cfg.data.world_grid.validate()
             case 'data-harmonize':
-                self._cfg.data.harmonization.validate()
+                self.cfg.data.harmonization.validate()
             case 'data-ingest':
-                self._cfg.data.ingestion.validate()
+                self.cfg.data.ingestion.validate()
             case 'data-prepare':
-                self._cfg.data.preparation.validate()
+                self.cfg.data.preparation.validate()
             case 'model-evaluate':
-                self._cfg.models.validate()
-                self._cfg.session.validate()
+                self.cfg.models.validate()
+                self.cfg.session.validate()
             case (
                 'model-train' |
                 'diagnose-overfit' |
                 'study-sweep' |
                 'study-analysis'
             ):
-                self._cfg.models.validate()
-                self._cfg.session.validate()
-        return self._cfg
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+        return self.cfg
 
     def preflight(self, strict: bool = False) -> typing.Any:
         '''Run pre-flight diagnostic validation for configured command.'''
-        return api.run_preflight(self._cfg, self._cfg.command, strict=strict)
+        return api.run_preflight(self.cfg, self.cfg.command, strict=strict)
 
     # ----- shared methods for configuring runtime sessions
     def set_data_loading(
@@ -115,8 +149,8 @@ class BaseConfigurator:
         patch_size: int
     ) -> typing.Self:
         '''Set data sizes.'''
-        self._cfg.session.dataloader.batch_size = batch_size
-        self._cfg.session.dataloader.patch_size = patch_size
+        self.cfg.session.dataloader.batch_size = batch_size
+        self.cfg.session.dataloader.patch_size = patch_size
         return self
 
     def set_domain_source(
@@ -125,8 +159,8 @@ class BaseConfigurator:
         continuous_domain: str | None,
     ) -> typing.Self:
         '''Set data source'''
-        self._cfg.data.specification.domain_ids_name = category_domain
-        self._cfg.data.specification.domain_vec_name = continuous_domain
+        self.cfg.data.specification.domain_ids_name = category_domain
+        self.cfg.data.specification.domain_vec_name = continuous_domain
         return self
 
     def set_tasks(
@@ -137,10 +171,10 @@ class BaseConfigurator:
         head_weights: dict[str, float] | None = None,
     ) -> typing.Self:
         '''Set engine tasks.'''
-        self._cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
-        self._cfg.session.engine_tasks.excluded_cls = exclude_classes
-        self._cfg.session.engine_tasks.head_weights = head_weights
-        losses = self._cfg.session.engine_tasks.loss_configs
+        self.cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
+        self.cfg.session.engine_tasks.excluded_cls = exclude_classes
+        self.cfg.session.engine_tasks.head_weights = head_weights
+        losses = self.cfg.session.engine_tasks.loss_configs
         losses.focal.weight = loss_weights.get('focal', 0.5)
         losses.dice.weight = loss_weights.get('dice', 0.5)
         losses.spectral.weight = loss_weights.get('spectral', 1e-3)
@@ -156,9 +190,18 @@ class BaseConfigurator:
         track_heads: dict[str, float] | None,
     ) -> typing.Self:
         '''Set training runtime behaviour.'''
-        orchestration = self._cfg.session.orchestration
+        orchestration = self.cfg.session.orchestration
         orchestration.curriculum.single.phases[0].num_epochs = max_epochs
         orchestration.curriculum.single.phases[0].active_heads = active_heads
         orchestration.monitor.patience = patience_epoch
         orchestration.monitor.track_heads = track_heads
         return self
+
+    @staticmethod
+    def require_dir(
+        path: str | pathlib.Path | None,
+        *,
+        writable: bool = False,
+    ) -> str:
+        '''Require path to a directory (optionally writable).'''
+        return str(val.require_dir(path, writable=writable))

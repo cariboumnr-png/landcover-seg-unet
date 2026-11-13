@@ -35,15 +35,17 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path,
         *,
-        grid_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
-            experiment_root,
             'world-grid',
-            grid_dpath=grid_dpath,
+            output_dpath=output_dpath,
+            experiment_root=experiment_root
         )
+        if experiment_root is None:
+            self.cfg.data.world_grid.output_dpath = self.output
 
     def set_grid(
         self,
@@ -54,18 +56,18 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
         reference_raster: str | pathlib.Path | None = None,
     ) -> typing.Self:
         '''Set study extent and grid specs.'''
-        self._cfg.data.world_grid.mode = mode
-        self._cfg.data.world_grid.manual_specs.crs_string = crs
-        self._cfg.data.world_grid.tile_size = (tile_size, tile_size)
-        self._cfg.data.world_grid.tile_stride = (
+        self.cfg.data.world_grid.mode = mode
+        self.cfg.data.world_grid.manual_specs.crs_string = crs
+        self.cfg.data.world_grid.tile_size = (tile_size, tile_size)
+        self.cfg.data.world_grid.tile_stride = (
             tile_stride,
             tile_stride,
         )
         if reference_raster:
-            self._cfg.data.world_grid.ref_fpath = str(reference_raster)
+            self.cfg.data.world_grid.ref_fpath = str(reference_raster)
         return self
 
     def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set output directory path for world grid artifacts.'''
-        self._cfg.data.world_grid.output_dpath = str(output_dpath)
+        self.cfg.data.world_grid.output_dpath = str(output_dpath)
         return self

@@ -34,17 +34,19 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path,
         *,
-        ingestion_dpath: str | pathlib.Path | None = None,
-        preparation_dpath: str | pathlib.Path | None = None,
+        upstream_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
-            experiment_root,
             'data-prepare',
-            ingestion_dpath=ingestion_dpath,
-            preparation_dpath=preparation_dpath,
+            output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
+        if experiment_root is None:
+            self.cfg.data.preparation.output_dpath = self.output
+            self.cfg.data.ingestion.output_dpath = self.require_dir(upstream_dpath)
 
     def set_partition(
         self,
@@ -52,8 +54,8 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         test_holdout_blocks_ratio: float
     ) -> typing.Self:
         '''Set block ratios for validation and test holdout.'''
-        self._cfg.data.preparation.partition.val_ratio = validation_blocks_ratio
-        self._cfg.data.preparation.partition.test_ratio = test_holdout_blocks_ratio
+        self.cfg.data.preparation.partition.val_ratio = validation_blocks_ratio
+        self.cfg.data.preparation.partition.test_ratio = test_holdout_blocks_ratio
         return self
 
     def set_oversampling(
@@ -62,8 +64,8 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
         reward_classes: dict[int, float]
     ) -> typing.Self:
         '''Set blocks hydration for reward classes in the target head'''
-        self._cfg.data.preparation.datasetview.focal_target = target_head
-        self._cfg.data.preparation.scoring.reward = reward_classes
+        self.cfg.data.preparation.datasetview.focal_target = target_head
+        self.cfg.data.preparation.scoring.reward = reward_classes
         return self
 
     def set_features(
@@ -79,7 +81,7 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
                 'dem': 'all',
             })
         '''
-        self._cfg.data.preparation.datasetview.features = features or {}
+        self.cfg.data.preparation.datasetview.features = features or {}
         return self
 
     def set_targets(self, targets: dict[str, typing.Any] | None) -> typing.Self:
@@ -92,10 +94,10 @@ class DataPreparationConfigurator(configurators.BaseConfigurator):
                 'leadspc': 'raw',
             })
         '''
-        self._cfg.data.preparation.datasetview.targets = targets or {}
+        self.cfg.data.preparation.datasetview.targets = targets or {}
         return self
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:
         '''Set whether to force rebuild preparation artifacts.'''
-        self._cfg.data.preparation.rebuild = rebuild
+        self.cfg.data.preparation.rebuild = rebuild
         return self

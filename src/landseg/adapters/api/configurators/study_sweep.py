@@ -35,24 +35,30 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path,
         *,
-        optuna_storage: str | pathlib.Path,
+        upstream_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
+        optuna_storage: str | pathlib.Path | None = None,
         seed: int = 42,
-        preparation_dpath: str | pathlib.Path | None = None,
-        session_dpath: str | pathlib.Path | None = None,
     ):
         super().__init__(
-            experiment_root,
-            'study-sweep',
-            preparation_dpath=preparation_dpath,
-            session_dpath=session_dpath,
+            'model-train',
+            output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
+        if experiment_root is None:
+            self.cfg.session.output_dpath = self.output
+            self.cfg.data.preparation.output_dpath = self.require_dir(upstream_dpath)
 
-        #
-        self.study = self._cfg.study
-        self._cfg.study.sweep.storage = str(optuna_storage)
-        self._cfg.study.sweep.seed = seed
+        self.study = self.cfg.study
+        if optuna_storage is not None:
+            self.cfg.study.sweep.storage = str(optuna_storage)
+        elif self.cfg.session.output_dpath:
+            self.cfg.study.sweep.storage = (
+                f'sqlite:///{self.cfg.session.output_dpath}/optuna.db'
+            )
+        self.cfg.study.sweep.seed = seed
 
     # ----- sweep configs
     def set_sweep(
@@ -65,7 +71,7 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         '''Set study sweep parameters.'''
 
         presets.resolve(preset_name)
-        sweep_cfg = self._cfg.study.sweep
+        sweep_cfg = self.cfg.study.sweep
         sweep_cfg.study_name = study_name
         sweep_cfg.preset_name = preset_name
         sweep_cfg.n_trials = n_trials
