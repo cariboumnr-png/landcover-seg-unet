@@ -32,16 +32,21 @@ import landseg.mlops as mlops
 
 # Helper fake classes for testing Databricks widgets
 class _FakeWidgets:
+    '''Fake Databricks widgets implementation for testing.'''
+
     def __init__(self, store: dict[str, str] | None = None):
         self._store = dict(store) if store else {}
 
     def get(self, name: str) -> str:
+        '''Get widget value by name.'''
         if name in self._store:
             return self._store[name]
         raise KeyError(name)
 
 
 class _FakeDbutils:
+    '''Fake dbutils implementation for testing.'''
+
     def __init__(self, store: dict[str, str] | None = None):
         self.widgets = _FakeWidgets(store)
 
@@ -188,3 +193,62 @@ def test_sync_optuna_study_persists_summary_and_trials(tmp_path: pathlib.Path):
     # Verify loading via load_study_trials
     df = mlops.load_study_trials(exp_root=tmp_path, study_name=study_name)
     assert len(df) == 3
+
+
+# ----- `validate_output_root` tests
+def test_validate_output_root_empty_raises(monkeypatch: pytest.MonkeyPatch):
+    '''
+    Given: Empty string or None path with no env var.
+    When: Calling validate_output_root.
+    Then: Raises ValueError with actionable explanation.
+    '''
+    monkeypatch.delenv('LANDSEG_OUTPUT_ROOT', raising=False)
+    monkeypatch.delenv('LANDSEG_EXP_ROOT', raising=False)
+    with pytest.raises(ValueError) as exc_info:
+        mlops.validate_output_root('')
+    assert 'output_root' in str(exc_info.value)
+
+
+def test_validate_output_root_workspace_raises():
+    '''
+    Given: Path under Databricks /Workspace.
+    When: Calling validate_output_root.
+    Then: Raises ValueError noting .pt checkpoint flush restriction.
+    '''
+    with pytest.raises(ValueError) as exc_info:
+        mlops.validate_output_root('/Workspace/Users/researcher/landcover/experiment')
+    assert 'Workspace' in str(exc_info.value)
+    assert '.pt' in str(exc_info.value)
+
+
+def test_validate_output_root_valid_local(tmp_path: pathlib.Path):
+    '''
+    Given: Valid writable local directory path.
+    When: Calling validate_output_root.
+    Then: Validates writability and returns resolved Path.
+    '''
+    target = tmp_path / 'valid_session_output'
+    res = mlops.validate_output_root(target)
+    assert isinstance(res, pathlib.Path)
+    assert res.is_dir()
+
+
+def test_validate_output_root_databricks_enforcement(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    '''
+    Given: Simulated Databricks environment.
+    When: Calling validate_output_root with non-volume path vs volume path.
+    Then: Disallows non-volume paths and validates volume paths.
+    '''
+    monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '14.3')
+
+    # Non-volume path should be rejected
+    with pytest.raises(ValueError) as exc_info:
+        mlops.validate_output_root('/unsupported/cluster/path')
+    assert '/Volumes/' in str(exc_info.value)
+
+    # Valid volume path with probe_write=False
+    vol_path = '/Volumes/main/landcover/test_vol/run_01'
+    res = mlops.validate_output_root(vol_path, probe_write=False)
+    assert str(res).replace('\\', '/') == vol_path

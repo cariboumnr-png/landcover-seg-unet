@@ -49,6 +49,7 @@ compose and return the appropriate executable objects.
 
 # standard imports
 import dataclasses
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
@@ -88,6 +89,9 @@ class SessionBuildContext:
     session_paths: artifacts.SessionPaths
     eval_dataset: typing.Literal['val', 'test'] = 'val'
     logger: session_logger.SessionLogger | None = None
+    trackers: list[typing.Literal['tb', 'mlflow']] | None = None
+    tracking_uri: str | pathlib.Path | None = None
+    is_databricks: bool = False
 
 
 # ----- public functions
@@ -149,9 +153,22 @@ def build_session_runner(
             device=context.device,
         )
 
+    if context.trackers is not None:
+        _trackers = context.trackers
+        tracking_uri = context.tracking_uri
+    elif context.is_databricks:
+        _trackers = ['mlflow']
+        tracking_uri = context.tracking_uri or 'databricks'
+    else:
+        _trackers = ['tb']
+        tracking_uri = context.tracking_uri or context.session_paths.logs
+
+    if 'tb' in _trackers and tracking_uri is None:
+        tracking_uri = context.session_paths.logs
+
     dispatcher = instrumentation.build_dispatcher(
-        trackers=['tb'],
-        uri=context.session_paths.logs,
+        trackers=typing.cast(list[typing.Literal['tb', 'mlflow']], _trackers),
+        uri=tracking_uri,
         label_color_map=dataspecs.meta.label_color_map,
         logger=logger,
     )
@@ -165,12 +182,12 @@ def build_session_runner(
 
     if session_type == 'continuous':
         return orchestration_mod.build_runner(
-        epoch_engine,
-        config.orchestration,
-        dispatcher,
-        context.session_paths,
-        runner_type='continuous',
-    )
+            epoch_engine,
+            config.orchestration,
+            dispatcher,
+            context.session_paths,
+            runner_type='continuous',
+        )
 
     return orchestration_mod.build_runner(
         epoch_engine,

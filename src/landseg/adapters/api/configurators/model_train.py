@@ -77,3 +77,13 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         '''Set target execution device.'''
         self._cfg.session.device = device
         return self
+
+    def set_trackers(
+        self,
+        trackers: list[typing.Literal['tb', 'mlflow']],
+        tracking_uri: str | pathlib.Path | None = None,
+    ) -> typing.Self:
+        '''Set experiment tracking backends.'''
+        self._cfg.session.trackers = list(trackers)
+        self._cfg.session.tracking_uri = str(tracking_uri) if tracking_uri else None
+        return self

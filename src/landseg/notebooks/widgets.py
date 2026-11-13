@@ -37,6 +37,15 @@ import typing
 import landseg.mlops.env as mlops_env
 
 
+# ----- internal session cache
+_SESSION_VALUES: dict[str, typing.Any] = {}
+
+
+# ----- public exceptions
+class MissingRequiredInputError(ValueError):
+    '''Raised when a required notebook widget input is missing or invalid.'''
+
+
 # ----- public classes
 class NotebookWidgets:
     '''
@@ -51,6 +60,11 @@ class NotebookWidgets:
         '''Initialize widget bridge with optional explicit dbutils.'''
         self._dbutils = mlops_env.get_dbutils(dbutils)
         self._values: dict[str, typing.Any] = {}
+
+    def _set_val(self, name: str, val: typing.Any) -> typing.Any:
+        self._values[name] = val
+        _SESSION_VALUES[name] = val
+        return val
 
     @property
     def has_dbutils(self) -> bool:
@@ -83,8 +97,7 @@ class NotebookWidgets:
             try:
                 self._dbutils.widgets.text(name, default, display_label)
                 val = self._dbutils.widgets.get(name)
-                self._values[name] = val
-                return val
+                return self._set_val(name, val)
             except (AttributeError, KeyError, RuntimeError, TypeError):
                 pass
 
@@ -93,8 +106,7 @@ class NotebookWidgets:
             os.environ.get(name.upper())
         )
         val = env_val if env_val is not None else default
-        self._values[name] = val
-        return val
+        return self._set_val(name, val)
 
     def dropdown(
         self,
@@ -130,8 +142,7 @@ class NotebookWidgets:
                     display_label,
                 )
                 val = self._dbutils.widgets.get(name)
-                self._values[name] = val
-                return val
+                return self._set_val(name, val)
             except (AttributeError, KeyError, RuntimeError, TypeError):
                 pass
 
@@ -140,8 +151,7 @@ class NotebookWidgets:
             os.environ.get(name.upper())
         )
         val = env_val if env_val in choices else default
-        self._values[name] = val
-        return val
+        return self._set_val(name, val)
 
     def combobox(
         self,
@@ -177,8 +187,7 @@ class NotebookWidgets:
                     display_label,
                 )
                 val = self._dbutils.widgets.get(name)
-                self._values[name] = val
-                return val
+                return self._set_val(name, val)
             except (AttributeError, KeyError, RuntimeError, TypeError):
                 pass
 
@@ -187,8 +196,7 @@ class NotebookWidgets:
             os.environ.get(name.upper())
         )
         val = env_val if env_val is not None else default
-        self._values[name] = val
-        return val
+        return self._set_val(name, val)
 
     def multiselect(
         self,
@@ -239,8 +247,7 @@ class NotebookWidgets:
             item.strip() for item in raw_val.split(',')
             if item.strip()
         ]
-        self._values[name] = parsed
-        return parsed
+        return self._set_val(name, parsed)
 
     def int(
         self,
@@ -268,8 +275,7 @@ class NotebookWidgets:
             val = int(raw.strip())
         except (ValueError, AttributeError):
             val = default
-        self._values[name] = val
-        return val
+        return self._set_val(name, val)
 
     def float(
         self,
@@ -297,8 +303,7 @@ class NotebookWidgets:
             val = float(raw.strip())
         except (ValueError, AttributeError):
             val = default
-        self._values[name] = val
-        return val
+        return self._set_val(name, val)
 
     def boolean(
         self,
@@ -329,8 +334,7 @@ class NotebookWidgets:
             label=label,
         )
         val = str(raw).strip().lower() in {'true', '1', 'yes', 'y'}
-        self._values[name] = val
-        return val
+        return self._set_val(name, val)
 
     def path(
         self,
@@ -361,8 +365,7 @@ class NotebookWidgets:
         resolved = pathlib.Path(raw).expanduser()
         if create_if_missing:
             resolved.mkdir(parents=True, exist_ok=True)
-        self._values[name] = resolved
-        return resolved
+        return self._set_val(name, resolved)
 
     def get(self, name: str, default: typing.Any = None) -> typing.Any:
         '''
@@ -380,11 +383,21 @@ class NotebookWidgets:
         '''
         if name in self._values:
             return self._values[name]
+        if name in _SESSION_VALUES:
+            return _SESSION_VALUES[name]
         if self.has_dbutils:
             try:
-                return self._dbutils.widgets.get(name)
+                val = self._dbutils.widgets.get(name)
+                self._set_val(name, val)
+                return val
             except (AttributeError, KeyError, RuntimeError, TypeError):
                 pass
+        env_val = (
+            os.environ.get(f'LANDSEG_{name.upper()}') or
+            os.environ.get(name.upper())
+        )
+        if env_val is not None:
+            return env_val
         return default
 
     def remove(self, name: str) -> None:
@@ -396,6 +409,7 @@ class NotebookWidgets:
                 Identifier key of widget to remove.
         '''
         self._values.pop(name, None)
+        _SESSION_VALUES.pop(name, None)
         if self.has_dbutils:
             try:
                 self._dbutils.widgets.remove(name)
@@ -405,6 +419,7 @@ class NotebookWidgets:
     def remove_all(self) -> None:
         '''Remove all registered widgets from active notebook session.'''
         self._values.clear()
+        _SESSION_VALUES.clear()
         if self.has_dbutils:
             try:
                 self._dbutils.widgets.removeAll()
@@ -420,3 +435,90 @@ class NotebookWidgets:
                 Mapping of widget names to resolved values.
         '''
         return dict(self._values)
+
+
+# ----- public validation functions
+def require_widget(
+    name: str,
+    *,
+    validator: typing.Callable[[typing.Any], typing.Any] | None = None,
+    error_message: str | None = None,
+    default: typing.Any = None,
+    widgets: NotebookWidgets | None = None,
+    dbutils: typing.Any = None,
+) -> typing.Any:
+    '''
+    Retrieve and validate a required notebook widget value.
+
+    Raises `MissingRequiredInputError` when the widget value is empty,
+    missing, or fails validation. When executing inside Databricks, raising this
+    exception cleanly halts notebook 'Run All' cell execution before compute
+    is committed.
+
+    Args:
+        name:
+            Widget parameter key name.
+        validator:
+            Optional callable that validates the retrieved value. If validator
+            raises an exception (e.g. ValueError) or returns False, validation fails.
+            If validator returns a transformed value (e.g. resolved Path), that
+            value is returned.
+        error_message:
+            Custom actionable error message to raise on failure.
+        default:
+            Optional fallback value if widget is unset.
+        widgets:
+            Optional NotebookWidgets instance to query.
+        dbutils:
+            Optional explicit dbutils handle.
+
+    Returns:
+        typing.Any:
+            Validated widget value (or transformed value from validator).
+
+    Raises:
+        MissingRequiredInputError:
+            If widget is missing, empty, or fails validator.
+    '''
+    val = None
+    if widgets is not None:
+        val = widgets.get(name)
+    if val is None or (isinstance(val, str) and not val.strip()):
+        w = NotebookWidgets(dbutils=dbutils)
+        val = w.get(name)
+    if val is None or (isinstance(val, str) and not val.strip()):
+        env_val = (
+            os.environ.get(f'LANDSEG_{name.upper()}') or
+            os.environ.get(name.upper())
+        )
+        if env_val is not None and env_val.strip():
+            val = env_val
+        elif default is not None and str(default).strip():
+            val = default
+
+    if val is None or (isinstance(val, str) and not val.strip()):
+        msg = error_message or (
+            f"Required parameter widget '{name}' is not set. "
+            f"Please configure widget '{name}' before continuing execution."
+        )
+        raise MissingRequiredInputError(msg)
+
+    if validator is not None:
+        try:
+            res = validator(val)
+            if res is False:
+                msg = error_message or (
+                    f"Value '{val}' for required widget '{name}' failed validation."
+                )
+                raise MissingRequiredInputError(msg)
+            if res is not None and res is not True:
+                return res
+        except MissingRequiredInputError:
+            raise
+        except Exception as err:
+            msg = error_message or (
+                f"Validation failed for required widget '{name}' ({val}): {err}"
+            )
+            raise MissingRequiredInputError(msg) from err
+
+    return val

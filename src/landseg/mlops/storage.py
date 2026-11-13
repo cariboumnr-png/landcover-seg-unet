@@ -32,6 +32,7 @@ Public APIs:
     - `resolve_exp_root`: Resolve experiment root path across contexts.
     - `resolve_optuna_storage`: Resolve environment-safe Optuna URI.
     - `sync_optuna_study`: Persist Optuna study trials to volume storage.
+    - `validate_output_root`: Validate user-designated session output root.
 '''
 
 # standard imports
@@ -61,9 +62,10 @@ def resolve_exp_root(
     Resolve experiment root path across local, CI, and Databricks.
 
     Evaluation precedence:
-    1. Explicit `exp_root` argument if provided.
-    2. Databricks widget or dbutils parameter if available.
-    3. Dedicated environment variable (default: `LANDSEG_EXP_ROOT`, fallback: `EXP_ROOT`).
+    1. Explicit `exp_root` argument if provided and non-empty.
+    2. Databricks widget or dbutils parameter if available (`output_root` or `exp_root`).
+    3. Dedicated environment variable (default: `LANDSEG_OUTPUT_ROOT`, `LANDSEG_EXP_ROOT`,
+       fallback: `EXP_ROOT`).
     4. Fallback default (`./experiment`).
 
     Args:
@@ -82,29 +84,137 @@ def resolve_exp_root(
         pathlib.Path:
             Resolved experiment root directory.
     '''
-    if exp_root is not None:
-        target = pathlib.Path(exp_root)
+    if exp_root is not None and str(exp_root).strip():
+        target = pathlib.Path(str(exp_root).strip())
     else:
         db = env_mod.get_dbutils(dbutils)
         widget_val: str | None = None
         if db is not None and hasattr(db, 'widgets'):
-            try:
-                widget_val = db.widgets.get('exp_root')
-            except Exception:  # pylint: disable=broad-exception-caught
-                widget_val = None
+            for wname in ('output_root', 'exp_root'):
+                try:
+                    wval = db.widgets.get(wname)
+                    if wval and str(wval).strip():
+                        widget_val = str(wval).strip()
+                        break
+                except Exception:  # pylint: disable=broad-exception-caught
+                    pass
 
         if widget_val:
             target = pathlib.Path(widget_val)
         else:
-            env_val = os.environ.get(env_var) or os.environ.get('EXP_ROOT')
-            if env_val:
-                target = pathlib.Path(env_val)
+            env_val = (
+                os.environ.get('LANDSEG_OUTPUT_ROOT') or
+                os.environ.get(env_var) or
+                os.environ.get('EXP_ROOT')
+            )
+            if env_val and env_val.strip():
+                target = pathlib.Path(env_val.strip())
             else:
                 target = pathlib.Path(default)
 
     target = target.expanduser()
     if create_if_missing:
         target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
+def validate_output_root(
+    path: str | pathlib.Path | None,
+    *,
+    probe_write: bool = True,
+    dbutils: typing.Any = None,
+) -> pathlib.Path:
+    '''
+    Validate a user-designated session output root directory.
+
+    Enforces cloud filesystem safety policies:
+    1. Rejects empty or missing output paths (with actionable guidance).
+    2. Explicitly blocks Databricks `/Workspace/...` paths because workspace files
+       cannot store binary model checkpoints (.pt) due to Databricks flush limits.
+    3. On Databricks clusters, enforces Unity Catalog Volume paths (`/Volumes/...`)
+       or cluster scratch (`/local_disk0`).
+    4. Probes directory writability (via test probe file creation and removal)
+       before heavy computation is committed.
+
+    Args:
+        path:
+            Output directory string or pathlib.Path.
+        probe_write:
+            If True, verifies filesystem writability by writing and deleting
+            a sentinel probe file.
+        dbutils:
+            Optional explicit dbutils handle.
+
+    Returns:
+        pathlib.Path:
+            Validated output directory path.
+
+    Raises:
+        ValueError:
+            If path is empty, invalid format, or points to disallowed storage.
+        PermissionError:
+            If target directory is not writable.
+    '''
+    _ = dbutils
+    raw_str = ''
+    if path is not None:
+        raw_str = str(path).strip()
+
+    if not raw_str:
+        # Check env var fallback for headless CI parity
+        env_val = (
+            os.environ.get('LANDSEG_OUTPUT_ROOT') or
+            os.environ.get('LANDSEG_EXP_ROOT')
+        )
+        if env_val and env_val.strip():
+            raw_str = env_val.strip()
+
+    if not raw_str:
+        raise ValueError(
+            "Output root path is empty. Please set the 'output_root' widget "
+            "(or 'LANDSEG_OUTPUT_ROOT' environment variable) to a writable "
+            "Unity Catalog Volume path (e.g. '/Volumes/<catalog>/<schema>/<volume>/<dir>') "
+            "or local directory before proceeding."
+        )
+
+    norm_path = raw_str.replace('\\', '/')
+
+    # Guard 1: Reject /Workspace paths
+    if norm_path.startswith('/Workspace') or norm_path.startswith('Workspace/'):
+        raise ValueError(
+            f"Invalid output location '{raw_str}': Databricks Workspace files "
+            "(/Workspace/...) cannot store model checkpoint binaries (.pt) due to "
+            "Databricks workspace filesystem flush restrictions. "
+            "Please use a Unity Catalog Volume (/Volumes/<catalog>/<schema>/<volume>/<dir>) "
+            "or local cluster scratch (/local_disk0)."
+        )
+
+    # Guard 2: Enforce UC Volumes or local scratch when running on Databricks
+    if env_mod.is_databricks():
+        valid_prefixes = ('/Volumes/', '/local_disk0', '/tmp')
+        if not any(norm_path.startswith(prefix) for prefix in valid_prefixes):
+            raise ValueError(
+                f"Invalid output location '{raw_str}' for Databricks runtime. "
+                "Session outputs must be written to a Unity Catalog Volume "
+                "('/Volumes/<catalog>/<schema>/<volume>/...') or cluster scratch "
+                "('/local_disk0')."
+            )
+
+    target = pathlib.Path(raw_str).expanduser()
+
+    # Guard 3: Writability probe
+    if probe_write:
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            probe_file = target / '.landseg_probe'
+            probe_file.write_text('probe', encoding='utf-8')
+            probe_file.unlink(missing_ok=True)
+        except Exception as err:
+            raise PermissionError(
+                f"Output directory '{target}' is not writable: {err}. "
+                "Please verify volume existence and write permissions."
+            ) from err
+
     return target
 
 

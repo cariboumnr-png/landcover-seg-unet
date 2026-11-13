@@ -21,9 +21,12 @@
 
 '''Unit tests for session factory (session/factory.py).'''
 
+# standard imports
+import unittest.mock
 # local imports
 import landseg.session.engine.epoch as epoch_mod
 import landseg.session.factory as factory_mod
+import landseg.session.instrumentation.dashboards as dashboards
 import landseg.session.orchestration.runner as runner_mod
 
 
@@ -119,10 +122,47 @@ def test_build_session_runner_curriculum(
     assert isinstance(runner, runner_mod.CurriculumRunner)
 
 
+def test_build_session_runner_databricks_tracker_defaults_to_mlflow(
+    session_config,
+    dataspecs,
+    mock_model,
+    mock_session_paths,
+):
+    '''
+    Given: SessionBuildContext with is_databricks=True and without explicit trackers.
+    When: Calling `build_session_runner`.
+    Then: Automatically defaults to MLflow tracker with 'databricks' URI.
+    '''
+    with unittest.mock.patch('mlflow.set_tracking_uri') as mock_set_uri, \
+         unittest.mock.patch('mlflow.start_run'):
+        runner = factory_mod.build_session_runner(
+            dataspecs=dataspecs,
+            model=mock_model,
+            config=session_config,
+            context=_get_context(mock_session_paths, is_databricks=True),
+            session_type='continuous',
+        )
+        assert isinstance(runner, runner_mod.ContinuousRunner)
+        mock_set_uri.assert_called_with('databricks')
+
+
+def test_base_tracker_string_uri():
+    '''
+    Given: BaseTracker or MLFlowTracker with a string URI (e.g. 'databricks').
+    When: Initializing tracker.
+    Then: Safely stores the string URI without calling .absolute().
+    '''
+    with unittest.mock.patch('mlflow.set_tracking_uri'), \
+         unittest.mock.patch('mlflow.start_run'):
+        tracker = dashboards.MLFlowTracker('databricks')
+        assert tracker.uri == 'databricks'
+
+
 # ----- internal helpers
-def _get_context(mock_session_paths):
+def _get_context(mock_session_paths, **kwargs):
     return factory_mod.SessionBuildContext(
         device='cpu',
         session_paths=mock_session_paths,
         eval_dataset='val',
+        **kwargs,
     )

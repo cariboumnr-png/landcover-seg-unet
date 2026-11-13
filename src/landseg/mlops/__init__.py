@@ -37,6 +37,7 @@ Public APIs:
     - `resolve_exp_root`: Resolve experiment root path across contexts.
     - `resolve_optuna_storage`: Resolve environment-safe Optuna URI.
     - `sync_optuna_study`: Persist Optuna study trials to volume storage.
+    - `validate_output_root`: Validate user-designated session output root.
 '''
 
 # standard imports
@@ -55,6 +56,7 @@ __all__ = [
     'resolve_exp_root',
     'resolve_optuna_storage',
     'sync_optuna_study',
+    'validate_output_root',
 ]
 
 # for static check
@@ -74,6 +76,7 @@ if typing.TYPE_CHECKING:
         resolve_exp_root,
         resolve_optuna_storage,
         sync_optuna_study,
+        validate_output_root,
     )
 
 
@@ -97,6 +100,7 @@ def __getattr__(name: str):
         'resolve_exp_root',
         'resolve_optuna_storage',
         'sync_optuna_study',
+        'validate_output_root',
     }:
         obj = importlib.import_module('.storage', __package__)
         return getattr(obj, name)

@@ -177,9 +177,11 @@ def _resolve_checkpoint(
             return p
 
     search_dirs = [
+        exp_root / 'results',
         exp_root / 'artifacts' / 'checkpoints',
         exp_root / 'artifacts' / 'session',
         exp_root / 'artifacts',
+        exp_root,
     ]
 
     candidates: list[pathlib.Path] = []

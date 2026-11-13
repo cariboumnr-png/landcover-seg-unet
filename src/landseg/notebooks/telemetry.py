@@ -420,7 +420,7 @@ def _load_step_results(
         # Search for step_results.json in directory or session artifacts
         candidates = list(path.glob('**/step_results.json'))
         if candidates:
-            target = candidates[0]
+            target = max(candidates, key=lambda p: p.stat().st_mtime)
         else:
             raise FileNotFoundError(f'Could not find step_results.json under {path}')
     else:

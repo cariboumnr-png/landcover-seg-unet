@@ -42,6 +42,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
 import landseg.execution.preflight as preflight
+import landseg.mlops as mlops
 import landseg.models as models
 import landseg.session as session
 import landseg.utils as utils
@@ -258,7 +259,10 @@ class SessionPipeline(BasePipeline):
                 device=target_device,
                 session_paths=self.pipeline_paths,
                 eval_dataset=eval_split,
-                logger=self.logger
+                logger=self.logger,
+                trackers=getattr(self.config.session, 'trackers', None),
+                tracking_uri=getattr(self.config.session, 'tracking_uri', None),
+                is_databricks=mlops.is_databricks(),
             ),
             session_type=session_type,
         )
