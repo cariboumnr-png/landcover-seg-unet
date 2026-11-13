@@ -34,58 +34,39 @@ import landseg.notebooks as nb
 matplotlib.use('Agg')
 
 
-def test_safe_training_session_normal_exit(tmp_path: pathlib.Path):
+def test_safe_training_session_normal_exit():
     '''
     Given: An uninterrupted training block wrapped in safe_training_session.
     When: Block executes to completion.
-    Then: State records uninterrupted execution and no emergency checkpoint is written.
+    Then: State records uninterrupted execution.
     '''
-    exp_root = tmp_path / 'exp'
-    exp_root.mkdir()
-
-    with nb.safe_training_session(exp_root) as state:
+    with nb.safe_training_session() as state:
         assert state['interrupted'] is False
         _ = 1 + 1
 
     assert state['interrupted'] is False
-    assert state['emergency_checkpoint'] is None
 
 
-def test_safe_training_session_handles_keyboard_interrupt(tmp_path: pathlib.Path):
+def test_safe_training_session_handles_keyboard_interrupt():
     '''
     Given: A simulated KeyboardInterrupt inside safe_training_session.
     When: Cell is interrupted.
-    Then: Checkpoint is preserved and exception is handled gracefully without crash.
+    Then: State records interruption and halts cleanly without crash.
     '''
-    exp_root = tmp_path / 'exp'
-    ckpts_dir = exp_root / 'artifacts' / 'checkpoints'
-    ckpts_dir.mkdir(parents=True)
-
-    # Create dummy existing checkpoint
-    existing_ckpt = ckpts_dir / 'epoch_0001_last.pt'
-    existing_ckpt.write_bytes(b'dummy_weights')
-
-    with nb.safe_training_session(exp_root, reraise=False) as state:
+    with nb.safe_training_session(reraise=False) as state:
         raise KeyboardInterrupt('Simulated notebook stop button click')
 
     assert state['interrupted'] is True
-    assert state['emergency_checkpoint'] is not None
-
-    emergency_file = ckpts_dir / 'checkpoint_interrupted.pt'
-    assert emergency_file.is_file()
-    assert emergency_file.read_bytes() == b'dummy_weights'
 
 
-def test_safe_training_session_reraises_when_requested(tmp_path: pathlib.Path):
+def test_safe_training_session_reraises_when_requested():
     '''
     Given: safe_training_session with reraise=True.
     When: KeyboardInterrupt occurs.
-    Then: Saves emergency state and re-raises KeyboardInterrupt.
+    Then: Re-raises KeyboardInterrupt after cleanup.
     '''
-    exp_root = tmp_path / 'exp'
-
     with pytest.raises(KeyboardInterrupt):
-        with nb.safe_training_session(exp_root, reraise=True):
+        with nb.safe_training_session(reraise=True):
             raise KeyboardInterrupt('User stop')
 
 

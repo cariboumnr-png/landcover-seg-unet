@@ -35,19 +35,25 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
+        experiment_root: str | pathlib.Path | None = None,
         *,
         upstream_dpath: str | pathlib.Path | None = None,
+        grid_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
-        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
             'data-harmonize',
-            output_dpath=output_dpath,
             experiment_root=experiment_root,
+            output_dpath=output_dpath,
         )
         if experiment_root is None:
             self.cfg.data.harmonization.output_dpath = self.output
-            self.cfg.data.world_grid.output_dpath = self.require_dir(upstream_dpath)
+            target_upstream = (
+                upstream_dpath if upstream_dpath is not None else grid_dpath
+            )
+            self.cfg.data.world_grid.output_dpath = self.require_dir(
+                target_upstream
+            )
 
     def set_dataset_manifest(
         self,

@@ -35,14 +35,14 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
+        experiment_root: str | pathlib.Path | None = None,
         *,
         output_dpath: str | pathlib.Path | None = None,
-        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
             'world-grid',
+            experiment_root=experiment_root,
             output_dpath=output_dpath,
-            experiment_root=experiment_root
         )
         if experiment_root is None:
             self.cfg.data.world_grid.output_dpath = self.output

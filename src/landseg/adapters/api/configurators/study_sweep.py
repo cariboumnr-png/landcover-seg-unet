@@ -35,21 +35,29 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
+        experiment_root: str | pathlib.Path | None = None,
         *,
         upstream_dpath: str | pathlib.Path | None = None,
+        preparation_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
-        experiment_root: str | pathlib.Path | None = None,
         optuna_storage: str | pathlib.Path | None = None,
         seed: int = 42,
     ):
         super().__init__(
-            'model-train',
-            output_dpath=output_dpath,
+            'study-sweep',
             experiment_root=experiment_root,
+            output_dpath=output_dpath,
         )
         if experiment_root is None:
             self.cfg.session.output_dpath = self.output
-            self.cfg.data.preparation.output_dpath = self.require_dir(upstream_dpath)
+            target_upstream = (
+                upstream_dpath if upstream_dpath is not None
+                else preparation_dpath
+            )
+            if target_upstream is not None:
+                self.cfg.data.preparation.output_dpath = self.require_dir(
+                    target_upstream
+                )
 
         self.study = self.cfg.study
         if optuna_storage is not None:

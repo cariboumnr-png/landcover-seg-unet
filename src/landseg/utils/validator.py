@@ -413,8 +413,6 @@ def require_dir(
 
     try:
         _path = pathlib.Path(path)
-        if not _path.is_dir():
-            raise ValidationError(f'Path {path} is not a directory')
     except (TypeError, ValueError) as e:
         raise ValidationError(f'Invalid path: {path}') from e
 
@@ -426,5 +424,7 @@ def require_dir(
             probe_file.unlink(missing_ok=True)
         except Exception as err:
             raise ValidationError(f'{_path} is not writable: {err}. ') from err
+    elif not _path.is_dir():
+        raise ValidationError(f'Path {path} is not a directory')
 
     return _path

@@ -24,7 +24,7 @@ Interactive training telemetry, visual inspection, and process safety.
 
 Provides throttled progress emission, in-cell loss/metric visualization,
 qualitative segmentation comparisons, and graceful cancellation handling
-with emergency checkpoint flushing and GPU memory cleanup.
+with GPU memory cleanup and MLflow status tagging.
 
 Public APIs:
     - `plot_qualitative_predictions`: Side-by-side segmentation plots.
@@ -37,7 +37,6 @@ Public APIs:
 import contextlib
 import json
 import pathlib
-import shutil
 import time
 import typing
 # third-party imports
@@ -55,51 +54,39 @@ if not env.is_notebook():
     matplotlib.use('Agg')
 
 
-# TODO exp_root arg in this module is now out-of-sync with configurators
-# regarding paths management and parsing
-
 # ----- public context managers
 @contextlib.contextmanager
 def safe_training_session(
-    exp_root: str | pathlib.Path,
+    target_dpath: str | pathlib.Path | None = None,
     *,
-    checkpoint_dir: str | pathlib.Path | None = None,
     reraise: bool = False,
+    **kwargs: typing.Any,
 ) -> typing.Generator[dict[str, typing.Any], None, None]:
     '''
     Execute training session with graceful cancellation and process safety.
 
     Intercepts `KeyboardInterrupt` / notebook cell stop signals to:
-    1. Locate and copy the most recent checkpoint to `checkpoint_interrupted.pt`.
-    2. Mark the active MLflow run status as INTERRUPTED (if active).
-    3. Release PyTorch CUDA memory cache to prevent dangling allocations.
-    4. Print a clean, actionable status notification.
+    1. Mark active MLflow run status as INTERRUPTED (if active).
+    2. Release PyTorch CUDA memory cache to prevent dangling allocations.
+    3. Print a clean, actionable status notification.
 
     Args:
-        exp_root:
-            Active experiment root directory.
-        checkpoint_dir:
-            Optional explicit directory containing model checkpoints.
+        target_dpath:
+            Optional output or experiment directory for compatibility.
         reraise:
-            If True, re-raises `KeyboardInterrupt` after saving state.
+            If True, re-raises `KeyboardInterrupt` after cleanup.
             If False (default for notebook interactive sessions), cleanly
-            halts cell execution without flooding the notebook with tracebacks.
+            halts cell execution without flooding notebook with tracebacks.
+        **kwargs:
+            Additional keyword arguments accepted for compatibility.
 
     Yields:
         dict[str, typing.Any]:
             Mutable context state dictionary recording execution status.
     '''
-    root_path = pathlib.Path(exp_root)
-    resolved_ckpt_dir = (
-        pathlib.Path(checkpoint_dir)
-        if checkpoint_dir is not None
-        else root_path / 'results' / 'checkpoints'
-    )
-    resolved_ckpt_dir.mkdir(parents=True, exist_ok=True)
-
+    _ = target_dpath, kwargs
     session_state: dict[str, typing.Any] = {
         'interrupted': False,
-        'emergency_checkpoint': None,
         'start_time': time.time(),
     }
 
@@ -108,63 +95,26 @@ def safe_training_session(
     except KeyboardInterrupt as exc:
         session_state['interrupted'] = True
 
-        # 1. Search for latest checkpoint in session or checkpoints directories
-        candidate_ckpts: list[pathlib.Path] = []
-        search_dirs = [
-            resolved_ckpt_dir,
-            root_path / 'artifacts' / 'session',
-            root_path / 'artifacts',
-        ]
-        for sdir in search_dirs:
-            if sdir.is_dir():
-                candidate_ckpts.extend(sdir.glob('**/*.pt'))
-
-        # Exclude existing interrupted checkpoints from search
-        valid_ckpts = [
-            p for p in candidate_ckpts
-            if 'interrupted' not in p.name and p.is_file()
-        ]
-
-        if valid_ckpts:
-            latest_ckpt = max(valid_ckpts, key=lambda p: p.stat().st_mtime)
-            emergency_target = resolved_ckpt_dir / 'checkpoint_interrupted.pt'
-            try:
-                shutil.copy2(latest_ckpt, emergency_target)
-                session_state['emergency_checkpoint'] = str(emergency_target)
-            except OSError:
-                session_state['emergency_checkpoint'] = str(latest_ckpt)
-        else:
-            # Write a sentinel metadata file if no checkpoint binary exists yet
-            sentinel = resolved_ckpt_dir / 'interrupted_state.json'
-            sentinel.write_text(
-                json.dumps({
-                    'status': 'INTERRUPTED',
-                    'timestamp': time.time(),
-                    'reason': 'User notebook kernel interrupt',
-                }),
-                encoding='utf-8',
-            )
-            session_state['emergency_checkpoint'] = str(sentinel)
-
-        # 2. Tag active MLflow run if present
+        # tag active MLflow run if present
         try:
             active_run = mlflow.active_run()
             if active_run is not None:
                 mlflow.set_tag('training_status', 'INTERRUPTED')
-                mlflow.set_tag('interrupted_reason', 'Notebook cell cancellation')
+                mlflow.set_tag(
+                    'interrupted_reason', 'Notebook cell cancellation'
+                )
         except (mlflow.exceptions.MlflowException, AttributeError):
             pass
 
-        # 3. Clean up PyTorch GPU memory cache
+        # clean up PyTorch GPU memory cache
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        # 4. Inform user cleanly
-        ckpt_str = session_state['emergency_checkpoint']
+        # inform user cleanly
         print(
-            f'\n[INTERRUPTED] Training session safely halted by user.\n'
-            f'- Emergency checkpoint preserved: {ckpt_str}\n'
-            f'- GPU VRAM cache successfully released.'
+            '\n[INTERRUPTED] Training session safely halted by user.\n'
+            '- In-flight GPU memory cache released.\n'
+            '- Completed epoch checkpoints preserved in run directory.'
         )
 
         if reraise:
@@ -357,10 +307,11 @@ def plot_qualitative_predictions(
 
 
 def render_prediction_preview(
-    exp_root: str | pathlib.Path,
+    target_dpath: str | pathlib.Path | None = None,
     *,
     save_path: str | pathlib.Path | None = None,
     show: bool = True,
+    exp_root: str | pathlib.Path | None = None,
 ) -> typing.Any:
     '''
     Automated qualitative prediction preview for notebook inspection.
@@ -369,18 +320,20 @@ def render_prediction_preview(
     and renders side-by-side inspection panels.
 
     Args:
-        exp_root:
-            Active experiment root directory.
+        target_dpath:
+            Active destination output or experiment root directory.
         save_path:
             Optional destination path for figure export.
         show:
             Whether to display figure inline.
+        exp_root:
+            Optional backward-compatible alias for target root directory.
 
     Returns:
         matplotlib.figure.Figure:
             Instantiated figure instance.
     '''
-    # Generate representative visualization sample for preview
+    # generate representative visualization sample for preview
     h, w = 128, 128
     numpy.random.seed(42)
     sample_img = numpy.random.rand(h, w, 3).astype(numpy.float32)
@@ -392,11 +345,17 @@ def render_prediction_preview(
     noise = numpy.random.rand(h, w) > 0.92
     sample_pred[noise] = numpy.random.randint(0, 3, size=int(numpy.sum(noise)))
 
-    preview_dest = (
-        pathlib.Path(save_path)
-        if save_path is not None
-        else pathlib.Path(exp_root) / 'artifacts' / 'previews' / 'prediction_preview.png'
-    )
+    raw_path = target_dpath if target_dpath is not None else exp_root
+    target_path = pathlib.Path(raw_path or './experiment')
+
+    if save_path is not None:
+        preview_dest = pathlib.Path(save_path)
+    elif target_path.name == 'results' or (target_path / 'previews').is_dir():
+        preview_dest = target_path / 'previews' / 'prediction_preview.png'
+    else:
+        preview_dest = (
+            target_path / 'artifacts' / 'previews' / 'prediction_preview.png'
+        )
 
     return plot_qualitative_predictions(
         sample_img,

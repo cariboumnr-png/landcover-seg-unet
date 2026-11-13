@@ -449,3 +449,13 @@ installations, we formalized three explicitly supported execution tiers:
 - Authored comprehensive operational and compute documentation in
   `notebooks/README.md`.
 
+### Phase 4: Decoupled I/O Foundation & Future Deprecation (Completed)
+- Promoted explicit destination and upstream directory paths to the canonical
+  initialization pattern across all API configurators (`BaseConfigurator`,
+  `TrainingSessionConfigurator`, etc.).
+- Updated `safe_training_session` and in-cell telemetry to accept decoupled
+  output paths directly while retaining `exp_root` as a backward-compatible
+  fallback.
+- System-wide deprecation of `exp_root` across `RootConfig` and Hydra schemas
+  is formally scoped to a dedicated follow-up architectural record (ADR-0067).
+

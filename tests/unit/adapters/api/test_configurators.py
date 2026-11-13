@@ -295,6 +295,7 @@ def test_study_sweep_configurator_canonical(tmp_path):
     '''
     results_out = tmp_path / 'sweep_results'
     prep_out = tmp_path / 'prepared_data'
+    prep_out.mkdir(parents=True, exist_ok=True)
     storage = 'sqlite:///' + str(tmp_path / 'custom_optuna.db').replace('\\', '/')
 
     sweep_cfg = configurators.StudySweepConfigurator(

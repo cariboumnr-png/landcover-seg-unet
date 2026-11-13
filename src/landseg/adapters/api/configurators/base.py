@@ -38,9 +38,9 @@ class BaseConfigurator:
     def __init__(
         self,
         command: str,
+        experiment_root: str | pathlib.Path | None = None,
         *,
         output_dpath: str | pathlib.Path | None = None,
-        experiment_root: str | pathlib.Path | None = None,
     ):
         '''
         Initialize the configurator.
@@ -69,6 +69,7 @@ class BaseConfigurator:
             dt_cfg.harmonization.output_dpath = str(_paths.data_harmonization.root)
             dt_cfg.ingestion.output_dpath = str(_paths.data_ingestion.root)
             dt_cfg.preparation.output_dpath = str(_paths.data_preparation.root)
+            self.cfg.session.output_dpath = str(_paths.session.root)
 
 
     def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
