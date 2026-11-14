@@ -53,7 +53,7 @@ landseg = ["configs/**/*.yaml", "configs/*.yaml", "py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-ra"
+addopts = "-ra --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning:rasterio.*",
     "ignore:Setting the shape on a NumPy array:DeprecationWarning",

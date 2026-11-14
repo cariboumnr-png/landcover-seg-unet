@@ -46,6 +46,7 @@ def test_batch_ingest_multi_batch_catchup_and_idempotence(
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
+    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
     grid_cfg.ref_fpath = dummy_data_paths.extent
     grid_cfg.tile_size = (256, 256)
     grid_cfg.tile_stride = (128, 128)
@@ -98,6 +99,7 @@ def test_data_ingest_targeted_harmonization_run(
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
+    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
     grid_cfg.ref_fpath = dummy_data_paths.extent
     grid_cfg.tile_size = (256, 256)
     grid_cfg.tile_stride = (128, 128)
@@ -148,6 +150,7 @@ def test_data_ingest_with_spectral_and_topo_derivation(
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
     grid_cfg = cfg_schema.data.world_grid
     grid_cfg.mode = 'ref'
+    grid_cfg.output_dpath = str(tmp_path / 'world_grids')
     grid_cfg.ref_fpath = dummy_data_paths.extent
     grid_cfg.tile_size = (256, 256)
     grid_cfg.tile_stride = (128, 128)

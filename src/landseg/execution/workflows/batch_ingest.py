@@ -53,7 +53,7 @@ def execute_batch_ingest(config: configs.RootConfig) -> None:
     planned_batches = ingest.resolve_pending_ingestion_batches(
         artifact_paths.data_harmonization.runs_manifest,
         artifact_paths.data_ingestion.runs_manifest,
-        target=config.data.ingestion.harmonization_run or 'latest',
+        target=config.data.ingestion.harmonization_run,
         rebuild=config.data.ingestion.rebuild,
     )
 

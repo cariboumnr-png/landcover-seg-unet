@@ -120,4 +120,8 @@ class DataIngestion(base.GeoPipeline):
             target=target,
             rebuild=self.config.data.ingestion.rebuild,
         )
+        if not batches:
+            raise artifacts.ArtifactError(
+                f'No pending harmonization runs found for target "{target}".'
+            )
         return batches[0]

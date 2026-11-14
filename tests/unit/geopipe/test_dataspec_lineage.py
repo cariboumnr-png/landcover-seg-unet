@@ -33,6 +33,7 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.factory as factory
+import landseg.geopipe.prepare.materialize.schema as prep_schema
 
 
 # ----- `build_dataspec` lineage tests
@@ -149,8 +150,6 @@ def test_prepared_schema_records_ingestion_provenance(tmp_path):
     When: Building the prepared schema artifact.
     Then: Persist the ingestion path, relative path, and checksum.
     '''
-    from landseg.geopipe.prepare.materialize import schema as prep_schema
-
     ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
     prep = tmp_path / 'prepared'
     prep.mkdir()
