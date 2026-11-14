@@ -54,17 +54,27 @@ class CallbackDispatcher(contracts.SessionObserverLike):
             cb.on_session_phase_begin(phase)
 
     # session step begins
-    def on_session_step_begin(self) -> None: ...
+    def on_session_step_begin(self) -> None:
+        for cb in self.callbacks:
+            cb.on_session_step_begin()
 
     # epoch begins
-    def on_epoch_begin(self, epoch: int) -> None: ...
+    def on_epoch_begin(self, epoch: int) -> None:
+        for cb in self.callbacks:
+            cb.on_epoch_begin(epoch)
 
     # policy begins
-    def on_train_policy_begin(self) -> None: ...
+    def on_train_policy_begin(self) -> None:
+        for cb in self.callbacks:
+            cb.on_train_policy_begin()
 
-    def on_val_policy_begin(self) -> None: ...
+    def on_val_policy_begin(self) -> None:
+        for cb in self.callbacks:
+            cb.on_val_policy_begin()
 
-    def on_infer_policy_begin(self) -> None: ...
+    def on_infer_policy_begin(self) -> None:
+        for cb in self.callbacks:
+            cb.on_infer_policy_begin()
 
     # batch begins
     def on_batch_begin(self, action: str, bidx: int) -> None:
@@ -78,9 +88,13 @@ class CallbackDispatcher(contracts.SessionObserverLike):
         for cb in self.callbacks:
             cb.on_train_batch_end(bidx, results)
 
-    def on_val_batch_end(self) -> None: ...
+    def on_val_batch_end(self) -> None:
+        for cb in self.callbacks:
+            cb.on_val_batch_end()
 
-    def on_infer_batch_end(self) -> None: ...
+    def on_infer_batch_end(self) -> None:
+        for cb in self.callbacks:
+            cb.on_infer_batch_end()
 
     # policy ends
     def on_train_policy_end(self, results: core.TrainStepResults) -> None:
@@ -96,7 +110,9 @@ class CallbackDispatcher(contracts.SessionObserverLike):
             cb.on_infer_policy_end(results)
 
     # epoch ends
-    def on_epoch_end(self, epoch: int) -> None: ...
+    def on_epoch_end(self, epoch: int) -> None:
+        for cb in self.callbacks:
+            cb.on_epoch_end(epoch)
 
     # session step ends
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:

@@ -127,46 +127,53 @@ class ContinuousRunner(base.BaseRunner):
         ).run()
 
         # advance generator manually to capture yields and returns
-        while True:
+        try:
+            while True:
 
-            try:
-                e = next(events_stream)
-            except StopIteration:
-                return # already at the end of phase
+                try:
+                    e = next(events_stream)
+                except StopIteration:
+                    return # already at the end of phase
 
-            # runner intercepts events to perform side effects
-            match e:
+                # runner intercepts events to perform side effects
+                match e:
 
-                case events.EpochStart(epoch_index=epoch):
-                    self.dispatcher.on_epoch_begin(epoch)
+                    case events.EpochStart(epoch_index=epoch):
+                        self.dispatcher.on_epoch_begin(epoch)
 
-                case events.EpochEnd(epoch_index=epoch):
+                    case events.EpochEnd(epoch_index=epoch):
 
-                    # epoch tracking
-                    self._current_epoch = epoch
-                    self._is_phase_end = epoch==self.phase.num_epochs
-                    # dispatch
-                    self.dispatcher.on_epoch_end(epoch)
+                        # epoch tracking
+                        self._current_epoch = epoch
+                        self._is_phase_end = epoch==self.phase.num_epochs
+                        # dispatch
+                        self.dispatcher.on_epoch_end(epoch)
 
-                case events.MetricsReport(
-                    best_so_far=best_so_far,
-                    best_epoch=best_epoch,
-                    is_best_epoch=is_best_epoch,
-                    raw_metrics=metrics
-                ):
+                    case events.MetricsReport(
+                        best_so_far=best_so_far,
+                        best_epoch=best_epoch,
+                        is_best_epoch=is_best_epoch,
+                        raw_metrics=metrics
+                    ):
 
-                    # metrics tracking
-                    self._best_value_so_far = best_so_far
-                    self._best_epoch_so_far = best_epoch
-                    self._is_best_epoch = is_best_epoch
-                    self._current_metrics = metrics
+                        # metrics tracking
+                        self._best_value_so_far = best_so_far
+                        self._best_epoch_so_far = best_epoch
+                        self._is_best_epoch = is_best_epoch
+                        self._current_metrics = metrics
 
-                    # normal yield
-                    if not self._is_phase_end:
-                        yield self._get_step(reason=None)
-                    # yield at the end
-                    else:
-                        reason = 'Max epoch reached'
+                        # normal yield
+                        if not self._is_phase_end:
+                            yield self._get_step(reason=None)
+                        # yield at the end
+                        else:
+                            reason = 'Max epoch reached'
+                            self._is_phase_end = True
+                            yield self._get_step(reason=reason)
+
+                    case events.StopRun(reason=reason):
+
+                        # yield and exit on stop signal
                         self._is_phase_end = True
                         yield self._get_step(reason=reason)
                         self.dispatcher.on_session_phase_end(
@@ -174,18 +181,15 @@ class ContinuousRunner(base.BaseRunner):
                         )
                         return
 
-                case events.StopRun(reason=reason):
+                    case events.CheckpointRequest(tag=tag):
+                        self._save_progress(self.phase.name, is_best=tag=='best')
 
-                    # yield and exit on stop signal
-                    self._is_phase_end = True
-                    yield self._get_step(reason=reason)
-                    self.dispatcher.on_session_phase_end(
-                        self.phase.name, reason
-                    )
-                    return
-
-                case events.CheckpointRequest(tag=tag):
-                    self._save_progress(self.phase.name, is_best=tag=='best')
+                    case events.PhaseEnd(phase_name=phase_name):
+                        reason = 'Max epoch reached'
+                        self.dispatcher.on_session_phase_end(phase_name, reason)
+                        return
+        finally:
+            self.dispatcher.on_session_end()
 
     def _get_step(self, reason: str | None = None) -> core.SessionStepSummary:
         '''Helper to generate a step dataclass from self trackers.'''

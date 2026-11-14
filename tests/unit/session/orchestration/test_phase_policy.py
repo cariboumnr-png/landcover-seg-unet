@@ -98,6 +98,17 @@ def test_phase_policy_run_generator_flow(mock_epoch_engine, session_config):
     assert any(isinstance(e, events.PhaseEnd) for e in events_emitted)
     assert isinstance(best_value, float)
 
+    # ensure MetricsReport precedes CheckpointRequest
+    metrics_idx = next(
+        i for i, e in enumerate(events_emitted)
+        if isinstance(e, events.MetricsReport)
+    )
+    ckpt_idx = next(
+        i for i, e in enumerate(events_emitted)
+        if isinstance(e, events.CheckpointRequest)
+    )
+    assert metrics_idx < ckpt_idx
+
 
 def test_phase_policy_early_stopping(mock_epoch_engine, session_config):
     '''

@@ -116,84 +116,95 @@ class CurriculumRunner(base.BaseRunner):
                 abandoning the step stream.
         '''
         # iterate through provided phases
-        for i, phase in enumerate(self.phases):
+        try:
+            for i, phase in enumerate(self.phases):
 
-            # reset flag
-            self._is_phase_end = False
-            # dispatch at phase begininng
-            self.dispatcher.on_session_phase_begin(phase)
+                # reset flag
+                self._is_phase_end = False
+                # dispatch at phase begininng
+                self.dispatcher.on_session_phase_begin(phase)
 
-            # get phase events stream
-            events_stream = policy.PhasePolicy(
-                epoch_runner=self.epoch_runner,
-                phase_config=phase,
-                track_config=self.tracking,
-            ).run()
+                # get phase events stream
+                events_stream = policy.PhasePolicy(
+                    epoch_runner=self.epoch_runner,
+                    phase_config=phase,
+                    track_config=self.tracking,
+                ).run()
 
-            # advance generator manually to capture yields and returns
-            while True:
+                # advance generator manually to capture yields and returns
+                while True:
 
-                try:
-                    e = next(events_stream)
-                    self._global_epoch += 1
-                except StopIteration:
-                    break # already at the end of phase
+                    try:
+                        e = next(events_stream)
+                    except StopIteration:
+                        break # already at the end of phase
 
-                # runner intercepts events to perform side effects
-                match e:
+                    # runner intercepts events to perform side effects
+                    match e:
 
-                    case events.EpochStart(epoch_index=epoch):
-                        self.dispatcher.on_epoch_begin(epoch)
+                        case events.EpochStart(epoch_index=epoch):
+                            self.dispatcher.on_epoch_begin(epoch)
 
-                    case events.EpochEnd(epoch_index=epoch):
+                        case events.EpochEnd(epoch_index=epoch):
 
-                        # epoch and run tracking
-                        self._current_epoch = epoch
-                        self._is_phase_end = epoch==phase.num_epochs
-                        self._is_run_end = (
-                            self._is_phase_end and
-                            i == len(self.phases) - 1
-                        )
-                        # dispatch
-                        self.dispatcher.on_epoch_end(epoch)
+                            # epoch and run tracking
+                            self._current_epoch = epoch
+                            self._is_phase_end = epoch==phase.num_epochs
+                            self._is_run_end = (
+                                self._is_phase_end and
+                                i == len(self.phases) - 1
+                            )
+                            # dispatch
+                            self.dispatcher.on_epoch_end(epoch)
 
-                    case events.MetricsReport(
-                        best_so_far=best_so_far,
-                        best_epoch=best_epoch,
-                        is_best_epoch=is_best_epoch,
-                        raw_metrics=metrics
-                    ):
-
-                        # metrics logging
-                        self._current_metrics = metrics
-
-                        # normal yield
-                        step = core.SessionStepSummary(
-                            # id/loc
-                            phase_name=phase.name,
-                            phase_index=i,
-                            phase_max_epoch=phase.num_epochs,
-                            epoch_in_phase=self._current_epoch,
-                            global_epoch=self._global_epoch,
-                            # control
-                            is_phase_end=self._is_phase_end,
-                            is_run_end=self._is_run_end,
-                            stop_reason=None,
-                            # metrics
-                            val_metrics_name=metrics.target_objective,
-                            val_metrics_value=metrics.target_metrics,
-                            best_value_so_far=best_so_far,
-                            best_epoch_so_far=best_epoch,
+                        case events.MetricsReport(
+                            best_so_far=best_so_far,
+                            best_epoch=best_epoch,
                             is_best_epoch=is_best_epoch,
-                            raw_metrics=metrics,
-                        )
-                        self.dispatcher.on_session_step_end(step)
-                        yield step
+                            raw_metrics=metrics
+                        ):
 
-                    case events.CheckpointRequest(tag=tag):
-                        self._save_progress(phase.name, is_best=tag=='best')
+                            # metrics logging
+                            self._current_metrics = metrics
 
-                    case events.PhaseEnd:
-                        reason = 'Max epoch reached'
-                        self.dispatcher.on_session_phase_end(phase.name, reason)
-                        break
+                            # normal yield
+                            step = core.SessionStepSummary(
+                                # id/loc
+                                phase_name=phase.name,
+                                phase_index=i,
+                                phase_max_epoch=phase.num_epochs,
+                                epoch_in_phase=self._current_epoch,
+                                global_epoch=self._global_epoch,
+                                # control
+                                is_phase_end=self._is_phase_end,
+                                is_run_end=self._is_run_end,
+                                stop_reason=None,
+                                # metrics
+                                val_metrics_name=metrics.target_objective,
+                                val_metrics_value=metrics.target_metrics,
+                                best_value_so_far=best_so_far,
+                                best_epoch_so_far=best_epoch,
+                                is_best_epoch=is_best_epoch,
+                                raw_metrics=metrics,
+                            )
+                            self.dispatcher.on_session_step_end(step)
+                            yield step
+                            self._global_epoch += 1
+
+                        case events.CheckpointRequest(tag=tag):
+                            self._save_progress(phase.name, is_best=tag=='best')
+
+                        case events.StopRun(reason=reason):
+                            self.dispatcher.on_session_phase_end(
+                                phase.name, reason
+                            )
+                            break
+
+                        case events.PhaseEnd:
+                            reason = 'Max epoch reached'
+                            self.dispatcher.on_session_phase_end(
+                                phase.name, reason
+                            )
+                            break
+        finally:
+            self.dispatcher.on_session_end()

@@ -64,6 +64,7 @@ def test_curriculum_runner_run_generator(
     Then: Execute phases in sequence and yield steps per epoch.
     '''
     mocker.patch('landseg.artifacts.save_checkpoint', autospec=True)
+    on_end = mocker.spy(mock_dispatcher, 'on_session_end')
 
     phases = [
         orch_sec.PhaseConfig(name='phase_1', num_epochs=1),
@@ -81,8 +82,11 @@ def test_curriculum_runner_run_generator(
 
     assert len(steps) == 2
     assert steps[0].phase_name == 'phase_1'
+    assert steps[0].global_epoch == 1
     assert steps[1].phase_name == 'phase_2'
+    assert steps[1].global_epoch == 2
     assert steps[1].is_run_end is True
+    assert on_end.call_count == 1
 
 
 def test_curriculum_runner_execute(

@@ -62,10 +62,11 @@ def test_continuous_runner_run_generator(
     When: Iterating over generator returned by `run()`.
     Then: Yield `TrainingStep` per epoch plus final terminal step.
     '''
-    mocker.patch(
+    mock_save = mocker.patch(
         'landseg.artifacts.save_checkpoint',
         autospec=True
     )
+    on_end = mocker.spy(mock_dispatcher, 'on_session_end')
     phase = session_config.orchestration.single_phase
     phase.num_epochs = 2
 
@@ -82,6 +83,14 @@ def test_continuous_runner_run_generator(
     assert steps[0].epoch_in_phase == 1
     assert steps[1].epoch_in_phase == 2
     assert steps[1].is_run_end is True
+
+    # assert on_session_end dispatched cleanly
+    assert on_end.call_count == 1
+
+    # assert checkpoint recorded valid metric for epoch 1
+    first_ckpt_meta = mock_save.call_args_list[0].kwargs['ckpt_meta']
+    assert first_ckpt_meta['metric'] != -float('inf')
+    assert first_ckpt_meta['metric'] == steps[0].val_metrics_value
 
 
 def test_continuous_runner_execute(

@@ -41,6 +41,32 @@ class MockCallback(cb_base.BaseCallback):
         _ = action, bidx
         self.calls.append('on_batch_begin')
 
+    def on_session_step_begin(self) -> None:
+        self.calls.append('on_session_step_begin')
+
+    def on_epoch_begin(self, epoch: int) -> None:
+        _ = epoch
+        self.calls.append('on_epoch_begin')
+
+    def on_train_policy_begin(self) -> None:
+        self.calls.append('on_train_policy_begin')
+
+    def on_val_policy_begin(self) -> None:
+        self.calls.append('on_val_policy_begin')
+
+    def on_infer_policy_begin(self) -> None:
+        self.calls.append('on_infer_policy_begin')
+
+    def on_val_batch_end(self) -> None:
+        self.calls.append('on_val_batch_end')
+
+    def on_infer_batch_end(self) -> None:
+        self.calls.append('on_infer_batch_end')
+
+    def on_epoch_end(self, epoch: int) -> None:
+        _ = epoch
+        self.calls.append('on_epoch_end')
+
     def on_train_policy_end(self, results: core.TrainStepResults) -> None:
         _ = results
         self.calls.append('on_train_policy_end')
@@ -83,13 +109,29 @@ def test_dispatcher_event_broadcasting():
     mock_cb = MockCallback()
     dispatcher = disp_mod.CallbackDispatcher([mock_cb])
 
+    dispatcher.on_session_step_begin()
+    dispatcher.on_epoch_begin(1)
+    dispatcher.on_train_policy_begin()
+    dispatcher.on_val_policy_begin()
+    dispatcher.on_infer_policy_begin()
     dispatcher.on_batch_begin('Training', 1)
+    dispatcher.on_val_batch_end()
+    dispatcher.on_infer_batch_end()
+    dispatcher.on_epoch_end(1)
     dispatcher.on_train_policy_end(core.TrainStepResults())
     dispatcher.on_val_policy_end(core.ValStepResults())
     dispatcher.on_session_end()
 
     assert mock_cb.calls == [
+        'on_session_step_begin',
+        'on_epoch_begin',
+        'on_train_policy_begin',
+        'on_val_policy_begin',
+        'on_infer_policy_begin',
         'on_batch_begin',
+        'on_val_batch_end',
+        'on_infer_batch_end',
+        'on_epoch_end',
         'on_train_policy_end',
         'on_val_policy_end',
         'on_session_end'
