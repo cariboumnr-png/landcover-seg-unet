@@ -308,18 +308,17 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         if self.concat is not None:
             x = self.concat(x, concat)
 
-        # force float32 with clamping control for gradient stability
-        with self.num_safety.autocast_context(enable=False):
-            # encoders
-            x1, x2, x3, x4, xb = self.body.encode(self.num_safety.clamp(x))
+        # feature extraction with clamping control for gradient stability
+        # encoders
+        x1, x2, x3, x4, xb = self.body.encode(self.num_safety.clamp(x))
+        xb = self.num_safety.clamp(xb)
+        # FiLM at bottom if provided
+        if self.film is not None:
+            xb = self.film(xb, film)
             xb = self.num_safety.clamp(xb)
-            # FiLM at bottom if provided
-            if self.film is not None:
-                xb = self.film(xb, film)
-                xb = self.num_safety.clamp(xb)
-            # decoders
-            xs = tuple(self.num_safety.clamp(x) for x in [x1, x2, x3, x4, xb])
-            x = self.body.decode(xs)
+        # decoders
+        xs = tuple(self.num_safety.clamp(x) for x in [x1, x2, x3, x4, xb])
+        x = self.body.decode(xs)
 
         # return features
         return x

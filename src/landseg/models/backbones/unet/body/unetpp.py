@@ -177,7 +177,11 @@ class UNetPP(body.UNetBackbone):
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Return 5-level encoder features.'''
 
-        return self.downs(x)
+        # unpack the 5 levels
+        x1, x2, x3, x4, x5 = self.downs(x)
+        # apply bottleneck to the deepest encoder feature
+        xb = self.bottleneck(x5)
+        return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
         '''Decode nested UNet++ refinement graph.'''

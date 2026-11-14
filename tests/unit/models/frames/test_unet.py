@@ -160,10 +160,14 @@ def test_multihead_unet_head_management(
 
     model.set_frozen_heads(['head_1'])
     assert model.heads.frozen == ['head_1']
+    for p in model.heads.outc['head_1'].parameters():
+        assert not p.requires_grad
 
     model.reset_heads()
     assert model.heads.active is None
     assert model.heads.frozen is None
+    for p in model.heads.outc['head_1'].parameters():
+        assert p.requires_grad
 
 
 def test_multihead_unet_logit_adjust_properties(
@@ -234,3 +238,61 @@ def test_multihead_unet_forward_pass(
     assert 'head_2' in outputs
     assert outputs['head_1'].shape == (2, 2, 256, 256)
     assert outputs['head_2'].shape == (2, 3, 256, 256)
+
+
+def test_multihead_unetppp_with_film_forward(
+    dataspecs,
+    mock_backbone_config_factory,
+    mock_domain_config_factory,
+):
+    '''
+    Given: A MultiHeadUNet configured with UNetPPP and FiLM conditioner.
+    When: Running forward pass.
+    Then: Successfully compute outputs without bottleneck channel mismatch.
+    '''
+    backbone_cfg = mock_backbone_config_factory(
+        body_type='unetppp', base_ch=16
+    )
+    conditioning_cfg = {
+        'film': mock_domain_config_factory(use_vec=True, vec_proj_dims=4),
+    }
+
+    model = frames_unet.MultiHeadUNet(
+        input_patch_size=256,
+        dataspecs=dataspecs,
+        backbone_config=backbone_cfg,
+        conditioning_config=conditioning_cfg,
+    )
+
+    batch = model.build_dummy_batch(batch_size=2)
+    outputs = model(batch['x'], vec_domain=batch['vec_domain'])
+
+    assert isinstance(outputs, dict)
+    assert 'head_1' in outputs
+    assert outputs['head_1'].shape == (2, 2, 256, 256)
+
+
+def test_unetpp_and_unetppp_bottleneck_executed(
+    dataspecs,
+    mock_backbone_config_factory,
+    mocker,
+):
+    '''
+    Given: MultiHeadUNet with unetpp and unetppp backbones.
+    When: Running forward pass.
+    Then: Verify the bottleneck module is explicitly executed.
+    '''
+    for body_type in ('unetpp', 'unetppp'):
+        backbone_cfg = mock_backbone_config_factory(
+            body_type=body_type, base_ch=16, bottleneck='conv'
+        )
+        model = frames_unet.MultiHeadUNet(
+            input_patch_size=256,
+            dataspecs=dataspecs,
+            backbone_config=backbone_cfg,
+            conditioning_config={},
+        )
+        spy = mocker.spy(model.body.bottleneck, 'forward')
+        batch = model.build_dummy_batch(batch_size=1)
+        model(batch['x'])
+        assert spy.call_count == 1

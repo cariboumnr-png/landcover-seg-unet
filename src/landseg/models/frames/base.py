@@ -195,7 +195,8 @@ class MultiHeadBaseModel(abc.ABC, torch.nn.Module):
         self.heads.freeze(frozen_heads)
 
     def reset_heads(self):
-        '''Clear active/frozen head selections.'''
+        '''Clear active/frozen head selections and unfreeze parameters.'''
+        self.heads.unfreeze()
         self.heads.active = None
         self.heads.frozen = None
 

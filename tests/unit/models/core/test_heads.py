@@ -127,6 +127,35 @@ def test_head_manager_freeze():
         assert p.requires_grad
 
 
+def test_head_manager_unfreeze():
+    '''
+    Given: HeadManager instance with frozen heads.
+    When: Calling unfreeze for selected heads or all heads.
+    Then: Restore requires_grad to True for target head parameters.
+    '''
+    in_ch = 8
+    heads_dict = {'head_a': 2, 'head_b': 3}
+    hm = heads.HeadManager(in_ch, heads_dict)
+
+    hm.freeze(['head_a', 'head_b'])
+    for p in hm.outc['head_a'].parameters():
+        assert not p.requires_grad
+    for p in hm.outc['head_b'].parameters():
+        assert not p.requires_grad
+
+    # unfreeze specific head
+    hm.unfreeze(['head_a'])
+    for p in hm.outc['head_a'].parameters():
+        assert p.requires_grad
+    for p in hm.outc['head_b'].parameters():
+        assert not p.requires_grad
+
+    # unfreeze all
+    hm.unfreeze()
+    for p in hm.outc['head_b'].parameters():
+        assert p.requires_grad
+
+
 # ----- `HeadManager` logit adjustment
 def test_head_manager_logit_adjustment():
     '''

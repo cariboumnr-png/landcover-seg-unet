@@ -129,7 +129,7 @@ class UNetPPP(body.UNetBackbone):
     @property
     def bottleneck_ch(self) -> int:
         '''Return the bottleneck channel number.'''
-        return self._out_channels # same
+        return self._out_channels * 16
 
     @property
     def out_channels(self) -> int:
@@ -190,7 +190,11 @@ class UNetPPP(body.UNetBackbone):
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''Run encoder path and return multi-scale feature hierarchy.'''
 
-        return self.downs(x)
+        # unpack the 5 levels
+        x1, x2, x3, x4, x5 = self.downs(x)
+        # apply bottleneck to the deepest encoder feature
+        xb = self.bottleneck(x5)
+        return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
         '''UNet3+ full-scale feature aggregation decoder.'''

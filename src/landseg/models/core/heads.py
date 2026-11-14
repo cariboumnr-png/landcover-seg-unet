@@ -99,6 +99,18 @@ class HeadManager(torch.nn.Module):
             for p in self.outc[h].parameters():
                 p.requires_grad = False
 
+    def unfreeze(self, unfrozen_heads: list[str] | None = None) -> None:
+        '''Enable gradients of selected heads, or all if None.'''
+        targets = (
+            unfrozen_heads
+            if unfrozen_heads is not None
+            else list(self.outc.keys())
+        )
+        for h in targets:
+            if h in self.outc:
+                for p in self.outc[h].parameters():
+                    p.requires_grad = True
+
     @staticmethod
     def _apply_logit_adjust(
         head: str,
