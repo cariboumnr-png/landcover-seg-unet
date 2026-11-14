@@ -43,11 +43,12 @@ import landseg.mlops.storage as storage_mod
 
 # ----- public functions
 def register_unity_catalog_model(
-    exp_root: str | pathlib.Path,
+    exp_root: str | pathlib.Path | None = None,
     catalog: str = 'main',
     schema: str = 'landcover',
     model_name: str = 'landseg_unet',
     *,
+    session_dpath: str | pathlib.Path | None = None,
     checkpoint_path: str | pathlib.Path | None = None,
     tags: dict[str, str] | None = None,
     dbutils: typing.Any = None,
@@ -70,6 +71,8 @@ def register_unity_catalog_model(
             Unity Catalog schema/database name (default: 'landcover').
         model_name:
             Registered model name identifier (default: 'landseg_unet').
+        session_dpath:
+            Optional direct destination session directory path.
         checkpoint_path:
             Optional explicit path to the model checkpoint binary (.pt).
         tags:
@@ -82,7 +85,8 @@ def register_unity_catalog_model(
             `mlflow.entities.model_registry.ModelVersion` instance if registered
             in Databricks, or a summary metadata dictionary if executed locally.
     '''
-    resolved_root = storage_mod.resolve_exp_root(exp_root, dbutils=dbutils)
+    target = session_dpath if session_dpath is not None else exp_root
+    resolved_root = storage_mod.resolve_exp_root(target, dbutils=dbutils)
     target_ckpt = _resolve_checkpoint(resolved_root, checkpoint_path)
 
     # Collect governance metadata

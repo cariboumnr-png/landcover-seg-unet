@@ -1,6 +1,6 @@
 # ADR-0067: Decoupled Stage I/O and Auxiliary Experiment Root
 
-**Status:** Proposed<br>
+**Status:** Accepted — Implemented<br>
 **Date:** 2026-11-13<br>
 **Supersedes:** [ADR-0007](ADR-0007-unified-experiment-io.md)<br>
 **Related:** [ADR-0054](ADR-0054-etl-first-architecture-and-artifact-renaming.md),
@@ -129,10 +129,10 @@ recipes with earlier ETL pipeline stages that training should never manage.
 
 ## 2. Decision
 
-We will formally **supersede ADR-0007**. We will establish **Explicit
+We have formally **superseded ADR-0007**. We established **Explicit
 Decoupled Stage I/O** as the primary, first-class contract across the entire
 codebase, enforce **strictly single upstream dependencies** between stages,
-and demote `exp_root` to an **optional auxiliary convenience macro**.
+and demoted `exp_root` to an **optional auxiliary convenience macro**.
 
 ```mermaid
 flowchart TD
@@ -152,7 +152,7 @@ flowchart TD
     end
 ```
 
-The architecture will be structured around five core pillars:
+The architecture is structured around five core pillars:
 1. Pure Decoupled Stage Contracts
 2. Single Upstream Lineage for Model Training (Ingestion Schema Forwarding)
 3. Optional `exp_root` in Configuration Schemas
@@ -163,7 +163,7 @@ The architecture will be structured around five core pillars:
 
 ### 2.1. Pure Decoupled Stage Contracts
 
-Every pipeline command and configurator will operate strictly on explicit
+Every pipeline command and configurator operates strictly on explicit
 input source paths and explicit output destination paths:
 
 | Stage Command | Direct Upstream Inputs | Destination Output (`output_dpath`) |
@@ -175,8 +175,8 @@ input source paths and explicit output destination paths:
 | `model-train` | Prepared dataset (`preparation_dpath`) | Run results, logs, and checkpoints (`output_dpath`) |
 | `study-sweep` | Prepared dataset (`preparation_dpath`), Optuna storage backend | Sweep trial records and Pareto checkpoints (`output_dpath`) |
 
-Each stage in the primary training path will have exactly **one upstream data
-input**. Configurators and CLI entrypoints will no longer require or assume
+Each stage in the primary training path has exactly **one upstream data
+input**. Configurators and CLI entrypoints no longer require or assume
 that these paths reside in the same directory branch.
 
 ---
@@ -184,13 +184,13 @@ that these paths reside in the same directory branch.
 ### 2.2. Single Upstream Lineage for Model Training (Schema Forwarding)
 
 To eliminate the dual-upstream dependency in `model-train` and `study-sweep`,
-the data preparation stage will record upstream provenance directly inside
+the data preparation stage records upstream provenance directly inside
 the preparation schema and execution report:
 
 1. **`PreparedSchema` Upstream Provenance**:
    During `data-prepare` (`src/landseg/geopipe/prepare/materialize/schema.py`),
-   the preparation runner already resolves and validates the ingestion schema.
-   When materializing `PreparedSchema`, the builder will record the resolved
+   the preparation runner resolves and validates the ingestion schema.
+   When materializing `PreparedSchema`, the builder records the resolved
    ingestion schema artifact path and its SHA-256 checksum in `PreparedSchema`:
    ```python
    collected_artifacts = {
@@ -201,49 +201,47 @@ the preparation schema and execution report:
        'image_stats': str(paths.image_stats.resolve()),
    }
    ```
-   The preparation summary report (`contracts.SchemaReport`) will similarly
-   record `ingestion_schema_filepath` for operational diagnostics.
+   The preparation summary report (`contracts.SchemaReport`) similarly
+   records `ingestion_schema_filepath` for operational diagnostics.
 
 2. **Self-Contained DataSpecs Assembly**:
-   We will update `build_dataspec` (`src/landseg/geopipe/factory.py`) so that
-   its primary input contract is `preparation_dpath` (or `PreparationPaths`).
+   We refactored `build_dataspec` (`src/landseg/geopipe/factory.py`) so that
+   its primary input contract is strictly `preparation_dpath` (or `PreparationPaths`).
    When assembling `DataSpecs`:
-   - It will fetch `PreparedSchema` from `preparation_dpath`.
-   - It will resolve `data_schema_fpath` directly from
+   - It fetches `PreparedSchema` from `preparation_dpath`.
+   - It resolves `data_schema_fpath` directly from
      `prepared_schema['artifacts']['ingestion_schema']`.
-   - Domain tilemaps (`ids_domain_name`, `vec_domain_name`) will resolve
+   - Domain tilemaps (`ids_domain_name`, `vec_domain_name`) resolve
      relative to the ingestion schema location or embedded domain links.
-   - If an explicit `ingestion_dpath` is provided, it will serve as an
-     optional override rather than a required parameter.
+   - It operates with zero runtime dependency on `data_ingestion` arguments.
 
 3. **Single-Upstream Training Configurators**:
-   `TrainingSessionConfigurator` and `StudySweepConfigurator` will require
-   strictly `preparation_dpath` and `output_dpath`. The `ingestion_dpath`
-   argument will be demoted to an optional advanced override and deprecated
-   from standard workflows. This ensures downstream training jobs track
+   `TrainingSessionConfigurator` and `StudySweepConfigurator` require
+   strictly `preparation_dpath` (or `upstream_dpath`) and `output_dpath`.
+   The `ingestion_dpath` parameter was removed from `build_dataspec` and
+   `TrainingSessionConfigurator`. This ensures downstream training jobs track
    a single upstream data asset.
 
 4. **Preserving Clean Recipe Ergonomics (`model_train.yaml`)**:
    `configs/model_train.yaml`, `configs/study_sweep.yaml`, and
-   `configs/model_evaluate.yaml` will remain entirely free of `data.ingestion`.
-   They will continue declaring only `data.preparation.output_dpath` and
-   `session.output_dpath`, aligning runtime execution with what the user recipes
-   and preflight contracts already intended.
+   `configs/model_evaluate.yaml` remain entirely free of `data.ingestion`.
+   They declare only `data.preparation.output_dpath` and `session.output_dpath`,
+   aligning runtime execution with user recipes and preflight contracts.
 
 ---
 
 ### 2.3. Configuration Schema Decoupling (`RootConfig`)
 
-1. **Make `exp_root` Optional**:
-   `RootConfig.execution.exp_root` will be updated to:
+1. **Made `exp_root` Optional**:
+   `RootConfig.execution.exp_root` was updated to:
    ```python
    exp_root: str | None = None
    ```
-2. **Remove Hardcoded String Interpolations from Hydra Templates**:
-   Default YAML recipes (`src/landseg/configs/hydra/`) will define autonomous
+2. **Removed Hardcoded String Interpolations from Hydra Templates**:
+   Default YAML recipes (`src/landseg/configs/hydra/`) define autonomous
    stage defaults rather than relying on `${execution.exp_root}`.
    For example, `src/landseg/configs/hydra/data/harmonization/default.yaml`
-   will become:
+   became:
    ```yaml
    output_dpath: ./artifacts/harmonized_data
    ```
@@ -252,17 +250,16 @@ the preparation schema and execution report:
    output_dpath: ${execution.exp_root}/artifacts/harmonized_data
    ```
 3. **Strict Path Validation**:
-   When a stage executes, its respective section validator will verify only
-   its declared upstream and output paths. Unrelated stages will not validate
+   When a stage executes, its respective section validator verifies only
+   its declared upstream and output paths. Unrelated stages do not validate
    or create unneeded directory trees.
 
 ---
 
 ### 2.4. Autonomous Stage `ArtifactPaths` Namespaces
 
-Currently, `ArtifactPaths` assumes a centralized `root` from which all
-sub-namespaces descend. We will refactor `src/landseg/artifacts/paths/` so
-each stage's path helper can be instantiated directly and independently:
+`src/landseg/artifacts/paths/` was refactored so each stage's path helper
+can be instantiated directly and independently:
 
 ```python
 # Direct instantiation of session paths without parent root requirement
@@ -270,9 +267,9 @@ paths = SessionPaths(root=pathlib.Path('/Volumes/experiments/run_42'))
 checkpoint_path = paths.best_checkpoint('baseline')
 ```
 
-`ArtifactPaths` will remain as a top-level aggregation facade, but each
+`ArtifactPaths` remains as a top-level aggregation facade, but each
 property (`world_grid`, `data_harmonization`, `data_ingestion`,
-`data_preparation`, `session`) will operate strictly on its explicit directory
+`data_preparation`, `session`) operates strictly on its explicit directory
 root without falling back to a shared parent unless explicitly requested.
 
 ---
@@ -280,7 +277,7 @@ root without falling back to a shared parent unless explicitly requested.
 ### 2.5. Auxiliary Layout Presets for Local Development
 
 To preserve a seamless developer experience on single-directory local
-workstations, we will provide an auxiliary layout macro:
+workstations, we provided auxiliary layout macros:
 
 1. **Programmatic Factory**:
    ```python
@@ -289,15 +286,15 @@ workstations, we will provide an auxiliary layout macro:
        './experiment'
    )
    ```
-   This helper will cleanly derive:
+   This helper cleanly derives:
    - `preparation_dpath = './experiment/artifacts/prepared_data'`
    - `output_dpath = './experiment/results'`
-2. **Hydra Configuration Profile**:
-   A dedicated Hydra profile (`preset=local_experiment`) will configure the
-   unified directory structure for users executing standard CLI runs locally:
-   ```bash
-   landseg +preset=local_experiment exp_root=./experiment
-   ```
+2. **Default Recipe Relative Paths**:
+   Default Hydra recipe templates specify canonical relative paths
+   (e.g., `./experiment/artifacts/prepared_data` and
+   `./experiment/results`), allowing users to execute local end-to-end
+   experiments out of the box without requiring extra configuration flags
+   or preset overrides.
 
 ---
 
@@ -325,16 +322,17 @@ workstations, we will provide an auxiliary layout macro:
 - **Multiple CLI Path Arguments**:
   - *Trade-off*: Running individual stages without a unified root requires
     specifying upstream inputs and downstream outputs.
-  - *Mitigation*: Sensible default relative paths and the
-    `+preset=local_experiment` macro will maintain single-parameter
+  - *Mitigation*: Sensible default relative paths and programmatic
+    `from_experiment_root(...)` macros maintain single-parameter
     execution for local research.
 - **Schema Reference Portability**:
   - *Trade-off*: If an ingestion directory is physically relocated after data
     preparation, the absolute path recorded in
     `PreparedSchema['artifacts']['ingestion_schema']` may become stale.
-  - *Mitigation*: `build_dataspec` will accept an optional `ingestion_dpath`
-    override, and will support resolving ingestion schema relative to the
-    preparation directory when both live in a portable bundle.
+  - *Mitigation*: `build_dataspec` supports resolving ingestion schema either
+    via the absolute path recorded at preparation time or relative to the
+    preparation directory (`ingestion_schema_relpath`) when both live in a
+    portable bundle.
 - **Migration of Existing Custom Configs**:
   - *Trade-off*: Custom Hydra YAML files that strictly relied on overriding
     `execution.exp_root` will need to specify stage-specific paths.
@@ -344,47 +342,48 @@ workstations, we will provide an auxiliary layout macro:
 
 ---
 
-## 4. Implementation Plan
+## 4. Implementation Status
 
-The implementation will proceed across four phases:
+The implementation has been fully completed across four phases:
 
 ### Phase 1: Lineage Forwarding & Schema Primitives
-- Update `src/landseg/geopipe/core/prepared_schema.py` and
+- Updated `src/landseg/geopipe/core/prepared_schema.py` and
   `src/landseg/geopipe/prepare/materialize/schema.py` to record
   `ingestion_schema` path and checksum in `PreparedSchema`.
-- Update `src/landseg/geopipe/factory.py` (`build_dataspec`) to dynamically
+- Updated `src/landseg/geopipe/factory.py` (`build_dataspec`) to dynamically
   resolve `data_schema_fpath` from
-  `prepared_schema['artifacts']['ingestion_schema']`, making
-  `artifact_paths.data_ingestion` optional.
-- Update `TrainingSessionConfigurator` and `StudySweepConfigurator` in
-  `src/landseg/adapters/api/configurators/` to make `preparation_dpath` the
-  sole mandatory upstream dependency, deprecating `ingestion_dpath`.
-- Update `src/landseg/configs/schema/root.py` and `execution.py` to make
+  `prepared_schema['artifacts']['ingestion_schema']` and
+  `ingestion_schema_relpath`, with zero runtime coupling to `data_ingestion`.
+- Updated `TrainingSessionConfigurator` in
+  `src/landseg/adapters/api/configurators/model_train.py` to make
+  `preparation_dpath` the sole upstream dependency, eliminating redundant
+  `upstream_dpath` and `ingestion_dpath` parameters.
+- Updated `src/landseg/configs/schema/root.py` and `execution.py` to make
   `exp_root` optional (`str | None = None`).
-- Refactor `src/landseg/artifacts/paths/root.py` and sub-modules to allow
+- Refactored `src/landseg/artifacts/paths/root.py` and sub-modules to allow
   autonomous instantiation of stage paths without requiring a shared parent
   `root`.
-- Update Hydra default configuration files to remove `${execution.exp_root}`
+- Updated Hydra default configuration files to remove `${execution.exp_root}`
   string interpolations.
 
 ### Phase 2: Workflows & Preflight Decoupling
-- Update preflight validation catalog (`src/landseg/execution/preflight/`)
-  to validate stage-specific inputs and outputs directly rather than
-  querying `execution.exp_root`.
-- Update diagnostic workflows (`diagnose_overfit`, `study_analysis`) to
+- Updated preflight validation catalog (`src/landseg/execution/preflight/`)
+  and `pool_compatibility` check to validate stage-specific inputs and outputs
+  directly without requiring `world_grid` or `execution.exp_root`.
+- Updated diagnostic workflows (`diagnose_overfit`, `study_analysis`) to
   consume stage-specific paths.
-- Remove synthetic `output_dpath.parent` fallback logic from
+- Removed synthetic `output_dpath.parent` fallback logic from
   `BaseConfigurator`.
 
-### Phase 3: Auxiliary Presets & Convenience Helpers
-- Introduce `Configurator.from_experiment_root(...)` factory methods across
+### Phase 3: Auxiliary Convenience Helpers & MLOps Decoupling
+- Introduced `Configurator.from_experiment_root(...)` factory methods across
   all stage configurators.
-- Provide `+preset=local_experiment` Hydra profile for single-knob local
-  experimentation.
-- Update `src/landseg/mlops/storage.py` and `registry.py` to accept
-  decoupled target paths directly.
+- Updated `src/landseg/mlops/storage.py` (`sync_optuna_study`) and
+  `registry.py` (`register_unity_catalog_model`) to accept decoupled target
+  paths directly (`output_dpath`, `session_dpath`).
 
 ### Phase 4: Validation & Documentation
-- Author comprehensive unit tests covering standalone decoupled execution,
-  single-upstream training resolution, and auxiliary macro presets.
-- Update user guides, CLI documentation, and notebook references.
+- Authored comprehensive unit tests covering standalone decoupled execution,
+  single-upstream training resolution, preflight gating, MLOps storage/registry,
+  and auxiliary macro factories.
+- Validated test suite across all affected modules.

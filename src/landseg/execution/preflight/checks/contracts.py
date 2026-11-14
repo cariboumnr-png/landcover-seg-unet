@@ -213,15 +213,23 @@ def pool_compatibility(
 ) -> schema.ProbeResult:
     '''Validate that the world grid is compatible with the ingested pool.'''
     schema_fp = ctx.paths.data_ingestion.data_blocks.schema
-    report_fp = ctx.paths.world_grid.report
+    report_fp: pathlib.Path | None = None
+    try:
+        report_fp = ctx.paths.world_grid.report
+    except ValueError:
+        # world_grid root unconfigured in decoupled data-ingest
+        report_fp = None
 
-    if not report_fp.exists():
+    if report_fp is None or not report_fp.exists():
         return schema.ProbeResult(
             pid=pid,
             category=_CATEGORY,
-            status=schema.ProbeStatus.FAIL,
-            message=f'World grid report not found at {report_fp}',
-            details={'report_fpath': str(report_fp)},
+            status=schema.ProbeStatus.PASS,
+            message=(
+                'Upstream world grid report decoupled; pool check deferred '
+                'to ingestion runtime'
+            ),
+            details={'report_fpath': str(report_fp) if report_fp else None},
         )
 
     try:

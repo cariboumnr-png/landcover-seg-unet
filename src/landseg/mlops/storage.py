@@ -277,6 +277,7 @@ def sync_optuna_study(
     study_name: str,
     exp_root: str | pathlib.Path | None = None,
     *,
+    output_dpath: str | pathlib.Path | None = None,
     storage: str | None = None,
     top_k: int = 5,
     dbutils: typing.Any = None,
@@ -295,6 +296,8 @@ def sync_optuna_study(
             Identifier of the Optuna study to synchronize.
         exp_root:
             Optional persistent experiment root directory.
+        output_dpath:
+            Optional explicit persistent output destination directory.
         storage:
             Optional Optuna storage connection URI.
         top_k:
@@ -306,16 +309,20 @@ def sync_optuna_study(
         dict[str, typing.Any]:
             Summary dictionary recording persisted artifact paths and metrics.
     '''
-    resolved_root = resolve_exp_root(exp_root, dbutils=dbutils)
+    if output_dpath is not None:
+        target_dest = pathlib.Path(output_dpath)
+    else:
+        resolved_root = resolve_exp_root(exp_root, dbutils=dbutils)
+        target_dest = resolved_root / 'artifacts'
     resolved_storage = resolve_optuna_storage(storage, dbutils=dbutils)
 
     # Load Optuna study from scratch or remote storage
     study = optuna.load_study(study_name=study_name, storage=resolved_storage)
 
     # Prepare persistent volume destination
-    sweeps_dir = resolved_root / 'artifacts' / 'sweeps' / study_name
+    sweeps_dir = target_dest / 'sweeps' / study_name
     sweeps_dir.mkdir(parents=True, exist_ok=True)
-    checkpoints_dir = resolved_root / 'artifacts' / 'checkpoints'
+    checkpoints_dir = target_dest / 'checkpoints'
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Rank top completed trials
@@ -363,7 +370,7 @@ def sync_optuna_study(
     best_ckpt_dest = None
     if best_trial_num is not None:
         candidate_ckpts = list(
-            (resolved_root / 'artifacts').glob(f'**/*trial_{best_trial_num:04d}*.pt')
+            target_dest.glob(f'**/*trial_{best_trial_num:04d}*.pt')
         )
         if candidate_ckpts:
             src_ckpt = candidate_ckpts[0]

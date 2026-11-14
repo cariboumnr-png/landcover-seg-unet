@@ -52,24 +52,17 @@ def test_dataspec_uses_forwarded_ingestion_schema(tmp_path):
     assert specs.splits.train
 
 
-def test_dataspec_explicit_ingestion_override(tmp_path):
+def test_dataspec_rejects_missing_provenance(tmp_path):
     '''
-    Given: Recorded provenance plus an explicit ingestion override.
-    When: Building `DataSpecs` with `ingestion_dpath`.
-    Then: The override wins over the forwarded path.
+    Given: A prepared schema missing ingestion provenance.
+    When: Building `DataSpecs` from the preparation directory.
+    Then: Raise an informative error requiring data-prepare re-run.
     '''
-    ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
-    other = _write_ingestion(tmp_path / 'other', 'override')
     prep = tmp_path / 'run_42'
-    _write_prepared(prep, ing)
+    _write_prepared(prep, None, version='prepared_schema/v0.1.2')
 
-    specs = factory.build_dataspec(
-        _prep_paths(prep),
-        mode='default',
-        ingestion_dpath=other.parent.parent,
-    )
-
-    assert specs.name == 'override'
+    with pytest.raises(FileNotFoundError, match='no ingestion provenance'):
+        factory.build_dataspec(_prep_paths(prep), mode='default')
 
 
 def test_dataspec_relocated_prepared_bundle(tmp_path):
@@ -134,25 +127,19 @@ def test_dataspec_tolerates_updated_ingestion_schema(tmp_path):
     assert specs.name == 'lakehouse'
 
 
-def test_dataspec_legacy_schema_requires_fallback(tmp_path):
+def test_dataspec_rejects_unsupported_legacy_schema(tmp_path):
     '''
-    Given: A v0.1.1 prepared schema without provenance.
-    When: Building `DataSpecs` with and without a legacy ingestion root.
-    Then: Fail informatively first, then resolve via the fallback.
+    Given: A legacy v0.1.1 prepared schema without provenance.
+    When: Building `DataSpecs` from the preparation directory.
+    Then: Raise ArtifactError rejecting the deprecated schema version.
     '''
-    ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
     prep = tmp_path / 'run_42'
     _write_prepared(prep, None, version='prepared_schema/v0.1.1')
 
-    with pytest.raises(FileNotFoundError, match='no ingestion provenance'):
+    with pytest.raises(
+        artifacts.ArtifactError, match='Unsupported prepared schema'
+    ):
         factory.build_dataspec(_prep_paths(prep), mode='default')
-
-    specs = factory.build_dataspec(
-        _prep_paths(prep),
-        mode='default',
-        legacy_ingestion_dpath=ing.parent.parent,
-    )
-    assert specs.name == 'lakehouse'
 
 
 # ----- prepared schema provenance test

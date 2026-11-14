@@ -128,3 +128,25 @@ def test_register_model_databricks_simulation(
     assert registered_args['name'] == 'prod_catalog.landcover.sentinel_seg'
     assert registered_args['tags']['cluster_id'] == 'cluster-gpu-99'
     assert res.version == '3'
+
+
+def test_register_model_decoupled_session_dpath(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+):
+    '''
+    Given: A standalone session output directory without exp_root.
+    When: Registering model with session_dpath.
+    Then: Correctly resolves checkpoints inside the session directory.
+    '''
+    monkeypatch.delenv('DATABRICKS_RUNTIME_VERSION', raising=False)
+
+    session_dir = tmp_path / 'my_training_run'
+    ckpt_dir = session_dir / 'checkpoints'
+    ckpt_dir.mkdir(parents=True)
+    best_ckpt = ckpt_dir / 'best_model.pt'
+    best_ckpt.write_bytes(b'session_weights')
+
+    result = mlops.register_unity_catalog_model(session_dpath=session_dir)
+    assert result['status'] == 'SKIPPED_LOCAL'
+    assert result['checkpoint_path'] == str(best_ckpt)

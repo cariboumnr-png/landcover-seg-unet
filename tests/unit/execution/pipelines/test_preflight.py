@@ -820,3 +820,19 @@ def test_dir_writable_rejects_workspace_path():
     assert res.status == schema.ProbeStatus.FAIL
     assert '/Workspace' in res.message
     assert '.pt' in res.message
+
+
+def test_preflight_data_ingest_pool_compatibility_decoupled(tmp_path):
+    '''
+    Given: A decoupled configuration for data-ingest without world-grid.
+    When: Running pool_compatibility check.
+    Then: Return a PASS probe indicating check is deferred to runtime.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.ingestion.output_dpath = str(tmp_path / 'ingest')
+    cfg.data.harmonization.output_dpath = str(tmp_path / 'harm')
+    ctx = context.InspectionContext.from_config(cfg)
+
+    res = checks.contracts.pool_compatibility(ctx)
+    assert res.status == schema.ProbeStatus.PASS
+    assert 'decoupled' in res.message.lower()

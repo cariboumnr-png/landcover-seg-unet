@@ -36,7 +36,6 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         self,
         experiment_root: str | pathlib.Path | None = None,
         *,
-        ingestion_dpath: str | pathlib.Path | None = None,
         preparation_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
     ):
@@ -47,10 +46,6 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         )
         if experiment_root is None:
             self.cfg.session.output_dpath = self.output
-            if ingestion_dpath is not None:
-                self.cfg.data.ingestion.output_dpath = self.require_dir(
-                    ingestion_dpath
-                )
             if preparation_dpath is not None:
                 self.cfg.data.preparation.output_dpath = self.require_dir(
                     preparation_dpath

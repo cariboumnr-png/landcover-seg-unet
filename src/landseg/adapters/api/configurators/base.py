@@ -71,6 +71,19 @@ class BaseConfigurator:
             dt_cfg.preparation.output_dpath = str(_paths.data_preparation.root)
             self.cfg.session.output_dpath = str(_paths.session.root)
 
+    @classmethod
+    def from_experiment_root(
+        cls,
+        experiment_root: str | pathlib.Path,
+        **kwargs: typing.Any,
+    ) -> typing.Self:
+        '''
+        Create configurator instance populated from an experiment root.
+
+        Convenience factory populating canonical stage subdirectories
+        under `<exp_root>/artifacts/...` and `<exp_root>/results`.
+        '''
+        return cls(experiment_root=experiment_root, **kwargs)
 
     def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set destination output directory path for the active command.'''

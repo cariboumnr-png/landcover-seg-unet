@@ -28,9 +28,7 @@ evaluation routines.
 
 The preparation schema is the single upstream contract: it records the
 ingestion schema path and checksum it was materialized from, so training
-only needs the preparation directory. An explicit `ingestion_dpath` may
-override the recorded lineage, and `legacy_ingestion_dpath` keeps
-pre-v0.1.2 prepared datasets (which lack provenance) trainable.
+only needs the preparation directory.
 
 Public APIs:
     - build_dataspec: Assembles runtime DataSpecs from artifacts.
@@ -52,8 +50,7 @@ import landseg.knowledge as knowledge
 
 # ----- constants
 PREPARED_SCHEMA_IDS = (
-    'prepared_schema/v0.1.1',
-    'prepared_schema/v0.1.2',
+    geo_core.prepared_schema.SCHEMA_ID,
 )
 INGESTION_SCHEMA_KEY = 'ingestion_schema'
 INGESTION_SCHEMA_RELPATH_KEY = 'ingestion_schema_relpath'
@@ -66,8 +63,6 @@ def build_dataspec(
     mode: typing.Literal['default', 'single', 'val_only', 'test_only'],
     ids_domain_name: str | None = None,
     vec_domain_name: str | None = None,
-    ingestion_dpath: pathlib.Path | str | None = None,
-    legacy_ingestion_dpath: pathlib.Path | str | None = None,
     knowledge_root: pathlib.Path | str | None = None,
     verify_ingestion_checksum: bool = False,
 ) -> core.DataSpecs:
@@ -87,12 +82,6 @@ def build_dataspec(
             Optional name of categorical domain tilemap artifact.
         vec_domain_name:
             Optional name of continuous/vector domain artifact.
-        ingestion_dpath:
-            Optional explicit ingestion override (root directory or
-            schema file). Wins over recorded provenance.
-        legacy_ingestion_dpath:
-            Optional ingestion root used only when the preparation
-            schema predates provenance forwarding (v0.1.1).
         knowledge_root:
             Optional ecological knowledge root for similarity matrices.
         verify_ingestion_checksum:
@@ -124,8 +113,6 @@ def build_dataspec(
     data_schema_fpath = _resolve_ingestion_schema(
         prepared_schema,
         prep_root,
-        override=ingestion_dpath,
-        legacy=legacy_ingestion_dpath,
         verify=verify_ingestion_checksum,
     )
 
@@ -138,7 +125,7 @@ def build_dataspec(
 
     # domain maps live beside the canonical block pool
     ing_paths = artifacts.IngestionPaths(
-        _resolve_ingestion_root(data_schema_fpath, ingestion_dpath)
+        _resolve_ingestion_root(data_schema_fpath)
     )
     ids_domain = (
         _load_domain(ing_paths.domains.domain_map_fpath(ids_domain_name))
@@ -191,27 +178,14 @@ def _resolve_ingestion_schema(
     prepared_schema: geo_core.PreparedSchema,
     prep_root: pathlib.Path,
     *,
-    override: pathlib.Path | str | None,
-    legacy: pathlib.Path | str | None,
     verify: bool = False,
 ) -> pathlib.Path:
-    '''Resolve the ingestion schema path from provenance or override.'''
+    '''Resolve the ingestion schema path from forwarded provenance.'''
     artifacts_map = prepared_schema.get('artifacts', {})
     checksums = prepared_schema.get('checksums', {})
     recorded = artifacts_map.get(INGESTION_SCHEMA_KEY)
     relpath = artifacts_map.get(INGESTION_SCHEMA_RELPATH_KEY)
 
-    # explicit override wins
-    if override is not None:
-        candidate = _as_schema_path(pathlib.Path(override))
-        if candidate.is_file():
-            return candidate.resolve()
-        raise FileNotFoundError(
-            f'Ingestion override does not resolve to a schema file: '
-            f'{override}'
-        )
-
-    # forwarded provenance
     candidates: list[pathlib.Path] = []
     if recorded:
         candidates.append(pathlib.Path(recorded))
@@ -224,41 +198,21 @@ def _resolve_ingestion_schema(
                 _verify_ingestion_checksum(candidate, checksums)
             return candidate.resolve()
 
-    # legacy datasets without provenance
-    if legacy is not None and not recorded and not relpath:
-        candidate = _as_schema_path(pathlib.Path(legacy))
-        if candidate.is_file():
-            return candidate.resolve()
-
     if recorded or relpath:
         raise FileNotFoundError(
             'Forwarded ingestion schema is missing: '
             f'{recorded or relpath}. The upstream pool was relocated; '
-            'pass ingestion_dpath or re-run data-prepare.'
+            're-run data-prepare to update the prepared dataset.'
         )
     raise FileNotFoundError(
         'Preparation schema has no ingestion provenance '
-        f'({prepared_schema.get("schema_id")}). Pass ingestion_dpath or '
-        're-run data-prepare to upgrade the prepared dataset.'
+        f'({prepared_schema.get("schema_id")}). '
+        'Re-run data-prepare to upgrade the prepared dataset.'
     )
 
 
-def _as_schema_path(path: pathlib.Path) -> pathlib.Path:
-    '''Accept either an ingestion root directory or a schema file.'''
-    if path.is_dir():
-        return path / 'data_blocks' / 'schema.json'
-    return path
-
-
-def _resolve_ingestion_root(
-    schema_fpath: pathlib.Path,
-    override: pathlib.Path | str | None,
-) -> pathlib.Path:
+def _resolve_ingestion_root(schema_fpath: pathlib.Path) -> pathlib.Path:
     '''Infer the ingestion root directory from a schema path.'''
-    if override is not None:
-        candidate = pathlib.Path(override)
-        if candidate.is_dir():
-            return candidate
     if schema_fpath.parent.name == 'data_blocks':
         return schema_fpath.parent.parent
     return schema_fpath.parent

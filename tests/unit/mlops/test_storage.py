@@ -195,6 +195,34 @@ def test_sync_optuna_study_persists_summary_and_trials(tmp_path: pathlib.Path):
     assert len(df) == 3
 
 
+def test_sync_optuna_study_decoupled_output_dpath(tmp_path: pathlib.Path):
+    '''
+    Given: An explicit decoupled output destination directory.
+    When: Calling sync_optuna_study with output_dpath without exp_root.
+    Then: Persists summary metadata directly under output destination.
+    '''
+    study_name = 'test_decoupled_sweep'
+    storage_uri = f'sqlite:///{tmp_path / "scratch_decoupled.db"}'
+
+    study = optuna.create_study(
+        study_name=study_name,
+        storage=storage_uri,
+        direction='maximize',
+    )
+    study.optimize(lambda trial: 0.95, n_trials=1)
+
+    dest_dir = tmp_path / 'sweep_artifacts'
+    summary = mlops.sync_optuna_study(
+        study_name=study_name,
+        output_dpath=dest_dir,
+        storage=storage_uri,
+    )
+
+    assert summary['study_name'] == study_name
+    assert (dest_dir / 'sweeps' / study_name).is_dir()
+    assert (dest_dir / 'checkpoints').is_dir()
+
+
 # ----- `validate_output_root` tests
 def test_validate_output_root_empty_raises(monkeypatch: pytest.MonkeyPatch):
     '''

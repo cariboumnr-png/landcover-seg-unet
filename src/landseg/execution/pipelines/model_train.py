@@ -97,7 +97,6 @@ class ModelTraining(base.SessionPipeline):
             mode='default',
             ids_domain_name=self.config.data.specification.domain_ids_name,
             vec_domain_name=self.config.data.specification.domain_vec_name,
-            legacy_ingestion_dpath=self.artifact_paths.ingestion_root,
             knowledge_root=self.artifact_paths.knowledge_root,
         )
 

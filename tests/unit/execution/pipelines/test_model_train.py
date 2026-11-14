@@ -227,6 +227,5 @@ def test_train_build_context(tmp_path, mocker):
         mode='default',
         ids_domain_name='discrete_domain',
         vec_domain_name='continuous_domain',
-        legacy_ingestion_dpath=pipeline.artifact_paths.ingestion_root,
         knowledge_root=pipeline.artifact_paths.knowledge_root,
     )

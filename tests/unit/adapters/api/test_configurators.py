@@ -372,3 +372,28 @@ def test_e2e_unified_experiment_root_resolution(tmp_path):
         root / 'artifacts' / 'prepared_data'
     )
 
+
+def test_configurator_from_experiment_root_factories(tmp_path):
+    '''
+    Given: An experiment root workspace directory.
+    When: Instantiating configurators via `from_experiment_root`.
+    Then: Correctly populate all canonical subdirectories.
+    '''
+    root = tmp_path / 'my_exp'
+
+    wg = configurators.WorldGridConfigurator.from_experiment_root(root)
+    assert wg.running_root_config.data.world_grid.output_dpath == str(
+        root / 'artifacts' / 'world_grids'
+    )
+
+    ts = configurators.TrainingSessionConfigurator.from_experiment_root(root)
+    ts.set_runtime(
+        max_epochs=1,
+        active_heads=None,
+        patience_epoch=None,
+        track_heads=None,
+    )
+    assert ts.running_root_config.session.output_dpath == str(root / 'results')
+    assert ts.running_root_config.data.preparation.output_dpath == str(
+        root / 'artifacts' / 'prepared_data'
+    )
