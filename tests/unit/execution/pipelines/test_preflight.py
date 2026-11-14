@@ -22,6 +22,7 @@
 '''Unit tests for standalone pre-flight execution validation module.'''
 
 # standard imports
+import pathlib
 import types
 # third-party imports
 import pytest
@@ -799,3 +800,18 @@ def test_run_preflight_dispatch_unknown_target():
     cfg = configs.RootConfig()
     with pytest.raises(KeyError, match='Target "unknown-target" not supported'):
         preflight.run_preflight(cfg, target='unknown-target')
+
+
+def test_dir_writable_rejects_workspace_path():
+    '''
+    Given: A target path under Databricks /Workspace.
+    When: Running dir_writable preflight check.
+    Then: Return a FAIL probe result noting checkpoint flush restrictions.
+    '''
+    res = checks.filesystem.dir_writable(
+        pathlib.Path('/Workspace/Users/researcher/landcover/results'),
+        pid='checkpoint_dir',
+    )
+    assert res.status == schema.ProbeStatus.FAIL
+    assert '/Workspace' in res.message
+    assert '.pt' in res.message

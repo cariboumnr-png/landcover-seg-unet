@@ -50,6 +50,21 @@ def dir_writable(
             details={'target_dir': None},
         )
 
+    norm_str = str(dir_path).replace('\\', '/')
+    if norm_str.startswith('/Workspace') or norm_str.startswith('Workspace/'):
+        return schema.ProbeResult(
+            pid=pid,
+            category=schema.ProbeCategory.FILESYSTEM,
+            status=schema.ProbeStatus.FAIL,
+            message=(
+                f'Target directory {dir_path} is located under /Workspace. '
+                'Databricks workspace storage cannot hold binary model checkpoints (.pt) '
+                'due to filesystem flush constraints. Use a Unity Catalog Volume '
+                '(/Volumes/<catalog>/<schema>/<volume>/<dir>) or cluster scratch (/local_disk0).'
+            ),
+            details={'target_dir': str(dir_path), 'disallowed_root': '/Workspace'},
+        )
+
     # walk up to the nearest existing ancestor
     check_path = dir_path.resolve()
     while not check_path.exists():

@@ -40,10 +40,13 @@ class BaseTracker(abc.ABC):
     '''Interface of the base tracker.'''
     def __init__(
         self,
-        uri: pathlib.Path,
+        uri: pathlib.Path | str,
         artifact_path: str | None = None
     ):
-        self.uri = uri.absolute().as_uri() # safe URI generation
+        if isinstance(uri, pathlib.Path):
+            self.uri = uri.absolute().as_uri() # safe URI generation
+        else:
+            self.uri = str(uri)
         self.artifact_path = artifact_path
 
     @abc.abstractmethod

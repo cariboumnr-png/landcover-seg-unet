@@ -24,6 +24,7 @@ Data ingestion configurator
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -35,17 +36,44 @@ CollisionPolicy = typing.Literal['skip', 'overwrite', 'error']
 class DataIngestionConfigurator(configurators.BaseConfigurator):
     '''Configure data ingestion.'''
 
-    def __init__(self, experiment_root: str):
-        super().__init__(experiment_root, 'data-ingest')
+    def __init__(
+        self,
+        experiment_root: str | pathlib.Path | None = None,
+        *,
+        upstream_dpath: str | pathlib.Path | None = None,
+        harmonization_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+    ):
+        super().__init__(
+            'data-ingest',
+            experiment_root=experiment_root,
+            output_dpath=output_dpath,
+        )
+        if experiment_root is None:
+            self.cfg.data.ingestion.output_dpath = self.output
+            target_upstream = (
+                upstream_dpath if upstream_dpath is not None
+                else harmonization_dpath
+            )
+            self.cfg.data.harmonization.output_dpath = self.require_dir(
+                target_upstream
+            )
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:
         '''Set whether to force rebuild ingestion artifacts.'''
-        self._cfg.data.ingestion.rebuild = rebuild
+        self.cfg.data.ingestion.rebuild = rebuild
         return self
 
-    def set_harmonization_run(self, target: int | str | None = None) -> typing.Self:
+    def set_harmonization_run(
+        self,
+        target: int | str | pathlib.Path = 'latest',
+    ) -> typing.Self:
         '''Set targeted harmonization run index, folder name, or path.'''
-        self._cfg.data.ingestion.harmonization_run = target
+        self.cfg.data.ingestion.harmonization_run = (
+            str(target)
+            if isinstance(target, pathlib.Path)
+            else target
+        )
         return self
 
     def set_feature_engineering(
@@ -64,11 +92,11 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
                 List of spectral indices to calculate (e.g.,
                 `['ndvi', 'ndmi', 'nbr']`).
         '''
-        self._cfg.data.ingestion.datablocks.add_topo = add_topo
-        self._cfg.data.ingestion.datablocks.add_spectral = add_spectral
+        self.cfg.data.ingestion.datablocks.add_topo = add_topo
+        self.cfg.data.ingestion.datablocks.add_spectral = add_spectral
         return self
 
     def set_collision_policy(self, policy: CollisionPolicy) -> typing.Self:
         '''Set collision policy for overlapping data blocks.'''
-        self._cfg.data.ingestion.datablocks.collision_policy = policy
+        self.cfg.data.ingestion.datablocks.collision_policy = policy
         return self

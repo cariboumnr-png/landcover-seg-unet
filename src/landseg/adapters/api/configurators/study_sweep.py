@@ -24,6 +24,7 @@ Study sweep configurator
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -34,17 +35,38 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str,
+        experiment_root: str | pathlib.Path | None = None,
         *,
-        optuna_storage: str,
-        seed: int = 42
+        upstream_dpath: str | pathlib.Path | None = None,
+        preparation_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+        optuna_storage: str | pathlib.Path | None = None,
+        seed: int = 42,
     ):
-        super().__init__(experiment_root, 'study-sweep')
+        super().__init__(
+            'study-sweep',
+            experiment_root=experiment_root,
+            output_dpath=output_dpath,
+        )
+        if experiment_root is None:
+            self.cfg.session.output_dpath = self.output
+            target_upstream = (
+                upstream_dpath if upstream_dpath is not None
+                else preparation_dpath
+            )
+            if target_upstream is not None:
+                self.cfg.data.preparation.output_dpath = self.require_dir(
+                    target_upstream
+                )
 
-        #
-        self.study = self._cfg.study
-        self._cfg.study.sweep.storage = optuna_storage
-        self._cfg.study.sweep.seed = seed
+        self.study = self.cfg.study
+        if optuna_storage is not None:
+            self.cfg.study.sweep.storage = str(optuna_storage)
+        elif self.cfg.session.output_dpath:
+            self.cfg.study.sweep.storage = (
+                f'sqlite:///{self.cfg.session.output_dpath}/optuna.db'
+            )
+        self.cfg.study.sweep.seed = seed
 
     # ----- sweep configs
     def set_sweep(
@@ -57,7 +79,7 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
         '''Set study sweep parameters.'''
 
         presets.resolve(preset_name)
-        sweep_cfg = self._cfg.study.sweep
+        sweep_cfg = self.cfg.study.sweep
         sweep_cfg.study_name = study_name
         sweep_cfg.preset_name = preset_name
         sweep_cfg.n_trials = n_trials

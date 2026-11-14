@@ -43,7 +43,9 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- execution/                Registre de pipelines et dispatch d'execution
 |   |-- geopipe/                  Sous-système rasters, grille, harmonisation, ingestion, préparation
 |   |-- knowledge/                Validation de taxonomie, plongements d'espèces, matrices de similarité
+|   |-- mlops/                    Stockage cloud volumes, détection d'environnement, registre Unity Catalog
 |   |-- models/                   Frames, backbones, tetes, conditionnement, factories
+|   |-- notebooks/                Widgets interactifs, télémétrie visuelle et sécurité d'interruption
 |   |-- session/                  Construction, orchestration et moteurs runtime
 |   |-- study/                    Sweeps et analyse post-execution
 |   |-- utils/                    Helpers partages de logging et multiprocessing

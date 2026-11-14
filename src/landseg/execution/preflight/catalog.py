@@ -182,12 +182,6 @@ SUITES: dict[str, tuple[ProbeSpec, ...]] = {
         ),
         _spec('model_body', checks.model.model_body),
         _spec(
-            'pending_ingestion',
-            lambda ctx: checks.lineage.pending_ingestion(
-                ctx, desire_pending=False
-            ),
-        ),
-        _spec(
             'prepared_blocks_state',
             lambda ctx: checks.ledger.prepared_blocks_state(
                 ctx, desire_existing=True

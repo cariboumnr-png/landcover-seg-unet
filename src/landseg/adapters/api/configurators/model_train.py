@@ -24,6 +24,7 @@ Programmatic API entry
 '''
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.adapters.api.configurators as configurators
@@ -31,8 +32,29 @@ import landseg.adapters.api.configurators as configurators
 class TrainingSessionConfigurator(configurators.BaseConfigurator):
     '''Configure a training session.'''
 
-    def __init__(self, experiment_root: str):
-        super().__init__(experiment_root, 'model-train')
+    def __init__(
+        self,
+        experiment_root: str | pathlib.Path | None = None,
+        *,
+        ingestion_dpath: str | pathlib.Path | None = None,
+        preparation_dpath: str | pathlib.Path | None = None,
+        output_dpath: str | pathlib.Path | None = None,
+    ):
+        super().__init__(
+            'model-train',
+            experiment_root=experiment_root,
+            output_dpath=output_dpath,
+        )
+        if experiment_root is None:
+            self.cfg.session.output_dpath = self.output
+            if ingestion_dpath is not None:
+                self.cfg.data.ingestion.output_dpath = self.require_dir(
+                    ingestion_dpath
+                )
+            if preparation_dpath is not None:
+                self.cfg.data.preparation.output_dpath = self.require_dir(
+                    preparation_dpath
+                )
 
     def set_model(
         self,
@@ -41,9 +63,9 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         base_channel: int
     ) -> typing.Self:
         '''Set model body.'''
-        self._cfg.models.model_body = body
-        self._cfg.models.bottleneck = bottleneck
-        self._cfg.models.set_base_channel(base_channel)
+        self.cfg.models.model_body = body
+        self.cfg.models.bottleneck = bottleneck
+        self.cfg.models.set_base_channel(base_channel)
         return self
 
     def set_optimization(
@@ -54,7 +76,7 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         scheduler: typing.Literal['CosAnneal']
     ) -> typing.Self:
         '''Set model optimization.'''
-        engine_optim = self._cfg.session.engine_optim
+        engine_optim = self.cfg.session.engine_optim
         engine_optim.opt_cls = optimizer
         engine_optim.lr = learning_rate
         engine_optim.weight_decay = weight_decay
@@ -63,5 +85,15 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
 
     def set_device(self, device: str) -> typing.Self:
         '''Set target execution device.'''
-        self._cfg.session.device = device
+        self.cfg.session.device = device
+        return self
+
+    def set_trackers(
+        self,
+        trackers: list[typing.Literal['tb', 'mlflow']],
+        tracking_uri: str | pathlib.Path | None = None,
+    ) -> typing.Self:
+        '''Set experiment tracking backends.'''
+        self.cfg.session.trackers = list(trackers)
+        self.cfg.session.tracking_uri = str(tracking_uri) if tracking_uri else None
         return self

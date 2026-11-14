@@ -45,7 +45,7 @@ import landseg.utils as utils
 # ----- public functions
 def build_dispatcher(
     trackers: list[typing.Literal['tb', 'mlflow']] | None = None,
-    uri: pathlib.Path | None = None,
+    uri: pathlib.Path | str | None = None,
     artifact_path: str | None = None,
     label_color_map: dict[str, list[int]] | None = None,
     logger: utils.Logger | None = None,
@@ -85,9 +85,10 @@ def build_dispatcher(
     if trackers:
         if 'tb' in trackers:
             assert uri, 'URI not provided for TensorBoard tracker'
-            _trackers.append(dashboards.TensorBoardTracker(uri))
+            tb_uri = pathlib.Path(uri) if isinstance(uri, str) else uri
+            _trackers.append(dashboards.TensorBoardTracker(tb_uri))
         if 'mlflow' in trackers:
-            assert uri and artifact_path
+            assert uri, 'URI not provided for MLflow tracker'
             _trackers.append(dashboards.MLFlowTracker(uri, artifact_path))
 
     # callbacks list

@@ -40,14 +40,24 @@ if typing.TYPE_CHECKING:
 class MLFlowTracker(base.BaseTracker):
     '''Minimal MLflow tracker for experiment logging.'''
 
-    def __init__(self, uri: pathlib.Path, artifact_path: str):
+    def __init__(
+        self,
+        uri: pathlib.Path | str,
+        artifact_path: str | None = None,
+    ):
         super().__init__(uri, artifact_path)
 
-        mlflow.set_tracking_uri(self.uri)
+        if self.uri:
+            mlflow.set_tracking_uri(self.uri)
         if artifact_path:
             mlflow.set_experiment(artifact_path)
-        # start run immediately (simple semantics)
-        self._run = mlflow.start_run()
+        active = mlflow.active_run()
+        if active is not None:
+            self._run = active
+            self._owns_run = False
+        else:
+            self._run = mlflow.start_run()
+            self._owns_run = True
 
     def log_scalar(self, key: str, value: float, step: int):
         mlflow.log_metric(key, value, step)
@@ -70,4 +80,5 @@ class MLFlowTracker(base.BaseTracker):
         # `mlflow` writes immediately; not required
 
     def close(self):
-        mlflow.end_run()
+        if getattr(self, '_owns_run', True):
+            mlflow.end_run()

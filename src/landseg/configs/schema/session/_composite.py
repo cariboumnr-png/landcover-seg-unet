@@ -56,6 +56,8 @@ class SessionConfig(base.BaseConfigSection):
     mode: str = 'continuous'
     output_dpath: str = '${execution.exp_root}/results/'
     device: str = 'auto'
+    trackers: list[str] | None = None
+    tracking_uri: str | None = None
 
     def __post_init__(self):
         if self.mode == 'curriculum':
