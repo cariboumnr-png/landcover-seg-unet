@@ -60,7 +60,7 @@ class WorldGridConfig(base.BaseConfigSection):
     mode: str = 'ref'
     ref_fpath: str = ''
     manual_specs: GridSpecs = dataclasses.field(default_factory=GridSpecs)
-    output_dpath: str = '${execution.exp_root}/artifacts/world_grids'
+    output_dpath: str | None = None
 
     def validate(self) -> None:
         tx, ty = self.val.require_sequence(self.tile_size, 2)

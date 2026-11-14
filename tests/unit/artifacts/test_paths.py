@@ -32,16 +32,46 @@ import landseg.configs as configs_mod
 # ----- `ArtifactPaths` & Foundation tests
 def test_artifact_paths_hierarchy():
     '''
-    Given: An experiment root directory string.
+    Given: A shared root directory string.
     When: Instantiating `ArtifactPaths`.
-    Then: Return joined namespaces.
+    Then: Derive legacy stage namespaces beneath the shared root.
     '''
     r = pathlib.Path('/tmp') / 'exp'
     art = paths_mod.ArtifactPaths(root=r)
-    assert art.data_harmonization.root == r / 'harmonized_data'
-    assert art.data_ingestion.root == r / 'ingested_data'
-    assert art.data_preparation.root == r / 'prepared_data'
+    assert art.data_harmonization.root == r / 'artifacts' / 'harmonized_data'
+    assert art.data_ingestion.root == r / 'artifacts' / 'ingested_data'
+    assert art.data_preparation.root == r / 'artifacts' / 'prepared_data'
     assert art.session.root == r / 'results'
+
+
+def test_artifact_paths_require_explicit_root():
+    '''
+    Given: An `ArtifactPaths` with no shared root.
+    When: Accessing a stage namespace.
+    Then: Raise an actionable error instead of guessing a parent.
+    '''
+    art = paths_mod.ArtifactPaths()
+    try:
+        _ = art.data_preparation
+    except ValueError as e:
+        assert 'data.preparation.output_dpath' in str(e)
+    else:
+        raise AssertionError('Expected ValueError for missing stage root')
+
+
+def test_artifact_paths_autonomous_stage_roots():
+    '''
+    Given: Explicit stage roots with no shared experiment root.
+    When: Accessing namespaces.
+    Then: Resolve each stage independently.
+    '''
+    art = paths_mod.ArtifactPaths(
+        preparation_root=pathlib.Path('/volumes/prepared'),
+        session_root=pathlib.Path('/volumes/run_42'),
+    )
+    assert art.data_preparation.root == pathlib.Path('/volumes/prepared')
+    assert art.session.root == pathlib.Path('/volumes/run_42')
+    assert art.root is None
 
 
 def test_artifact_paths_custom_overrides():

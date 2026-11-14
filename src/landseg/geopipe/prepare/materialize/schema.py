@@ -33,6 +33,7 @@ Public APIs:
 
 # standard imports
 import datetime
+import os
 import pathlib
 import time
 import typing
@@ -47,6 +48,8 @@ import landseg.geopipe.prepare.dataset as prepare_dataset
 
 # ----- private types
 class _PipelinePaths(typing.Protocol):
+    @property
+    def root(self) -> pathlib.Path: ...
     @property
     def schema(self) -> pathlib.Path: ...
     @property
@@ -66,6 +69,7 @@ def build_schema(
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare_logger.PreparationLogger,
+    ingestion_schema_fpath: pathlib.Path | None = None,
 ) -> None:
     '''
     Generate and persist dataset preparation schema JSON.
@@ -74,6 +78,11 @@ def build_schema(
     image statistics, label class statistics, and target head
     reclassification hierarchy into a single verified preparation
     schema JSON artifact.
+
+    When `ingestion_schema_fpath` is provided, the resolved path and its
+    SHA-256 checksum are recorded as upstream provenance so downstream
+    stages can resolve the ingestion schema from the preparation schema
+    alone.
 
     Args:
         paths:
@@ -84,17 +93,27 @@ def build_schema(
             lifecycle policy guiding rebuild behavior.
         logger:
             logger for progress and diagnostic output.
+        ingestion_schema_fpath:
+            optional resolved ingestion schema artifact path.
     '''
     start_time = time.perf_counter()
 
     # schema artifact controller
+    # - version handled explicitly so a legacy schema can be upgraded
+    #   under an explicit rebuild instead of blocking in-place
     Ctrl = artifacts.Controller[geo_core.PreparedSchema]
-    schema_ctrl = Ctrl(
-        paths.schema,
-        policy=policy,
-        schema_id=geo_core.prepared_schema.SCHEMA_ID,
-    )
-    schema = schema_ctrl.fetch()
+    schema_ctrl = Ctrl(paths.schema, policy=policy)
+    schema = schema_ctrl.fetch(missing_ok=True)
+    if schema is not None and schema.get('schema_id') != (
+        geo_core.prepared_schema.SCHEMA_ID
+    ):
+        if policy != artifacts.LifecyclePolicy.REBUILD:
+            raise artifacts.ArtifactError(
+                f'Prepared schema at {paths.schema} has version '
+                f'{schema.get("schema_id")!r}; re-run data-prepare with '
+                'rebuild enabled to upgrade it.'
+            )
+        schema = None # upgrade in place
     loaded = schema is not None
 
     if not schema:
@@ -114,6 +133,23 @@ def build_schema(
             'label_stats': Ctrl(paths.label_stats).sha256,
             'image_stats': Ctrl(paths.image_stats).sha256
         }
+
+        # forward ingestion lineage (single-upstream contract)
+        if ingestion_schema_fpath is not None:
+            ingestion_schema = pathlib.Path(ingestion_schema_fpath)
+            collected_artifacts['ingestion_schema'] = str(
+                ingestion_schema.resolve()
+            )
+            checksums['ingestion_schema'] = Ctrl(ingestion_schema).sha256
+            try:
+                rel = os.path.relpath(
+                    ingestion_schema.resolve(),
+                    paths.root.resolve(),
+                )
+            except ValueError:
+                pass # distinct anchors (e.g. separate Windows drives)
+            else:
+                collected_artifacts['ingestion_schema_relpath'] = rel
 
         # read blocks splits
         Ctrl = artifacts.Controller[contracts.BlocksPartition]
@@ -170,5 +206,8 @@ def build_schema(
         'duration_sec': duration,
         'schema_filepath': str(paths.schema.resolve()),
         'classes_mapped': list(schema['label_stats'].keys()),
+        'ingestion_schema_filepath': schema['artifacts'].get(
+            'ingestion_schema'
+        ),
     }
     logger.set_schema(report)

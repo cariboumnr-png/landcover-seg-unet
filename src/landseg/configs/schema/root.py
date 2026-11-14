@@ -48,7 +48,7 @@ StudyConfig = study.StudyConfig
 class ExecutionContext(base.BaseConfigSection):
     '''Mutable execution context.'''
     verbosity: str | int | None = 'full'
-    exp_root: str = './experiment'
+    exp_root: str | None = None
     recipe_dir: str = './configs' # external recipe directory path override
     knowledge_dir: str = './knowledge' # external knowledge directory override
     dev_cfg: str | None = None # developer-only override config

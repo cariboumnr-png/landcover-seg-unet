@@ -23,6 +23,14 @@
 
 '''
 Root entrypoint for all artifact path namespaces.
+
+Each stage namespace resolves from its explicit directory root. The
+legacy shared `root` is optional and used only as a fallback when a
+stage root is not configured, so standalone decoupled execution never
+requires a common experiment parent.
+
+Public APIs:
+    - `ArtifactPaths`: Aggregation facade over stage path namespaces.
 '''
 
 # standard imports
@@ -38,7 +46,7 @@ import landseg.configs as configs
 @dataclasses.dataclass
 class ArtifactPaths:
     '''Root entrypoint for all artifact path namespaces.'''
-    root: pathlib.Path = pathlib.Path('./experiment')
+    root: pathlib.Path | None = None
     world_grid_root: pathlib.Path | None = None
     harmonization_root: pathlib.Path | None = None
     ingestion_root: pathlib.Path | None = None
@@ -47,7 +55,8 @@ class ArtifactPaths:
     knowledge_root: pathlib.Path | None = None
 
     def __post_init__(self):
-        self.root = pathlib.Path(self.root)
+        if self.root is not None:
+            self.root = pathlib.Path(self.root)
         if self.world_grid_root is not None:
             self.world_grid_root = pathlib.Path(self.world_grid_root)
         if self.harmonization_root is not None:
@@ -64,63 +73,69 @@ class ArtifactPaths:
     @classmethod
     def from_config(cls, config: 'configs.RootConfig') -> typing.Self:
         '''Construct `ArtifactPaths` from a `RootConfig` instance.'''
+        exp_root = config.execution.exp_root
         return cls(
-            root=pathlib.Path(config.execution.exp_root),
-            world_grid_root=(
-                pathlib.Path(config.data.world_grid.output_dpath)
-                if config.data.world_grid.output_dpath
-                else None
+            root=pathlib.Path(exp_root) if exp_root else None,
+            world_grid_root=_to_path(config.data.world_grid.output_dpath),
+            harmonization_root=_to_path(
+                config.data.harmonization.output_dpath
             ),
-            harmonization_root=(
-                pathlib.Path(config.data.harmonization.output_dpath)
-                if config.data.harmonization.output_dpath
-                else None
+            ingestion_root=_to_path(config.data.ingestion.output_dpath),
+            preparation_root=_to_path(
+                config.data.preparation.output_dpath
             ),
-            ingestion_root=(
-                pathlib.Path(config.data.ingestion.output_dpath)
-                if config.data.ingestion.output_dpath
-                else None
-            ),
-            preparation_root=(
-                pathlib.Path(config.data.preparation.output_dpath)
-                if config.data.preparation.output_dpath
-                else None
-            ),
-            session_root=(
-                pathlib.Path(config.session.output_dpath)
-                if config.session.output_dpath
-                else None
-            ),
-            knowledge_root=(
-                pathlib.Path(config.execution.knowledge_dir)
-                if config.execution.knowledge_dir
-                else None
-            ),
+            session_root=_to_path(config.session.output_dpath),
+            knowledge_root=_to_path(config.execution.knowledge_dir),
         )
 
     @property
     def world_grid(self) -> paths.WorldGridPaths:
-        r = self.world_grid_root or (self.root / 'artifacts' / 'world_grids')
+        r = _stage_root(
+            self.world_grid_root,
+            self.root,
+            pathlib.Path('artifacts') / 'world_grids',
+            'data.world_grid.output_dpath',
+        )
         return paths.WorldGridPaths(r)
 
     @property
     def data_harmonization(self) -> paths.HarmonizationPaths:
-        r = self.harmonization_root or (self.root / 'artifacts' / 'harmonized_data')
+        r = _stage_root(
+            self.harmonization_root,
+            self.root,
+            pathlib.Path('artifacts') / 'harmonized_data',
+            'data.harmonization.output_dpath',
+        )
         return paths.HarmonizationPaths(r)
 
     @property
     def data_ingestion(self) -> paths.IngestionPaths:
-        r = self.ingestion_root or (self.root / 'artifacts' / 'ingested_data')
+        r = _stage_root(
+            self.ingestion_root,
+            self.root,
+            pathlib.Path('artifacts') / 'ingested_data',
+            'data.ingestion.output_dpath',
+        )
         return paths.IngestionPaths(r)
 
     @property
     def data_preparation(self) -> paths.PreparationPaths:
-        r = self.preparation_root or (self.root / 'artifacts' / 'prepared_data')
+        r = _stage_root(
+            self.preparation_root,
+            self.root,
+            pathlib.Path('artifacts') / 'prepared_data',
+            'data.preparation.output_dpath',
+        )
         return paths.PreparationPaths(r)
 
     @property
     def session(self) -> paths.SessionPaths:
-        r = self.session_root or (self.root / 'results')
+        r = _stage_root(
+            self.session_root,
+            self.root,
+            pathlib.Path('results'),
+            'session.output_dpath',
+        )
         return paths.SessionPaths(root=r)
 
     @property
@@ -128,3 +143,35 @@ class ArtifactPaths:
         if self.knowledge_root is None:
             return None
         return paths.KnowledgePaths(self.knowledge_root)
+
+
+# ----- private helpers
+def _to_path(value: str | pathlib.Path | None) -> pathlib.Path | None:
+    '''Normalize an optional configured path value.'''
+    if value is None or value == '':
+        return None
+    return pathlib.Path(value)
+
+
+def _stage_root(
+    explicit: pathlib.Path | None,
+    shared_root: pathlib.Path | None,
+    fallback: pathlib.Path,
+    config_key: str,
+) -> pathlib.Path:
+    '''
+    Resolve one stage root.
+
+    Explicit stage roots always win. The legacy shared root is only a
+    fallback when provided; otherwise the caller must configure the
+    stage path explicitly.
+    '''
+    if explicit is not None:
+        return explicit
+    if shared_root is not None:
+        return shared_root / fallback
+    raise ValueError(
+        f'No root configured for this artifact namespace. Set '
+        f'"{config_key}" explicitly, or provide a shared "root"/'
+        f'"execution.exp_root" to derive it.'
+    )

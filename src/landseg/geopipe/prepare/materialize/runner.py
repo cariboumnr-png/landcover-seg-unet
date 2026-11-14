@@ -74,6 +74,7 @@ def run_materialize_blocks(
     *,
     policy: artifacts.LifecyclePolicy,
     logger: logger_mod.PreparationLogger,
+    ingestion_schema_fpath: pathlib.Path | None = None,
 ) -> None:
     '''
     Build normalized data blocks from raw block splits.
@@ -91,6 +92,9 @@ def run_materialize_blocks(
             lifecycle policy guiding rebuild behavior.
         logger:
             logger for progress and diagnostic output.
+        ingestion_schema_fpath:
+            optional resolved ingestion schema path forwarded into the
+            prepared schema for downstream single-upstream resolution.
     '''
     start_time = time.perf_counter()
 
@@ -154,6 +158,7 @@ def run_materialize_blocks(
         context,
         policy=policy,
         logger=logger,
+        ingestion_schema_fpath=ingestion_schema_fpath,
     )
 
     # compile report

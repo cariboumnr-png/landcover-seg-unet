@@ -140,6 +140,7 @@ class SchemaReport(typing.TypedDict):
     duration_sec: float
     schema_filepath: str
     classes_mapped: list[str]
+    ingestion_schema_filepath: str | None
 
 
 class PreparationReportSchema(typing.TypedDict):

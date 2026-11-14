@@ -47,9 +47,11 @@ class BaseConfigurator:
 
         Supports both:
         1. Canonical decoupled mode: Explicitly passing destination output and
-           upstream input directories (matching standalone CLI recipes).
-        2. Unified E2E mode: Passing an optional `experiment_root` that auto-populates
-           all stage inputs and outputs under `<exp_root>/artifacts/...` and `<exp_root>/results`.
+           upstream input directories. No experiment root is inferred or
+           required, so stages may live on unrelated storage volumes.
+        2. Auxiliary unified mode: Passing an optional `experiment_root` that
+           auto-populates all stage inputs and outputs under
+           `<exp_root>/artifacts/...` and `<exp_root>/results`.
         '''
         # init a default RootConfig instance
         self.cfg = configs.RootConfig()
@@ -57,8 +59,6 @@ class BaseConfigurator:
 
         if experiment_root is None:
             self.output = self.require_dir(output_dpath, writable=True)
-            resolved_root = str(pathlib.Path(self.output).parent)
-            self.cfg.execution.exp_root = resolved_root
         else:
             resolved_root = self.require_dir(experiment_root, writable=True)
             self.cfg.execution.exp_root = resolved_root
@@ -75,6 +75,7 @@ class BaseConfigurator:
     def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set destination output directory path for the active command.'''
         dpath_str = str(output_dpath)
+        self.output = dpath_str
         match self.cfg.command:
             case 'world-grid':
                 self.cfg.data.world_grid.output_dpath = dpath_str

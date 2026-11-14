@@ -36,7 +36,7 @@ from __future__ import annotations
 import typing
 
 
-SCHEMA_ID = 'prepared_schema/v0.1.1'
+SCHEMA_ID = 'prepared_schema/v0.1.2'
 
 
 # ----- public types
@@ -47,7 +47,15 @@ class PreparedSchema(typing.TypedDict):
     Captures metadata and statistics generated during preparation,
     including splits, checksums, label counts, and image stats.
 
-    Schema: SCHEMA_ID = 'prepared_schema/v0.1.1'
+    Schema: SCHEMA_ID = 'prepared_schema/v0.1.2'
+
+    The `artifacts` mapping records absolute paths to source and
+    produced artifacts. Since v0.1.2 it also records the resolved
+    ingestion schema (`ingestion_schema`) plus, when a relative path can
+    be expressed, its path relative to the preparation root
+    (`ingestion_schema_relpath`). The corresponding SHA-256 digests are
+    recorded under `checksums` so downstream consumers can verify the
+    forwarded lineage chain when required.
     '''
     schema_id: str
     creation_time: str

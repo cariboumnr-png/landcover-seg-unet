@@ -116,7 +116,8 @@ def run_data_preparation(
         prep_paths,
         dataset_view,
         policy=policy,
-        logger=logger
+        logger=logger,
+        ingestion_schema_fpath=context.schema_fpath,
     )
     assert logger.summary['normalization']
     d = logger.summary['normalization']['duration_sec']

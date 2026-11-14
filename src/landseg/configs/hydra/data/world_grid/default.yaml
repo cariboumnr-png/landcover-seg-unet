@@ -7,4 +7,4 @@ manual_specs:
   origin: [0.0, 0.0] # x, y in CRS units
   pixel_size: [0.0, 0.0] # x, y positive magnitudes; we assume north up
   extent_in_crs_units: [0.0, 0.0] # height and width in CRS units
-output_dpath: ${execution.exp_root}/artifacts/world_grids
+output_dpath: ./artifacts/world_grids

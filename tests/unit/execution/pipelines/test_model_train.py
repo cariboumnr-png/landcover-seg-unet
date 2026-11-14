@@ -223,8 +223,10 @@ def test_train_build_context(tmp_path, mocker):
     pipeline._build_context()
 
     mock_build_dataspec.assert_called_once_with(
-        pipeline.artifact_paths,
+        pipeline.artifact_paths.data_preparation,
         mode='default',
         ids_domain_name='discrete_domain',
         vec_domain_name='continuous_domain',
+        legacy_ingestion_dpath=pipeline.artifact_paths.ingestion_root,
+        knowledge_root=pipeline.artifact_paths.knowledge_root,
     )

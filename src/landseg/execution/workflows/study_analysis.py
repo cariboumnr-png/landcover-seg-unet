@@ -27,6 +27,8 @@ trials. It operates strictly on persisted Optuna study metadata and
 materializes simple ranked summaries for downstream inspect
 '''
 
+# standard imports
+import pathlib
 # local imports
 import landseg.artifacts as artifacts
 import landseg.configs as configs
@@ -52,8 +54,14 @@ def execute_study_analysis(config: configs.RootConfig):
         ascending=False
     )
 
-    # persist artifacts
-    analysis_json = f'{config.execution.exp_root}/analysis/{sweep_config.study_name}.json'
+    # persist artifacts beside the configured session output
+    if config.session.output_dpath:
+        analysis_dpath = pathlib.Path(config.session.output_dpath) / 'analysis'
+    elif config.execution.exp_root:
+        analysis_dpath = pathlib.Path(config.execution.exp_root) / 'analysis'
+    else:
+        analysis_dpath = pathlib.Path('./analysis')
+    analysis_json = analysis_dpath / f'{sweep_config.study_name}.json'
     ctrl = artifacts.Controller[list[dict]](analysis_json)
     ctrl.persist(ranked)
 

@@ -5,5 +5,5 @@ defaults:
   - orchestration: default
 
 mode: continuous # continuous | curriculum
-output_dpath: ${execution.exp_root}/results/
+output_dpath: ./results
 device: auto

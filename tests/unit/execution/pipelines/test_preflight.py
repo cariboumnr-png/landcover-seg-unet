@@ -620,6 +620,11 @@ def test_pipeline_default_path_resolution(monkeypatch):
     )
 
     cfg = configs.RootConfig()
+    cfg.data.world_grid.output_dpath = './grids'
+    cfg.data.harmonization.output_dpath = './harmonized'
+    cfg.data.ingestion.output_dpath = './ingested'
+    cfg.data.preparation.output_dpath = './prepared'
+    cfg.session.output_dpath = './results'
     wg = pipelines.WorldGridGeneration(cfg)
     dh = pipelines.DataHarmonization(cfg)
     di = pipelines.DataIngestion(cfg)

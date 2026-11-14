@@ -60,7 +60,8 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
     Args:
         config: RootConfig with model/trainer settings.
     '''
-    root = pathlib.Path(config.execution.exp_root) / 'results' / 'overfit_test'
+    artifact_paths = artifacts.ArtifactPaths.from_config(config)
+    root = artifact_paths.session.root / 'overfit_test'
     log_file = root / 'log' / 'overfit_summary.json'
     logger = session.SessionLogger('overfit', log_file=log_file)
     logger.init_summary(run_id='overfit_test', command='diagnose_overfit')
@@ -91,7 +92,7 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
             config=config.session,
             context=session.SessionBuildContext(
                 device=utils.resolve_device(config.session.device),
-                session_paths=artifacts.ArtifactPaths().session, # no ops
+                session_paths=artifact_paths.session, # no ops
                 eval_dataset='val',
                 logger=logger
             ),

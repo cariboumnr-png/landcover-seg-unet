@@ -106,7 +106,7 @@ class DataPreparationConfig(base.BaseConfigSection):
     scoring: Scoring = field(default_factory=Scoring)
     hydration: Hydration = field(default_factory=Hydration)
     rebuild: bool = False
-    output_dpath: str = '${execution.exp_root}/artifacts/prepared_data'
+    output_dpath: str | None = None
 
     def validate(self) -> None:
         self.datasetview.validate()

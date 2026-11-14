@@ -1,4 +1,4 @@
 dataset_manifest: ''
 resampling_continuous: bilinear
 resampling_categorical: nearest
-output_dpath: ${execution.exp_root}/artifacts/harmonized_data
+output_dpath: ./artifacts/harmonized_data
