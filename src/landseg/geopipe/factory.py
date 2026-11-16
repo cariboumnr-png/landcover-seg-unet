@@ -96,7 +96,7 @@ def build_dataspec(
     ).fetch()
 
     # single-upstream ingestion resolution
-    ing_paths = _resolve_ingestion_schema(prepared_schema)
+    ing_paths = _resolve_ingestion_schema(prepared_schema, prep_root)
 
     # load ingestion schema
     Ctrl = artifacts.Controller[geo_core.DataSchema]
@@ -137,20 +137,25 @@ def build_dataspec(
 
 # ----- private helpers
 def _resolve_ingestion_schema(
-    prepared_schema: geo_core.PreparedSchema
+    prepared_schema: geo_core.PreparedSchema,
+    prep_root: pathlib.Path | None = None,
 ) -> artifacts.IngestionPaths:
     '''Resolve the ingestion schema path from forwarded provenance.'''
     artifacts_map = prepared_schema.get('artifacts', {})
     ingestion_schema_fpath = artifacts_map.get('ingestion_schema')
     if ingestion_schema_fpath is None:
         raise FileNotFoundError(
-                'Preparation schema has no ingestion provenance '
-                f'({prepared_schema.get("schema_id")}). '
-                'Re-run data-prepare to upgrade the prepared dataset.'
-            )
+            'Preparation schema has no ingestion provenance '
+            f'({prepared_schema.get("schema_id")}). '
+            'Re-run data-prepare to upgrade the prepared dataset.'
+        )
     try:
         # canon: .../ingested_data/data_blocks/schema.json
         ingestion_root = pathlib.Path(ingestion_schema_fpath).parent.parent
+        if not ingestion_root.exists() and prep_root is not None:
+            candidate = prep_root.parent / ingestion_root.name
+            if candidate.is_dir():
+                ingestion_root = candidate
         ingestion_paths = artifacts.IngestionPaths(ingestion_root).validate()
     except Exception as e:
         raise ValueError('Error resolving ingestion pipeline paths') from e

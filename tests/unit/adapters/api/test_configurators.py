@@ -43,7 +43,7 @@ def test_world_grid_configurator(tmp_path):
         tile_stride=128,
         crs='EPSG:3161',
         reference_raster=str(ref_tif)
-    ).set_output_dpath(
+    ).set_output(
         output_dpath=str(tmp_path / 'world_grids')
     )
 
@@ -77,10 +77,10 @@ def test_data_harmonization_configurator(tmp_path):
     ).set_resampling(
         continuous='bilinear',
         categorical='nearest'
-    ).set_output_dpath(
+    ).set_output(
         output_dpath=str(tmp_path / 'harmonized')
-    ).set_grid_reference(
-        output_dpath=str(tmp_path / 'world_grids')
+    ).set_upstream(
+        upstream_dpath=str(tmp_path / 'world_grids')
     )
 
     root = cfg_builder.running_root_config
@@ -251,7 +251,7 @@ def test_canonical_decoupled_configurators(tmp_path):
     # 2. DataHarmonizationConfigurator
     dh = configurators.DataHarmonizationConfigurator(
         output_dpath=harm_out,
-        grid_dpath=grid_out,
+        upstream_dpath=grid_out,
     )
     assert dh.running_root_config.data.harmonization.output_dpath == str(harm_out)
     assert dh.running_root_config.data.world_grid.output_dpath == str(grid_out)
@@ -259,7 +259,7 @@ def test_canonical_decoupled_configurators(tmp_path):
     # 3. DataIngestionConfigurator
     di = configurators.DataIngestionConfigurator(
         output_dpath=ingest_out,
-        harmonization_dpath=harm_out,
+        upstream_dpath=harm_out,
     )
     assert di.running_root_config.data.ingestion.output_dpath == str(ingest_out)
     assert di.running_root_config.data.harmonization.output_dpath == str(harm_out)
@@ -267,7 +267,7 @@ def test_canonical_decoupled_configurators(tmp_path):
     # 4. DataPreparationConfigurator
     dp = configurators.DataPreparationConfigurator(
         output_dpath=prep_out,
-        ingestion_dpath=ingest_out,
+        upstream_dpath=ingest_out,
     )
     assert dp.running_root_config.data.preparation.output_dpath == str(prep_out)
     assert dp.running_root_config.data.ingestion.output_dpath == str(ingest_out)
@@ -275,7 +275,7 @@ def test_canonical_decoupled_configurators(tmp_path):
     # 5. TrainingSessionConfigurator
     ts = configurators.TrainingSessionConfigurator(
         output_dpath=results_out,
-        preparation_dpath=prep_out,
+        upstream_dpath=prep_out,
     )
     ts.set_runtime(
         max_epochs=1,
@@ -300,7 +300,7 @@ def test_study_sweep_configurator_canonical(tmp_path):
 
     sweep_cfg = configurators.StudySweepConfigurator(
         output_dpath=results_out,
-        preparation_dpath=prep_out,
+        upstream_dpath=prep_out,
         optuna_storage=storage,
     )
     sweep_cfg.set_runtime(
@@ -332,7 +332,7 @@ def test_configurator_set_output_and_upstream_dpaths(tmp_path):
         patience_epoch=None,
         track_heads=None,
     )
-    ts.set_output_dpath(new_results).set_upstream_dpath(new_prep)
+    ts.set_output(new_results).set_upstream(new_prep)
     root = ts.running_root_config
 
     assert root.session.output_dpath == str(new_results)
@@ -347,12 +347,12 @@ def test_e2e_unified_experiment_root_resolution(tmp_path):
     '''
     root = tmp_path / 'unified_exp'
 
-    wg = configurators.WorldGridConfigurator(root)
+    wg = configurators.WorldGridConfigurator(experiment_root=root)
     assert wg.running_root_config.data.world_grid.output_dpath == str(
         root / 'artifacts' / 'world_grids'
     )
 
-    dh = configurators.DataHarmonizationConfigurator(root)
+    dh = configurators.DataHarmonizationConfigurator(experiment_root=root)
     assert dh.running_root_config.data.harmonization.output_dpath == str(
         root / 'artifacts' / 'harmonized_data'
     )
@@ -360,7 +360,7 @@ def test_e2e_unified_experiment_root_resolution(tmp_path):
         root / 'artifacts' / 'world_grids'
     )
 
-    ts = configurators.TrainingSessionConfigurator(root)
+    ts = configurators.TrainingSessionConfigurator(experiment_root=root)
     ts.set_runtime(
         max_epochs=1,
         active_heads=None,

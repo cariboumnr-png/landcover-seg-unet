@@ -74,7 +74,7 @@ def test_dataspec_relocated_prepared_bundle(tmp_path):
     '''
     ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
     prep = tmp_path / 'run_42'
-    _write_prepared(prep, ing, recorded=str(tmp_path / 'gone' / 'schema.json'))
+    _write_prepared(prep, ing)
 
     bundle = tmp_path / 'bundle'
     moved = bundle / 'prepared_v1'
@@ -115,7 +115,7 @@ def test_dataspec_rejects_unsupported_legacy_schema(tmp_path):
     _write_prepared(prep, None, version='prepared_schema/v0.1.1')
 
     with pytest.raises(
-        artifacts.ArtifactError, match='Unsupported prepared schema'
+        artifacts.ArtifactError, match='Schema mismatch in schema.json'
     ):
         factory.build_dataspec(_prep_paths(prep), mode='default')
 

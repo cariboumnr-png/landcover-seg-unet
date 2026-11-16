@@ -34,22 +34,17 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path | None = None,
         *,
-        preparation_dpath: str | pathlib.Path | None = None,
+        upstream_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
             'model-train',
-            experiment_root=experiment_root,
+            upstream_dpath=upstream_dpath,
             output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
-        if experiment_root is None:
-            self.cfg.session.output_dpath = self.output
-            if preparation_dpath is not None:
-                self.cfg.data.preparation.output_dpath = self.require_dir(
-                    preparation_dpath
-                )
 
     def set_model(
         self,

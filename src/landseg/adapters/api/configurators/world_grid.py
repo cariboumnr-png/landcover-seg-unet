@@ -35,17 +35,17 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path | None = None,
         *,
+        upstream_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
             'world-grid',
-            experiment_root=experiment_root,
+            upstream_dpath=upstream_dpath,
             output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
-        if experiment_root is None:
-            self.cfg.data.world_grid.output_dpath = self.output
 
     def set_grid(
         self,
@@ -65,9 +65,4 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
         )
         if reference_raster:
             self.cfg.data.world_grid.ref_fpath = str(reference_raster)
-        return self
-
-    def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
-        '''Set output directory path for world grid artifacts.'''
-        self.cfg.data.world_grid.output_dpath = str(output_dpath)
         return self

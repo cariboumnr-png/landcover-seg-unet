@@ -38,26 +38,17 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path | None = None,
         *,
         upstream_dpath: str | pathlib.Path | None = None,
-        harmonization_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
             'data-ingest',
-            experiment_root=experiment_root,
+            upstream_dpath=upstream_dpath,
             output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
-        if experiment_root is None:
-            self.cfg.data.ingestion.output_dpath = self.output
-            target_upstream = (
-                upstream_dpath if upstream_dpath is not None
-                else harmonization_dpath
-            )
-            self.cfg.data.harmonization.output_dpath = self.require_dir(
-                target_upstream
-            )
 
     def set_rebuild(self, rebuild: bool) -> typing.Self:
         '''Set whether to force rebuild ingestion artifacts.'''

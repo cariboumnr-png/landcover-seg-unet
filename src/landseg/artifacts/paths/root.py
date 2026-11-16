@@ -77,13 +77,9 @@ class ArtifactPaths:
         return cls(
             root=pathlib.Path(exp_root) if exp_root else None,
             world_grid_root=_to_path(config.data.world_grid.output_dpath),
-            harmonization_root=_to_path(
-                config.data.harmonization.output_dpath
-            ),
+            harmonization_root=_to_path(config.data.harmonization.output_dpath),
             ingestion_root=_to_path(config.data.ingestion.output_dpath),
-            preparation_root=_to_path(
-                config.data.preparation.output_dpath
-            ),
+            preparation_root=_to_path(config.data.preparation.output_dpath),
             session_root=_to_path(config.session.output_dpath),
             knowledge_root=_to_path(config.execution.knowledge_dir),
         )
@@ -160,26 +156,41 @@ class ArtifactPaths:
         Returns:
             typing.Self: The validated instance for method chaining.
         '''
-        validators = {
-            'world_grid': self.world_grid.validate(),
-            'data_harmonization': self.data_harmonization.validate(),
-            'data_ingestion': self.data_ingestion.validate(),
-            'data_preparation': self.data_preparation.validate(),
-            'session': self.session.validate(),
-            'knowledge': self.knowledge.validate() if self.knowledge else None,
-        }
-        if stages is not None:
-            for s in stages:
-                if s not in validators:
-                    raise ValueError(f'Unknown stage name: {s}')
-                validators[s]()
-        else:
-            for s, validator in validators.items():
-                try:
-                    validator()
-                except ValueError:
-                    # Unconfigured stage is skipped when validating all defaults
-                    continue
+        target_stages = (
+            stages
+            if stages is not None
+            else (
+                'world_grid',
+                'data_harmonization',
+                'data_ingestion',
+                'data_preparation',
+                'session',
+                'knowledge',
+            )
+        )
+        for stage in target_stages:
+            try:
+                match stage:
+                    case 'world_grid':
+                        self.world_grid.validate()
+                    case 'data_harmonization':
+                        self.data_harmonization.validate()
+                    case 'data_ingestion':
+                        self.data_ingestion.validate()
+                    case 'data_preparation':
+                        self.data_preparation.validate()
+                    case 'session':
+                        self.session.validate()
+                    case 'knowledge':
+                        if self.knowledge is not None:
+                            self.knowledge.validate()
+                    case _:
+                        raise ValueError(f'Unknown stage name: {stage}')
+            except ValueError:
+                if stages is not None:
+                    raise
+                # Unconfigured stage is skipped when validating all defaults
+                continue
         return self
 
 
