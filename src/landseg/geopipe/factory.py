@@ -47,15 +47,6 @@ import landseg.core as core
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
-
-# ----- constants
-PREPARED_SCHEMA_IDS = (
-    geo_core.prepared_schema.SCHEMA_ID,
-)
-INGESTION_SCHEMA_KEY = 'ingestion_schema'
-INGESTION_SCHEMA_RELPATH_KEY = 'ingestion_schema_relpath'
-
-
 # ----- public functions
 def build_dataspec(
     preparation_paths: artifacts.PreparationPaths,
@@ -64,7 +55,6 @@ def build_dataspec(
     ids_domain_name: str | None = None,
     vec_domain_name: str | None = None,
     knowledge_root: pathlib.Path | str | None = None,
-    verify_ingestion_checksum: bool = False,
 ) -> core.DataSpecs:
     '''
     Build runtime data specification from prepared dataset artifacts.
@@ -84,11 +74,6 @@ def build_dataspec(
             Optional name of continuous/vector domain artifact.
         knowledge_root:
             Optional ecological knowledge root for similarity matrices.
-        verify_ingestion_checksum:
-            Verify the recorded ingestion schema digest before use.
-            Disabled by default because incremental ingestion updates
-            the schema manifest (`last_updated`) while the forwarded
-            block pool remains valid for a prepared dataset.
 
     Returns:
         core.DataSpecs:
@@ -104,29 +89,24 @@ def build_dataspec(
     prep_root = pathlib.Path(preparation_paths.root)
     prepared_schema_fpath = preparation_paths.schema
 
-    # prepared schema - version handled explicitly for migration
+    # prepared schema
     Ctrl = artifacts.Controller[geo_core.PreparedSchema]
-    prepared_schema = Ctrl(prepared_schema_fpath).fetch()
-    _validate_prepared_schema_id(prepared_schema, prepared_schema_fpath)
+    prepared_schema = Ctrl(
+        prepared_schema_fpath,
+        schema_id=geo_core.prepared_schema.SCHEMA_ID,
+    ).fetch()
 
     # single-upstream ingestion resolution
-    data_schema_fpath = _resolve_ingestion_schema(
-        prepared_schema,
-        prep_root,
-        verify=verify_ingestion_checksum,
-    )
+    ing_paths = _resolve_ingestion_schema(prepared_schema)
 
     # load ingestion schema
     Ctrl = artifacts.Controller[geo_core.DataSchema]
     data_schema = Ctrl(
-        data_schema_fpath,
+        ing_paths.data_blocks.schema,
         schema_id=geo_core.data_schema.SCHEMA_ID
     ).fetch()
 
     # domain maps live beside the canonical block pool
-    ing_paths = artifacts.IngestionPaths(
-        _resolve_ingestion_root(data_schema_fpath)
-    )
     ids_domain = (
         _load_domain(ing_paths.domains.domain_map_fpath(ids_domain_name))
         if ids_domain_name
@@ -150,89 +130,36 @@ def build_dataspec(
         name=data_schema['dataset']['name'],
         mode=mode,
         meta=_get_meta(data_schema, prepared_schema),
-        heads=_get_heads(
-            data_schema,
-            prepared_schema,
-            knowledge_paths=k_paths
-        ),
+        heads=_get_heads(data_schema, prepared_schema, knowledge_paths=k_paths),
         splits=_get_split(prepared_schema, prep_root),
         domains=_get_domain(prepared_schema, ids_domain, vec_domain)
     )
 
 
 # ----- private helpers
-def _validate_prepared_schema_id(
-    prepared_schema: geo_core.PreparedSchema,
-    fpath: pathlib.Path,
-) -> None:
-    '''Reject unsupported prepared schema identifiers.'''
-    schema_id = prepared_schema.get('schema_id')
-    if schema_id not in PREPARED_SCHEMA_IDS:
-        raise artifacts.ArtifactError(
-            f'Unsupported prepared schema in {fpath}: '
-            f'got {schema_id!r}, expected one of {PREPARED_SCHEMA_IDS}'
-        )
-
-
 def _resolve_ingestion_schema(
-    prepared_schema: geo_core.PreparedSchema,
-    prep_root: pathlib.Path,
-    *,
-    verify: bool = False,
-) -> pathlib.Path:
+    prepared_schema: geo_core.PreparedSchema
+) -> artifacts.IngestionPaths:
     '''Resolve the ingestion schema path from forwarded provenance.'''
     artifacts_map = prepared_schema.get('artifacts', {})
-    checksums = prepared_schema.get('checksums', {})
-    recorded = artifacts_map.get(INGESTION_SCHEMA_KEY)
-    relpath = artifacts_map.get(INGESTION_SCHEMA_RELPATH_KEY)
-
-    candidates: list[pathlib.Path] = []
-    if recorded:
-        candidates.append(pathlib.Path(recorded))
-    if relpath:
-        candidates.append(prep_root / relpath)
-
-    for candidate in candidates:
-        if candidate.is_file():
-            if verify:
-                _verify_ingestion_checksum(candidate, checksums)
-            return candidate.resolve()
-
-    if recorded or relpath:
+    ingestion_schema_fpath = artifacts_map.get('ingestion_schema')
+    if ingestion_schema_fpath is None:
         raise FileNotFoundError(
-            'Forwarded ingestion schema is missing: '
-            f'{recorded or relpath}. The upstream pool was relocated; '
-            're-run data-prepare to update the prepared dataset.'
-        )
-    raise FileNotFoundError(
-        'Preparation schema has no ingestion provenance '
-        f'({prepared_schema.get("schema_id")}). '
-        'Re-run data-prepare to upgrade the prepared dataset.'
-    )
+                'Preparation schema has no ingestion provenance '
+                f'({prepared_schema.get("schema_id")}). '
+                'Re-run data-prepare to upgrade the prepared dataset.'
+            )
+    try:
+        # canon: .../ingested_data/data_blocks/schem.json
+        ingestion_root = pathlib.Path(ingestion_schema_fpath).parent.parent
+        ingestion_paths = artifacts.IngestionPaths(ingestion_root)
+        # TODO replace assertion with `IngestionPaths`-owned validation method
+        # TODO add defensive validation methods to all `Paths` subclasses
+        assert ingestion_paths.domains.root.is_dir()
+    except Exception as e:
+        raise ValueError('Error resolving ingestion pipeline paths') from e
 
-
-def _resolve_ingestion_root(schema_fpath: pathlib.Path) -> pathlib.Path:
-    '''Infer the ingestion root directory from a schema path.'''
-    if schema_fpath.parent.name == 'data_blocks':
-        return schema_fpath.parent.parent
-    return schema_fpath.parent
-
-
-def _verify_ingestion_checksum(
-    fpath: pathlib.Path,
-    checksums: dict[str, str],
-) -> None:
-    '''Verify the forwarded ingestion schema checksum when available.'''
-    expected = checksums.get(INGESTION_SCHEMA_KEY)
-    if not expected:
-        return
-    Ctrl = artifacts.Controller[typing.Any]
-    actual = Ctrl(fpath).sha256
-    if actual != expected:
-        raise artifacts.ArtifactError(
-            f'Ingestion schema checksum mismatch for {fpath}: '
-            f'expected {expected}, got {actual}'
-        )
+    return ingestion_paths
 
 
 def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:

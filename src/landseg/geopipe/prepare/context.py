@@ -46,8 +46,8 @@ class PreparationContext:
     '''Resolved upstream ingestion references for dataset preparation.'''
     catalog: dict[str, geo_core.DataCatalogEntry]
     test_catalog: dict[str, geo_core.DataCatalogEntry] | None
-    schema: geo_core.DataSchema
-    schema_fpath: pathlib.Path
+    ingested_blocks_schema: geo_core.DataSchema
+    ingested_blocks_schema_fpath: pathlib.Path
     block_specs: tuple[int, int, int, int] # (row, col, overlap_r, overlap_c)
     train_aoi: pathlib.Path | None
     val_aoi: pathlib.Path | None
@@ -112,8 +112,8 @@ def build_preparation_context(
     return PreparationContext(
         catalog=catalog,
         test_catalog=test_catalog,
-        schema=schema,
-        schema_fpath=pathlib.Path(schema_fp),
+        ingested_blocks_schema=schema,
+        ingested_blocks_schema_fpath=schema_fp.resolve(),
         block_specs=(blk_size[0], blk_size[1], blk_overlap[0], blk_overlap[1]),
         train_aoi=pathlib.Path(splits.train_aoi) if splits.train_aoi else None,
         val_aoi=pathlib.Path(splits.val_aoi) if splits.val_aoi else None,

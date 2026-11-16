@@ -48,7 +48,7 @@ def run_data_preparation(
     '''Run the preparation pipeline for an experiment.'''
     # build dataset view
     dataset_view_inputs = prepare_dataset.DataBlocksManifestInputs(
-        schema=context.schema,
+        schema=context.ingested_blocks_schema,
         catalog=context.catalog,
         test_catalog=context.test_catalog,
     )
@@ -115,9 +115,9 @@ def run_data_preparation(
     prepare_materialize.run_materialize_blocks(
         prep_paths,
         dataset_view,
+        context.ingested_blocks_schema_fpath,
         policy=policy,
         logger=logger,
-        ingestion_schema_fpath=context.schema_fpath,
     )
     assert logger.summary['normalization']
     d = logger.summary['normalization']['duration_sec']

@@ -33,7 +33,6 @@ Public APIs:
 
 # standard imports
 import datetime
-import os
 import pathlib
 import time
 import typing
@@ -66,10 +65,10 @@ class _PipelinePaths(typing.Protocol):
 def build_schema(
     paths: _PipelinePaths,
     context: prepare_dataset.DatasetView,
+    ingestion_schema_fpath: pathlib.Path,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare_logger.PreparationLogger,
-    ingestion_schema_fpath: pathlib.Path | None = None,
 ) -> None:
     '''
     Generate and persist dataset preparation schema JSON.
@@ -79,22 +78,17 @@ def build_schema(
     reclassification hierarchy into a single verified preparation
     schema JSON artifact.
 
-    When `ingestion_schema_fpath` is provided, the resolved path and its
-    SHA-256 checksum are recorded as upstream provenance so downstream
-    stages can resolve the ingestion schema from the preparation schema
-    alone.
-
     Args:
         paths:
             preparation paths container.
         context:
             dataset preparation view with target heads topology.
+        ingestion_schema_fpath:
+            resolved ingestion schema artifact path.
         policy:
             lifecycle policy guiding rebuild behavior.
         logger:
             logger for progress and diagnostic output.
-        ingestion_schema_fpath:
-            optional resolved ingestion schema artifact path.
     '''
     start_time = time.perf_counter()
 
@@ -103,20 +97,19 @@ def build_schema(
     #   under an explicit rebuild instead of blocking in-place
     Ctrl = artifacts.Controller[geo_core.PreparedSchema]
     schema_ctrl = Ctrl(paths.schema, policy=policy)
-    schema = schema_ctrl.fetch(missing_ok=True)
-    if schema is not None and schema.get('schema_id') != (
-        geo_core.prepared_schema.SCHEMA_ID
+    cur_schema = schema_ctrl.fetch(missing_ok=True)
+    if (cur_schema is not None and
+        cur_schema.get('schema_id') != geo_core.prepared_schema.SCHEMA_ID
     ):
         if policy != artifacts.LifecyclePolicy.REBUILD:
             raise artifacts.ArtifactError(
                 f'Prepared schema at {paths.schema} has version '
-                f'{schema.get("schema_id")!r}; re-run data-prepare with '
+                f'{cur_schema.get("schema_id")!r}; re-run data-prepare with '
                 'rebuild enabled to upgrade it.'
             )
-        schema = None # upgrade in place
-    loaded = schema is not None
+        cur_schema = None # upgrade in place
 
-    if not schema:
+    if not cur_schema:
         # artifacts file paths
         collected_artifacts = {
             'block_source': str(paths.splits_source_blocks.resolve()),
@@ -126,7 +119,8 @@ def build_schema(
         }
 
         # checksum the artifacts
-        Ctrl = artifacts.Controller[typing.Any]
+        # TODO might not be necessary as _hash.json is referred when loading
+        Ctrl = artifacts.Controller[dict[str, str]]
         checksums = {
             'block_source': Ctrl(paths.splits_source_blocks).sha256,
             'block_prepared': Ctrl(paths.splits_prepared_blocks).sha256,
@@ -135,21 +129,9 @@ def build_schema(
         }
 
         # forward ingestion lineage (single-upstream contract)
-        if ingestion_schema_fpath is not None:
-            ingestion_schema = pathlib.Path(ingestion_schema_fpath)
-            collected_artifacts['ingestion_schema'] = str(
-                ingestion_schema.resolve()
-            )
-            checksums['ingestion_schema'] = Ctrl(ingestion_schema).sha256
-            try:
-                rel = os.path.relpath(
-                    ingestion_schema.resolve(),
-                    paths.root.resolve(),
-                )
-            except ValueError:
-                pass # distinct anchors (e.g. separate Windows drives)
-            else:
-                collected_artifacts['ingestion_schema_relpath'] = rel
+        ingestion_schema = pathlib.Path(ingestion_schema_fpath)
+        collected_artifacts['ingestion_schema'] = str(ingestion_schema)
+        checksums['ingestion_schema'] = Ctrl(ingestion_schema).sha256
 
         # read blocks splits
         Ctrl = artifacts.Controller[contracts.BlocksPartition]
@@ -164,17 +146,14 @@ def build_schema(
         image_stats = Ctrl(paths.image_stats).fetch()
 
         # target heads reclass hierarchy
+        # TODO shallow copy might not be necessary here
         heads_schema: geo_core.TargetHeadsSchema = {
             'head_names': list(context.targets.head_names),
             'head_parent': dict(context.targets.head_parent),
             'head_parent_cls': dict(context.targets.head_parent_cls),
             'num_classes': dict(context.targets.num_classes),
-            'class_names': {
-                k: list(v) for k, v in context.targets.class_names.items()
-            },
-            'ignore_classes': {
-                k: list(v) for k, v in context.targets.ignore_classes.items()
-            },
+            'class_names': dict(context.targets.class_names),
+            'ignore_classes': dict(context.targets.ignore_classes),
         }
 
         # populate schema dict
@@ -196,18 +175,17 @@ def build_schema(
         schema_ctrl.persist(schema)
         logger.info('[CHECKPOINT] Created dataset prepared schema')
     else:
+        schema = cur_schema
         logger.info('[CHECKPOINT] Loaded dataset prepared schema')
 
     # compile report
     duration = time.perf_counter() - start_time
 
     report: contracts.SchemaReport = {
-        'status': 'loaded' if loaded else 'created',
+        'status': 'loaded' if cur_schema is not None else 'created',
         'duration_sec': duration,
         'schema_filepath': str(paths.schema.resolve()),
         'classes_mapped': list(schema['label_stats'].keys()),
-        'ingestion_schema_filepath': schema['artifacts'].get(
-            'ingestion_schema'
-        ),
+        'ingestion_schema_filepath': schema['artifacts'].get('ingestion_schema'),
     }
     logger.set_schema(report)

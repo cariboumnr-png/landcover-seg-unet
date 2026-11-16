@@ -45,7 +45,7 @@ def test_dataspec_uses_forwarded_ingestion_schema(tmp_path):
     '''
     ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
     prep = tmp_path / 'run_42'
-    _write_prepared(prep, ing, relpath='../lakehouse/data_blocks/schema.json')
+    _write_prepared(prep, ing)
 
     specs = factory.build_dataspec(_prep_paths(prep), mode='default')
 
@@ -74,12 +74,7 @@ def test_dataspec_relocated_prepared_bundle(tmp_path):
     '''
     ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
     prep = tmp_path / 'run_42'
-    _write_prepared(
-        prep,
-        ing,
-        recorded=str(tmp_path / 'gone' / 'schema.json'),
-        relpath='../lakehouse/data_blocks/schema.json',
-    )
+    _write_prepared(prep, ing, recorded=str(tmp_path / 'gone' / 'schema.json'))
 
     bundle = tmp_path / 'bundle'
     moved = bundle / 'prepared_v1'
@@ -105,11 +100,7 @@ def test_dataspec_rejects_checksum_mismatch(tmp_path):
     _write_prepared(prep, ing, checksum='0' * 64)
 
     with pytest.raises(artifacts.ArtifactError, match='checksum mismatch'):
-        factory.build_dataspec(
-            _prep_paths(prep),
-            mode='default',
-            verify_ingestion_checksum=True,
-        )
+        factory.build_dataspec(_prep_paths(prep), mode='default')
 
 
 def test_dataspec_tolerates_updated_ingestion_schema(tmp_path):
@@ -163,9 +154,9 @@ def test_prepared_schema_records_ingestion_provenance(tmp_path):
     prep_schema.build_schema(
         paths,
         _StubContext(),
+        ing,
         policy=artifacts.LifecyclePolicy.BUILD_IF_MISSING,
         logger=logger,
-        ingestion_schema_fpath=ing,
     )
 
     written = json.loads(paths.schema.read_text(encoding='utf-8'))
@@ -250,7 +241,6 @@ def _write_prepared(
     *,
     version: str = 'prepared_schema/v0.1.2',
     recorded: str | None = None,
-    relpath: str | None = None,
     checksum: str | None = None,
 ) -> None:
     '''Write a prepared schema and one dummy block.'''
@@ -266,8 +256,6 @@ def _write_prepared(
             recorded or str(ingestion_schema)
         )
         checksums['ingestion_schema'] = checksum or _sha256(ingestion_schema)
-    if relpath is not None:
-        artifacts_map['ingestion_schema_relpath'] = relpath
 
     _persist(prep_root / 'schema.json', {
         'schema_id': version,
@@ -293,6 +281,7 @@ def _write_prepared(
     })
 
 
+# TODO consider replace the stubs via scoped conftest/fixtures
 class _StubTargets:
     '''Minimal target-heads context for schema generation.'''
     head_names = ['landcover']

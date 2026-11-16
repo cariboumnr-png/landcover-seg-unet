@@ -51,11 +51,9 @@ class PreparedSchema(typing.TypedDict):
 
     The `artifacts` mapping records absolute paths to source and
     produced artifacts. Since v0.1.2 it also records the resolved
-    ingestion schema (`ingestion_schema`) plus, when a relative path can
-    be expressed, its path relative to the preparation root
-    (`ingestion_schema_relpath`). The corresponding SHA-256 digests are
-    recorded under `checksums` so downstream consumers can verify the
-    forwarded lineage chain when required.
+    ingestion schema (`ingestion_schema`). The corresponding SHA-256
+    digests are recorded under `checksums` so downstream consumers can
+    verify the forwarded lineage chain when required.
     '''
     schema_id: str
     creation_time: str
