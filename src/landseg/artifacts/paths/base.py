@@ -27,6 +27,8 @@ Base class for artifact paths dataclasses for each pipeline.
 import dataclasses
 import pathlib
 import typing
+# local imports
+import landseg.artifacts.controller as controller
 
 
 # ----- public dataclasses
@@ -155,3 +157,20 @@ class PipelineArtifactsPaths:
     def _init_pipeline_folders(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.effective_run_folder.mkdir(parents=True, exist_ok=True)
+
+    def validate(self) -> typing.Self:
+        '''
+        Defensively validate that the artifact root directory exists.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If the root directory does not exist or is not a directory.
+        '''
+        if not self.root.exists() or not self.root.is_dir():
+            raise controller.ArtifactError(
+                f'Root does not exist or is not a directory: {self.root}'
+            )
+        return self

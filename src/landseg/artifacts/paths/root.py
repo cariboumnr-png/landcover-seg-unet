@@ -144,6 +144,44 @@ class ArtifactPaths:
             return None
         return paths.KnowledgePaths(self.knowledge_root)
 
+    def validate(
+        self,
+        stages: typing.Iterable[str] | None = None,
+    ) -> typing.Self:
+        '''
+        Validate configured stage artifact paths.
+
+        Args:
+            stages:
+                Optional iterable of stage attribute names to validate
+                (e.g. ['world_grid', 'data_ingestion']). If None, validates
+                all stages whose roots are explicitly configured or derived.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+        '''
+        validators = {
+            'world_grid': self.world_grid.validate(),
+            'data_harmonization': self.data_harmonization.validate(),
+            'data_ingestion': self.data_ingestion.validate(),
+            'data_preparation': self.data_preparation.validate(),
+            'session': self.session.validate(),
+            'knowledge': self.knowledge.validate() if self.knowledge else None,
+        }
+        if stages is not None:
+            for s in stages:
+                if s not in validators:
+                    raise ValueError(f'Unknown stage name: {s}')
+                validators[s]()
+        else:
+            for s, validator in validators.items():
+                try:
+                    validator()
+                except ValueError:
+                    # Unconfigured stage is skipped when validating all defaults
+                    continue
+        return self
+
 
 # ----- private helpers
 def _to_path(value: str | pathlib.Path | None) -> pathlib.Path | None:

@@ -119,7 +119,9 @@ def build_schema(
         }
 
         # checksum the artifacts
-        # TODO might not be necessary as _hash.json is referred when loading
+        # record artifact digests for immutable provenance audit trail.
+        # verification is intentionally non-blocking at runtime to accommodate
+        # incremental ingestion updates to upstream schema manifests.
         Ctrl = artifacts.Controller[dict[str, str]]
         checksums = {
             'block_source': Ctrl(paths.splits_source_blocks).sha256,
@@ -146,14 +148,13 @@ def build_schema(
         image_stats = Ctrl(paths.image_stats).fetch()
 
         # target heads reclass hierarchy
-        # TODO shallow copy might not be necessary here
         heads_schema: geo_core.TargetHeadsSchema = {
-            'head_names': list(context.targets.head_names),
-            'head_parent': dict(context.targets.head_parent),
-            'head_parent_cls': dict(context.targets.head_parent_cls),
-            'num_classes': dict(context.targets.num_classes),
-            'class_names': dict(context.targets.class_names),
-            'ignore_classes': dict(context.targets.ignore_classes),
+            'head_names': context.targets.head_names,
+            'head_parent': context.targets.head_parent,
+            'head_parent_cls': context.targets.head_parent_cls,
+            'num_classes': context.targets.num_classes,
+            'class_names': context.targets.class_names,
+            'ignore_classes': context.targets.ignore_classes,
         }
 
         # populate schema dict

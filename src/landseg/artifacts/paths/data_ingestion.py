@@ -28,6 +28,7 @@ Canonical filesystem paths for data ingestion artifacts.
 # standard imports
 import dataclasses
 import pathlib
+import typing
 # local imports
 import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
@@ -65,6 +66,44 @@ class IngestionPaths(base.PipelineArtifactsPaths):
         self.domains.root.mkdir(parents=True, exist_ok=True)
         if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})
+
+    def validate(
+        self,
+        require_domains: bool = True,
+        require_blocks: bool = False,
+        require_manifest: bool = False,
+    ) -> typing.Self:
+        '''
+        Validate that ingestion artifact directories and schema exist.
+
+        Args:
+            require_domains:
+                If True, validates that domain knowledge directory exists.
+            require_blocks:
+                If True, validates that data blocks pool directory exists.
+            require_manifest:
+                If True, validates that ingestion runs manifest exists.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If expected directory structure or files are missing.
+        '''
+        super().validate()
+        self.data_blocks.validate(require_blocks=require_blocks)
+        if require_domains and not self.domains.root.is_dir():
+            raise controller.ArtifactError(
+                f'Domain knowledge directory does not exist '
+                f'or is not a directory: {self.domains.root}'
+            )
+        if require_manifest and not self.runs_manifest.is_file():
+            raise controller.ArtifactError(
+                f'Ingestion runs manifest does not exist '
+                f'or is not a file: {self.runs_manifest}'
+            )
+        return self
 
 
 # ----- private dataclasses
@@ -104,3 +143,32 @@ class _DataBlocks:
     @property
     def schema(self) -> pathlib.Path:
         return self.root / 'schema.json'
+
+    def validate(self, require_blocks: bool = False) -> typing.Self:
+        '''
+        Validate that data blocks directory and canonical schema exist.
+
+        Args:
+            require_blocks:
+                If True, also validates that the blocks directory exists.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If expected directory structure or files are missing.
+        '''
+        if not self.root.is_dir():
+            raise controller.ArtifactError(
+                f'Data blocks directory does not exist or is not a directory: {self.root}'
+            )
+        if not self.schema.is_file():
+            raise controller.ArtifactError(
+                f'Data blocks schema file does not exist or is not a file: {self.schema}'
+            )
+        if require_blocks and not self.blocks.is_dir():
+            raise controller.ArtifactError(
+                f'Data blocks pool directory does not exist or is not a directory: {self.blocks}'
+            )
+        return self

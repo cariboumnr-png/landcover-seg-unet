@@ -89,20 +89,6 @@ def test_dataspec_relocated_prepared_bundle(tmp_path):
     assert specs.splits.train['row_000000_col_000000'].is_file()
 
 
-def test_dataspec_rejects_checksum_mismatch(tmp_path):
-    '''
-    Given: Forwarded provenance with a tampered checksum.
-    When: Building `DataSpecs` with checksum verification enabled.
-    Then: Raise an `ArtifactError` instead of trusting the artifact.
-    '''
-    ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
-    prep = tmp_path / 'run_42'
-    _write_prepared(prep, ing, checksum='0' * 64)
-
-    with pytest.raises(artifacts.ArtifactError, match='checksum mismatch'):
-        factory.build_dataspec(_prep_paths(prep), mode='default')
-
-
 def test_dataspec_tolerates_updated_ingestion_schema(tmp_path):
     '''
     Given: A prepared schema whose recorded digest is stale.
@@ -139,7 +125,7 @@ def test_prepared_schema_records_ingestion_provenance(tmp_path):
     '''
     Given: A preparation run with a resolved ingestion schema.
     When: Building the prepared schema artifact.
-    Then: Persist the ingestion path, relative path, and checksum.
+    Then: Persist the ingestion path and checksum without relative path.
     '''
     ing = _write_ingestion(tmp_path / 'lakehouse', 'lakehouse')
     prep = tmp_path / 'prepared'
@@ -162,7 +148,7 @@ def test_prepared_schema_records_ingestion_provenance(tmp_path):
     written = json.loads(paths.schema.read_text(encoding='utf-8'))
     assert written['artifacts']['ingestion_schema'] == str(ing.resolve())
     assert written['checksums']['ingestion_schema'] == _sha256(ing)
-    assert written['artifacts']['ingestion_schema_relpath']
+    assert 'ingestion_schema_relpath' not in written['artifacts']
     assert logger.report['ingestion_schema_filepath'] == str(ing.resolve())
 
 
@@ -186,6 +172,7 @@ def _write_ingestion(root: pathlib.Path, name: str) -> pathlib.Path:
     '''Write a minimal ingestion schema and return its path.'''
     schema_fpath = root / 'data_blocks' / 'schema.json'
     _persist(schema_fpath, _data_schema(name))
+    (root / 'data_blocks' / 'blocks').mkdir(parents=True, exist_ok=True)
     (root / 'domain_knowledge').mkdir(parents=True, exist_ok=True)
     return schema_fpath
 

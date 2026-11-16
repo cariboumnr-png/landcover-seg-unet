@@ -19,6 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+# pylint: disable=missing-function-docstring
+
 '''
 Path manager for repository knowledge base artifacts.
 '''
@@ -26,6 +28,9 @@ Path manager for repository knowledge base artifacts.
 # standard imports
 import dataclasses
 import pathlib
+import typing
+# local imports
+import landseg.artifacts.controller as controller
 
 
 # ----- `KnowledgePaths` definition
@@ -38,21 +43,62 @@ class KnowledgePaths:
         self.root = pathlib.Path(self.root)
 
     def profile_dpath(self, profile: str) -> pathlib.Path:
-        '''Return path to the profile embedding directory.'''
         return self.root / 'embeddings' / profile
 
     def similarity_matrix_fpath(self, profile: str) -> pathlib.Path:
-        '''Return path to species similarity matrix tensor for profile.'''
         return self.profile_dpath(profile) / 'species_similarity_matrix.pt'
 
     def embeddings_fpath(self, profile: str) -> pathlib.Path:
-        '''Return path to species embeddings tensor for profile.'''
         return self.profile_dpath(profile) / 'species_embeddings.pt'
 
     def metadata_fpath(self, profile: str) -> pathlib.Path:
-        '''Return path to species metadata JSON for profile.'''
         return self.profile_dpath(profile) / 'species_metadata.json'
 
     def similarity_csv_fpath(self, profile: str) -> pathlib.Path:
-        '''Return path to species similarity CSV for profile.'''
         return self.profile_dpath(profile) / 'species_similarity_matrix.csv'
+
+    def validate(self, profile: str | None = None) -> typing.Self:
+        '''
+        Validate that knowledge root directory exists, and optionally
+        profile files.
+
+        Args:
+            profile:
+                Optional profile name to validate matrix and metadata
+                files for.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If expected directory structure or files are missing.
+        '''
+        if not self.root.is_dir():
+            raise controller.ArtifactError(
+                f'Knowledge root directory does not exist '
+                f'or is not a directory: {self.root}'
+            )
+        if profile is not None:
+            prof_dpath = self.profile_dpath(profile)
+            if not prof_dpath.is_dir():
+                raise controller.ArtifactError(
+                    f'Profile directory does not exist '
+                    f'or is not a directory: {prof_dpath}'
+                )
+            if not self.similarity_matrix_fpath(profile).is_file():
+                raise controller.ArtifactError(
+                    'Species similarity matrix does not exist or is not a file: '
+                    f'{self.similarity_matrix_fpath(profile)}'
+                )
+            if not self.embeddings_fpath(profile).is_file():
+                raise controller.ArtifactError(
+                    'Species embeddings do not exist or are not a file: '
+                    f'{self.embeddings_fpath(profile)}'
+                )
+            if not self.metadata_fpath(profile).is_file():
+                raise controller.ArtifactError(
+                    'Species metadata does not exist or is not a file: '
+                    f'{self.metadata_fpath(profile)}'
+                )
+        return self

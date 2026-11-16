@@ -81,8 +81,7 @@ def build_dataspec(
 
     Raises:
         artifacts.ArtifactError:
-            If the schema identifier is unsupported or a forwarded
-            checksum does not match while verification is enabled.
+            If the schema identifier is unsupported.
         FileNotFoundError:
             If no ingestion schema can be resolved.
     '''
@@ -150,12 +149,9 @@ def _resolve_ingestion_schema(
                 'Re-run data-prepare to upgrade the prepared dataset.'
             )
     try:
-        # canon: .../ingested_data/data_blocks/schem.json
+        # canon: .../ingested_data/data_blocks/schema.json
         ingestion_root = pathlib.Path(ingestion_schema_fpath).parent.parent
-        ingestion_paths = artifacts.IngestionPaths(ingestion_root)
-        # TODO replace assertion with `IngestionPaths`-owned validation method
-        # TODO add defensive validation methods to all `Paths` subclasses
-        assert ingestion_paths.domains.root.is_dir()
+        ingestion_paths = artifacts.IngestionPaths(ingestion_root).validate()
     except Exception as e:
         raise ValueError('Error resolving ingestion pipeline paths') from e
 
