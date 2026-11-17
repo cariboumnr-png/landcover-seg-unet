@@ -514,13 +514,15 @@ def test_inspect_target():
     assert 'ingested_blocks_pool' in probe_ids
 
 
-def test_probe_canonical_ordering():
+def test_probe_canonical_ordering(monkeypatch):
     '''
     Given: Pipeline targets with registered diagnostic suites.
     When: Diagnostic probes are inspected.
     Then: Probes preserve the exact ordering declared in
         `catalog.SUITES`.
     '''
+    # pin CPU so `hardware` yields only `cuda_device` (no `vram_headroom`)
+    monkeypatch.setattr('torch.cuda.is_available', lambda: False)
     cfg = configs.RootConfig()
     ctx = context.InspectionContext.from_config(cfg)
     targets = (
