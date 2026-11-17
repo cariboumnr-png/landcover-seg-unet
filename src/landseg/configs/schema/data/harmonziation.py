@@ -37,7 +37,7 @@ class DataHarmonizationConfig(base.BaseConfigSection):
     dataset_manifest: str = ''
     resampling_continuous: str = 'bilinear'
     resampling_categorical: str = 'nearest'
-    output_dpath: str = '${execution.exp_root}/artifacts/harmonized_data'
+    output_dpath: str | None = None
 
     def validate(self) -> None:
         self.val.require_value_from(self.resampling_continuous, CONT, str)

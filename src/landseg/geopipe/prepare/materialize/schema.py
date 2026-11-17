@@ -48,6 +48,8 @@ import landseg.geopipe.prepare.dataset as prepare_dataset
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
+    def root(self) -> pathlib.Path: ...
+    @property
     def schema(self) -> pathlib.Path: ...
     @property
     def splits_source_blocks(self) -> pathlib.Path: ...
@@ -63,6 +65,7 @@ class _PipelinePaths(typing.Protocol):
 def build_schema(
     paths: _PipelinePaths,
     context: prepare_dataset.DatasetView,
+    ingestion_schema_fpath: pathlib.Path,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: prepare_logger.PreparationLogger,
@@ -80,6 +83,8 @@ def build_schema(
             preparation paths container.
         context:
             dataset preparation view with target heads topology.
+        ingestion_schema_fpath:
+            resolved ingestion schema artifact path.
         policy:
             lifecycle policy guiding rebuild behavior.
         logger:
@@ -88,16 +93,23 @@ def build_schema(
     start_time = time.perf_counter()
 
     # schema artifact controller
+    # - version handled explicitly so a legacy schema can be upgraded
+    #   under an explicit rebuild instead of blocking in-place
     Ctrl = artifacts.Controller[geo_core.PreparedSchema]
-    schema_ctrl = Ctrl(
-        paths.schema,
-        policy=policy,
-        schema_id=geo_core.prepared_schema.SCHEMA_ID,
-    )
-    schema = schema_ctrl.fetch()
-    loaded = schema is not None
+    schema_ctrl = Ctrl(paths.schema, policy=policy)
+    cur_schema = schema_ctrl.fetch(missing_ok=True)
+    if (cur_schema is not None and
+        cur_schema.get('schema_id') != geo_core.prepared_schema.SCHEMA_ID
+    ):
+        if policy != artifacts.LifecyclePolicy.REBUILD:
+            raise artifacts.ArtifactError(
+                f'Prepared schema at {paths.schema} has version '
+                f'{cur_schema.get("schema_id")!r}; re-run data-prepare with '
+                'rebuild enabled to upgrade it.'
+            )
+        cur_schema = None # upgrade in place
 
-    if not schema:
+    if not cur_schema:
         # artifacts file paths
         collected_artifacts = {
             'block_source': str(paths.splits_source_blocks.resolve()),
@@ -107,13 +119,21 @@ def build_schema(
         }
 
         # checksum the artifacts
-        Ctrl = artifacts.Controller[typing.Any]
+        # record artifact digests for immutable provenance audit trail.
+        # verification is intentionally non-blocking at runtime to accommodate
+        # incremental ingestion updates to upstream schema manifests.
+        Ctrl = artifacts.Controller[dict[str, str]]
         checksums = {
             'block_source': Ctrl(paths.splits_source_blocks).sha256,
             'block_prepared': Ctrl(paths.splits_prepared_blocks).sha256,
             'label_stats': Ctrl(paths.label_stats).sha256,
             'image_stats': Ctrl(paths.image_stats).sha256
         }
+
+        # forward ingestion lineage (single-upstream contract)
+        ingestion_schema = pathlib.Path(ingestion_schema_fpath)
+        collected_artifacts['ingestion_schema'] = str(ingestion_schema)
+        checksums['ingestion_schema'] = Ctrl(ingestion_schema).sha256
 
         # read blocks splits
         Ctrl = artifacts.Controller[contracts.BlocksPartition]
@@ -129,16 +149,12 @@ def build_schema(
 
         # target heads reclass hierarchy
         heads_schema: geo_core.TargetHeadsSchema = {
-            'head_names': list(context.targets.head_names),
-            'head_parent': dict(context.targets.head_parent),
-            'head_parent_cls': dict(context.targets.head_parent_cls),
-            'num_classes': dict(context.targets.num_classes),
-            'class_names': {
-                k: list(v) for k, v in context.targets.class_names.items()
-            },
-            'ignore_classes': {
-                k: list(v) for k, v in context.targets.ignore_classes.items()
-            },
+            'head_names': context.targets.head_names,
+            'head_parent': context.targets.head_parent,
+            'head_parent_cls': context.targets.head_parent_cls,
+            'num_classes': context.targets.num_classes,
+            'class_names': context.targets.class_names,
+            'ignore_classes': context.targets.ignore_classes,
         }
 
         # populate schema dict
@@ -160,15 +176,17 @@ def build_schema(
         schema_ctrl.persist(schema)
         logger.info('[CHECKPOINT] Created dataset prepared schema')
     else:
+        schema = cur_schema
         logger.info('[CHECKPOINT] Loaded dataset prepared schema')
 
     # compile report
     duration = time.perf_counter() - start_time
 
     report: contracts.SchemaReport = {
-        'status': 'loaded' if loaded else 'created',
+        'status': 'loaded' if cur_schema is not None else 'created',
         'duration_sec': duration,
         'schema_filepath': str(paths.schema.resolve()),
         'classes_mapped': list(schema['label_stats'].keys()),
+        'ingestion_schema_filepath': schema['artifacts'].get('ingestion_schema'),
     }
     logger.set_schema(report)

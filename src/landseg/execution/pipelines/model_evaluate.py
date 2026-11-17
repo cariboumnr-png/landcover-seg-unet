@@ -96,10 +96,11 @@ class ModelEvaluation(base.SessionPipeline):
 
     def _build_context(self) -> core.DataSpecs:
         dataspecs = geopipe.build_dataspec(
-            self.artifact_paths,
+            self.artifact_paths.data_preparation,
             mode='default',
             ids_domain_name=self.config.data.specification.domain_ids_name,
             vec_domain_name=self.config.data.specification.domain_vec_name,
+            knowledge_root=self.artifact_paths.knowledge_root,
         )
 
         eval_config = self.config.session.evaluation

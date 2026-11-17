@@ -24,9 +24,12 @@
 # standard imports
 import pathlib
 # third-party imports
+import hydra
+import hydra.core.global_hydra
 import omegaconf
 import pytest
 # local imports
+import landseg._constants as c
 import landseg.adapters.cli.resolver as resolver_mod
 
 
@@ -198,3 +201,24 @@ def test_all_tracked_recipes_resolve_and_validate(cmd: str):
     finally:
         if created and ckpt_file.exists():
             ckpt_file.unlink()
+
+
+@pytest.mark.parametrize('cmd', c.COMMANDS)
+def test_hydra_composed_commands_resolve_without_exp_root(cmd: str):
+    '''
+    Given: The packaged Hydra config tree and a command override.
+    When: Resolving the fully composed configuration.
+    Then: Every command resolves with `execution.exp_root` unset, proving
+        stage paths are explicit and no interpolation requires a root.
+    '''
+    hydra.core.global_hydra.GlobalHydra.instance().clear()
+    with hydra.initialize(
+        version_base='1.3',
+        config_path='pkg://landseg/configs/hydra',
+    ):
+        cfg = hydra.compose(config_name='config', overrides=[f'command={cmd}'])
+        root = resolver_mod.resolve_configs(cfg)
+
+    assert root.command == cmd
+    assert root.execution.exp_root is None
+    hydra.core.global_hydra.GlobalHydra.instance().clear()

@@ -54,7 +54,7 @@ class SessionConfig(base.BaseConfigSection):
     orchestration: Orchestration = field(default_factory=Orchestration)
     evaluation: Evaluation = field(default_factory=Evaluation)
     mode: str = 'continuous'
-    output_dpath: str = '${execution.exp_root}/results/'
+    output_dpath: str | None = None
     device: str = 'auto'
     trackers: list[str] | None = None
     tracking_uri: str | None = None

@@ -23,6 +23,8 @@
 
 # standard imports
 import pathlib
+# third-party imports
+import pytest
 # local imports
 import landseg.artifacts.controller as ctrl_mod
 import landseg.artifacts.paths as paths_mod
@@ -32,16 +34,46 @@ import landseg.configs as configs_mod
 # ----- `ArtifactPaths` & Foundation tests
 def test_artifact_paths_hierarchy():
     '''
-    Given: An experiment root directory string.
+    Given: A shared root directory string.
     When: Instantiating `ArtifactPaths`.
-    Then: Return joined namespaces.
+    Then: Derive legacy stage namespaces beneath the shared root.
     '''
     r = pathlib.Path('/tmp') / 'exp'
     art = paths_mod.ArtifactPaths(root=r)
-    assert art.data_harmonization.root == r / 'harmonized_data'
-    assert art.data_ingestion.root == r / 'ingested_data'
-    assert art.data_preparation.root == r / 'prepared_data'
+    assert art.data_harmonization.root == r / 'artifacts' / 'harmonized_data'
+    assert art.data_ingestion.root == r / 'artifacts' / 'ingested_data'
+    assert art.data_preparation.root == r / 'artifacts' / 'prepared_data'
     assert art.session.root == r / 'results'
+
+
+def test_artifact_paths_require_explicit_root():
+    '''
+    Given: An `ArtifactPaths` with no shared root.
+    When: Accessing a stage namespace.
+    Then: Raise an actionable error instead of guessing a parent.
+    '''
+    art = paths_mod.ArtifactPaths()
+    try:
+        _ = art.data_preparation
+    except ValueError as e:
+        assert 'data.preparation.output_dpath' in str(e)
+    else:
+        raise AssertionError('Expected ValueError for missing stage root')
+
+
+def test_artifact_paths_autonomous_stage_roots():
+    '''
+    Given: Explicit stage roots with no shared experiment root.
+    When: Accessing namespaces.
+    Then: Resolve each stage independently.
+    '''
+    art = paths_mod.ArtifactPaths(
+        preparation_root=pathlib.Path('/volumes/prepared'),
+        session_root=pathlib.Path('/volumes/run_42'),
+    )
+    assert art.data_preparation.root == pathlib.Path('/volumes/prepared')
+    assert art.session.root == pathlib.Path('/volumes/run_42')
+    assert art.root is None
 
 
 def test_artifact_paths_custom_overrides():
@@ -301,3 +333,213 @@ def test_artifact_paths_knowledge_integration():
 
     art_default = paths_mod.ArtifactPaths()
     assert art_default.knowledge is None
+
+
+# ----- `validate` method tests for all path classes
+def test_pipeline_artifacts_paths_validate(tmp_path):
+    '''
+    Given: A Base PipelineArtifactsPaths instance.
+    When: Calling `validate`.
+    Then: Succeed if directory exists; raise ArtifactError if missing.
+    '''
+    valid_dir = tmp_path / 'valid'
+    valid_dir.mkdir()
+    p = paths_mod.PipelineArtifactsPaths(root=valid_dir)
+    assert p.validate() is p
+
+    missing_dir = tmp_path / 'missing'
+    p_missing = paths_mod.PipelineArtifactsPaths(root=missing_dir)
+    with pytest.raises(ctrl_mod.ArtifactError, match='does not exist'):
+        p_missing.validate()
+
+    file_as_root = tmp_path / 'file_root'
+    file_as_root.write_text('content')
+    p_file = paths_mod.PipelineArtifactsPaths(root=file_as_root)
+    with pytest.raises(ctrl_mod.ArtifactError, match='not a directory'):
+        p_file.validate()
+
+
+def test_world_grid_paths_validate(tmp_path):
+    '''
+    Given: A WorldGridPaths instance.
+    When: Calling `validate`.
+    Then: Succeed if report.json exists; raise ArtifactError otherwise.
+    '''
+    grid_root = tmp_path / 'world_grid'
+    grid_root.mkdir()
+    paths = paths_mod.WorldGridPaths(root=grid_root)
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='report does not exist'):
+        paths.validate()
+
+    paths.report.write_text('{}')
+    assert paths.validate() is paths
+
+
+def test_harmonization_paths_validate(tmp_path):
+    '''
+    Given: A HarmonizationPaths instance.
+    When: Calling `validate` with default and run requirements.
+    Then: Validate presence of runs_manifest and run folder contents.
+    '''
+    harm_root = tmp_path / 'harmonization'
+    harm_root.mkdir()
+    paths = paths_mod.HarmonizationPaths(root=harm_root)
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='manifest does not exist'):
+        paths.validate()
+
+    paths.init_pipeline_folders()
+    assert paths.validate() is paths
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='valid mask raster'):
+        paths.validate(require_run=True)
+
+    paths.valid_mask_raster.write_text('vrt')
+    assert paths.validate(require_run=True) is paths
+
+
+def test_ingestion_paths_validate(tmp_path):
+    '''
+    Given: An IngestionPaths instance.
+    When: Calling `validate`.
+    Then: Defensively enforce data blocks schema, domains, blocks pool, and manifest.
+    '''
+    ing_root = tmp_path / 'ingestion'
+    ing_root.mkdir()
+    paths = paths_mod.IngestionPaths(root=ing_root)
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='Data blocks directory'):
+        paths.validate()
+
+    paths.data_blocks.root.mkdir(parents=True)
+    with pytest.raises(ctrl_mod.ArtifactError, match='schema file'):
+        paths.validate()
+
+    paths.data_blocks.schema.write_text('{}')
+    with pytest.raises(ctrl_mod.ArtifactError, match='Domain knowledge directory'):
+        paths.validate()
+
+    paths.domains.root.mkdir(parents=True)
+    assert paths.validate() is paths
+
+    # require blocks
+    with pytest.raises(ctrl_mod.ArtifactError, match='Data blocks pool directory'):
+        paths.validate(require_blocks=True)
+    paths.data_blocks.blocks.mkdir(parents=True)
+    assert paths.validate(require_blocks=True) is paths
+
+    # require manifest
+    with pytest.raises(ctrl_mod.ArtifactError, match='manifest does not exist'):
+        paths.validate(require_manifest=True)
+    paths.runs_manifest.write_text('{}')
+    assert paths.validate(require_manifest=True) is paths
+
+
+def test_preparation_paths_validate(tmp_path):
+    '''
+    Given: A PreparationPaths instance.
+    When: Calling `validate`.
+    Then: Validate schema and optionally split block directories and manifest.
+    '''
+    prep_root = tmp_path / 'preparation'
+    prep_root.mkdir()
+    paths = paths_mod.PreparationPaths(root=prep_root)
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='Preparation schema file'):
+        paths.validate()
+
+    paths.schema.write_text('{}')
+    assert paths.validate() is paths
+
+    # require splits
+    with pytest.raises(ctrl_mod.ArtifactError, match='Train blocks directory'):
+        paths.validate(require_splits=True)
+
+    paths.train_blocks.mkdir()
+    paths.val_blocks.mkdir()
+    paths.test_blocks.mkdir()
+    with pytest.raises(ctrl_mod.ArtifactError, match='Prepared block splits manifest'):
+        paths.validate(require_splits=True)
+
+    paths.splits_prepared_blocks.write_text('{}')
+    assert paths.validate(require_splits=True) is paths
+
+
+def test_session_paths_validate(tmp_path):
+    '''
+    Given: A SessionPaths instance.
+    When: Calling `validate` with default and run requirements.
+    Then: Validate root and session run directory structure.
+    '''
+    sess_root = tmp_path / 'results'
+    sess_root.mkdir()
+    paths = paths_mod.SessionPaths(root=sess_root)
+    assert paths.validate() is paths
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='Session run directory'):
+        paths.validate(require_run=True)
+
+    paths.init_pipeline_folders()
+    assert paths.validate(require_run=True) is paths
+
+
+def test_knowledge_paths_validate(tmp_path):
+    '''
+    Given: A KnowledgePaths instance.
+    When: Calling `validate`.
+    Then: Validate root and species profile embeddings/matrices.
+    '''
+    k_root = tmp_path / 'knowledge'
+    paths = paths_mod.KnowledgePaths(root=k_root)
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='Knowledge root directory'):
+        paths.validate()
+
+    k_root.mkdir()
+    assert paths.validate() is paths
+
+    with pytest.raises(ctrl_mod.ArtifactError, match='Profile directory'):
+        paths.validate(profile='boreal')
+
+    prof_dir = paths.profile_dpath('boreal')
+    prof_dir.mkdir(parents=True)
+    with pytest.raises(ctrl_mod.ArtifactError, match='similarity matrix'):
+        paths.validate(profile='boreal')
+
+    paths.similarity_matrix_fpath('boreal').write_text('matrix')
+    with pytest.raises(ctrl_mod.ArtifactError, match='embeddings do not exist'):
+        paths.validate(profile='boreal')
+
+    paths.embeddings_fpath('boreal').write_text('embeddings')
+    with pytest.raises(ctrl_mod.ArtifactError, match='metadata does not exist'):
+        paths.validate(profile='boreal')
+
+    paths.metadata_fpath('boreal').write_text('{}')
+    assert paths.validate(profile='boreal') is paths
+
+
+def test_artifact_paths_validate(tmp_path):
+    '''
+    Given: An ArtifactPaths aggregation instance.
+    When: Calling `validate`.
+    Then: Validate configured stage directories and handle stage selection.
+    '''
+    exp_root = tmp_path / 'exp'
+    art = paths_mod.ArtifactPaths(root=exp_root)
+
+    # Missing root throws on first stage
+    with pytest.raises(ctrl_mod.ArtifactError):
+        art.validate()
+
+    # Create directories and files for world_grid and harmonization
+    art.world_grid.root.mkdir(parents=True)
+    art.world_grid.report.write_text('{}')
+    art.data_harmonization.init_pipeline_folders()
+
+    # Validating selected valid stages succeeds
+    assert art.validate(stages=['world_grid', 'data_harmonization']) is art
+
+    # Invalid stage name raises ValueError
+    with pytest.raises(ValueError, match='Unknown stage name'):
+        art.validate(stages=['invalid_stage'])

@@ -303,6 +303,7 @@ def test_preparation_logger_lifecycle(tmp_path):
         'duration_sec': 0.5,
         'schema_filepath': '/path/schema.json',
         'classes_mapped': ['landcover', 'landcover_group'],
+        'ingestion_schema_filepath': '/path/ingestion_schema.json',
     }
     logger.set_schema(schema_rep)
     logger.close()

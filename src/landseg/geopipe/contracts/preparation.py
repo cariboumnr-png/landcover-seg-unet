@@ -70,10 +70,11 @@ class PreparationPipelineConfig(typing.Protocol):
     @property
     def rebuild(self) -> bool: ...
     @property
-    def output_dpath(self) -> str: ...
+    def output_dpath(self) -> str | None: ...
 
 
 class PreparationDatasetViewConfig(typing.Protocol):
+    '''Shape of preparation dataset view configurations.'''
     @property
     def valid_pxs(self) -> dict[str, float]: ...
     @property
@@ -140,6 +141,7 @@ class SchemaReport(typing.TypedDict):
     duration_sec: float
     schema_filepath: str
     classes_mapped: list[str]
+    ingestion_schema_filepath: str | None
 
 
 class PreparationReportSchema(typing.TypedDict):

@@ -514,13 +514,15 @@ def test_inspect_target():
     assert 'ingested_blocks_pool' in probe_ids
 
 
-def test_probe_canonical_ordering():
+def test_probe_canonical_ordering(monkeypatch):
     '''
     Given: Pipeline targets with registered diagnostic suites.
     When: Diagnostic probes are inspected.
     Then: Probes preserve the exact ordering declared in
         `catalog.SUITES`.
     '''
+    # pin CPU so `hardware` yields only `cuda_device` (no `vram_headroom`)
+    monkeypatch.setattr('torch.cuda.is_available', lambda: False)
     cfg = configs.RootConfig()
     ctx = context.InspectionContext.from_config(cfg)
     targets = (
@@ -620,6 +622,11 @@ def test_pipeline_default_path_resolution(monkeypatch):
     )
 
     cfg = configs.RootConfig()
+    cfg.data.world_grid.output_dpath = './grids'
+    cfg.data.harmonization.output_dpath = './harmonized'
+    cfg.data.ingestion.output_dpath = './ingested'
+    cfg.data.preparation.output_dpath = './prepared'
+    cfg.session.output_dpath = './results'
     wg = pipelines.WorldGridGeneration(cfg)
     dh = pipelines.DataHarmonization(cfg)
     di = pipelines.DataIngestion(cfg)
@@ -815,3 +822,19 @@ def test_dir_writable_rejects_workspace_path():
     assert res.status == schema.ProbeStatus.FAIL
     assert '/Workspace' in res.message
     assert '.pt' in res.message
+
+
+def test_preflight_data_ingest_pool_compatibility_decoupled(tmp_path):
+    '''
+    Given: A decoupled configuration for data-ingest without world-grid.
+    When: Running pool_compatibility check.
+    Then: Return a PASS probe indicating check is deferred to runtime.
+    '''
+    cfg = configs.RootConfig()
+    cfg.data.ingestion.output_dpath = str(tmp_path / 'ingest')
+    cfg.data.harmonization.output_dpath = str(tmp_path / 'harm')
+    ctx = context.InspectionContext.from_config(cfg)
+
+    res = checks.contracts.pool_compatibility(ctx)
+    assert res.status == schema.ProbeStatus.PASS
+    assert 'decoupled' in res.message.lower()

@@ -130,8 +130,8 @@ def export_preflight_report(
     now = datetime.datetime.now()
     uid = f'{now.strftime("%Y%m%d_%H%M%S")}_{uuid.uuid4().hex[:6]}'
 
-    effective_exp_root = exp_root or root_config.execution.exp_root
-    report_dir = pathlib.Path(effective_exp_root) / 'preflight'
+    effective_exp_root = _resolve_report_root(root_config, exp_root)
+    report_dir = effective_exp_root / 'preflight'
     report_fp = report_dir / f'preflight_report_{uid}.json'
     report_dir.mkdir(parents=True, exist_ok=True)
 
@@ -153,6 +153,32 @@ def export_preflight_report(
 
 
 # ----- private helpers
+def _resolve_report_root(
+    root_config: configs.RootConfig,
+    exp_root: pathlib.Path | None,
+) -> pathlib.Path:
+    '''
+    Resolve where pre-flight reports are written.
+
+    `exp_root` is optional; without it, reports live beside the most
+    relevant configured stage root, falling back to the process CWD.
+    '''
+    if exp_root is not None:
+        return pathlib.Path(exp_root)
+    if root_config.execution.exp_root:
+        return pathlib.Path(root_config.execution.exp_root)
+    for value in (
+        root_config.session.output_dpath,
+        root_config.data.preparation.output_dpath,
+        root_config.data.ingestion.output_dpath,
+        root_config.data.harmonization.output_dpath,
+        root_config.data.world_grid.output_dpath,
+    ):
+        if value:
+            return pathlib.Path(value)
+    return pathlib.Path.cwd()
+
+
 def _status_summary(results: list[schema.PreflightResult]) -> dict[str, int]:
     '''Return aggregate probe status counts across all results.'''
     counts = {status: 0 for status in schema.ProbeStatus}

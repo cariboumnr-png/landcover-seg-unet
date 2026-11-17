@@ -35,25 +35,17 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
 
     def __init__(
         self,
-        experiment_root: str | pathlib.Path | None = None,
         *,
         upstream_dpath: str | pathlib.Path | None = None,
-        grid_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         super().__init__(
             'data-harmonize',
-            experiment_root=experiment_root,
+            upstream_dpath=upstream_dpath,
             output_dpath=output_dpath,
+            experiment_root=experiment_root,
         )
-        if experiment_root is None:
-            self.cfg.data.harmonization.output_dpath = self.output
-            target_upstream = (
-                upstream_dpath if upstream_dpath is not None else grid_dpath
-            )
-            self.cfg.data.world_grid.output_dpath = self.require_dir(
-                target_upstream
-            )
 
     def set_dataset_manifest(
         self,
@@ -84,20 +76,4 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         self.cfg.data.world_grid.tile_stride = (tile_stride, tile_stride)
         if output_dpath:
             self.cfg.data.world_grid.output_dpath = str(output_dpath)
-        return self
-
-    def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
-        '''Set output directory path for harmonized artifacts.'''
-        self.cfg.data.harmonization.output_dpath = str(output_dpath)
-        return self
-
-    def set_grid_reference(self, output_dpath: str | pathlib.Path) -> typing.Self:
-        '''
-        Set directory path containing upstream world grid artifacts.
-
-        Args:
-            output_dpath:
-                Directory containing the canonical world grid report.
-        '''
-        self.cfg.data.world_grid.output_dpath = str(output_dpath)
         return self

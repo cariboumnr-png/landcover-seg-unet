@@ -50,27 +50,30 @@ import landseg.geopipe.prepare.materialize.stats as stats
 # ----- private types
 class _PipelinePaths(typing.Protocol):
     @property
+    def root(self) -> pathlib.Path: ...
+    @property
+    def schema(self) -> pathlib.Path: ...
+    @property
     def splits_source_blocks(self) -> pathlib.Path: ...
+    @property
+    def splits_prepared_blocks(self) -> pathlib.Path: ...
     @property
     def image_stats(self) -> pathlib.Path: ...
     @property
     def label_stats(self) -> pathlib.Path: ...
-    @property
-    def splits_prepared_blocks(self) -> pathlib.Path: ...
     @property
     def train_blocks(self) -> pathlib.Path: ...
     @property
     def val_blocks(self) -> pathlib.Path: ...
     @property
     def test_blocks(self) -> pathlib.Path: ...
-    @property
-    def schema(self) -> pathlib.Path: ...
 
 
 # ----- public functions
 def run_materialize_blocks(
     paths: _PipelinePaths,
     context: dataset.DatasetView,
+    ingestion_schema_fpath: pathlib.Path,
     *,
     policy: artifacts.LifecyclePolicy,
     logger: logger_mod.PreparationLogger,
@@ -87,6 +90,9 @@ def run_materialize_blocks(
             pipeline artifact and directory paths container.
         context:
             dataset view containing features and target hierarchy.
+        ingestion_schema_fpath:
+            resolved ingestion schema path forwarded into the
+            prepared schema for downstream single-upstream resolution.
         policy:
             lifecycle policy guiding rebuild behavior.
         logger:
@@ -152,6 +158,7 @@ def run_materialize_blocks(
     schema.build_schema(
         paths,
         context,
+        ingestion_schema_fpath,
         policy=policy,
         logger=logger,
     )

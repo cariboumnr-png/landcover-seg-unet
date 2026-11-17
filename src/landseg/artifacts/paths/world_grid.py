@@ -28,7 +28,9 @@ Canonical filesystem paths for world grid artifacts.
 # standard imports
 import dataclasses
 import pathlib
+import typing
 # local imports
+import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
 
 
@@ -40,3 +42,22 @@ class WorldGridPaths(base.PipelineArtifactsPaths):
     @property
     def effective_run_folder(self) -> pathlib.Path:
         return self.root
+
+    def validate(self) -> typing.Self:
+        '''
+        Defensively validate that the world grid directory and report exist.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If root directory or report file does not exist.
+        '''
+        super().validate()
+        if not self.report.is_file():
+            raise controller.ArtifactError(
+                f'World grid report does not exist '
+                f'or is not a file: {self.report}'
+            )
+        return self

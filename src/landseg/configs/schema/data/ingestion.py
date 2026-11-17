@@ -74,13 +74,15 @@ class DataIngestionConfig(base.BaseConfigSection):
     domains: Domains = dataclasses.field(default_factory=Domains)
     datablocks: DataBlocks = dataclasses.field(default_factory=DataBlocks)
     rebuild: bool = False
-    harmonization_run: int | str = 'latest'
-    output_dpath: str = '${execution.exp_root}/artifacts/ingested_data'
+    harmonization_run: int | str | None = 'latest'
+    output_dpath: str | None = None
 
     def validate(self) -> None:
         self.domains.validate()
         self.datablocks.validate()
 
+        if self.harmonization_run is None:
+            return # null means "latest"; normalized by consumers
         if isinstance(self.harmonization_run, (int, float)):
             self.val.require_numeric_min(self.harmonization_run, 1)
         elif isinstance(self.harmonization_run, str):

@@ -38,41 +38,60 @@ class BaseConfigurator:
     def __init__(
         self,
         command: str,
-        experiment_root: str | pathlib.Path | None = None,
         *,
+        upstream_dpath: str | pathlib.Path | None = None,
         output_dpath: str | pathlib.Path | None = None,
+        experiment_root: str | pathlib.Path | None = None,
     ):
         '''
         Initialize the configurator.
 
         Supports both:
         1. Canonical decoupled mode: Explicitly passing destination output and
-           upstream input directories (matching standalone CLI recipes).
-        2. Unified E2E mode: Passing an optional `experiment_root` that auto-populates
-           all stage inputs and outputs under `<exp_root>/artifacts/...` and `<exp_root>/results`.
+           upstream input directories. No experiment root is inferred or
+           required, so stages may live on unrelated storage volumes.
+        2. Auxiliary unified mode: Passing an optional `experiment_root` that
+           auto-populates all stage inputs and outputs under
+           `<exp_root>/artifacts/...` and `<exp_root>/results`.
+           TMP: here if experiment_root is provided its populated I/O takes
+           precedence (override-like).
         '''
         # init a default RootConfig instance
         self.cfg = configs.RootConfig()
         self.cfg.command = command
 
-        if experiment_root is None:
-            self.output = self.require_dir(output_dpath, writable=True)
-            resolved_root = str(pathlib.Path(self.output).parent)
+        if experiment_root is not None:
+            resolved_root = self._require_dir(experiment_root, writable=True)
             self.cfg.execution.exp_root = resolved_root
-        else:
-            resolved_root = self.require_dir(experiment_root, writable=True)
-            self.cfg.execution.exp_root = resolved_root
+            ps = artifacts.ArtifactPaths(root=pathlib.Path(resolved_root))
 
-            _paths = artifacts.ArtifactPaths(root=pathlib.Path(resolved_root))
             dt_cfg = self.cfg.data
-            dt_cfg.world_grid.output_dpath = str(_paths.world_grid.root)
-            dt_cfg.harmonization.output_dpath = str(_paths.data_harmonization.root)
-            dt_cfg.ingestion.output_dpath = str(_paths.data_ingestion.root)
-            dt_cfg.preparation.output_dpath = str(_paths.data_preparation.root)
-            self.cfg.session.output_dpath = str(_paths.session.root)
+            dt_cfg.world_grid.output_dpath = str(ps.world_grid.root)
+            dt_cfg.harmonization.output_dpath = str(ps.data_harmonization.root)
+            dt_cfg.ingestion.output_dpath = str(ps.data_ingestion.root)
+            dt_cfg.preparation.output_dpath = str(ps.data_preparation.root)
+            self.cfg.session.output_dpath = str(ps.session.root)
 
+        if upstream_dpath is not None:
+            self.set_upstream(self._require_dir(upstream_dpath))
+        if output_dpath is not None:
+            self.set_output(self._require_dir(output_dpath, writable=True))
 
-    def set_output_dpath(self, output_dpath: str | pathlib.Path) -> typing.Self:
+    @classmethod
+    def from_experiment_root(
+        cls,
+        experiment_root: str | pathlib.Path,
+        **kwargs: typing.Any,
+    ) -> typing.Self:
+        '''
+        Create configurator instance populated from an experiment root.
+
+        Convenience factory populating canonical stage subdirectories
+        under `<exp_root>/artifacts/...` and `<exp_root>/results`.
+        '''
+        return cls(experiment_root=experiment_root, **kwargs)
+
+    def set_output(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set destination output directory path for the active command.'''
         dpath_str = str(output_dpath)
         match self.cfg.command:
@@ -93,12 +112,12 @@ class BaseConfigurator:
                 self.cfg.session.output_dpath = dpath_str
         return self
 
-    def set_upstream_dpath(
-        self, upstream_dpath: str | pathlib.Path
-    ) -> typing.Self:
+    def set_upstream(self, upstream_dpath: str | pathlib.Path) -> typing.Self:
         '''Set direct upstream input directory path for the active command.'''
         dpath_str = str(upstream_dpath)
         match self.cfg.command:
+            case 'world-grid':
+                pass
             case 'data-harmonize':
                 self.cfg.data.world_grid.output_dpath = dpath_str
             case 'data-ingest':
@@ -199,7 +218,7 @@ class BaseConfigurator:
         return self
 
     @staticmethod
-    def require_dir(
+    def _require_dir(
         path: str | pathlib.Path | None,
         *,
         writable: bool = False,

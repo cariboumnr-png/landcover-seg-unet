@@ -28,7 +28,9 @@ Canonical filesystem paths for data preparation artifacts.
 # standard imports
 import dataclasses
 import pathlib
+import typing
 # local imports
+import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
 
 
@@ -82,3 +84,44 @@ class PreparationPaths(base.PipelineArtifactsPaths):
         self.train_blocks.mkdir(parents=True, exist_ok=True)
         self.val_blocks.mkdir(parents=True, exist_ok=True)
         self.test_blocks.mkdir(parents=True, exist_ok=True)
+
+    def validate(self, require_splits: bool = False) -> typing.Self:
+        '''
+        Validate that preparation artifact directory and schema exist.
+
+        Args:
+            require_splits:
+                If True, also validates that block split directories
+                (train_blocks, val_blocks, test_blocks) and prepared
+                splits manifest exist.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If expected directory structure or files are missing.
+        '''
+        super().validate()
+        if not self.schema.is_file():
+            raise controller.ArtifactError(
+                f'Preparation schema file does not exist '
+                f'or is not a file: {self.schema}'
+            )
+        if require_splits:
+            for d, name in (
+                (self.train_blocks, 'Train blocks'),
+                (self.val_blocks, 'Validation blocks'),
+                (self.test_blocks, 'Test blocks'),
+            ):
+                if not d.is_dir():
+                    raise controller.ArtifactError(
+                        f'{name} directory does not exist '
+                        f'or is not a directory: {d}'
+                    )
+            if not self.splits_prepared_blocks.is_file():
+                raise controller.ArtifactError(
+                    f'Prepared block splits manifest does not exist '
+                    f'or is not a file: {self.splits_prepared_blocks}'
+                )
+        return self

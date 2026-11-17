@@ -28,6 +28,7 @@ Canonical filesystem paths for data harmonization (ETL) artifacts.
 # standard imports
 import dataclasses
 import pathlib
+import typing
 # local imports
 import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
@@ -50,3 +51,38 @@ class HarmonizationPaths(base.PipelineArtifactsPaths):
         super()._init_pipeline_folders()
         if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})
+
+    def validate(self, require_run: bool = False) -> typing.Self:
+        '''
+        Validate that harmonization directory and manifest exist.
+
+        Args:
+            require_run:
+                If True, also validates that the effective run directory
+                and valid pixel mask exist.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If expected directory structure or files are missing.
+        '''
+        super().validate()
+        if not self.runs_manifest.is_file():
+            raise controller.ArtifactError(
+                f'Harmonization runs manifest does not exist '
+                f'or is not a file: {self.runs_manifest}'
+            )
+        if require_run:
+            if not self.effective_run_folder.is_dir():
+                raise controller.ArtifactError(
+                    f'Harmonization run directory does not exist '
+                    f'or is not a directory: {self.effective_run_folder}'
+                )
+            if not self.valid_mask_raster.is_file():
+                raise controller.ArtifactError(
+                    f'Harmonization valid mask raster does not exist '
+                    f'or is not a file: {self.valid_mask_raster}'
+                )
+        return self

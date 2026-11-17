@@ -20,11 +20,15 @@
 # =========================================================================== #
 
 '''
-Construct runtime data specs from ingestion and preparation schemas.
+Construct runtime data specs from prepared dataset artifacts.
 
 This module bridges persisted dataset artifacts and the training stack
 by assembling a `DataSpecs` object consumed by models, trainers, and
 evaluation routines.
+
+The preparation schema is the single upstream contract: it records the
+ingestion schema path and checksum it was materialized from, so training
+only needs the preparation directory.
 
 Public APIs:
     - build_dataspec: Assembles runtime DataSpecs from artifacts.
@@ -43,82 +47,122 @@ import landseg.core as core
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
 
-
 # ----- public functions
 def build_dataspec(
-    artifact_paths: artifacts.ArtifactPaths,
+    preparation_paths: artifacts.PreparationPaths,
     *,
     mode: typing.Literal['default', 'single', 'val_only', 'test_only'],
     ids_domain_name: str | None = None,
-    vec_domain_name: str | None = None
+    vec_domain_name: str | None = None,
+    knowledge_root: pathlib.Path | str | None = None,
 ) -> core.DataSpecs:
     '''
-    Build runtime data specification from dataset artifacts and schemas.
+    Build runtime data specification from prepared dataset artifacts.
 
-    Assembles a `DataSpecs` object by loading dataset schema from
-    ingestion, preparation schema defining splits and heads, and
-    optional categorical or vectorized domain tilemaps.
+    Assembles a `DataSpecs` object from the preparation schema, the
+    ingestion schema it forwards as upstream provenance, and optional
+    categorical or vectorized domain tilemaps.
 
     Args:
-        artifact_paths:
-            Hierarchical path manager for repository artifacts.
+        preparation_paths:
+            canonical path manager for the prepared dataset.
         mode:
             Execution mode governing dataset partition selection.
         ids_domain_name:
             Optional name of categorical domain tilemap artifact.
         vec_domain_name:
             Optional name of continuous/vector domain artifact.
+        knowledge_root:
+            Optional ecological knowledge root for similarity matrices.
 
     Returns:
         core.DataSpecs:
             Configured runtime specifications for dataset consumption.
+
+    Raises:
+        artifacts.ArtifactError:
+            If the schema identifier is unsupported.
+        FileNotFoundError:
+            If no ingestion schema can be resolved.
     '''
-    # artifact fpaths
-    data_schema_fpath = artifact_paths.data_ingestion.data_blocks.schema
-    prepared_schema_fpath = artifact_paths.data_preparation.schema
-
-    # load artifacts
-    # domains
-    _paths = artifact_paths.data_ingestion.domains
-    if ids_domain_name:
-        ids_domain = _load_domain(_paths.domain_map_fpath(ids_domain_name))
-    else:
-        ids_domain = None
-    if vec_domain_name:
-        vec_domain = _load_domain(_paths.domain_map_fpath(vec_domain_name))
-    else:
-        vec_domain = None
-
-    # data schema
-    Ctrl = artifacts.Controller[geo_core.DataSchema]
-    data_schema = Ctrl(
-        data_schema_fpath,
-        schema_id=geo_core.data_schema.SCHEMA_ID
-    ).fetch()
+    prep_root = pathlib.Path(preparation_paths.root)
+    prepared_schema_fpath = preparation_paths.schema
 
     # prepared schema
     Ctrl = artifacts.Controller[geo_core.PreparedSchema]
-    prepare_schema = Ctrl(
+    prepared_schema = Ctrl(
         prepared_schema_fpath,
-        schema_id=geo_core.prepared_schema.SCHEMA_ID
+        schema_id=geo_core.prepared_schema.SCHEMA_ID,
     ).fetch()
+
+    # single-upstream ingestion resolution
+    ing_paths = _resolve_ingestion_schema(prepared_schema, prep_root)
+
+    # load ingestion schema
+    Ctrl = artifacts.Controller[geo_core.DataSchema]
+    data_schema = Ctrl(
+        ing_paths.data_blocks.schema,
+        schema_id=geo_core.data_schema.SCHEMA_ID
+    ).fetch()
+
+    # domain maps live beside the canonical block pool
+    ids_domain = (
+        _load_domain(ing_paths.domains.domain_map_fpath(ids_domain_name))
+        if ids_domain_name
+        else None
+    )
+    vec_domain = (
+        _load_domain(ing_paths.domains.domain_map_fpath(vec_domain_name))
+        if vec_domain_name
+        else None
+    )
+
+    # ecological knowledge is optional
+    k_paths = (
+        artifacts.KnowledgePaths(pathlib.Path(knowledge_root))
+        if knowledge_root is not None
+        else None
+    )
 
     # return specs
     return core.DataSpecs(
         name=data_schema['dataset']['name'],
         mode=mode,
-        meta=_get_meta(data_schema, prepare_schema),
-        heads=_get_heads(
-            data_schema,
-            prepare_schema,
-            knowledge_paths=artifact_paths.knowledge
-        ),
-        splits=_get_split(prepare_schema),
-        domains=_get_domain(prepare_schema, ids_domain, vec_domain)
+        meta=_get_meta(data_schema, prepared_schema),
+        heads=_get_heads(data_schema, prepared_schema, knowledge_paths=k_paths),
+        splits=_get_split(prepared_schema, prep_root),
+        domains=_get_domain(prepared_schema, ids_domain, vec_domain)
     )
 
 
 # ----- private helpers
+def _resolve_ingestion_schema(
+    prepared_schema: geo_core.PreparedSchema,
+    prep_root: pathlib.Path | None = None,
+) -> artifacts.IngestionPaths:
+    '''Resolve the ingestion schema path from forwarded provenance.'''
+    artifacts_map = prepared_schema.get('artifacts', {})
+    ingestion_schema_fpath = artifacts_map.get('ingestion_schema')
+    if ingestion_schema_fpath is None:
+        raise FileNotFoundError(
+            'Preparation schema has no ingestion provenance '
+            f'({prepared_schema.get("schema_id")}). '
+            'Re-run data-prepare to upgrade the prepared dataset.'
+        )
+    try:
+        # canon: .../ingested_data/data_blocks/schema.json
+        ingestion_root = pathlib.Path(ingestion_schema_fpath).parent.parent
+        if not ingestion_root.exists() and prep_root is not None:
+            candidate = prep_root.parent / ingestion_root.name
+            if candidate.is_dir():
+                ingestion_root = candidate
+        ingestion_paths = artifacts.IngestionPaths(ingestion_root).validate()
+    except Exception as e:
+        raise ValueError('Error resolving ingestion pipeline paths') from e
+
+    return ingestion_paths
+
+
 def _load_domain(fp: pathlib.Path) -> geo_core.DomainTileMap:
     '''Load a DomainTileMap from the specified JSON path.'''
     Ctrl = artifacts.Controller[geo_core.DomainPayload]
@@ -264,13 +308,42 @@ def __la_from_count(
     return [-t * math.log10(max(x, e)) for x in frequencies]
 
 
-def _get_split(schema: geo_core.PreparedSchema) -> core.Splits:
-    '''Populate core.Splits dataclass from schema dictionary.'''
+def _get_split(
+    schema: geo_core.PreparedSchema,
+    prep_root: pathlib.Path,
+) -> core.Splits:
+    '''Populate core.Splits dataclass, resolving blocks relocatably.'''
     return core.Splits(
-        train={k: pathlib.Path(v) for k, v in schema['train_blocks'].items()},
-        val={k: pathlib.Path(v) for k, v in schema['val_blocks'].items()},
-        test={k: pathlib.Path(v) for k, v in schema['test_blocks'].items()}
+        train=_split_blocks(schema['train_blocks'], prep_root, 'train_blocks'),
+        val=_split_blocks(schema['val_blocks'], prep_root, 'val_blocks'),
+        test=_split_blocks(schema['test_blocks'], prep_root, 'test_blocks'),
     )
+
+
+def _split_blocks(
+    blocks: dict[str, str],
+    prep_root: pathlib.Path,
+    subdir: str,
+) -> dict[str, pathlib.Path]:
+    '''
+    Resolve recorded block paths, preferring the preparation root.
+
+    Newer schemas record blocks relative to the preparation root; older
+    schemas recorded absolute paths. An absolute path is honoured while
+    it exists, then falls back to `<prep_root>/<subdir>/<name>` so a
+    relocated or copied prepared directory keeps working.
+    '''
+    resolved: dict[str, pathlib.Path] = {}
+    for name, raw in blocks.items():
+        path = pathlib.Path(raw)
+        if not path.is_absolute():
+            path = prep_root / path
+        elif not path.is_file():
+            fallback = prep_root / subdir / path.name
+            if fallback.is_file():
+                path = fallback
+        resolved[name] = path
+    return resolved
 
 
 def _get_domain(

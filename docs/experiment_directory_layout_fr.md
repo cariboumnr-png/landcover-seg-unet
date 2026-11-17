@@ -16,6 +16,15 @@ de données factices illustrée dans le dossier `input/` ci-dessous. L'exécutio
 du projet sur cette arborescence d'entrée alimente les sous-répertoires d'artefacts (`artifacts/`)
 et de résultats (`results/`) correspondants.
 
+> [!NOTE]
+> **Topologies Cloud Découplées ([ADR-0067](ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md))** :
+> L'arborescence à racine unique `<exp_root>` illustrée ci-dessous sert de préréglage
+> de commodité auxiliaire pour la recherche locale sur station de travail. Dans les
+> déploiements d'entreprise et sur le cloud (tels que les volumes Databricks Unity Catalog),
+> les étapes de pipeline fonctionnent avec une I/O entièrement découplée : chaque étape
+> consomme un répertoire `upstream_dpath` explicite et écrit dans un répertoire `output_dpath`
+> explicite sur des volumes de stockage autonomes.
+
 > [!TIP]
 > **Découplage et Isolement des Pipelines** :
 > - **`data-harmonize` (ETL)** : Lit les fichiers GeoTIFF non harmonisés depuis `input/raw/`

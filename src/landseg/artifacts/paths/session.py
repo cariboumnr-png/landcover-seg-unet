@@ -29,7 +29,9 @@ evaluation results.
 # standard imports
 import dataclasses
 import pathlib
+import typing
 # local imports
+import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
 
 
@@ -78,3 +80,39 @@ class SessionPaths(base.PipelineArtifactsPaths):
         self.logs.mkdir(parents=True, exist_ok=True)
         self.plots.mkdir(parents=True, exist_ok=True)
         self.previews.mkdir(parents=True, exist_ok=True)
+
+    def validate(self, require_run: bool = False) -> typing.Self:
+        '''
+        Validate that session directory exists.
+
+        Args:
+            require_run:
+                If True, also validates that the effective run directory
+                and its subdirectories (checkpoints, logs, plots, previews) exist.
+
+        Returns:
+            typing.Self: The validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If expected directory structure is missing.
+        '''
+        super().validate()
+        if require_run:
+            if not self.effective_run_folder.is_dir():
+                raise controller.ArtifactError(
+                    f'Session run directory does not exist '
+                    f'or is not a directory: {self.effective_run_folder}'
+                )
+            for d, name in (
+                (self.checkpoints, 'Checkpoints'),
+                (self.logs, 'Logs'),
+                (self.plots, 'Plots'),
+                (self.previews, 'Previews'),
+            ):
+                if not d.is_dir():
+                    raise controller.ArtifactError(
+                        f'{name} directory does not exist '
+                        f'or is not a directory: {d}'
+                    )
+        return self

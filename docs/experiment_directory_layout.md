@@ -14,6 +14,14 @@ pipeline artifacts, and session execution results under an experiment root direc
 > tree shown in the `input/` folder below. Executing the project pipelines against this
 > input tree populates the corresponding `artifacts/` and `results/` subdirectories.
 
+> [!NOTE]
+> **Decoupled Cloud Topologies ([ADR-0067](ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md))**:
+> The single `<exp_root>` directory tree shown below serves as an auxiliary
+> convenience preset for local workstation research. In cloud and enterprise
+> deployments (such as Databricks Unity Catalog Volumes), pipeline stages operate
+> with fully decoupled I/O: each stage consumes an explicit `upstream_dpath` and
+> writes to an explicit `output_dpath` across autonomous storage volumes.
+
 > [!TIP]
 > **Pipeline Decoupling & Isolation**:
 > - **`data-harmonize` (ETL)**: Reads unharmonized GeoTIFFs from `input/raw/` and
