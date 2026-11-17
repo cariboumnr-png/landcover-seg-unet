@@ -185,7 +185,9 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     via `execution.recipe_fpath` / `--recipe`, and unified environment
     fallbacks (`${oc.env:LANDSEG_*}`).
   - **Programmatic API Surface (`adapters.api`)**: Notebook-first configurators
-    with typed, programmatically safe builder methods.
+    with typed, programmatically safe builder methods. Implements canonical
+    decoupled stage I/O (`upstream_dpath`, `output_dpath`) with single-upstream
+    provenance forwarding and auxiliary `from_experiment_root(...)` macros (ADR-0067).
 
 ---
 
@@ -247,6 +249,10 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 - **Isomorphic schemas & decoupled surfaces**: Ergonomic user YAML configs and
   API configurators are translated into immutable structured config dataclasses,
   preventing UI logic from leaking into core schemas.
+- **Decoupled stage I/O & single-upstream lineage**: Stages operate on
+  explicit upstream and output paths without requiring a shared directory root;
+  model training stages depend strictly on preparation outputs with lineage
+  forwarded via schemas ([ADR-0067](../docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)).
 - **Strict 1:1 Atomic Pipelines vs Composite Workflows**: Atomic pipelines
   execute exactly one stage with deterministic lifecycle contracts; multi-stage
   loops belong in composite workflows.

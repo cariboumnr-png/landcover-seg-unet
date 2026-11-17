@@ -139,8 +139,11 @@ Les couches de configuration sont :
 - Recettes par tâche : `configs/*.yaml` (ou fichiers de recettes externes)
 - Défauts de composition Hydra du package : `src/landseg/configs/hydra/`
 - Contrats de configuration Python structurés : `src/landseg/configs/schema/`
-- Replis de chemins de base : configurables via `execution.exp_root` (`LANDSEG_EXP_ROOT`,
-  défaut `./experiment`), `execution.recipe_dir` (`LANDSEG_RECIPE_DIR`,
+- I/O d'étapes découplées : chaque étape accepte explicitement `output_dpath` et
+  `upstream_dpath`, permettant de cibler indépendamment les volumes cloud et le
+  stockage lakehouse ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md))
+- Replis de chemins de base : macro de commodité auxiliaire via `execution.exp_root` (`LANDSEG_EXP_ROOT`,
+  défaut `None` / `./experiment`), `execution.recipe_dir` (`LANDSEG_RECIPE_DIR`,
   défaut `./configs`) et `execution.knowledge_dir` (`LANDSEG_KNOWLEDGE_DIR`,
   défaut `./knowledge`)
 - Surcharges de développement : résolues depuis le chemin défini dans
@@ -252,9 +255,8 @@ de bord, consultez le [guide de preparation avant vol](./docs/preflight_readines
 
 ## Organisation Des Artefacts Et Des Sorties
 
-L'I/O locale des experiences est normalement placee sous le repertoire
-d'experience configure. Dans l'arborescence de travail par defaut, cela
-correspond a:
+Dans les flux de travail locaux, l'I/O de l'expérience est normalement placée
+sous le répertoire d'expérience configuré :
 
 ```text
 experiment/
@@ -262,6 +264,13 @@ experiment/
 |-- artifacts/   Artefacts generes reutilisables
 `-- results/     Sorties d'execution et de sessions
 ```
+
+Dans les environnements cloud et distribués (tels que les volumes Databricks Unity Catalog),
+les étapes fonctionnent avec une I/O entièrement découplée ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)).
+Chaque étape accepte des répertoires `output_dpath` et `upstream_dpath` explicites,
+permettant aux grilles mondiales, rasters harmonisés, pools de blocs ingérés,
+jeux de données préparés et exécutions d'entraînement de résider sur des volumes
+de stockage distincts.
 
 Les artefacts sont destines a servir de source de verite pour la
 reproductibilite. Le framework resout, reutilise, reconstruit ou valide les
@@ -308,6 +317,12 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
+- I/O d'étapes découplées et racine d'expérience auxiliaire ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)) :
+  unification canonique de `upstream_dpath` et `output_dpath` sur tous les
+  configurateurs d'API, transfert de lignée amont unique via `PreparedSchema` avec
+  résolution défensive de bundles frères, découplage des schémas d'`exp_root`,
+  `ArtifactPaths` autonomes avec validation `match-case`, et mise à jour des flux
+  de travail dans les notebooks.
 - Architecture de notebooks de production et intégration Databricks : package
   dédié `landseg.notebooks`, `NotebookWidgets` multi-environnements, télémétrie
   visuelle en cellule, sécurité des processus (`safe_training_session`) et

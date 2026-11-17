@@ -129,10 +129,13 @@ The configuration layers are:
 - Task recipes: `configs/*.yaml` (or custom external recipe files)
 - Packaged Hydra composition defaults: `src/landseg/configs/hydra/`
 - Structured Python config contracts: `src/landseg/configs/schema/`
-- Base path fallbacks: configurable via `execution.exp_root` (`LANDSEG_EXP_ROOT`,
-  default `./experiment`), `execution.recipe_dir` (`LANDSEG_RECIPE_DIR`,
-  default `./configs`), and `execution.knowledge_dir` (`LANDSEG_KNOWLEDGE_DIR`,
-  default `./knowledge`)
+- Decoupled stage I/O: individual stages accept explicit `output_dpath` and
+  `upstream_dpath`, enabling cloud volumes and lakehouse storage to be targeted
+  independently ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md))
+- Base path fallbacks: auxiliary convenience preset configurable via
+  `execution.exp_root` (`LANDSEG_EXP_ROOT`, default `None` / `./experiment`),
+  `execution.recipe_dir` (`LANDSEG_RECIPE_DIR`, default `./configs`), and
+  `execution.knowledge_dir` (`LANDSEG_KNOWLEDGE_DIR`, default `./knowledge`)
 - Development overrides: resolved from `execution.dev_cfg`
   (typically defaults to the `AUX_SETTINGS_PATH` environment variable)
 
@@ -237,8 +240,8 @@ For detailed probe specifications, status codes, and terminal dashboards, see th
 
 ## Artifact And Output Layout
 
-Local experiment I/O is normally rooted under the configured experiment
-directory. In the default working tree this corresponds to:
+In local workstation workflows, experiment I/O is normally rooted under the
+configured experiment directory. In the default working tree this corresponds to:
 
 ```text
 experiment/
@@ -246,6 +249,12 @@ experiment/
 |-- artifacts/   Reusable generated artifacts
 `-- results/     Execution and session outputs
 ```
+
+In distributed and cloud environments (e.g. Databricks Unity Catalog Volumes),
+stages operate with fully decoupled I/O ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)).
+Each stage takes explicit `output_dpath` and `upstream_dpath` directories,
+allowing world grids, harmonized rasters, ingested pools, prepared datasets,
+and training runs to reside across distinct storage volumes or catalogs.
 
 Artifacts are intended to be the source of truth for reproducibility. The
 framework resolves, reuses, rebuilds, or validates artifacts through centralized
@@ -291,6 +300,12 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
+- Decoupled Stage I/O and Auxiliary Experiment Root ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)):
+  canonical unification of `upstream_dpath` and `output_dpath` across all API
+  configurators, single-upstream provenance forwarding via `PreparedSchema` with
+  defensive sibling bundle resolution, optional `exp_root` schema decoupling,
+  autonomous `ArtifactPaths` with lazy `match-case` validation, and updated
+  notebook workflows.
 - Production notebook architecture and Databricks integration: dedicated
   `landseg.notebooks` package, multi-runtime `NotebookWidgets`, in-cell visual
   telemetry, process safety (`safe_training_session`), and multi-task workflow

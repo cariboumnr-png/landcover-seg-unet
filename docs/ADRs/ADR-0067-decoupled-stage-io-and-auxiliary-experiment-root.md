@@ -164,16 +164,30 @@ The architecture is structured around five core pillars:
 ### 2.1. Pure Decoupled Stage Contracts
 
 Every pipeline command and configurator operates strictly on explicit
-input source paths and explicit output destination paths:
+input source paths and explicit output destination paths. To ensure maximum
+polymorphism and seamless integration into automated orchestrators, all stage
+configurators share a canonical, unified keyword initialization signature:
+
+```python
+*,
+upstream_dpath: str | pathlib.Path | None = None,
+output_dpath: str | pathlib.Path | None = None,
+experiment_root: str | pathlib.Path | None = None,
+```
+
+Path routing is hosted centrally in `BaseConfigurator` via `set_upstream(...)`
+and `set_output(...)` (with `set_upstream_dpath` and `set_output_dpath` kept as
+backward-compatible aliases). Each stage command maps direct inputs and outputs
+consistently:
 
 | Stage Command | Direct Upstream Inputs | Destination Output (`output_dpath`) |
 | :--- | :--- | :--- |
-| `world-grid` | Reference raster (`ref_fpath`) or manual bounding box | World grid definition directory (`output_dpath`) |
-| `data-harmonize` | Raw manifest (`dataset_manifest`), grid directory (`grid_dpath`) | Harmonized virtual rasters (`output_dpath`) |
-| `data-ingest` | Harmonization directory (`harmonization_dpath`) | Sliced data block pool (`output_dpath`) |
-| `data-prepare` | Ingestion block pool (`ingestion_dpath`) | Normalized, split dataset (`output_dpath`) |
-| `model-train` | Prepared dataset (`preparation_dpath`) | Run results, logs, and checkpoints (`output_dpath`) |
-| `study-sweep` | Prepared dataset (`preparation_dpath`), Optuna storage backend | Sweep trial records and Pareto checkpoints (`output_dpath`) |
+| `world-grid` | None (safe no-op, extent defined via ref raster / bbox) | World grid definition directory (`output_dpath`) |
+| `data-harmonize` | World grid directory (`upstream_dpath`) | Harmonized virtual rasters (`output_dpath`) |
+| `data-ingest` | Harmonization directory (`upstream_dpath`) | Sliced data block pool (`output_dpath`) |
+| `data-prepare` | Ingestion block pool (`upstream_dpath`) | Normalized, split dataset (`output_dpath`) |
+| `model-train` | Prepared dataset (`upstream_dpath`) | Run results, logs, and checkpoints (`output_dpath`) |
+| `study-sweep` | Prepared dataset (`upstream_dpath`) | Sweep trial records and Pareto checkpoints (`output_dpath`) |
 
 Each stage in the primary training path has exactly **one upstream data
 input**. Configurators and CLI entrypoints no longer require or assume
@@ -188,36 +202,49 @@ the data preparation stage records upstream provenance directly inside
 the preparation schema and execution report:
 
 1. **`PreparedSchema` Upstream Provenance**:
-   During `data-prepare` (`src/landseg/geopipe/prepare/materialize/schema.py`),
-   the preparation runner resolves and validates the ingestion schema.
-   When materializing `PreparedSchema`, the builder records the resolved
-   ingestion schema artifact path and its SHA-256 checksum in `PreparedSchema`:
+   During `data-prepare`, the preparation context
+   (`src/landseg/geopipe/prepare/context.py`) resolves the ingestion schema
+   to an absolute path once (`ingested_blocks_schema_fpath`) and validates it.
+   The materialization runner forwards this path as a required argument to
+   the schema builder (`src/landseg/geopipe/prepare/materialize/schema.py`),
+   which records it, together with its SHA-256 checksum, as the single
+   canonical ingestion lineage entry in `PreparedSchema`:
    ```python
    collected_artifacts = {
-       'ingestion_schema': str(context.ingestion_schema_fpath.resolve()),
        'block_source': str(paths.splits_source_blocks.resolve()),
        'block_prepared': str(paths.splits_prepared_blocks.resolve()),
        'label_stats': str(paths.label_stats.resolve()),
        'image_stats': str(paths.image_stats.resolve()),
    }
+   # forward ingestion lineage (single-upstream contract)
+   ingestion_schema = pathlib.Path(ingestion_schema_fpath)  # already absolute
+   collected_artifacts['ingestion_schema'] = str(ingestion_schema)
+   checksums['ingestion_schema'] = Ctrl(ingestion_schema).sha256
    ```
-   The preparation summary report (`contracts.SchemaReport`) similarly
-   records `ingestion_schema_filepath` for operational diagnostics.
+   No relative-path variant (formerly `ingestion_schema_relpath`) is
+   recorded; relocation is handled at read time by the sibling fallback
+   described below. The preparation summary report
+   (`contracts.SchemaReport`) similarly records `ingestion_schema_filepath`
+   for operational diagnostics.
 
 2. **Self-Contained DataSpecs Assembly**:
    We refactored `build_dataspec` (`src/landseg/geopipe/factory.py`) so that
-   its primary input contract is strictly `preparation_dpath` (or `PreparationPaths`).
+   its primary input contract is strictly `preparation_paths: artifacts.PreparationPaths`
+   (or `upstream_dpath` in configurators).
    When assembling `DataSpecs`:
-   - It fetches `PreparedSchema` from `preparation_dpath`.
+   - It fetches `PreparedSchema` from `preparation_paths.schema`.
    - It resolves `data_schema_fpath` directly from
      `prepared_schema['artifacts']['ingestion_schema']`.
+   - If an ingestion directory has been physically relocated beside the
+     prepared bundle, `_resolve_ingestion_schema` automatically falls back to
+     sibling directory resolution (`prep_root.parent / ingestion_root.name`).
    - Domain tilemaps (`ids_domain_name`, `vec_domain_name`) resolve
      relative to the ingestion schema location or embedded domain links.
    - It operates with zero runtime dependency on `data_ingestion` arguments.
 
 3. **Single-Upstream Training Configurators**:
    `TrainingSessionConfigurator` and `StudySweepConfigurator` require
-   strictly `preparation_dpath` (or `upstream_dpath`) and `output_dpath`.
+   strictly `upstream_dpath` (`preparation_dpath`) and `output_dpath`.
    The `ingestion_dpath` parameter was removed from `build_dataspec` and
    `TrainingSessionConfigurator`. This ensures downstream training jobs track
    a single upstream data asset.
@@ -243,7 +270,7 @@ the preparation schema and execution report:
    For example, `src/landseg/configs/hydra/data/harmonization/default.yaml`
    became:
    ```yaml
-   output_dpath: ./artifacts/harmonized_data
+   output_dpath: ./experiment/artifacts/harmonized_data
    ```
    instead of:
    ```yaml
@@ -271,6 +298,15 @@ checkpoint_path = paths.best_checkpoint('baseline')
 property (`world_grid`, `data_harmonization`, `data_ingestion`,
 `data_preparation`, `session`) operates strictly on its explicit directory
 root without falling back to a shared parent unless explicitly requested.
+
+Furthermore, `ArtifactPaths.validate(stages=...)` uses lazy `match-case`
+pattern matching:
+- When a subset of stages is requested (`stages=['world_grid', ...]`), only
+  those stages are checked. Unselected or unconfigured stages do not cause
+  validation failures.
+- When called without stage arguments (`stages=None`), unconfigured stage roots
+  are safely skipped while configured stages are defensively validated on disk.
+- Method chaining returns `self` upon validation success.
 
 ---
 
@@ -329,10 +365,10 @@ workstations, we provided auxiliary layout macros:
   - *Trade-off*: If an ingestion directory is physically relocated after data
     preparation, the absolute path recorded in
     `PreparedSchema['artifacts']['ingestion_schema']` may become stale.
-  - *Mitigation*: `build_dataspec` supports resolving ingestion schema either
-    via the absolute path recorded at preparation time or relative to the
-    preparation directory (`ingestion_schema_relpath`) when both live in a
-    portable bundle.
+  - *Mitigation*: `build_dataspec` / `_resolve_ingestion_schema` supports
+    resolving the ingestion schema both via the recorded absolute path and via
+    defensive sibling fallback resolution (`prep_root.parent / ingestion_root.name`)
+    when both directories are co-located in a bundle.
 - **Migration of Existing Custom Configs**:
   - *Trade-off*: Custom Hydra YAML files that strictly relied on overriding
     `execution.exp_root` will need to specify stage-specific paths.
@@ -352,17 +388,20 @@ The implementation has been fully completed across four phases:
   `ingestion_schema` path and checksum in `PreparedSchema`.
 - Updated `src/landseg/geopipe/factory.py` (`build_dataspec`) to dynamically
   resolve `data_schema_fpath` from
-  `prepared_schema['artifacts']['ingestion_schema']` and
-  `ingestion_schema_relpath`, with zero runtime coupling to `data_ingestion`.
+  `prepared_schema['artifacts']['ingestion_schema']` with sibling directory
+  fallback resolution, with zero runtime coupling to `data_ingestion`.
 - Updated `TrainingSessionConfigurator` in
   `src/landseg/adapters/api/configurators/model_train.py` to make
-  `preparation_dpath` the sole upstream dependency, eliminating redundant
-  `upstream_dpath` and `ingestion_dpath` parameters.
+  `upstream_dpath` the sole upstream dependency, eliminating redundant
+  `ingestion_dpath` parameters.
+- Standardized all stage configurators in `src/landseg/adapters/api/configurators/`
+  to share unified `upstream_dpath` and `output_dpath` keyword signatures,
+  centrally managed by `BaseConfigurator`.
 - Updated `src/landseg/configs/schema/root.py` and `execution.py` to make
   `exp_root` optional (`str | None = None`).
 - Refactored `src/landseg/artifacts/paths/root.py` and sub-modules to allow
   autonomous instantiation of stage paths without requiring a shared parent
-  `root`.
+  `root`, implementing lazy `match-case` stage-selective validation.
 - Updated Hydra default configuration files to remove `${execution.exp_root}`
   string interpolations.
 
@@ -386,4 +425,4 @@ The implementation has been fully completed across four phases:
 - Authored comprehensive unit tests covering standalone decoupled execution,
   single-upstream training resolution, preflight gating, MLOps storage/registry,
   and auxiliary macro factories.
-- Validated test suite across all affected modules.
+- Validated test suite across all affected modules (100% pass rate).

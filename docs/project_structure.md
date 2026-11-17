@@ -31,7 +31,8 @@ adding or moving code over a fully exhaustive file listing.
 |-- notebooks/
 |   |-- 00_raster_mosaic.ipynb    Virtual raster mosaic assembly demo
 |   |-- 00_dataset_manifest.ipynb Dataset manifest construction & validation demo
-|   |-- 01_data_preparation.ipynb Data ingest, validation, and preparation demo
+|   |-- 01_data_ingestion.ipynb   World grid, harmonization, and data blocks pool ingestion demo
+|   |-- 01_data_preparation.ipynb Session data preparation (schemes & splits) demo
 |   |-- 02_model_train.ipynb      End-to-end model training demo
 |   `-- 03_study_sweep.ipynb      Optuna hyperparameter sweep demo
 |

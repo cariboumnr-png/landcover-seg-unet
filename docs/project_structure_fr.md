@@ -31,7 +31,8 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |-- notebooks/
 |   |-- 00_raster_mosaic.ipynb    Démo d'assemblage de mosaïque raster virtuelle
 |   |-- 00_dataset_manifest.ipynb Démo de construction et validation de manifestes
-|   |-- 01_data_preparation.ipynb Démo d'ingestion, validation et préparation
+|   |-- 01_data_ingestion.ipynb   Démo de grille mondiale, d'harmonisation et d'ingestion du pool de blocs de données
+|   |-- 01_data_preparation.ipynb Démo de préparation des données de session (schémas et partitions)
 |   |-- 02_model_train.ipynb      Démo d'entraînement de modèle de bout en bout
 |   `-- 03_study_sweep.ipynb      Démo de sweep hyperparamétrique Optuna
 |
