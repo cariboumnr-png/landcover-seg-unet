@@ -4,4 +4,4 @@ defaults:
   - datablocks: default
 
 harmonization_run: null
-output_dpath: ./artifacts/ingested_data
+output_dpath: ./experiment/artifacts/ingested_data
