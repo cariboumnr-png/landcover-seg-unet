@@ -1,5 +1,7 @@
 # Landseg Interactive Notebooks
 
+[English](README.md) | [Français](README_fr.md)
+
 This directory contains production-ready interactive Jupyter notebooks
 designed for multi-environment execution across Databricks cloud clusters
 and local developer sandboxes.
@@ -71,16 +73,9 @@ execution tiers (see
 | :--- | :--- | :--- |
 | [`00_dataset_manifest.ipynb`](00_dataset_manifest.ipynb) | Raw data manifest construction | Fluent `DatasetManifestBuilder` API, fail-fast raster contract validation, single-document YAML/JSON export. |
 | [`00_raster_mosaic.ipynb`](00_raster_mosaic.ipynb) | Multi-tile / cross-UTM mosaicking | GDAL Virtual Raster (`.vrt`) assembly without pixel duplication, cross-projection warping into `EPSG:3161`. |
-<<<<<<< HEAD
 | [`01_data_preparation.ipynb`](01_data_preparation.ipynb) | End-to-end data preparation | Spatial world grid generation, data harmonization ETL, multi-batch ingestion, feature channel selection, and splitting. |
 | [`02_model_train.ipynb`](02_model_train.ipynb) | Baseline model training | `TrainingSessionConfigurator`, in-cell telemetry, qualitative segmentation previews, interruption safety, and Unity Catalog model registration. |
 | [`03_study_sweep.ipynb`](03_study_sweep.ipynb) | Hyperparameter study sweeps | `StudySweepConfigurator` backed by Optuna, two-tiered storage (driver `/tmp/` vs Unity Catalog Volumes) to prevent distributed locking failures. |
-=======
-| [`01_data_ingestion.ipynb`](01_data_ingestion.ipynb) | Data blocks pool ingestion | Canonical decoupled stage configurators (`upstream_dpath`, `output_dpath`), spatial world grid generation, data harmonization ETL, and ingestion into the canonical data blocks pool from dummy or user-provided raw data; reports available feature schemes and training heads (ADR-0067). |
-| [`01_data_preparation.ipynb`](01_data_preparation.ipynb) | Session data preparation | Reads an existing ingestion root with explicit I/O widgets, feature scheme and training head dropdowns built from the pool schema, and train / validation / test splitting (ADR-0067). |
-| [`02_model_train.ipynb`](02_model_train.ipynb) | Baseline model training | `TrainingSessionConfigurator` with single-upstream lineage, in-cell telemetry, qualitative segmentation previews, interruption safety, and Unity Catalog model registration (ADR-0067). |
-| [`03_study_sweep.ipynb`](03_study_sweep.ipynb) | Hyperparameter study sweeps | `StudySweepConfigurator` backed by Optuna, two-tiered storage (driver `/tmp/` vs Unity Catalog Volumes) to prevent distributed locking failures (ADR-0067). |
->>>>>>> 9e507cd7 (docs(repo): align notebook readme, ADR-0067, and project structure with split ingestion and preparation notebooks)
 
 ---
 

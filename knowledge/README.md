@@ -1,5 +1,7 @@
 # Ontario Tree Species Ecological Knowledge Base
 
+[English](README.md) | [Français](README_fr.md)
+
 This directory contains the curated ecological domain knowledge base and precomputed vector embedding space for tree species in Ontario. The knowledge base is designed to inject ecological domain knowledge (habitat preferences, silvicultural traits, topographic niches, and soil/moisture requirements) into remote sensing and topographic deep learning segmentation models.
 
 ---
@@ -42,7 +44,8 @@ Each profile includes a `formatted_description` text string specifically structu
 
 ```
 knowledge/
-├── README.md                                         <-- This documentation
+├── README.md                                         <-- This documentation (English)
+├── README_fr.md                                      <-- French documentation
 ├── ontario_tree_species_grouped_profiles.csv         <-- 29 Ecologically grouped species profiles
 ├── ontario_tree_species_profiles.csv                 <-- 138 Full FRI species profiles
 └── embeddings/                                       <-- Precomputed Sentence Transformer vectors

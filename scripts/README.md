@@ -1,5 +1,7 @@
 # Project Executable Scripts
 
+[English](README.md) | [Français](README_fr.md)
+
 This directory contains executable entrypoint scripts for embedding generation, dummy testing data creation, and Databricks/VM pipeline execution.
 
 ---
