@@ -33,26 +33,18 @@ import typing
 
 __all__ = [
     # functions
-    'colorize',
     'report_iou',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .renderer import (
-        colorize,
-    )
     from .report import (
         report_iou,
     )
 
 
 def __getattr__(name: str):
-    if name in {'colorize'}:
-        obj = importlib.import_module('.renderer', __package__)
-        return getattr(obj, name)
-
     if name in {'report_iou'}:
         obj = importlib.import_module('.report', __package__)
         return getattr(obj, name)

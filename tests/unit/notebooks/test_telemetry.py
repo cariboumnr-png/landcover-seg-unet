@@ -21,17 +21,10 @@
 
 '''Unit test suite for `landseg.notebooks.telemetry` interactive module.'''
 
-# standard imports
-import json
-import pathlib
 # third-party imports
-import matplotlib
-import numpy
 import pytest
 # local imports
 import landseg.notebooks as nb
-
-matplotlib.use('Agg')
 
 
 def test_safe_training_session_normal_exit():
@@ -68,89 +61,3 @@ def test_safe_training_session_reraises_when_requested():
     with pytest.raises(KeyboardInterrupt):
         with nb.safe_training_session(reraise=True):
             raise KeyboardInterrupt('User stop')
-
-
-def test_plot_training_curves_from_list(tmp_path: pathlib.Path):
-    '''
-    Given: List of session step dictionaries.
-    When: Calling plot_training_curves.
-    Then: Successfully generates and saves the figure.
-    '''
-    steps = [
-        {
-            'epoch_in_phase': 1,
-            'training': {'total_objective': 0.85},
-            'validation': {'mtl_metrics': {'total_loss': 0.78}},
-            'validation_metrics_name': 'mean_iou',
-            'validation_metrics_value': 0.52,
-        },
-        {
-            'epoch_in_phase': 2,
-            'training': {'total_objective': 0.65},
-            'validation': {'mtl_metrics': {'total_loss': 0.58}},
-            'validation_metrics_name': 'mean_iou',
-            'validation_metrics_value': 0.68,
-        },
-    ]
-
-    out_png = tmp_path / 'curves.png'
-    fig = nb.plot_training_curves(steps, save_path=out_png, show=False)
-    assert fig is not None
-    assert out_png.is_file()
-    assert out_png.stat().st_size > 0
-
-
-def test_plot_training_curves_from_file(tmp_path: pathlib.Path):
-    '''
-    Given: A step_results.json file on disk.
-    When: Passing the directory or file path to plot_training_curves.
-    Then: Loads records and builds figure.
-    '''
-    steps = [
-        {
-            'epoch_in_phase': 1,
-            'training': {'total_objective': 0.9},
-            'validation_metrics_name': 'mean_iou',
-            'validation_metrics_value': 0.60,
-        }
-    ]
-    json_path = tmp_path / 'step_results.json'
-    json_path.write_text(json.dumps(steps), encoding='utf-8')
-
-    fig = nb.plot_training_curves(tmp_path, show=False)
-    assert fig is not None
-
-
-def test_plot_qualitative_predictions(tmp_path: pathlib.Path):
-    '''
-    Given: Synthetic RGB image, ground truth mask, and prediction mask.
-    When: Calling plot_qualitative_predictions.
-    Then: Successfully constructs and saves side-by-side plot.
-    '''
-    img = numpy.random.rand(64, 64, 3).astype(numpy.float32)
-    gt = numpy.random.randint(0, 4, size=(64, 64), dtype=numpy.int32)
-    pred = numpy.random.randint(0, 4, size=(64, 64), dtype=numpy.int32)
-
-    out_png = tmp_path / 'qualitative.png'
-    fig = nb.plot_qualitative_predictions(
-        img,
-        gt,
-        pred,
-        save_path=out_png,
-        show=False,
-    )
-    assert fig is not None
-    assert out_png.is_file()
-    assert out_png.stat().st_size > 0
-
-
-def test_render_prediction_preview(tmp_path: pathlib.Path):
-    '''
-    Given: An experiment root workspace directory.
-    When: Calling render_prediction_preview.
-    Then: Generates and persists the preview comparison image.
-    '''
-    preview_file = tmp_path / 'artifacts' / 'previews' / 'preview.png'
-    fig = nb.render_prediction_preview(tmp_path, save_path=preview_file, show=False)
-    assert fig is not None
-    assert preview_file.is_file()

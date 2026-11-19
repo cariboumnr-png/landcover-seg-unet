@@ -202,6 +202,7 @@ class SessionPipeline(BasePipeline):
                 instantiated session runner.
         '''
         dataspecs = self._build_context()
+        self.context = dataspecs
 
         for s in dataspecs.summary:
             self.logger.info(s)
