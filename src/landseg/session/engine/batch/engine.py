@@ -57,9 +57,9 @@ import typing
 # third-party imports
 import torch
 # local imports
-import landseg.core as core
-import landseg.session.engine.batch.objective as objective
-import landseg.session.engine.batch.state as state
+from landseg import core
+from landseg.runtime import hardware
+from landseg.session.engine.batch import objective, state
 
 
 # ----- public types
@@ -345,15 +345,22 @@ class BatchEngine:
     def _autocast_ctx(self):
         '''Autocast context for training based on precision setting.'''
         device_type = self.device
-        # pick dtype; feel free to prefer bf16 if supported:
-        dtype = torch.bfloat16 if device_type == 'cpu' else torch.float16
-        if self.config.use_amp:
-            return torch.autocast(
-                device_type=device_type,
-                dtype=dtype,
-                enabled=self.config.use_amp
-            )
-        return contextlib.nullcontext()
+        if not self.config.use_amp:
+            return contextlib.nullcontext()
+
+        # on CPU, fall back to FP32 if hardware lacks BF16 acceleration
+        if device_type == 'cpu':
+            if not hardware.is_cpu_bf16_supported():
+                return contextlib.nullcontext()
+            dtype = torch.bfloat16
+        else:
+            dtype = torch.float16
+
+        return torch.autocast(
+            device_type=device_type,
+            dtype=dtype,
+            enabled=True
+        )
 
     def _val_ctx(self):
         '''Inference mode and autocast context for validation phase.'''

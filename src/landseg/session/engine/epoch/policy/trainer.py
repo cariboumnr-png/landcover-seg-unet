@@ -113,6 +113,7 @@ class MultiHeadTrainer(base.EngineBase):
         self._objective: float
         self._head_losses: dict[str, float]
         self._regularization: dict[str, float]
+        self._consecutive_skipped_steps: int = 0
 
     def train_one_epoch(self, epoch: int) -> core.TrainStepResults:
         '''
@@ -198,6 +199,17 @@ class MultiHeadTrainer(base.EngineBase):
             # scheduler step if scale did not decrease
             if scale_after >= scale_before:
                 self.optimization.step_scheduler()
+                self._consecutive_skipped_steps = 0
+            else:
+                self._consecutive_skipped_steps += 1
+                if self._consecutive_skipped_steps >= 5:
+                    raise RuntimeError(
+                        'Optimizer step skipped for '
+                        f'{self._consecutive_skipped_steps} consecutive '
+                        'batches due to unscaled NaN/Inf gradients under AMP. '
+                        'Training halted to prevent silent corruption '
+                        '(see Issue #88).'
+                    )
 
             # increment global step counter
             self.state.progress.global_step += 1

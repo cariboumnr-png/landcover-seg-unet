@@ -29,11 +29,15 @@ Public APIs:
     - `hardware_info`: Inspect accelerator and compute environment.
 '''
 
+# standard imports
+import shutil
+import subprocess
 # third-party imports
 import torch
 # local imports
 import landseg.execution.preflight.context as context
 import landseg.execution.preflight.schema as schema
+import landseg.runtime.hardware as hardware
 
 
 # ----- public functions
@@ -42,20 +46,55 @@ def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
     results: list[schema.ProbeResult] = []
 
     if not torch.cuda.is_available():
+        host_gpu = _detect_host_gpu()
+        if host_gpu:
+            msg = (
+                f'CUDA unavailable in PyTorch ({torch.__version__}); '
+                f'host GPU detected ({host_gpu}). Reinstall PyTorch with CUDA.'
+            )
+            details = {
+                'device_name': 'cpu',
+                'cuda': False,
+                'device': 'cpu',
+                'host_gpu': host_gpu,
+                'torch_version': torch.__version__,
+            }
+        else:
+            msg = 'CUDA unavailable; compute running on CPU'
+            details = {
+                'device_name': 'cpu',
+                'cuda': False,
+                'device': 'cpu',
+                'torch_version': torch.__version__,
+            }
         results.append(
             schema.ProbeResult(
                 pid='cuda_device',
                 category=schema.ProbeCategory.HARDWARE,
                 status=schema.ProbeStatus.WARN,
-                message='CUDA unavailable; compute running on CPU',
-                details={
-                    'device_name': 'cpu',
-                    'cuda': False,
-                    'device': 'cpu',
-                    'torch_version': torch.__version__,
-                },
+                message=msg,
+                details=details,
             )
         )
+
+        use_amp = _resolve_use_amp(ctx)
+        if use_amp and not hardware.is_cpu_bf16_supported():
+            results.append(
+                schema.ProbeResult(
+                    pid='cpu_amp_headroom',
+                    category=schema.ProbeCategory.HARDWARE,
+                    status=schema.ProbeStatus.WARN,
+                    message=(
+                        'AMP (bfloat16) on CPU lacks hardware '
+                        'acceleration; emulation causes severe '
+                        'slowdown. Auto-fallback to FP32.'
+                    ),
+                    details={
+                        'use_amp': True,
+                        'cpu_bf16_supported': False,
+                    },
+                )
+            )
         return results
 
     device_name = torch.cuda.get_device_name(0)
@@ -111,3 +150,35 @@ def _resolve_batch_size(ctx: context.InspectionContext) -> int:
     if hasattr(config, 'session') and hasattr(config.session, 'dataloader'):
         return int(config.session.dataloader.batch_size)
     return 16
+
+
+def _resolve_use_amp(ctx: context.InspectionContext) -> bool:
+    '''Resolve configured use_amp flag, defaulting to True.'''
+    config = ctx.config
+    if hasattr(config, 'session') and hasattr(config.session, 'engine'):
+        engine = config.session.engine
+        if (
+            hasattr(engine, 'engine_exec')
+            and hasattr(engine.engine_exec, 'use_amp')
+        ):
+            return bool(engine.engine_exec.use_amp)
+    return True
+
+
+def _detect_host_gpu() -> str | None:
+    '''Detect whether a host GPU exists despite PyTorch lacking CUDA.'''
+    smi = shutil.which('nvidia-smi')
+    if smi:
+        try:
+            res = subprocess.run(
+                [smi, '--query-gpu=name', '--format=csv,noheader'],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip().splitlines()[0].strip()
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+    return None

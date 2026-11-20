@@ -25,7 +25,10 @@
 
 '''Unit tests for trainer policy module (policy/trainer.py).'''
 
+# standard imports
+import dataclasses
 # third-party imports
+import pytest
 import torch
 # local imports
 import landseg.core as core
@@ -135,3 +138,77 @@ def test_trainer_update_training_stats_interval(
     trainer._update_training_stats(flush=True)
     assert trainer.results.metrics_updated is True
     assert trainer.results.total_objective == 2.0
+
+
+# ----- `MultiHeadTrainer` consecutive skipped steps guard tests
+def test_trainer_consecutive_skipped_steps_guard(
+    mock_runtime,
+    mock_dataloaders,
+    mock_dispatcher,
+    mocker
+):
+    '''
+    Given: Trainer encountering consecutive unscaled NaN/Inf gradients.
+    When: Optimizer step is skipped for 5 consecutive batches.
+    Then: Raise `RuntimeError` halting training to prevent corruption.
+    '''
+    trainer = trainer_mod.MultiHeadTrainer(
+        update_every=1,
+        engine_runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+        device='cpu'
+    )
+    trainer.set_head_state(active_heads=['head_1'])
+
+    # simulate 5 batches available in dataloader
+    single_batch = next(iter(mock_dataloaders.train))
+    trainer.dataloaders = dataclasses.replace(
+        mock_dataloaders,
+        train=[single_batch] * 6
+    )
+
+    # simulate GradScaler decreasing scale on every batch
+    # scale_before and scale_after are sampled once per batch
+    scales = [64.0, 32.0, 32.0, 16.0, 16.0, 8.0, 8.0, 4.0, 4.0, 2.0]
+    mocker.patch.object(
+        trainer.state.optim.scaler,
+        'get_scale',
+        side_effect=scales
+    )
+
+    with pytest.raises(RuntimeError, match='consecutive batches'):
+        trainer.train_one_epoch(epoch=1)
+
+
+def test_trainer_skipped_steps_resets_on_success(
+    mock_runtime,
+    mock_dataloaders,
+    mock_dispatcher,
+    mocker
+):
+    '''
+    Given: Trainer with non-zero consecutive skipped steps counter.
+    When: Optimizer step succeeds without scale decrease.
+    Then: Reset consecutive skipped steps counter to 0.
+    '''
+    trainer = trainer_mod.MultiHeadTrainer(
+        update_every=1,
+        engine_runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+        device='cpu'
+    )
+    trainer.set_head_state(active_heads=['head_1'])
+    trainer._consecutive_skipped_steps = 3
+
+    # mock get_scale so scale_after >= scale_before
+    mocker.patch.object(
+        trainer.state.optim.scaler,
+        'get_scale',
+        side_effect=[32.0, 32.0]
+    )
+
+    trainer.train_one_epoch(epoch=1)
+
+    assert trainer._consecutive_skipped_steps == 0

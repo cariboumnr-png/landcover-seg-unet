@@ -24,6 +24,7 @@
 '''Unit tests for HeadManager (heads.py).'''
 
 # third-party imports
+import pytest
 import torch
 # local imports
 import landseg.models.core.heads as heads
@@ -194,12 +195,12 @@ def test_head_manager_logit_adjustment():
     assert torch.allclose(adjusted_missing, logits)
 
 
-# ----- `HeadManager`numerical stability
-def test_head_manager_nan_to_num():
+# ----- `HeadManager` numerical stability
+def test_head_manager_nan_detection():
     '''
     Given: Outputs containing non-finite float values like NaN or Inf.
     When: Forward pass runs.
-    Then: Apply safety clamps and map values to finite numeric limits.
+    Then: Raise FloatingPointError on NaNs and clamp Infs to bounds.
     '''
     in_ch = 4
     hm = heads.HeadManager(in_ch, {'head_a': 1})
@@ -212,13 +213,13 @@ def test_head_manager_nan_to_num():
     head_a.weight.data.fill_(0.0)
     head_a.bias.data.fill_(float('nan'))
 
-    out = hm.forward(
-        x,
-        active_heads=['head_a'],
-        logit_adjust={},
-        logit_adjust_alpha=1.0
-    )
-    assert torch.all(out['head_a'] == 0.0)
+    with pytest.raises(FloatingPointError, match='NaN detected'):
+        hm.forward(
+            x,
+            active_heads=['head_a'],
+            logit_adjust={},
+            logit_adjust_alpha=1.0
+        )
 
     head_a.bias.data.fill_(float('inf'))
     out_pos = hm.forward(

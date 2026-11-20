@@ -24,6 +24,7 @@
 '''Unit tests for executor module (executor.py and __init__.py).'''
 
 # standard imports
+import contextlib
 import dataclasses
 # third-party imports
 import pytest
@@ -235,6 +236,80 @@ def test_run_infer_batch_spatial_aggregation(
     assert (0, 0) in engine.state.infer_out.inputs
     assert (0, 0) in engine.state.infer_out.preds['head_1']
     assert (0, 0) in engine.state.infer_out.labels['head_1']
+
+
+# ----- `_autocast_ctx` precision and fallback tests
+def test_autocast_ctx_cpu_fallback_without_bf16(
+    mock_model,
+    session_config,
+    mocker
+):
+    '''
+    Given: Engine configured on CPU with use_amp=True.
+    When: Host CPU lacks hardware BF16 acceleration.
+    Then: Fall back to nullcontext (FP32).
+    '''
+    state = state_mod.initialize_state(
+        all_heads=['head_1'],
+        batch_size=2,
+        use_amp=True,
+        device='cpu'
+    )
+    config = dataclasses.replace(
+        session_config.engine_exec,
+        use_amp=True
+    )
+    engine = engine_mod.BatchEngine(
+        model=mock_model,
+        engine_state=state,
+        config=config,
+        context=_get_context()
+    )
+
+    mocker.patch.object(
+        engine_mod.hardware,
+        'is_cpu_bf16_supported',
+        return_value=False
+    )
+    ctx = engine._autocast_ctx()
+    assert isinstance(ctx, contextlib.nullcontext)
+
+
+def test_autocast_ctx_cpu_bf16_supported(
+    mock_model,
+    session_config,
+    mocker
+):
+    '''
+    Given: Engine configured on CPU with use_amp=True.
+    When: Host CPU supports hardware BF16 acceleration.
+    Then: Return torch.autocast context with bfloat16.
+    '''
+    state = state_mod.initialize_state(
+        all_heads=['head_1'],
+        batch_size=2,
+        use_amp=True,
+        device='cpu'
+    )
+    config = dataclasses.replace(
+        session_config.engine_exec,
+        use_amp=True
+    )
+    engine = engine_mod.BatchEngine(
+        model=mock_model,
+        engine_state=state,
+        config=config,
+        context=_get_context()
+    )
+
+    mocker.patch.object(
+        engine_mod.hardware,
+        'is_cpu_bf16_supported',
+        return_value=True
+    )
+    ctx = engine._autocast_ctx()
+    assert isinstance(ctx, torch.autocast)
+    assert ctx.fast_dtype == torch.bfloat16
 
 
 # ----- private helpers
