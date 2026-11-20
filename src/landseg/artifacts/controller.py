@@ -45,6 +45,7 @@ import yaml
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
+import landseg.utils.npzio as npzio
 
 # ----- typing aliases
 T = typing.TypeVar('T')
@@ -392,7 +393,7 @@ class Controller(typing.Generic[T]):
             raise ValueError(f'Values are not stackable: {e}') from e
 
         # write src to npz
-        numpy.savez_compressed(fp, keys=keys, values=values)
+        npzio.savez_compressed(fp, keys=keys, values=values)
 
     @staticmethod
     def _yaml_read(fp: pathlib.Path) -> typing.Any:
