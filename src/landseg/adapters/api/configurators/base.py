@@ -112,6 +112,13 @@ class BaseConfigurator:
                 self.cfg.session.output_dpath = dpath_str
         return self
 
+    def set_scratch(self, scratch_dpath: str | pathlib.Path) -> typing.Self:
+        '''Set fast scratch storage directory path for execution.'''
+        self.cfg.execution.scratch_dir = self._require_dir(
+            scratch_dpath, writable=True
+        )
+        return self
+
     def set_upstream(self, upstream_dpath: str | pathlib.Path) -> typing.Self:
         '''Set direct upstream input directory path for the active command.'''
         dpath_str = str(upstream_dpath)

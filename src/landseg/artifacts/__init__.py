@@ -36,10 +36,14 @@ Public APIs:
     - `LifecyclePolicy`: Artifact lifecycle retention policy.
     - `PreparationPaths`: Preparation artifact directory paths.
     - `SessionPaths`: Session artifact directory paths.
+    - `cleanup_scratch`: Remove obsolete temporary files from scratch.
     - `compute_fingerprint`: Deterministic SHA-256 hash of payload.
     - `find_run_collision`: Search runs manifest for matching run.
+    - `get_scratch_dir`: Resolve and validate active scratch directory.
     - `load_checkpoint`: Restore model and optimizer checkpoint.
     - `save_checkpoint`: Persist model and optimizer checkpoint.
+    - `scratch_file`: Context-managed temporary file in scratch storage.
+    - `stage_to_scratch`: Context manager staging writes before publishing.
 '''
 
 # standard imports
@@ -61,10 +65,14 @@ __all__ = [
     'SessionPaths',
     'WorldGridPaths',
     # functions
+    'cleanup_scratch',
     'compute_fingerprint',
     'find_run_collision',
+    'get_scratch_dir',
     'load_checkpoint',
     'save_checkpoint',
+    'scratch_file',
+    'stage_to_scratch',
     # typing
     'CheckpointMeta',
 ]
@@ -98,9 +106,23 @@ if typing.TYPE_CHECKING:
     from .policy import (
         LifecyclePolicy,
     )
+    from .storage import (
+        cleanup_scratch,
+        get_scratch_dir,
+        scratch_file,
+        stage_to_scratch,
+    )
 
 
 def __getattr__(name: str):
+    if name in {
+        'cleanup_scratch',
+        'get_scratch_dir',
+        'scratch_file',
+        'stage_to_scratch',
+    }:
+        obj = importlib.import_module('.storage', __package__)
+        return getattr(obj, name)
     if name in {
         'CheckpointMeta',
         'load_checkpoint',

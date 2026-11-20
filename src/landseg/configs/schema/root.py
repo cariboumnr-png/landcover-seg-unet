@@ -45,10 +45,11 @@ StudyConfig = study.StudyConfig
 
 
 @dataclasses.dataclass
-class ExecutionContext(base.BaseConfigSection):
+class ExecutionContext(base.BaseConfigSection):  # pylint: disable=too-many-instance-attributes
     '''Mutable execution context.'''
     verbosity: str | int | None = 'full'
     exp_root: str | None = None
+    scratch_dir: str | None = None # external fast local scratch directory
     recipe_dir: str = './configs' # external recipe directory path override
     knowledge_dir: str = './knowledge' # external knowledge directory override
     dev_cfg: str | None = None # developer-only override config
