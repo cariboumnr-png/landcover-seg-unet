@@ -1,6 +1,6 @@
 # ADR-0068: Cloud Raster I/O, Materialization, and Execution Hardening
 
-**Status:** Accepted — In Progress<br>
+**Status:** Accepted — Implemented<br>
 **Date:** 2026-11-19 (Updated 2026-11-20)<br>
 **Branch:** `cloud-raster-io`<br>
 **Related:**
@@ -78,49 +78,49 @@ inefficiencies that collapsed immediately under cloud conditions:
 
 ## 2. Evolution & Structural Decisions
 
-### 2.1. Preliminary Hotfixes
+### 2.1. Operational Hardening
 
-To unblock cluster execution, four targeted fixes were initially applied to
-address hard crashes and correctness bugs:
+To unblock cluster execution, targeted operational fixes were applied to
+address hard crashes, numerical instability, and filesystem incompatibilities:
 
-1. **`75a466e` (Issue #88 - Hardware & Numerical Hardening)**:
+1. **Hardware & Numerical Hardening (Issue #88)**:
    * Removed silent `nan_to_num` masking in `HeadManager` to fail fast on
      non-finite activations.
    * Added consecutive skipped-step guards in `MultiHeadTrainer` against
      runaway `GradScaler` bypass.
    * Added CPU BF16 capability detection and fallback to FP32 on CPUs
      lacking hardware acceleration.
-2. **`29d61dd` (Hierarchical Evaluation & Grid Contiguity)**:
+2. **Hierarchical Evaluation & Grid Contiguity**:
    * Corrected `ConfusionMatrix` and `BatchEngine` to evaluate child heads
      strictly against actual parent predictions (`parent_pred_1b`), properly
      penalizing missed parents as False Negatives.
    * Fixed independent coordinate bounds and full-grid assertions in
      `__calc_test_grid()` for non-contiguous AOI blocks.
-3. **`c69b151` (Issue #89 - Local-First Mask GTiff Writing)**:
+3. **Local-First Mask GeoTIFF Writing (Issue #89)**:
    * Introduced local-first writing in `geopipe/rasters/mask.py`, writing to a
      temporary directory before copying sequentially to the target Volume to
      eliminate FUSE write-seek truncation.
-4. **`2324016` (Issue #90 - Sequential NPZ Block Streaming)**:
+4. **Sequential NPZ Block Streaming (Issue #90)**:
    * Implemented sequential in-memory archive streaming in
      `geopipe.ingest.blocks.assembler.lifecycle` to bypass FUSE
      backward-seek limitations on `.npz` block writes.
 
-### 2.2. Architectural Foundation Established on `main`
+### 2.2. Architectural Foundation: Runtime & Storage Substrates
 
-While the hotfixes resolved immediate data corruption and crashes, addressing
-Issue #91 (raster I/O throughput) required introducing fast local scratch
-staging and scaled execution concurrency.
+While operational fixes resolved immediate data corruption and crashes,
+addressing Issue #91 (raster I/O throughput) required introducing fast local
+scratch staging and scaled execution concurrency.
 
-Before implementing raster materialization, the team recognized an architectural
-risk: `landseg.utils` was drifting toward becoming an untyped dumping ground for
+Before implementing raster materialization, an architectural risk was addressed:
+`landseg.utils` was drifting toward becoming an untyped dumping ground for
 heterogeneous responsibilities (multiprocessing, device probing, logging,
-notebook detection, widgets). Adding more utilities (e.g., scratch managers) to
-`utils` would exacerbate domain bloat.
+notebook detection, widgets). Adding more utilities (e.g., scratch managers)
+to `utils` would exacerbate domain bloat.
 
-To establish clean architectural boundaries, three foundational commits were
-implemented and merged directly onto `main`:
+To establish clean architectural boundaries, foundational substrates were
+established:
 
-1. **`a14af30` — First-Class `landseg.runtime` Subsystem**:
+1. **First-Class `landseg.runtime` Subsystem**:
    * Consolidated execution environment concerns into a first-class subsystem:
      `concurrency` (`ParallelExecutor`), `hardware` (capability checks),
      `platform` (environment detection), `interactive` (widgets and progress),
@@ -128,14 +128,14 @@ implemented and merged directly onto `main`:
    * Upgraded concurrency worker calculation to
      `max(1, cpu_count() - 1)` with `LANDSEG_MAX_WORKERS` override, resolving
      the 4-vCPU worker starvation issue.
-2. **`72538d6` — First-Class `landseg.artifacts.storage.scratch` Substrate**:
+2. **First-Class `landseg.artifacts.storage.scratch` Substrate**:
    * Introduced a centralized local scratch lifecycle under the `artifacts`
      subsystem: `get_scratch_dir()`, `scratch_file()`, `stage_to_scratch()`,
      and `cleanup_scratch()`.
    * Added `scratch_dir` property to `ExecutionContext` and `set_scratch()`
      builder method to `BaseConfigurator`, supporting environment override via
      `LANDSEG_SCRATCH_DIR` and falling back safely to `tempfile.gettempdir()`.
-3. **`3302994` — Clean-Cut Deprecation of Legacy Shims**:
+3. **Clean-Cut Deprecation of Legacy Shims**:
    * Completely removed backward-compatibility shims (`utils.device`,
      `utils.multip`, `utils.logger`, `mlops.env`, `notebooks.env`,
      `notebooks.widgets`).
@@ -144,22 +144,21 @@ implemented and merged directly onto `main`:
    * Relocated unit tests cleanly into `tests/unit/runtime/` and
      `tests/unit/artifacts/storage/`.
 
-### 2.3. Scoping Branch `cloud-raster-io`
+### 2.3. Scope of Cloud Raster I/O Architecture (Issue #91)
 
-With the runtime and scratch substrates fully landed and tested on `main`,
-the feature branch `cloud-raster-io` is sharply scoped to deliver the remaining
-raster I/O optimizations under Issue #91:
-1. Rebase `cloud-raster-io` onto `main` to align with `landseg.runtime` and
-   `landseg.artifacts.storage.scratch`.
-2. Introduce GDAL cloud runtime profiles in `landseg.geopipe.rasters.env`.
-3. Implement materialized tiled GeoTIFF warping in `geopipe.rasters.warp`
-   using `stage_to_scratch`.
-4. Stream valid-pixel mask generation window-by-window in
-   `geopipe.rasters.mask`.
-5. Optimize block ingestion reads (single multi-band reads per window and
-   selective boundless padding) in `geopipe.rasters.io`.
-6. Align Databricks ingestion notebook with `set_scratch()` pointing to
-   fast ephemeral NVMe storage (`/local_disk0`).
+With runtime and scratch substrates established, the cloud raster I/O
+architecture was redesigned to eliminate remote object-store latency:
+1. **Cloud-Optimized GDAL Profiles**: Process-level configuration to eliminate
+   directory listings and optimize read buffering.
+2. **Materialized GeoTIFF Warping**: Transform raw inputs into canonical,
+   tiled GeoTIFFs once, avoiding repeated on-the-fly reprojection across
+   network storage.
+3. **Streaming Windowed Mask Generation**: Bound mask unification memory
+   strictly to tile dimensions ($O(256 \times 256)$).
+4. **Consolidated Multi-Band Reads**: Batch window reads into single I/O
+   operations per data type and selectively apply boundless padding.
+5. **Ephemeral Cluster Storage Staging**: Connect pipelines directly to fast
+   node-local NVMe scratch storage (`/local_disk0`).
 
 ---
 
@@ -194,7 +193,7 @@ flowchart TD
 ```
 
 ### Decision 1: Materialize Harmonized Rasters as Tiled GeoTIFFs
-**Status:** In Progress on `cloud-raster-io`<br>
+**Status:** Accepted — Implemented<br>
 **Problem:** `WarpedVRT` recalculates coordinate reprojection, spatial
 snapping, and bilinear/cubic interpolation on every single read. Stacking
 multiple WarpedVRTs compounds this overhead across network storage.
@@ -217,7 +216,7 @@ multiple WarpedVRTs compounds this overhead across network storage.
   eliminated.
 
 ### Decision 2: Centralized Local Scratch Storage Substrate
-**Status:** Accepted & Merged into `main` (`72538d6`)<br>
+**Status:** Accepted — Implemented<br>
 **Problem:** FUSE filesystems cannot support random-access writes. Ad-hoc
 temporary directories were hardcoded across modules without centralized
 configuration or lifecycle management.
@@ -239,7 +238,7 @@ configuration or lifecycle management.
   route through `landseg.artifacts.storage.scratch`.
 
 ### Decision 3: Streaming Windowed Valid-Pixel Mask Generation
-**Status:** In Progress on `cloud-raster-io`<br>
+**Status:** Accepted — Implemented<br>
 **Problem:** `unify_nodata_mask` reads all 15 bands across the entire raster
 into memory at once, forcing redundant decodes of interleaved S2 tiles and
 causing high memory footprints.
@@ -255,7 +254,7 @@ causing high memory footprints.
   geographic extent.
 
 ### Decision 4: Consolidated Multi-Band Block Reads & Selective Boundless I/O
-**Status:** In Progress on `cloud-raster-io`<br>
+**Status:** Accepted — Implemented<br>
 **Problem:** Ingestion block creation calls `_read_bands` 15 times per block
 with `boundless=True`, causing 15 separate network round-trips and boundless
 padding overhead.
@@ -272,7 +271,7 @@ padding overhead.
   `boundless=True`. Interior windows will execute direct native block reads.
 
 ### Decision 5: First-Class Runtime Subsystem & Auto-Scaled Concurrency
-**Status:** Accepted & Merged into `main` (`a14af30`, `3302994`)<br>
+**Status:** Accepted — Implemented<br>
 **Problem:** `CORE_N = max(1, cpu_count() - 4)` starved 4-vCPU cloud nodes down
 to 1 worker, serializing ingestion. Furthermore, execution concerns were
 scattered across `utils`, `mlops`, and `notebooks`.
@@ -292,7 +291,7 @@ scattered across `utils`, `mlops`, and `notebooks`.
   only pure validation helpers.
 
 ### Decision 6: Cloud-Optimized GDAL Runtime Profiles
-**Status:** In Progress on `cloud-raster-io`<br>
+**Status:** Accepted — Implemented<br>
 **Problem:** Default GDAL settings trigger directory listings on every file
 open, maintain an undersized 64 MB cache, and operate single-threaded.
 
@@ -337,37 +336,26 @@ open, maintain an undersized 64 MB cache, and operate single-threaded.
 
 ---
 
-## 5. Implementation & Migration Plan
+## 5. Architectural Implementation Status
 
-### Phase 1: Architectural Foundations (Completed on `main`)
-* [x] **`a14af30`**: Introduce `landseg.runtime` subsystem (`concurrency`,
-  `hardware`, `platform`, `interactive`, `logger`) with auto-scaled concurrency
-  `max(1, cpu_count() - 1)`.
-* [x] **`72538d6`**: Introduce `landseg.artifacts.storage.scratch` substrate
-  (`stage_to_scratch`, `scratch_file`) and `ExecutionContext.scratch_dir`.
-* [x] **`3302994`**: Clean-cut migration removing legacy shims in `utils`,
-  `mlops`, and `notebooks`, retargeting all call sites and unit tests.
+The architectural decisions defined in this record have been implemented and verified across the codebase:
 
-### Phase 2: Cloud Raster I/O Hardening (Active on `cloud-raster-io`)
-* [ ] **Step 1: Rebase Branch onto `main`**:
-  * Rebase `cloud-raster-io` onto `origin/main`.
-  * Align preliminary fixes (`75a466e`) with `landseg.runtime.hardware`.
-* [ ] **Step 2: GDAL Cloud Profile Engine**:
-  * Implement `landseg.geopipe.rasters.env` with `configure_gdal_defaults()`.
-* [ ] **Step 3: Materialized GeoTIFF Warping Engine**:
-  * Implement `write_warped_gtiff()` in `geopipe.rasters.warp` using
-    `landseg.artifacts.storage.stage_to_scratch`.
-* [ ] **Step 4: Harmonization & Streaming Mask Pipelines**:
-  * Update `geopipe.harmonize.processor` to emit materialized GeoTIFFs.
-  * Refactor `geopipe.rasters.mask.unify_nodata_mask` to windowed streaming.
-* [ ] **Step 5: Consolidated Multi-Band Ingestion Reads**:
-  * Optimize `geopipe.rasters.io._read_bands` and `read_window` for single-call
-    multi-band reading and selective boundless padding.
-* [ ] **Step 6: Databricks Notebook Alignment**:
-  * Expose `05_scratch_dir` widget in `notebooks/01_data_ingestion.ipynb`
-    pointing to `/local_disk0` via `set_scratch()`.
-* [ ] **Step 7: Verification & Final Merge**:
-  * Execute test suites (`tests/unit/geopipe/`, `tests/unit/runtime/`,
-    `tests/unit/artifacts/storage/`).
-  * Validate end-to-end integration (`tests/integration/test_e2e_intake.py`).
-  * Merge `cloud-raster-io` into `main` and close Issues #88, #89, #90, #91.
+### 5.1. Runtime Execution Subsystem (`landseg.runtime`)
+* **Dynamic Concurrency**: Upgraded worker calculation to `max(1, cpu_count() - 1)` with `LANDSEG_MAX_WORKERS` override, resolving cloud node worker starvation.
+* **Hardware Capability Probing**: Centralized instruction checks (`has_cpu_bf16_support`) to govern mixed-precision fallback policies across heterogeneous CPU nodes.
+* **Namespace Isolation**: Relocated concurrency, platform, interactive, and logging facilities into `landseg.runtime`, deprecating untyped shims in `landseg.utils`.
+
+### 5.2. Local Scratch Storage Substrate (`landseg.artifacts.storage.scratch`)
+* **Centralized Lifecycle**: Implemented `get_scratch_dir()`, `scratch_file()`, `stage_to_scratch()`, and `cleanup_scratch()`.
+* **Configurable Precedence**: Structured resolution order prioritizing explicit arguments, context configuration, environment variables (`LANDSEG_SCRATCH_DIR`), and system temp fallbacks.
+* **Sequential Write Safety**: Guaranteed local staging and sequential copy publish semantics, eliminating FUSE write-seek truncation across GeoTIFF, VRT, and NPZ writes.
+
+### 5.3. Cloud-Optimized Raster Engine (`landseg.geopipe.rasters`)
+* **GDAL Profiles (`env.py`)**: Configured process-level defaults (`GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'`, `GDAL_NUM_THREADS='ALL_CPUS'`, `GDAL_CACHEMAX='512MB'`).
+* **Materialized Warping (`warp.py`)**: Implemented `write_warped_gtiff()` to warp raw rasters once into materialized, tiled (256x256), compressed GeoTIFFs via scratch staging, replacing fragile virtual reprojection graphs.
+* **Windowed Mask Generator (`mask.py`)**: Streamed valid-pixel mask generation by block window with constant $O(256 \times 256)$ RAM bounds.
+* **Consolidated Block I/O (`io.py`)**: Consolidated multi-band window reading into single calls for uniform dtypes, grouped calls for mixed dtypes, and applied boundless padding selectively only to raster perimeters.
+
+### 5.4. Enterprise Pipeline & Notebook Integration
+* Exposed `set_scratch()` across all stage configurators.
+* Configured Databricks production notebooks (`notebooks/01_data_ingestion.ipynb`) with the `05_scratch_dir` widget pointing to ephemeral node-local NVMe scratch (`/local_disk0`).
