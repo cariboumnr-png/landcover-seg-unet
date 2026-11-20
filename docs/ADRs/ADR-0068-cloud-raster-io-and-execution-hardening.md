@@ -1,6 +1,6 @@
 # ADR-0068: Cloud Raster I/O, Materialization, and Execution Hardening
 
-**Status:** Accepted — In Progress<br>
+**Status:** Accepted — Implemented<br>
 **Date:** 2026-11-19 (Updated 2026-11-20)<br>
 **Branch:** `cloud-raster-io`<br>
 **Related:**
@@ -349,24 +349,24 @@ open, maintain an undersized 64 MB cache, and operate single-threaded.
   `mlops`, and `notebooks`, retargeting all call sites and unit tests.
 
 ### Phase 2: Cloud Raster I/O Hardening (Active on `cloud-raster-io`)
-* [ ] **Step 1: Rebase Branch onto `main`**:
+* [x] **Step 1: Rebase Branch onto `main`**:
   * Rebase `cloud-raster-io` onto `origin/main`.
   * Align preliminary fixes (`75a466e`) with `landseg.runtime.hardware`.
-* [ ] **Step 2: GDAL Cloud Profile Engine**:
+* [x] **Step 2: GDAL Cloud Profile Engine**:
   * Implement `landseg.geopipe.rasters.env` with `configure_gdal_defaults()`.
-* [ ] **Step 3: Materialized GeoTIFF Warping Engine**:
+* [x] **Step 3: Materialized GeoTIFF Warping Engine**:
   * Implement `write_warped_gtiff()` in `geopipe.rasters.warp` using
     `landseg.artifacts.storage.stage_to_scratch`.
-* [ ] **Step 4: Harmonization & Streaming Mask Pipelines**:
+* [x] **Step 4: Harmonization & Streaming Mask Pipelines**:
   * Update `geopipe.harmonize.processor` to emit materialized GeoTIFFs.
   * Refactor `geopipe.rasters.mask.unify_nodata_mask` to windowed streaming.
-* [ ] **Step 5: Consolidated Multi-Band Ingestion Reads**:
+* [x] **Step 5: Consolidated Multi-Band Ingestion Reads**:
   * Optimize `geopipe.rasters.io._read_bands` and `read_window` for single-call
     multi-band reading and selective boundless padding.
-* [ ] **Step 6: Databricks Notebook Alignment**:
+* [x] **Step 6: Databricks Notebook Alignment**:
   * Expose `05_scratch_dir` widget in `notebooks/01_data_ingestion.ipynb`
     pointing to `/local_disk0` via `set_scratch()`.
-* [ ] **Step 7: Verification & Final Merge**:
+* [x] **Step 7: Verification & Final Merge**:
   * Execute test suites (`tests/unit/geopipe/`, `tests/unit/runtime/`,
     `tests/unit/artifacts/storage/`).
   * Validate end-to-end integration (`tests/integration/test_e2e_intake.py`).
