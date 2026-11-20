@@ -190,7 +190,13 @@ def read_window(
             If the computed padded window is invalid.
     '''
     if edge_mode == 'boundless':
-        return _read_bands(dataset, indexes, window, boundless=True)
+        is_outside = (
+            window.col_off < 0
+            or window.row_off < 0
+            or (window.col_off + window.width) > dataset.width
+            or (window.row_off + window.height) > dataset.height
+        )
+        return _read_bands(dataset, indexes, window, boundless=is_outside)
 
     if edge_mode == 'reflect':
         canvas_w, canvas_h = dataset.width, dataset.height
@@ -262,13 +268,40 @@ def _read_bands(
     *,
     boundless: bool = False,
 ) -> numpy.typing.NDArray:
+    '''Read requested bands with unified multi-band optimizations.'''
     info = _get_info(dataset)
     if isinstance(indexes, int): # single band
         return dataset.read(indexes, window=window, boundless=boundless)
-    bands = indexes or list(range(1, info.count + 1))
-    # handle mixed dtypes in bands (rasterio will throw)
-    to_stack = [
-        dataset.read(b, window=window, boundless=boundless)
-        for b in bands
-    ]
-    return numpy.stack(to_stack, axis=0)
+
+    bands = (
+        list(indexes)
+        if indexes is not None
+        else list(range(1, info.count + 1))
+    )
+    if not bands:
+        return numpy.empty((0, int(window.height), int(window.width)))
+
+    band_dtypes = [info.dtypes[b - 1] for b in bands]
+    if len(set(band_dtypes)) <= 1:
+        return dataset.read(bands, window=window, boundless=boundless)
+
+    dtype_groups: dict[str, list[tuple[int, int]]] = {}
+    for pos, (b, dt) in enumerate(zip(bands, band_dtypes)):
+        dtype_groups.setdefault(dt, []).append((pos, b))
+
+    promoted_dtype = numpy.result_type(
+        *[numpy.dtype(dt) for dt in dtype_groups]
+    )
+    result = numpy.empty(
+        (len(bands), int(window.height), int(window.width)),
+        dtype=promoted_dtype,
+    )
+    for group in dtype_groups.values():
+        group_bands = [b for _, b in group]
+        group_data = dataset.read(
+            group_bands, window=window, boundless=boundless
+        )
+        for g_idx, (orig_pos, _) in enumerate(group):
+            result[orig_pos] = group_data[g_idx]
+
+    return result
