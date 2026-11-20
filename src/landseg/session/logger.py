@@ -29,7 +29,7 @@ import typing
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public types
@@ -48,7 +48,7 @@ class SessionSummary(typing.TypedDict):
 
 
 # ----- public classes
-class SessionLogger(utils.Logger):
+class SessionLogger(runtime.Logger):
     '''
     A specialized `Logger` wrapper that collects logging during sessions
     and persists a structured JSON session summary at closing.

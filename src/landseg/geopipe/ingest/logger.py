@@ -39,11 +39,11 @@ import uuid
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.ingestion as contracts
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public classes
-class IngestionLogger(utils.Logger):
+class IngestionLogger(runtime.Logger):
     '''
     A specialized Logger wrapper that collects execution metrics and
     persists a structured JSON run report at shutdown.

@@ -22,8 +22,10 @@
 '''
 Top-level namespace for `landseg.utils`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes general-purpose validation primitives and helpers.
+
+Public APIs:
+    - `validator`: Standalone validation primitives and composed checks.
 '''
 
 # standard imports
@@ -32,40 +34,17 @@ import importlib
 import typing
 
 __all__ = [
-    # classes
-    'Logger',
-    'ParallelExecutor',
-    # functions
-    'get_device_name',
-    'resolve_device',
+    'validator',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .device import (
-        get_device_name,
-        resolve_device,
-    )
-    from .logger import (
-        Logger,
-    )
-    from .multip import (
-        ParallelExecutor,
-    )
+    from . import validator
 
 
 def __getattr__(name: str):
-    if name in {'Logger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    if name in {'ParallelExecutor'}:
-        obj = importlib.import_module('.multip', __package__)
-        return getattr(obj, name)
-
-    if name in {'get_device_name', 'resolve_device'}:
-        obj = importlib.import_module('.device', __package__)
-        return getattr(obj, name)
+    if name == 'validator':
+        return importlib.import_module('.validator', __package__)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

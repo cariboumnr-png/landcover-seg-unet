@@ -19,13 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit test suite for device resolution and querying (device.py).'''
+'''Unit test suite for device resolution and hardware queries (hardware.py).'''
 
 # third-party imports
 import pytest
 import torch
 # local imports
-import landseg.utils.device as device_utils
+import landseg.runtime.hardware as hardware
 
 
 def test_resolve_device_explicit_cpu():
@@ -34,7 +34,7 @@ def test_resolve_device_explicit_cpu():
     When: Calling resolve_device.
     Then: Return 'cpu'.
     '''
-    assert device_utils.resolve_device('cpu') == 'cpu'
+    assert hardware.resolve_device('cpu') == 'cpu'
 
 
 def test_resolve_device_torch_device():
@@ -44,20 +44,20 @@ def test_resolve_device_torch_device():
     Then: Return string representation of the device.
     '''
     dev = torch.device('cpu')
-    assert device_utils.resolve_device(dev) == 'cpu'
+    assert hardware.resolve_device(dev) == 'cpu'
 
 
 def test_resolve_device_auto_cpu_fallback(monkeypatch: pytest.MonkeyPatch):
     '''
-    Given: 'auto' target with both CUDA and MPS disabled.
+    Given: 'auto' target with CUDA and MPS unavailable.
     When: Calling resolve_device.
-    Then: Fall back to 'cpu'.
+    Then: Return 'cpu'.
     '''
     monkeypatch.setattr(torch.cuda, 'is_available', lambda: False)
     if hasattr(torch.backends, 'mps'):
         monkeypatch.setattr(torch.backends.mps, 'is_available', lambda: False)
 
-    assert device_utils.resolve_device('auto') == 'cpu'
+    assert hardware.resolve_device('auto') == 'cpu'
 
 
 def test_resolve_device_auto_cuda(monkeypatch: pytest.MonkeyPatch):
@@ -67,49 +67,69 @@ def test_resolve_device_auto_cuda(monkeypatch: pytest.MonkeyPatch):
     Then: Return 'cuda'.
     '''
     monkeypatch.setattr(torch.cuda, 'is_available', lambda: True)
-    assert device_utils.resolve_device('auto') == 'cuda'
+
+    assert hardware.resolve_device('auto') == 'cuda'
 
 
 def test_resolve_device_cuda_unavailable_raises(
     monkeypatch: pytest.MonkeyPatch
 ):
     '''
-    Given: Explicit 'cuda' target when CUDA is not available.
+    Given: Explicit 'cuda' target requested but CUDA is unavailable.
     When: Calling resolve_device.
-    Then: Raise ValueError with descriptive message.
+    Then: Raise ValueError.
     '''
     monkeypatch.setattr(torch.cuda, 'is_available', lambda: False)
+
     with pytest.raises(ValueError, match='CUDA is not available'):
-        device_utils.resolve_device('cuda')
+        hardware.resolve_device('cuda')
 
 
 def test_get_device_name_cpu():
     '''
-    Given: Target 'cpu' device.
+    Given: CPU device identifier.
     When: Calling get_device_name.
     Then: Return 'cpu'.
     '''
-    assert device_utils.get_device_name('cpu') == 'cpu'
+    assert hardware.get_device_name('cpu') == 'cpu'
 
 
 def test_get_device_name_mps():
     '''
-    Given: Target 'mps' device.
+    Given: MPS device identifier.
     When: Calling get_device_name.
     Then: Return 'Apple Silicon (MPS)'.
     '''
-    assert device_utils.get_device_name('mps') == 'Apple Silicon (MPS)'
+    assert hardware.get_device_name('mps') == 'Apple Silicon (MPS)'
 
 
 def test_get_device_name_cuda(monkeypatch: pytest.MonkeyPatch):
     '''
-    Given: Target 'cuda' device with mocked device name.
+    Given: CUDA device identifier with CUDA available and mocked name.
     When: Calling get_device_name.
-    Then: Return mocked GPU device name.
+    Then: Return the mocked device name.
     '''
     monkeypatch.setattr(torch.cuda, 'is_available', lambda: True)
     monkeypatch.setattr(
-        torch.cuda, 'get_device_name', lambda _: 'NVIDIA RTX 4090'
+        torch.cuda, 'get_device_name', lambda idx: 'NVIDIA RTX 4090'
     )
-    assert device_utils.get_device_name('cuda:0') == 'NVIDIA RTX 4090'
+    assert hardware.get_device_name('cuda:0') == 'NVIDIA RTX 4090'
 
+
+def test_is_cpu_bf16_supported(mocker):
+    '''
+    Given: PyTorch internal CPU feature probe functions.
+    When: Testing is_cpu_bf16_supported helper.
+    Then: Accurately reflect AVX-512 BF16 and AMX capability.
+    '''
+    mock_cpu = mocker.MagicMock()
+    mock_cpu._is_avx512_bf16_supported.return_value = True
+    mocker.patch.object(torch._C, '_cpu', mock_cpu, create=True)
+    assert hardware.is_cpu_bf16_supported() is True
+
+    mock_cpu._is_avx512_bf16_supported.return_value = False
+    mock_cpu._is_amx_tile_supported.return_value = True
+    assert hardware.is_cpu_bf16_supported() is True
+
+    mock_cpu._is_amx_tile_supported.return_value = False
+    assert hardware.is_cpu_bf16_supported() is False

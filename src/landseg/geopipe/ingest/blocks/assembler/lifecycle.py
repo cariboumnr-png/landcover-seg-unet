@@ -45,7 +45,7 @@ import landseg.geopipe.core as geo_core
 import landseg.geopipe.ingest.blocks.assembler.builder as builder
 import landseg.geopipe.ingest.blocks.assembler.io as io
 import landseg.geopipe.rasters as rasters
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public dataclasses
@@ -182,7 +182,7 @@ def build_blocks(
         build_jobs.append(job)
 
     if build_jobs:
-        utils.ParallelExecutor().run(build_jobs, desc=' - Creating blocks')
+        runtime.ParallelExecutor().run(build_jobs, desc=' - Creating blocks')
 
     running_stats: contracts.BlocksBuildingStats = {
         'blocks_candidate': len(coords_to_check),
@@ -237,7 +237,7 @@ def _structural_validation(
     collision_policy: str | contracts.CollisionPolicyType = 'skip',
 ) -> _StructuralValidationResults:
     '''Verify block file integrity and resolve intra-pool collisions.'''
-    results: list[dict[tuple[int, int], bool]] = utils.ParallelExecutor().run(
+    results: list[dict[tuple[int, int], bool]] = runtime.ParallelExecutor().run(
         [(io.check_npz_integrity, (c, p), {}) for c, p in input_coords.items()],
         ' - Checking existing data blocks (.npz files)'
     )

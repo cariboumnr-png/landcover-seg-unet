@@ -61,7 +61,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .env import (
+    from landseg.runtime.platform import (
         get_cluster_id,
         get_dbutils,
         get_git_commit,
@@ -88,7 +88,7 @@ def __getattr__(name: str):
         'get_runtime_version',
         'is_databricks',
     }:
-        obj = importlib.import_module('.env', __package__)
+        obj = importlib.import_module('landseg.runtime.platform')
         return getattr(obj, name)
 
     if name in {'register_unity_catalog_model'}:

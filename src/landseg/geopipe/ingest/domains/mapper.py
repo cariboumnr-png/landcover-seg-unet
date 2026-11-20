@@ -39,7 +39,7 @@ import numpy.typing
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.rasters as rasters
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- typing aliases
@@ -107,7 +107,7 @@ def _read_raster(
     # read through all windows via multiprocessing
     jobs = [(_read, (k, v, fpath, grid.tile_size), {}) for k, v in grid.items()]
     results: list[tuple[tuple[int, int], numpy.typing.NDArray]]
-    results = utils.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
+    results = runtime.ParallelExecutor().run(jobs, ' - Mapping domain tiles')
     all_tiles = [(_, t) for (_, t) in results if t.size > 0] # filter empty arrays
     return dict(all_tiles), nodata, index_base
 

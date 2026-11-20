@@ -45,7 +45,7 @@ import typing
 import optuna
 import pandas
 # local imports
-import landseg.mlops.env as env_mod
+import landseg.runtime.platform as env_mod
 import landseg.study.analysis.trials as trials_analysis
 
 

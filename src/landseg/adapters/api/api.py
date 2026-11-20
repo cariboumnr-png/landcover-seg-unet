@@ -37,7 +37,7 @@ import landseg.configs as configs
 import landseg.execution as execution
 import landseg.execution.preflight as preflight
 import landseg.execution.preflight.schema as pre_schema
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public functions
@@ -53,7 +53,7 @@ def run(root_config: configs.RootConfig) -> typing.Any:
         typing.Any:
             Result returned by the dispatched pipeline or workflow.
     '''
-    logger = utils.Logger('api', './api.log')
+    logger = runtime.Logger('api', './api.log')
     try:
         logger.info(f'Running command: {root_config.command}')
         return execution.execute_command(root_config)

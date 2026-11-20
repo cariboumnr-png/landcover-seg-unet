@@ -44,8 +44,8 @@ import landseg.core as core
 import landseg.execution.preflight as preflight
 import landseg.mlops as mlops
 import landseg.models as models
+import landseg.runtime as runtime
 import landseg.session as session
-import landseg.utils as utils
 
 
 # ----- public classes
@@ -221,14 +221,14 @@ class SessionPipeline(BasePipeline):
         self.timer['model'] = time.perf_counter() - start_t
         self.logger.info(f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
 
-        target_device = utils.resolve_device(self.config.session.device)
+        target_device = runtime.resolve_device(self.config.session.device)
 
         # summarize inputs and log
         total_p = sum(p.numel() for p in model.parameters())
         trainable_p = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.logger.set_inputs({
             'system': {
-                'device': utils.get_device_name(target_device),
+                'device': runtime.get_device_name(target_device),
                 'torch_version': torch.__version__
             },
             'model': {

@@ -207,7 +207,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     `exp_root` across Unity Catalog Volumes (`/Volumes/...`) and local POSIX
     filesystems; environment-safe two-tiered Optuna SQLite storage routing and
     volume synchronization.
-  - **Runtime & Lineage Probing (`mlops.env`)**: Zero-crash environment
+  - **Runtime & Lineage Probing (`runtime.platform`)**: Zero-crash environment
     discovery for Databricks runtimes, `dbutils` handles, cluster IDs, and
     git commit SHAs.
   - **Model Registry Integration (`mlops.registry`)**: Standardized model
@@ -219,13 +219,28 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 ### 11. Interactive Presentation & Telemetry ([`notebooks`](../src/landseg/notebooks))
 - Encapsulates interactive UI and process safety concerns without polluting
   headless execution layers:
-  - **Multi-Runtime Widgets (`notebooks.widgets`)**: Native `dbutils.widgets`
+  - **Multi-Runtime Widgets (`runtime.interactive`)**: Native `dbutils.widgets`
     bridge with silent headless fallbacks and typed getters.
   - **Process Safety & Interruption Handling (`notebooks.telemetry`)**: Graceful
     `KeyboardInterrupt` capture, emergency checkpoint flushing, and CUDA
     memory cleanup.
   - **In-Cell Visual Telemetry (`notebooks.telemetry`)**: Live loss/metric curves
     and qualitative side-by-side segmentation previewers.
+
+---
+
+### 12. Execution Runtime & Concurrency ([`runtime`](../src/landseg/runtime))
+- Consolidates foundational host and process runtime facilities:
+  - **Platform & Compute Environment (`runtime.platform`)**: Cloud cluster
+    detection, Databricks runtime introspection, and git lineage probes.
+  - **Hardware Resolution (`runtime.hardware`)**: Execution device resolution,
+    device querying, and CPU/GPU hardware capability probes.
+  - **Parallel Concurrency (`runtime.concurrency`)**: Core-aware worker pool sizing
+    (`ParallelExecutor`) supporting threads and processes with progress bars.
+  - **Interactive Widgets (`runtime.interactive`)**: Multi-runtime notebook
+    widgets with graceful local CLI and Databricks fallbacks.
+  - **Unified Logging (`runtime.logger`)**: Formatted file and console loggers
+    with structured run reports.
 
 ---
 

@@ -156,7 +156,7 @@ def test_logger_lifecycle(tmp_path: pathlib.Path):
     '''
     log_fp = tmp_path / 'runtime_test.log'
     logger = runtime.Logger(
-        name='test_logger',
+        name='test_runtime_lifecycle',
         log_file=log_fp,
         enable_file_log=True,
     )

@@ -35,7 +35,7 @@ import math
 # third-party imports
 import numpy
 # local imports
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 # global hyperparameters
 EPS = 1e-6  # safety
@@ -96,7 +96,7 @@ def score_blocks(
     # score blocks from list with parallel processing
     jobs = [(_score, (blk, p), kws) for blk in input_blocks.items()]
     scores: list[tuple[tuple[int, int], float | None, list[int]]]
-    scores = utils.ParallelExecutor(desc=' - Scoring data blocks').run(jobs)
+    scores = runtime.ParallelExecutor(desc=' - Scoring data blocks').run(jobs)
     # sort blocks to rank in descending order
     sorted_scores = sorted(
         scores,

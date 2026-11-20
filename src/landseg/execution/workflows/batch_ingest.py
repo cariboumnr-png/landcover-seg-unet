@@ -31,7 +31,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.geopipe.ingest as ingest
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public functions
@@ -57,7 +57,7 @@ def execute_batch_ingest(config: configs.RootConfig) -> None:
         rebuild=config.data.ingestion.rebuild,
     )
 
-    logger = utils.Logger(name='data-ingest', enable_file_log=False)
+    logger = runtime.Logger(name='data-ingest', enable_file_log=False)
     if not planned_batches:
         logger.log_sep()
         logger.info('No pending batches to ingest, ingestion pool is up to date')

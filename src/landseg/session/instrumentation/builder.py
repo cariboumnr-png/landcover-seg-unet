@@ -34,12 +34,12 @@ instrumentation.
 import pathlib
 import typing
 # local imports
+import landseg.runtime as runtime
 import landseg.session.instrumentation.callbacks.base as base
 import landseg.session.instrumentation.callbacks.dispatcher as dispatcher
 import landseg.session.instrumentation.callbacks.logging as logging
 import landseg.session.instrumentation.callbacks.tracking as tracking
 import landseg.session.instrumentation.dashboards as dashboards
-import landseg.utils as utils
 
 
 # ----- public functions
@@ -48,7 +48,7 @@ def build_dispatcher(
     uri: pathlib.Path | str | None = None,
     artifact_path: str | None = None,
     label_color_map: dict[str, list[int]] | None = None,
-    logger: utils.Logger | None = None,
+    logger: runtime.Logger | None = None,
 ) -> dispatcher.CallbackDispatcher:
     '''
     Construct a callback dispatcher with logging and tracking support.

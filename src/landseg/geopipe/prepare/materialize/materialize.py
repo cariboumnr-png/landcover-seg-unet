@@ -39,7 +39,7 @@ import numpy
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset as dataset
-import landseg.utils as utils
+import landseg.runtime as runtime
 import landseg.utils.validator as val
 
 
@@ -101,7 +101,7 @@ def materialize_blocks(
         for b in work
     ]
     if jobs:
-        utils.ParallelExecutor(desc=' - Normalize data blocks').run(jobs)
+        runtime.ParallelExecutor(desc=' - Normalize data blocks').run(jobs)
 
     # return current file paths
     indexed_files: dict[str, str] = {}

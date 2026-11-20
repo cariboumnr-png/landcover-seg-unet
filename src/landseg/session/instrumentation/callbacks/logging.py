@@ -23,9 +23,9 @@
 
 # local imports
 import landseg.core as core
+import landseg.runtime as runtime
 import landseg.session.contracts as contracts
 import landseg.session.instrumentation.callbacks.base as base
-import landseg.utils as utils
 
 
 # ----- public classes
@@ -34,7 +34,7 @@ class LoggingCallback(base.BaseCallback):
 
     def __init__(
         self,
-        logger: utils.Logger | None = None,
+        logger: runtime.Logger | None = None,
         *,
         verbose: bool = True
     ):

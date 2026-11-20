@@ -36,7 +36,7 @@ import omegaconf
 # local imports
 import landseg.adapters.cli as cli
 import landseg.execution as execution
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 # main process
 @hydra.main('pkg://landseg/configs/hydra', 'config', version_base='1.3')
@@ -47,7 +47,7 @@ def main(config: omegaconf.DictConfig) -> typing.Any:
     # use platform-agnostic temp directory
     # /tmp is databricks compute node friendly
     log_fp = pathlib.Path(tempfile.gettempdir()) / 'cli.log'
-    logger = utils.Logger('cli', log_fp)
+    logger = runtime.Logger('cli', log_fp)
 
     # run specified mode with exceptions handling
     try:

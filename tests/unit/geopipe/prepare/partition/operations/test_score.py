@@ -39,7 +39,7 @@ def test_score_blocks(mocker):
     '''
     # mock ParallelExecutor to run synchronously in the same process
     mocker.patch(
-        'landseg.utils.ParallelExecutor.run',
+        'landseg.runtime.ParallelExecutor.run',
         side_effect=lambda jobs, desc=None: [
             fn(*args, **kwargs) for fn, args, kwargs in jobs
         ]
@@ -115,7 +115,7 @@ def test_score_blocks_zero_score_rank(mocker):
     '''
     # mock ParallelExecutor to return predictable scores: 1.0, 0.0, -0.5, None
     mocker.patch(
-        'landseg.utils.ParallelExecutor.run',
+        'landseg.runtime.ParallelExecutor.run',
         return_value=[
             ((0, 0), -0.5, [1, 1]),
             ((0, 1), 0.0, [1, 1]),

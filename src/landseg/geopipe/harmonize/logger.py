@@ -39,11 +39,11 @@ import uuid
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.harmonization as contracts
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public classes
-class HarmonizationLogger(utils.Logger):
+class HarmonizationLogger(runtime.Logger):
     '''
     A specialized `Logger` wrapper that logs raster harmonization
     progress and persists a structured JSON report at shutdown.

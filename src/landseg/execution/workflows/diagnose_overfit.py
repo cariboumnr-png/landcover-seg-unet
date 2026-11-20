@@ -44,8 +44,8 @@ import landseg.geopipe.ingest.blocks.assembler as assembler
 import landseg.geopipe.ingest.blocks.mapper as mapper_mod
 import landseg.knowledge as knowledge
 import landseg.models as models
+import landseg.runtime as runtime
 import landseg.session as session
-import landseg.utils as utils
 
 
 # ----- overfit test pipeline
@@ -91,7 +91,7 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
             model=model,
             config=config.session,
             context=session.SessionBuildContext(
-                device=utils.resolve_device(config.session.device),
+                device=runtime.resolve_device(config.session.device),
                 session_paths=artifact_paths.session, # no ops
                 eval_dataset='val',
                 logger=logger

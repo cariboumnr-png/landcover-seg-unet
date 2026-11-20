@@ -24,7 +24,7 @@
 # standard imports
 import logging
 # local imports
-import landseg.utils.logger as logger
+import landseg.runtime.logger as logger
 
 
 def test_logger_initialization(tmp_path):

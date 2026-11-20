@@ -57,7 +57,12 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .env import (
+    from landseg.runtime.interactive import (
+        MissingRequiredInputError,
+        NotebookWidgets,
+        require_widget,
+    )
+    from landseg.runtime.platform import (
         is_notebook,
     )
     from .telemetry import (
@@ -66,16 +71,11 @@ if typing.TYPE_CHECKING:
         render_prediction_preview,
         safe_training_session,
     )
-    from .widgets import (
-        MissingRequiredInputError,
-        NotebookWidgets,
-        require_widget,
-    )
 
 
 def __getattr__(name: str):
     if name in {'MissingRequiredInputError', 'NotebookWidgets', 'require_widget'}:
-        obj = importlib.import_module('.widgets', __package__)
+        obj = importlib.import_module('landseg.runtime.interactive')
         return getattr(obj, name)
 
     if name in {
@@ -88,7 +88,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {'is_notebook'}:
-        obj = importlib.import_module('.env', __package__)
+        obj = importlib.import_module('landseg.runtime.platform')
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

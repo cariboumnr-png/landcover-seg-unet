@@ -33,7 +33,7 @@ Public APIs:
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.workflows.batch_ingest as batch_ingest
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public functions
@@ -48,7 +48,7 @@ def execute_e2e_intake(config: configs.RootConfig) -> None:
         config:
             Root execution configuration containing data settings.
     '''
-    logger = utils.Logger(name='e2e-intake', enable_file_log=False)
+    logger = runtime.Logger(name='e2e-intake', enable_file_log=False)
     logger.log_sep()
     logger.info('Starting End-to-End Data Intake workflow...')
     logger.log_sep()

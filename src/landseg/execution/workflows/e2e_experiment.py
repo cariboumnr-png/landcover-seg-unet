@@ -34,7 +34,7 @@ Public APIs:
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.workflows.batch_ingest as batch_ingest
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public functions
@@ -49,7 +49,7 @@ def execute_e2e_experiment(config: configs.RootConfig) -> None:
         config:
             Root execution configuration.
     '''
-    logger = utils.Logger(name='e2e-experiment', enable_file_log=False)
+    logger = runtime.Logger(name='e2e-experiment', enable_file_log=False)
     logger.log_sep()
     logger.info('Starting Full End-to-End Experiment workflow sequence...')
     logger.log_sep()

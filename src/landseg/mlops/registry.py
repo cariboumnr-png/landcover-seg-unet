@@ -37,8 +37,8 @@ import typing
 # third-party imports
 import mlflow
 # local imports
-import landseg.mlops.env as env_mod
 import landseg.mlops.storage as storage_mod
+import landseg.runtime.platform as env_mod
 
 
 # ----- public functions

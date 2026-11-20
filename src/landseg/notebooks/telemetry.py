@@ -47,7 +47,7 @@ import mlflow.exceptions
 import numpy
 import torch
 # local imports
-import landseg.notebooks.env as env
+import landseg.runtime.platform as env
 
 
 if not env.is_notebook():

@@ -38,11 +38,11 @@ import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.grid as contracts
 import landseg.geopipe.core as geo_core
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public classes
-class GridLogger(utils.Logger):
+class GridLogger(runtime.Logger):
     '''
     A specialized `Logger` wrapper that tracks world grid generation
     and persists a structured JSON report at shutdown.

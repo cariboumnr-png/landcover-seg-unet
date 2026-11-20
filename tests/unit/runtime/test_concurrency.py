@@ -19,10 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for the parallel execution framework (multip.py).'''
+'''Unit tests for the parallel execution framework (concurrency.py).'''
 
 # local imports
-import landseg.utils.multip as multip
+import landseg.runtime.concurrency as concurrency
 
 
 def test_parallel_executor_threads():
@@ -31,7 +31,7 @@ def test_parallel_executor_threads():
     When: Running ParallelExecutor in multi-threading mode.
     Then: Return the expected mapped calculation results.
     '''
-    executor = multip.ParallelExecutor(
+    executor = concurrency.ParallelExecutor(
         max_workers=2,
         use_threads=True,
         show_progress=False
@@ -48,7 +48,7 @@ def test_parallel_executor_processes():
     When: Running ParallelExecutor in multi-processing mode.
     Then: Return the expected mapped calculation results.
     '''
-    executor = multip.ParallelExecutor(
+    executor = concurrency.ParallelExecutor(
         max_workers=2,
         use_threads=False,
         show_progress=False
@@ -66,7 +66,7 @@ def test_parallel_executor_captures_exceptions():
     Then: Return the valid results and catch/serialize the failure
         traceback.
     '''
-    executor = multip.ParallelExecutor(
+    executor = concurrency.ParallelExecutor(
         max_workers=2,
         use_threads=True,
         show_progress=False

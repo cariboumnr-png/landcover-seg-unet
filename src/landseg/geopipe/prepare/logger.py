@@ -37,11 +37,11 @@ import typing
 import landseg._constants as c
 import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public classes
-class PreparationLogger(utils.Logger):
+class PreparationLogger(runtime.Logger):
     '''
     Specialized logger that records structured preparation reports.
 
