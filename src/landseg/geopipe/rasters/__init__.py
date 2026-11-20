@@ -28,6 +28,7 @@ Public APIs:
     - `Affine`: Type alias for raster Affine transform.
     - `BoundingBox`: Type alias for raster bounding box.
     - `CRS`: Type alias for raster coordinate reference system.
+    - `DEFAULT_GDAL_CONFIG`: Default cloud-optimized GDAL options.
     - `DatasetInfo`: Container for structural raster dataset info.
     - `DatasetReader`: Type alias for opened raster reader.
     - `Resampling`: Type alias for raster resampling algorithms.
@@ -38,6 +39,8 @@ Public APIs:
     - `check_raster_crs`: Verify coordinate reference system alignment.
     - `check_raster_resolution`: Verify pixel size consistency.
     - `compute_overlap_bounds`: Calculate intersected bounding box.
+    - `configure_gdal_defaults`: Apply cloud GDAL defaults to environment.
+    - `gdal_cloud_env`: Context manager applying cloud GDAL options.
     - `get_info`: Retrieve structured dataset info from a raster.
     - `is_same_crs`: Compare two coordinate reference systems for equality.
     - `parse_vrt_tag`: Decode serialized JSON or literal VRT tag value.
@@ -66,6 +69,8 @@ __all__ = [
     'Window',
     # classes
     'DatasetInfo',
+    # constants
+    'DEFAULT_GDAL_CONFIG',
     # functions
     'add_band_description_to_vrt',
     'add_tag_to_vrt',
@@ -73,6 +78,8 @@ __all__ = [
     'check_raster_crs',
     'check_raster_resolution',
     'compute_overlap_bounds',
+    'configure_gdal_defaults',
+    'gdal_cloud_env',
     'get_info',
     'is_same_crs',
     'parse_vrt_tag',
@@ -96,6 +103,11 @@ if typing.TYPE_CHECKING:
         DatasetReader,
         Resampling,
         Window,
+    )
+    from .env import (
+        DEFAULT_GDAL_CONFIG,
+        configure_gdal_defaults,
+        gdal_cloud_env,
     )
     from .geometry import (
         check_raster_crs,
@@ -141,6 +153,14 @@ def __getattr__(name: str):
         'Window',
     }:
         obj = importlib.import_module('._types', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'DEFAULT_GDAL_CONFIG',
+        'configure_gdal_defaults',
+        'gdal_cloud_env',
+    }:
+        obj = importlib.import_module('.env', __package__)
         return getattr(obj, name)
 
     if name in {
