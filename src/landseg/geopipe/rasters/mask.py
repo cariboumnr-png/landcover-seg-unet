@@ -31,6 +31,8 @@ Public APIs:
 
 # standard imports
 import pathlib
+import shutil
+import tempfile
 # third-party imports
 import numpy
 import rasterio
@@ -80,18 +82,35 @@ def unify_nodata_mask(
             'nodata': 0,
             'compress': 'deflate'
         })
+        meta['driver'] = 'GTiff'
         if out_path.suffix == '.vrt':
-            meta['driver'] = 'GTiff'
             raw_tif = out_path.with_name(f'{out_path.stem}_mask.tif')
-            with rasterio.open(raw_tif, 'w', **meta) as dst:
-                dst.write(valid_mask, 1)
+            _write_gtiff_local_first(raw_tif, valid_mask, meta)
 
             with rasterio.open(raw_tif) as mask_src:
                 with rasterio.vrt.WarpedVRT(mask_src) as vrt:
                     rasterio.shutil.copy(vrt, out_path, driver='VRT')
         else:
-            meta['driver'] = 'GTiff'
-            with rasterio.open(out_path, 'w', **meta) as dst:
-                dst.write(valid_mask, 1)
+            _write_gtiff_local_first(out_path, valid_mask, meta)
 
     return out_path
+
+
+# ----- private functions
+def _write_gtiff_local_first(
+    dst_path: pathlib.Path,
+    data: numpy.ndarray,
+    meta: dict,
+) -> None:
+    '''
+    Write a 1-band GTiff to local temp storage, then copy to destination.
+
+    The GTiff writer seeks within the file, which FUSE-mounted storage
+    (e.g. Unity Catalog Volumes) does not support for writes and leaves
+    a truncated file. A sequential copy is supported everywhere.
+    '''
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_tif = pathlib.Path(tmp_dir) / dst_path.name
+        with rasterio.open(tmp_tif, 'w', **meta) as dst:
+            dst.write(data, 1)
+        shutil.copyfile(tmp_tif, dst_path)
