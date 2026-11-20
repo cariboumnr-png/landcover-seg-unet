@@ -217,6 +217,91 @@ def test_write_warped_vrt_from_path(dummy_geotiff_factory, tmp_path):
     assert out_path.exists()
 
 
+# ----- `write_warped_gtiff` tests
+def test_write_warped_gtiff_tiled_and_compressed(
+    dummy_geotiff_factory,
+    tmp_path,
+):
+    '''
+    Given: A source GeoTIFF in EPSG:32617.
+    When: Warping to EPSG:3161 using `write_warped_gtiff`.
+    Then: Generates a tiled, DEFLATE-compressed GeoTIFF on disk.
+    '''
+    s2_path = dummy_geotiff_factory(
+        filename='s2_for_gtiff.tif',
+        width=40,
+        height=40,
+        bands=2,
+        crs='EPSG:32617',
+        dtype=numpy.uint16,
+    )
+    dst_crs = rasterio.crs.CRS.from_string('EPSG:3161')
+    dst_transform = rasterio.transform.from_origin(
+        500000.0, 6000000.0, 20.0, 20.0
+    )
+    out_path = tmp_path / 'materialized.tif'
+
+    res = warp.write_warped_gtiff(
+        src=s2_path,
+        output_path=out_path,
+        crs=dst_crs,
+        transform=dst_transform,
+        width=30,
+        height=30,
+        resampling=rasterio.enums.Resampling.bilinear,
+    )
+
+    assert res == out_path
+    assert out_path.exists()
+
+    with rasterio.open(out_path) as dst:
+        assert dst.crs == dst_crs
+        assert dst.width == 30
+        assert dst.height == 30
+        assert dst.count == 2
+        assert dst.block_shapes == [(256, 256), (256, 256)]
+        assert dst.profile.get('compress') == 'deflate'
+
+
+def test_write_warped_gtiff_with_tags_and_descriptions(
+    dummy_geotiff_factory,
+    tmp_path,
+):
+    '''
+    Given: Custom metadata tags and band descriptions.
+    When: Invoking `write_warped_gtiff`.
+    Then: Emits GeoTIFF with embedded tags and descriptions.
+    '''
+    src_path = dummy_geotiff_factory(
+        filename='tagged_src.tif',
+        width=20,
+        height=20,
+        bands=2,
+    )
+    dst_crs = rasterio.crs.CRS.from_string('EPSG:3161')
+    dst_transform = rasterio.transform.from_origin(
+        500000.0, 6000000.0, 20.0, 20.0
+    )
+    out_path = tmp_path / 'tagged_output.tif'
+
+    warp.write_warped_gtiff(
+        src=src_path,
+        output_path=out_path,
+        crs=dst_crs,
+        transform=dst_transform,
+        width=20,
+        height=20,
+        resampling=rasterio.enums.Resampling.nearest,
+        tags={'source': 'sentinel2', 'category': 'features'},
+        band_descriptions={1: 'blue', 2: 'green'},
+    )
+
+    with rasterio.open(out_path) as dst:
+        assert dst.tags().get('source') == 'sentinel2'
+        assert dst.tags().get('category') == 'features'
+        assert dst.descriptions == ('blue', 'green')
+
+
 # ----- `is_same_crs` tests
 def test_is_same_crs():
     '''

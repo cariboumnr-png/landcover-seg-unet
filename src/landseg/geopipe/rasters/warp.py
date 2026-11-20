@@ -28,6 +28,7 @@ rasters to a canonical world grid layout as GDAL Virtual Rasters (VRT).
 Public APIs:
     - `is_same_crs`: Compare two coordinate reference systems for equality.
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
+    - `write_warped_gtiff`: Write a materialized tiled GeoTIFF to disk.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
 
@@ -41,6 +42,7 @@ import rasterio.errors
 import rasterio.shutil
 import rasterio.vrt
 # local imports
+import landseg.artifacts.storage.scratch as scratch
 import landseg.geopipe.rasters._types as t
 import landseg.geopipe.rasters.io as io
 
@@ -59,6 +61,94 @@ def is_same_crs(
         return c1 == c2
     except (rasterio.errors.CRSError, ValueError):
         return str(crs1).strip() == str(crs2).strip()
+
+
+def write_warped_gtiff( # pylint: disable=too-many-arguments
+    *,
+    src: pathlib.Path | str | t.DatasetReader,
+    output_path: pathlib.Path | str,
+    crs: t.CRS,
+    transform: t.Affine,
+    width: int,
+    height: int,
+    resampling: t.Resampling,
+    nodata: float | int | None = None,
+    dtype: str | None = None,
+    scratch_dir: str | pathlib.Path | None = None,
+    tags: dict[str, str] | None = None,
+    band_descriptions: dict[int, str] | None = None,
+) -> pathlib.Path:
+    '''
+    Write a materialized, tiled, compressed GeoTIFF raster to disk.
+
+    Warps the source raster into a materialized GeoTIFF on the target grid
+    using local scratch staging to prevent write-seek corruption on cloud
+    FUSE storage.
+
+    Args:
+        src:
+            Open source dataset reader or path to raster file.
+        output_path:
+            Target destination path for the warped .tif file.
+        crs:
+            Target coordinate reference system.
+        transform:
+            Target affine transform.
+        width:
+            Target width in pixels.
+        height:
+            Target height in pixels.
+        resampling:
+            Resampling algorithm enum.
+        nodata:
+            Optional nodata value.
+        dtype:
+            Optional dtype value.
+        scratch_dir:
+            Optional scratch directory override.
+        tags:
+            Optional metadata tags to embed in the GeoTIFF.
+        band_descriptions:
+            Optional 1-based band index to description mapping.
+
+    Returns:
+        pathlib.Path:
+            Resolved absolute path to the created GeoTIFF file.
+    '''
+    out_p = pathlib.Path(output_path).resolve()
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+
+    if isinstance(src, (str, pathlib.Path)):
+        with io.read_raster(src) as reader:
+            return _write_warped_gtiff(
+                reader=reader,
+                out_p=out_p,
+                crs=crs,
+                transform=transform,
+                width=width,
+                height=height,
+                resampling=resampling,
+                nodata=nodata,
+                dtype=dtype,
+                scratch_dir=scratch_dir,
+                tags=tags,
+                band_descriptions=band_descriptions,
+            )
+
+    return _write_warped_gtiff(
+        reader=src,
+        out_p=out_p,
+        crs=crs,
+        transform=transform,
+        width=width,
+        height=height,
+        resampling=resampling,
+        nodata=nodata,
+        dtype=dtype,
+        scratch_dir=scratch_dir,
+        tags=tags,
+        band_descriptions=band_descriptions,
+    )
 
 
 def write_warped_vrt( # pylint: disable=too-many-arguments
@@ -146,6 +236,55 @@ def resolve_resampling_algorithm(
 
 
 # ----- private helpers
+def _write_warped_gtiff( # pylint: disable=too-many-arguments
+    *,
+    reader: t.DatasetReader,
+    out_p: pathlib.Path,
+    crs: t.CRS,
+    transform: t.Affine,
+    width: int,
+    height: int,
+    resampling: t.Resampling,
+    nodata: float | int | None,
+    dtype: str | None,
+    scratch_dir: str | pathlib.Path | None,
+    tags: dict[str, str] | None,
+    band_descriptions: dict[int, str] | None,
+) -> pathlib.Path:
+    '''Warp an open reader to disk as a tiled GeoTIFF via scratch staging.'''
+    effective_nodata = reader.nodata if nodata is None else nodata
+    with scratch.stage_to_scratch(out_p, scratch_dir=scratch_dir) as stage_f:
+        with rasterio.vrt.WarpedVRT(
+            reader,
+            crs=crs,
+            transform=transform,
+            width=width,
+            height=height,
+            resampling=resampling,
+            nodata=effective_nodata,
+            dtype=dtype,
+        ) as warped:
+            rasterio.shutil.copy(
+                warped,
+                stage_f,
+                driver='GTiff',
+                tiled=True,
+                blockxsize=256,
+                blockysize=256,
+                compress='deflate',
+            )
+
+        if tags or band_descriptions:
+            with rasterio.open(stage_f, 'r+') as dst:
+                if tags:
+                    dst.update_tags(**tags)
+                if band_descriptions:
+                    for b_idx, desc in band_descriptions.items():
+                        dst.set_band_description(b_idx, desc)
+
+    return out_p
+
+
 def _write_warped_vrt( # pylint: disable=too-many-arguments
     *,
     reader: t.DatasetReader,

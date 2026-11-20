@@ -51,6 +51,7 @@ Public APIs:
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
     - `stack_rasters`: Stack spatially aligned rasters into a VRT.
     - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `write_warped_gtiff`: Write a materialized tiled GeoTIFF to disk.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
 
@@ -90,6 +91,7 @@ __all__ = [
     'resolve_resampling_algorithm',
     'stack_rasters',
     'unify_nodata_mask',
+    'write_warped_gtiff',
     'write_warped_vrt',
 ]
 
@@ -139,6 +141,7 @@ if typing.TYPE_CHECKING:
     from .warp import (
         is_same_crs,
         resolve_resampling_algorithm,
+        write_warped_gtiff,
         write_warped_vrt,
     )
 
@@ -211,6 +214,7 @@ def __getattr__(name: str):
     if name in {
         'is_same_crs',
         'resolve_resampling_algorithm',
+        'write_warped_gtiff',
         'write_warped_vrt',
     }:
         obj = importlib.import_module('.warp', __package__)
