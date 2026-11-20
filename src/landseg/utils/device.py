@@ -22,80 +22,24 @@
 '''
 Hardware device resolution and query utilities.
 
-Provides safe runtime hardware resolution for execution devices,
-supporting automatic probe, CUDA, Apple Silicon MPS, and CPU fallback.
+Compatibility shim delegating to `landseg.runtime.hardware`.
 
 Public APIs:
-    - `resolve_device`: Resolve hardware execution target string.
     - `get_device_name`: Query human-readable name of execution device.
+    - `is_cpu_bf16_supported`: Check CPU hardware bfloat16 capability.
+    - `resolve_device`: Resolve hardware execution target string.
 '''
 
-# third-party imports
-import torch
+# local imports
+from landseg.runtime import hardware
 
+# re-exports
+get_device_name = hardware.get_device_name
+is_cpu_bf16_supported = hardware.is_cpu_bf16_supported
+resolve_device = hardware.resolve_device
 
-# ----- public functions
-def resolve_device(target: str | torch.device = 'auto') -> str:
-    '''
-    Resolve target device string into a concrete hardware device.
-
-    Evaluates execution hardware availability when 'auto' is specified,
-    prioritizing CUDA, then Apple Silicon MPS, and falling back to CPU.
-
-    Args:
-        target:
-            Target device specification string (e.g., 'auto', 'cpu',
-            'cuda', 'cuda:0', 'mps') or a torch.device instance.
-
-    Returns:
-        str:
-            Resolved concrete device identifier string.
-    '''
-    if isinstance(target, torch.device):
-        return str(target)
-
-    target_clean = target.strip().lower()
-    if target_clean == 'auto':
-        if torch.cuda.is_available():
-            return 'cuda'
-        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-            return 'mps'
-        return 'cpu'
-
-    if target_clean.startswith('cuda') and not torch.cuda.is_available():
-        raise ValueError(
-            f"Device '{target}' requested, but CUDA is not available."
-        )
-
-    return target_clean
-
-
-def get_device_name(device: str | torch.device = 'auto') -> str:
-    '''
-    Return human-readable device name for the specified device.
-
-    Resolves device metadata safely without raising exceptions if the
-    specified device is unavailable.
-
-    Args:
-        device:
-            Target device identifier or torch device object.
-
-    Returns:
-        str:
-            Human-readable hardware description or device identifier.
-    '''
-    resolved = resolve_device(device) if device == 'auto' else str(device)
-    dev = torch.device(resolved)
-
-    if dev.type == 'cuda' and torch.cuda.is_available():
-        idx = dev.index if dev.index is not None else 0
-        try:
-            return torch.cuda.get_device_name(idx)
-        except Exception:  # pylint: disable=broad-exception-caught
-            return f'cuda:{idx}'
-
-    if dev.type == 'mps':
-        return 'Apple Silicon (MPS)'
-
-    return dev.type
+__all__ = [
+    'get_device_name',
+    'is_cpu_bf16_supported',
+    'resolve_device',
+]

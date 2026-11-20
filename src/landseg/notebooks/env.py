@@ -22,40 +22,18 @@
 '''
 Notebook runtime environment detection utilities.
 
-Provides runtime detection probes for interactive IPython notebook kernels
-(Jupyter and Databricks notebook shells).
+Compatibility shim delegating to `landseg.runtime.platform`.
 
 Public APIs:
     - `is_notebook`: Probe whether code is running inside a notebook.
 '''
 
-# third-party imports
-try:
-    import IPython
-except ImportError:
-    IPython = None
+# local imports
+from landseg.runtime import platform
 
+# re-exports
+is_notebook = platform.is_notebook
 
-# ----- public functions
-def is_notebook() -> bool:
-    '''
-    Probe whether executing within an interactive notebook kernel.
-
-    Checks active IPython kernel shell types across Jupyter and
-    Databricks.
-
-    Returns:
-        bool:
-            True if executing in an interactive notebook kernel.
-    '''
-    if IPython is None:
-        return False
-
-    try:
-        shell = IPython.get_ipython()
-        if shell is None:
-            return False
-        shell_name = shell.__class__.__name__
-        return shell_name in {'ZMQInteractiveShell', 'DatabricksShell'}
-    except AttributeError:
-        return False
+__all__ = [
+    'is_notebook',
+]
