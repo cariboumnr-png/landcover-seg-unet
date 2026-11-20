@@ -57,9 +57,10 @@ import typing
 # third-party imports
 import torch
 # local imports
-from landseg import core
-from landseg.runtime import hardware
-from landseg.session.engine.batch import objective, state
+import landseg.core as core
+import landseg.runtime.hardware as hardware
+import landseg.session.engine.batch.objective as objective
+import landseg.session.engine.batch.state as state
 
 
 # ----- public types
@@ -424,23 +425,29 @@ class BatchEngine:
         preds = self.state.batch_out.preds
         targets = self.state.batch_cxt.y_dict
 
+        # precompute class IDs (1-based) for MTL Aggregator and
+        # hierarchical metrics
+        preds_1b = {
+            h: torch.argmax(logits, dim=1) + 1
+            for h, logits in preds.items()
+        }
+
         # update metrics (per head)
         for head, logits in preds.items():
             parent = self.context.parent_map.get(head)
             parent_1b = targets.get(parent) if parent is not None else None
+            parent_pred_1b = (
+                preds_1b.get(parent) if parent is not None else None
+            )
             # retrieve head metric calculator
             metrics_module = self.state.heads.active_hmetrics[head]
             metrics_module.update(
                 logits,                     # 0-based
                 targets[head],              # 1-based
-                parent_raw_1b=parent_1b     # 1-based (keyword arg)
+                parent_raw_1b=parent_1b,    # 1-based (keyword arg)
+                parent_pred_1b=parent_pred_1b,
             )
 
-        # precompute class IDs (1-based) for MTL Aggregator
-        preds_1b = {
-            h: torch.argmax(logits, dim=1) + 1
-            for h, logits in preds.items()
-        }
         # update horizontal MTL metrics (GEM and Violations)
         if self.state.heads.multihead_metrics is not None:
             self.state.heads.multihead_metrics.update(preds_1b, targets)
@@ -466,6 +473,16 @@ class BatchEngine:
             head: torch.argmax(logits, dim=1).detach().cpu() + 1 # to 1-based
             for head, logits in self.state.batch_out.preds.items()
         }
+        # Gate child head predictions based on predicted parent class
+        for head in preds.keys():
+            parent = self.context.parent_map.get(head)
+            if parent is not None and parent in preds:
+                assert self.state.heads.active_hspecs is not None
+                parent_cls = self.state.heads.active_hspecs[head].parent_cls
+                if parent_cls is not None:
+                    inactive = preds[parent] != parent_cls
+                    preds[head][inactive] = 0
+
         # ground truth
         targets = {
             head: t.detach().cpu()
@@ -475,20 +492,19 @@ class BatchEngine:
         # iterate each tensor in the current batch
         for i in range(x.shape[0]): # get current size (last may be ragged)
 
-            # global patch index
+            # global patch index and positions
             patch_idx = self.state.batch_cxt.pidx_start + i
-            # block position
-            block_idx = patch_idx // ctx.patch_per_blk
-            block_row, block_col = divmod(block_idx, ctx.block_columns)
-
-            # patch position inside block
-            p_in_blk = patch_idx % ctx.patch_per_blk
-            patch_row, patch_col = divmod(p_in_blk, ctx.patch_per_dim)
+            b_row, b_col = divmod(
+                patch_idx // ctx.patch_per_blk, ctx.block_columns
+            )
+            p_row, p_col = divmod(
+                patch_idx % ctx.patch_per_blk, ctx.patch_per_dim
+            )
 
             # map pred to patch-grid coordinates
             coord = (
-                block_col * ctx.patch_per_dim + patch_col,
-                block_row * ctx.patch_per_dim + patch_row
+                b_col * ctx.patch_per_dim + p_col,
+                b_row * ctx.patch_per_dim + p_row,
             )
 
             # store input patch [C, H, W]
@@ -502,9 +518,14 @@ class BatchEngine:
                 )[coord] = preds[head][i]
                 # aggregate target tensors
                 if head in targets:
+                    target_h = targets[head][i].clone()
+                    assert self.state.heads.active_hmetrics is not None
+                    hmetrics = self.state.heads.active_hmetrics
+                    ignore_idx = hmetrics[head].ignore_index
+                    target_h[target_h == ignore_idx] = 0
                     self.state.infer_out.labels.setdefault(
                         head, {}
-                    )[coord] = targets[head][i]
+                    )[coord] = target_h
                     self.state.infer_out.errors.setdefault(
                         head, {}
-                    )[coord] = (preds[head][i] == targets[head][i]).int()
+                    )[coord] = (preds[head][i] == target_h).int()

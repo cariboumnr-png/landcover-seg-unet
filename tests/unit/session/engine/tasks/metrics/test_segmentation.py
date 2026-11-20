@@ -301,3 +301,38 @@ def test_build_headmetrics(mock_hspecs):
     )
     assert isinstance(hmetrics['head_1'], seg_module.ConfusionMatrix)
     assert isinstance(hmetrics['head_2'], seg_module.ConfusionMatrix)
+
+
+def test_confusion_matrix_hierarchical_prediction_evaluation():
+    '''
+    Given: A single-class child head gated by parent class 4 (e.g. OMS).
+    When: Model parent prediction misses all true child pixels.
+    Then: Child IoU is correctly reported as 0.0, not 1.0.
+    '''
+    cm = seg_module.ConfusionMatrix(
+        num_classes=1,
+        ignore_index=255,
+        parent_class_1b=4,
+        exclude_class_1b=None
+    )
+
+    preds = torch.tensor([[[[10.0, 10.0]]]], dtype=torch.float32) # [1, 1, 1, 2]
+    targets = torch.tensor([[[1, 1]]], dtype=torch.long)
+    parent_raw = torch.tensor([[[4, 4]]], dtype=torch.long) # true parent is 4 (OMS)
+    parent_pred_wrong = torch.tensor([[[1, 5]]], dtype=torch.long) # model predicted Water and Farm
+
+    cm.update(preds, targets, parent_raw_1b=parent_raw, parent_pred_1b=parent_pred_wrong)
+
+    metrics = cm.compute()
+    assert metrics.ious['1'] == 0.0
+    assert metrics.mean == 0.0
+
+    # Now with correct parent prediction
+    cm.reset('cpu')
+    parent_pred_correct = torch.tensor([[[4, 4]]], dtype=torch.long)
+    cm.update(preds, targets, parent_raw_1b=parent_raw, parent_pred_1b=parent_pred_correct)
+
+    metrics_correct = cm.compute()
+    assert metrics_correct.ious['1'] == 1.0
+    assert metrics_correct.mean == 1.0
+
