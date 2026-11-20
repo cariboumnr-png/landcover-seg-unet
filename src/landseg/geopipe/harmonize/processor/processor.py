@@ -72,45 +72,41 @@ def harmonizer(  # pylint: disable=too-many-arguments, too-many-locals
     processed = HarmonizedRasters()
 
     for mfst in mfst_entries:
-
         parsed = _parse_manifest(
             mfst,
             categorical_resampling,
-            continuous_resampling
+            continuous_resampling,
         )
-        out_vrt = output_dir / f'{parsed.tagged_name}.vrt'
+        out_tif = output_dir / f'{parsed.tagged_name}.tif'
+        tags = _collect_metadata_tags(parsed, mfst)
 
         yield (
-            f'Harmonizing raster {parsed.file_path} -> {out_vrt} '
+            f'Harmonizing raster {parsed.file_path} -> {out_tif} '
             f'(resampling: {parsed.resampling_method.name})'
         )
 
-        # warp and write
-        warped = rasters.write_warped_vrt(
+        warped = rasters.write_warped_gtiff(
             src=parsed.file_path,
-            output_path=out_vrt,
+            output_path=out_tif,
             crs=dst_crs,
             transform=dst_transform,
             height=dst_height,
             width=dst_width,
             resampling=parsed.resampling_method,
+            tags=tags,
+            band_descriptions=parsed.raster_band_mapping,
         )
 
         match parsed.raster_type:
             case 'domains' | 'domain':
-                _tag_domain_metadata(warped, mfst)
                 processed.finalized[parsed.tagged_name] = warped
             case 'features' | 'feature':
-                _tag_feature_metadata(warped, mfst)
                 features.append(warped)
             case 'labels' | 'label':
-                _tag_label_metadata(warped, mfst)
                 labels.append(warped)
 
         processed.provenance[parsed.tagged_name] = parsed.file_path.resolve()
         processed.harmonized[parsed.tagged_name] = warped.resolve()
-
-        rasters.add_band_description_to_vrt(warped, parsed.raster_band_mapping)
 
     processed.finalized.update(
         **(yield from composition.compose_rasters(features, labels, output_dir))
@@ -133,50 +129,40 @@ def _parse_manifest(
         tagged_name=f'{mfst['category']}_{mfst["name"]}',
         raster_type=mfst['category'],
         raster_band_mapping=mfst['band_mapping'],
-        resampling_method=rasters.resolve_resampling_algorithm(resampling, is_cat)
+        resampling_method=rasters.resolve_resampling_algorithm(
+            resampling, is_cat
+        ),
     )
 
 
-def _tag_domain_metadata(
-    warped: pathlib.Path,
+def _collect_metadata_tags(
+    parsed: _ParsedManifestEntry,
     mfst: manifest.ManifestEntry,
-) -> None:
-    '''Attach domain raster metadata tags to VRT file.'''
-    cat_specs = mfst.get('categorical_specs')
-    if not cat_specs:
-        return
-
-    if 'index_base' in cat_specs:
-        rasters.add_tag_to_vrt(warped, index_base=cat_specs['index_base'])
-
-
-def _tag_feature_metadata(
-    warped: pathlib.Path,
-    mfst: manifest.ManifestEntry,
-) -> None:
-    '''Attach feature schemes metadata tags to VRT file.'''
-    schemes = mfst.get('schemes')
-    if schemes:
-        rasters.add_tag_to_vrt(warped, schemes={mfst['name']: schemes})
-
-
-def _tag_label_metadata(
-    warped: pathlib.Path,
-    mfst: manifest.ManifestEntry,
-) -> None:
-    '''Attach categorical label metadata tags to VRT file.'''
-    cat_specs = mfst.get('categorical_specs')
-    if not cat_specs:
-        raise ValueError('Missing categorical specs for label raster')
-
-    schemes = mfst.get('schemes')
-    rasters.add_tag_to_vrt(
-        warped,
-        index_base=cat_specs['index_base'],
-        num_cls=cat_specs['num_cls'],
-        ignore_cls=cat_specs['ignore_cls'],
-        class_name=cat_specs.get('class_name', {}),
-        color_map=cat_specs.get('color_map', {}),
-        taxonomy=cat_specs.get('taxonomy', {}),
-        schemes={mfst['name']: schemes} if schemes else {},
-    )
+) -> dict[str, typing.Any]:
+    '''Collect metadata tags for raster source.'''
+    tags: dict[str, typing.Any] = {}
+    match parsed.raster_type:
+        case 'domains' | 'domain':
+            cat_specs = mfst.get('categorical_specs')
+            if cat_specs and 'index_base' in cat_specs:
+                tags['index_base'] = cat_specs['index_base']
+        case 'features' | 'feature':
+            schemes = mfst.get('schemes')
+            if schemes:
+                tags['schemes'] = {mfst['name']: schemes}
+        case 'labels' | 'label':
+            cat_specs = mfst.get('categorical_specs')
+            if not cat_specs:
+                raise ValueError('Missing categorical specs for label raster')
+            schemes = mfst.get('schemes')
+            tags.update({
+                'index_base': cat_specs['index_base'],
+                'num_cls': cat_specs['num_cls'],
+                'ignore_cls': cat_specs['ignore_cls'],
+                'class_name': cat_specs.get('class_name', {}),
+                'color_map': cat_specs.get('color_map', {}),
+                'taxonomy': cat_specs.get('taxonomy', {}),
+            })
+            if schemes:
+                tags['schemes'] = {mfst['name']: schemes}
+    return tags
