@@ -22,16 +22,13 @@
 '''
 Top-level namespace for `landseg.notebooks`.
 
-Exposes interactive notebook widgets, display utilities, in-cell visual
-inspection previewers, and interruption-safe training session management.
+Exposes interactive notebook widgets, runtime detection, and
+interruption-safe training session management.
 
 Public APIs:
     - `MissingRequiredInputError`: Error raised on missing notebook parameters.
     - `NotebookWidgets`: Ergonomic widget wrapper across runtimes.
     - `is_notebook`: Probe whether code is running inside a notebook.
-    - `plot_qualitative_predictions`: Side-by-side segmentation plots.
-    - `plot_training_curves`: In-cell training loss and metric curves.
-    - `render_prediction_preview`: Automated prediction inspection preview.
     - `require_widget`: Enforce and validate required notebook widgets.
     - `safe_training_session`: Interruption-safe training context manager.
 '''
@@ -47,9 +44,6 @@ __all__ = [
     'NotebookWidgets',
     # functions
     'is_notebook',
-    'plot_qualitative_predictions',
-    'plot_training_curves',
-    'render_prediction_preview',
     'require_widget',
     'safe_training_session',
 ]
@@ -66,9 +60,6 @@ if typing.TYPE_CHECKING:
         is_notebook,
     )
     from .telemetry import (
-        plot_qualitative_predictions,
-        plot_training_curves,
-        render_prediction_preview,
         safe_training_session,
     )
 
@@ -78,12 +69,7 @@ def __getattr__(name: str):
         obj = importlib.import_module('landseg.runtime.interactive')
         return getattr(obj, name)
 
-    if name in {
-        'plot_qualitative_predictions',
-        'plot_training_curves',
-        'render_prediction_preview',
-        'safe_training_session',
-    }:
+    if name in {'safe_training_session'}:
         obj = importlib.import_module('.telemetry', __package__)
         return getattr(obj, name)
 

@@ -19,7 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Preview utilities'''
+'''
+Color mapping and palette utilities for segmentation visualization.
+'''
 
 # third-party imports
 import numpy
@@ -34,7 +36,7 @@ def colorize(
 ) -> torch.Tensor:
     '''Map class indices [H, W] -> RGB tensor [3, H, W].'''
     # palette handling
-    if not bool(palette): # None | empty array, dict, tensor
+    if not bool(palette):  # None | empty array, dict, tensor
         max_cls = int(canvas.max().item()) if canvas.numel() > 0 else 0
         palette = _default_palette(max_cls + 1, device=canvas.device)
 
@@ -66,7 +68,7 @@ def colorize(
     )
 
     rgb = palette[idx]          # [H, W, 3]
-    rgb = rgb.permute(2, 0, 1) # [3, H, W]
+    rgb = rgb.permute(2, 0, 1)  # [3, H, W]
 
     return rgb.contiguous()
 
@@ -103,41 +105,17 @@ def _default_palette(
 
 
 def _palette_from_dict(
-    color_map: dict[str, list[int]],
-    default_color: tuple[int, int, int] = (0, 0, 0),
+    palette_dict: dict[str, list[int]],
     *,
     device: torch.device | None = None
 ) -> torch.Tensor:
-    '''Convert class->RGB dict into palette tensor [N, 3].'''
-    if not color_map:
-        raise ValueError('color_map cannot be empty')
+    '''Map class dictionary to [N, 3] RGB palette tensor.'''
+    assert palette_dict, 'Palette dict must not be empty'
 
-    max_index = len(color_map)
+    max_idx = max(int(k) for k in palette_dict.keys())
+    pal = numpy.zeros((max_idx + 1, 3), dtype=numpy.uint8)
 
-    palette = torch.full(
-        (max_index + 1, 3),
-        fill_value=0,
-        dtype=torch.uint8,
-        device=device
-    )
+    for k, rgb in palette_dict.items():
+        pal[int(k)] = rgb
 
-    palette[:] = torch.tensor(
-        default_color,
-        dtype=torch.uint8,
-        device=device
-    )
-
-    for ids, (name, rgb) in enumerate(color_map.items()):
-
-        if len(rgb) != 3:
-            raise ValueError(
-                f'RGB value for class {name} must contain 3 elements'
-            )
-
-        palette[ids] = torch.tensor(
-            rgb,
-            dtype=torch.uint8,
-            device=device
-        )
-
-    return palette
+    return torch.as_tensor(pal, device=device)

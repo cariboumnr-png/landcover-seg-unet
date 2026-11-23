@@ -229,3 +229,55 @@ def test_train_build_context(tmp_path, mocker):
         vec_domain_name='continuous_domain',
         knowledge_root=pipeline.artifact_paths.knowledge_root,
     )
+
+
+def test_train_generate_post_run_visuals(tmp_path, mocker):
+    '''
+    Given: ModelTraining pipeline with finished run, step_results, and test split.
+    When: Calling `_generate_post_run_visuals`.
+    Then: Delegate to `visual.plot_training_curves` and `visual.generate_prediction_previews`.
+    '''
+    exp_root = tmp_path / 'exp'
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = exp_root
+    schema.data.preparation.output_dpath = tmp_path / 'prep'
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    pipeline = train_pipeline.ModelTraining(config)
+    pipeline.logger = mocker.Mock()
+
+    # Create dummy step_results.json
+    pipeline.pipeline_paths.step_results.parent.mkdir(parents=True, exist_ok=True)
+    pipeline.pipeline_paths.step_results.write_text('[]', encoding='utf-8')
+
+    # Create dummy best checkpoint
+    pipeline.pipeline_paths.checkpoints.mkdir(parents=True, exist_ok=True)
+    best_ckpt = pipeline.pipeline_paths.checkpoints / 'checkpoint_epoch_0005_best.pt'
+    best_ckpt.write_bytes(b'ckpt')
+
+    # Mock dataspecs with test split
+    mock_specs = mocker.Mock()
+    mock_specs.splits.test = {'blk1': 'path1'}
+    pipeline.context = mock_specs
+
+    mock_plot_curves = mocker.patch('landseg.visual.plot_training_curves')
+    mock_gen_previews = mocker.patch('landseg.visual.generate_prediction_previews', return_value={'head1': mocker.Mock()})
+
+    pipeline._generate_post_run_visuals()
+
+    mock_plot_curves.assert_called_once_with(
+        pipeline.pipeline_paths.step_results,
+        save_path=pipeline.pipeline_paths.plots / 'training_curves.png',
+        show=False,
+    )
+    mock_gen_previews.assert_called_once_with(
+        checkpoint_fpath=best_ckpt,
+        dataspecs=mock_specs,
+        config=pipeline.config,
+        previews_dpath=pipeline.pipeline_paths.previews,
+        logger=pipeline.logger,
+    )
+

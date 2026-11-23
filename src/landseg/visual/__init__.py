@@ -1,0 +1,88 @@
+# =========================================================================== #
+#            Copyright © His Majesty the King in right of Ontario,            #
+#         as represented by the Minister of Natural Resources, 2026.          #
+#                                                                             #
+#                      © King's Printer for Ontario, 2026.                    #
+#                                                                             #
+#       Licensed under the Apache License, Version 2.0 (the 'License');       #
+#          you may not use this file except in compliance with the            #
+#                                  License.                                   #
+#                  You may obtain a copy of the License at:                   #
+#                                                                             #
+#                  http://www.apache.org/licenses/LICENSE-2.0                 #
+#                                                                             #
+#    Unless required by applicable law or agreed to in writing, software      #
+#     distributed under the License is distributed on an 'AS IS' BASIS,       #
+#      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        #
+#                                   implied.                                  #
+#       See the License for the specific language governing permissions       #
+#                       and limitations under the License.                    #
+# =========================================================================== #
+
+'''
+Top-level namespace for `landseg.visual`.
+
+Provides pure visualization utilities for metric plotting, segmentation
+prediction previews, palette colorization, and multi-head qualitative
+inspections across CLI and interactive notebook environments.
+
+Public APIs:
+    - `colorize`: Map 2D class integer masks to 3D RGB tensors.
+    - `generate_prediction_previews`: Produce inferred preview figures per head.
+    - `plot_qualitative_predictions`: Side-by-side segmentation inspection.
+    - `plot_training_curves`: Plot multi-head training and validation curves.
+    - `render_prediction_preview`: Automated prediction preview display.
+    - `select_representative_block`: Deterministically select a diverse block.
+'''
+
+# standard imports
+from __future__ import annotations
+import importlib
+import typing
+
+__all__ = [
+    # functions
+    'colorize',
+    'generate_prediction_previews',
+    'plot_qualitative_predictions',
+    'plot_training_curves',
+    'render_prediction_preview',
+    'select_representative_block',
+]
+
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .color import (
+        colorize,
+    )
+    from .curves import (
+        plot_training_curves,
+    )
+    from .preview import (
+        generate_prediction_previews,
+        plot_qualitative_predictions,
+        render_prediction_preview,
+        select_representative_block,
+    )
+
+
+def __getattr__(name: str):
+    if name in {'colorize'}:
+        obj = importlib.import_module('.color', __package__)
+        return getattr(obj, name)
+
+    if name in {'plot_training_curves'}:
+        obj = importlib.import_module('.curves', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'generate_prediction_previews',
+        'plot_qualitative_predictions',
+        'render_prediction_preview',
+        'select_representative_block',
+    }:
+        obj = importlib.import_module('.preview', __package__)
+        return getattr(obj, name)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

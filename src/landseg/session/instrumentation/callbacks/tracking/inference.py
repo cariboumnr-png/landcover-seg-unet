@@ -24,7 +24,7 @@
 # local imports
 import landseg.core as core
 import landseg.session.instrumentation.callbacks.base as base
-import landseg.session.instrumentation.formatters as formatters
+import landseg.visual as visual
 
 
 # ----- public classes
@@ -42,15 +42,15 @@ class InferTrackingCallback(base.BaseCallback):
         head_metrics = {}
         for head in infer_results.infer_labels.keys():
             # add tensors from label, preds, and errors
-            head_tensors[f'{head}_labels'] = formatters.colorize(
+            head_tensors[f'{head}_labels'] = visual.colorize(
                 infer_results.infer_labels[head],
                 palette=self._label_color_map
             )
-            head_tensors[f'{head}_predictions'] = formatters.colorize(
+            head_tensors[f'{head}_predictions'] = visual.colorize(
                 infer_results.infer_preds[head],
                 palette=self._label_color_map
             )
-            head_tensors[f'{head}_errors'] = formatters.colorize(
+            head_tensors[f'{head}_errors'] = visual.colorize(
                 infer_results.infer_errors[head],
                 palette={'1': [40, 40, 40], '0': [255, 140, 0]} # grey vs orange
             )
