@@ -36,15 +36,23 @@ import numpy
 import rasterio
 import rasterio.shutil
 import rasterio.vrt
+# local imports
+import landseg.artifacts.storage.scratch as scratch
 
 
 # ----- public functions
 def unify_nodata_mask(
     input_path: pathlib.Path,
     output_mask_path: pathlib.Path,
+    *,
+    scratch_dir: str | pathlib.Path | None = None,
 ) -> pathlib.Path:
     '''
     Create a 1-band boolean valid pixel mask across bands.
+
+    Streams block-by-block using source block windows to bound RAM
+    usage to tile dimensions, writing to a tiled GeoTIFF staged via
+    scratch storage.
 
     Value mapping: 1=valid, 0=nodata.
 
@@ -52,7 +60,9 @@ def unify_nodata_mask(
         input_path:
             Path to the multi-band source raster.
         output_mask_path:
-            Destination path for the valid-pixel mask raster.
+            Destination path for the valid-pixel mask raster (.tif or .vrt).
+        scratch_dir:
+            Optional scratch directory override.
 
     Returns:
         pathlib.Path:
@@ -61,37 +71,64 @@ def unify_nodata_mask(
     out_path = pathlib.Path(output_mask_path).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    is_vrt = out_path.suffix == '.vrt'
+    target_tif = (
+        out_path.with_name(f'{out_path.stem}_mask.tif')
+        if is_vrt
+        else out_path
+    )
+
     with rasterio.open(input_path) as src:
-        valid_mask = numpy.ones((src.height, src.width), dtype=numpy.uint8)
-
-        for b in range(1, src.count + 1):
-            data = src.read(b)
-            if src.nodatavals and src.nodatavals[b - 1] is not None:
-                nodata_val = src.nodatavals[b - 1]
-                if numpy.isnan(nodata_val):
-                    valid_mask[numpy.isnan(data)] = 0
-                else:
-                    valid_mask[data == nodata_val] = 0
-
         meta = src.meta.copy()
         meta.update({
             'count': 1,
             'dtype': 'uint8',
             'nodata': 0,
-            'compress': 'deflate'
+            'driver': 'GTiff',
+            'tiled': True,
+            'blockxsize': 256,
+            'blockysize': 256,
+            'compress': 'deflate',
         })
-        if out_path.suffix == '.vrt':
-            meta['driver'] = 'GTiff'
-            raw_tif = out_path.with_name(f'{out_path.stem}_mask.tif')
-            with rasterio.open(raw_tif, 'w', **meta) as dst:
-                dst.write(valid_mask, 1)
 
-            with rasterio.open(raw_tif) as mask_src:
+        nodatavals = src.nodatavals or [None] * src.count
+        same_dtype = len(set(src.dtypes)) <= 1
+
+        with scratch.stage_to_scratch(
+            target_tif,
+            scratch_dir=scratch_dir,
+        ) as stage_f:
+            with rasterio.open(stage_f, 'w', **meta) as dst:
+                for _, window in src.block_windows(1):
+                    win_h = int(window.height)
+                    win_w = int(window.width)
+                    mask_block = numpy.ones((win_h, win_w), dtype=numpy.uint8)
+
+                    if same_dtype:
+                        block_data = src.read(window=window)
+                        for b_idx in range(src.count):
+                            band_data = block_data[b_idx]
+                            nodata_val = nodatavals[b_idx]
+                            if nodata_val is not None:
+                                if numpy.isnan(nodata_val):
+                                    mask_block[numpy.isnan(band_data)] = 0
+                                else:
+                                    mask_block[band_data == nodata_val] = 0
+                    else:
+                        for b in range(1, src.count + 1):
+                            band_data = src.read(b, window=window)
+                            nodata_val = nodatavals[b - 1]
+                            if nodata_val is not None:
+                                if numpy.isnan(nodata_val):
+                                    mask_block[numpy.isnan(band_data)] = 0
+                                else:
+                                    mask_block[band_data == nodata_val] = 0
+
+                    dst.write(mask_block, 1, window=window)
+
+        if is_vrt:
+            with rasterio.open(target_tif) as mask_src:
                 with rasterio.vrt.WarpedVRT(mask_src) as vrt:
                     rasterio.shutil.copy(vrt, out_path, driver='VRT')
-        else:
-            meta['driver'] = 'GTiff'
-            with rasterio.open(out_path, 'w', **meta) as dst:
-                dst.write(valid_mask, 1)
 
     return out_path

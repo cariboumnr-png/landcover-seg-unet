@@ -81,7 +81,13 @@ class HeadManager(torch.nn.Module):
         for head in self.active:
             conv = self.outc[head]
             logits = conv(x)
-            logits = torch.nan_to_num(logits, nan=0.0, posinf=1e4, neginf=-1e4)
+            if torch.isnan(logits).any():
+                raise FloatingPointError(
+                    f'NaN detected in output logits for head "{head}". '
+                    'This indicates forward numerical corruption or an '
+                    'AMP/cuDNN kernel incompatibility (see Issue #88).'
+                )
+            logits = torch.clamp(logits, min=-1e4, max=1e4)
             # apply logit adjustment
             output_logits[head] = self._apply_logit_adjust(
                 head,

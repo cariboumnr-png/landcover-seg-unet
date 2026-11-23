@@ -77,6 +77,8 @@ class ConfusionMatrix:
         # set up running confusion matrix (start with zeros)
         h, w = self.n_cls, self.n_cls
         self.cm = torch.zeros((h, w), dtype=torch.int64)
+        self.extra_fp = torch.zeros(self.n_cls, dtype=torch.int64)
+        self.extra_fn = torch.zeros(self.n_cls, dtype=torch.int64)
 
     @torch.no_grad()
     def update(
@@ -96,10 +98,55 @@ class ConfusionMatrix:
             parent_raw_1b (kwarg):
                 optional parent labels (1-based) for hierarchical
                 gating.
+            parent_pred_1b (kwarg):
+                optional parent predicted labels (1-based) for
+                end-to-end hierarchical evaluation.
         '''
         valid = targets != self.ignore_index
 
         parent_raw_1b = kwargs.get('parent_raw_1b')
+        parent_pred_1b = kwargs.get('parent_pred_1b')
+
+        if parent_pred_1b is not None and self.parent_class_1b is not None:
+            assert isinstance(parent_raw_1b, torch.Tensor)
+            assert isinstance(parent_pred_1b, torch.Tensor)
+
+            # ground truth belongs to this child head
+            gt_in_head = valid & (parent_raw_1b == self.parent_class_1b)
+            # model predicted parent class corresponding to this child head
+            pred_in_head = parent_pred_1b == self.parent_class_1b
+
+            preds_0b = torch.argmax(preds, dim=1)
+
+            # 1. both GT and Pred are in this child head:
+            # matches and cross-child confusions within this head
+            eval_mask = gt_in_head & pred_in_head
+            if eval_mask.any():
+                t0 = (targets[eval_mask].to(torch.int64) - 1).clamp(min=0, max=self.n_cls - 1)
+                p0 = preds_0b[eval_mask].to(torch.int64).clamp(min=0, max=self.n_cls - 1)
+                k = t0 * self.n_cls + p0
+                binc = torch.bincount(k, minlength=self.n_cls * self.n_cls)
+                self.cm += binc.view(self.n_cls, self.n_cls)
+
+            # 2. GT is in this child head, but model predicted a different parent class:
+            # false negatives for the true child class
+            fn_mask = gt_in_head & (~pred_in_head)
+            if fn_mask.any():
+                t_fn = (targets[fn_mask].to(torch.int64) - 1).clamp(min=0, max=self.n_cls - 1)
+                binc_fn = torch.bincount(t_fn, minlength=self.n_cls)
+                self.extra_fn += binc_fn.to(self.extra_fn.device)
+
+            # 3. model predicted this child head, but GT was in a different parent class:
+            # false positives for the predicted child class
+            fp_mask = (~gt_in_head) & pred_in_head & valid
+            if fp_mask.any():
+                p_fp = preds_0b[fp_mask].to(torch.int64).clamp(min=0, max=self.n_cls - 1)
+                binc_fp = torch.bincount(p_fp, minlength=self.n_cls)
+                self.extra_fp += binc_fp.to(self.extra_fp.device)
+
+            return
+
+        # fallback non-hierarchical or oracle gating
         if parent_raw_1b is not None and self.parent_class_1b is not None:
             assert isinstance(parent_raw_1b, torch.Tensor)
             valid = valid & (parent_raw_1b == self.parent_class_1b)
@@ -126,8 +173,8 @@ class ConfusionMatrix:
             raise ValueError('Confusion matrix must be a square 2D tensor')
 
         tp = torch.diag(self.cm).float()
-        fp = self.cm.sum(dim=0).float() - tp
-        fn = self.cm.sum(dim=1).float() - tp
+        fp = self.cm.sum(dim=0).float() - tp + self.extra_fp.to(self.cm.device).float()
+        fn = self.cm.sum(dim=1).float() - tp + self.extra_fn.to(self.cm.device).float()
         dn = tp + fp + fn
 
         eps = torch.finfo(tp.dtype).eps
@@ -159,6 +206,8 @@ class ConfusionMatrix:
     def reset(self, device: str) -> None:
         '''Zero the confusion matrix and move to specified device.'''
         self.cm = self.cm.zero_().to(device)
+        self.extra_fp = self.extra_fp.zero_().to(device)
+        self.extra_fn = self.extra_fn.zero_().to(device)
 
 
 class HeadMetrics:

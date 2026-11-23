@@ -211,17 +211,27 @@ def __calc_test_grid(
     '''Calculate continuous patch grid dimensions for test blocks.'''
     if not test_blocks:
         return 0, 0
-    sorted_blknames = sorted(test_blocks.keys(), key=geo_core.name_xy)
-    xmin, ymin = geo_core.name_xy(sorted_blknames[0])
-    col, row = 0.0, 0.0
-    for blkname in sorted_blknames:
-        x, y = geo_core.name_xy(blkname)
-        col = max(col, (x - xmin) / img_w)
-        row = max(row, (y - ymin) / img_h)
-    col_int, row_int = int(col + 1), int(row + 1)
-    if col_int * row_int != len(sorted_blknames):
+    coords = [geo_core.name_xy(b) for b in test_blocks.keys()]
+    xs = [c[0] for c in coords]
+    ys = [c[1] for c in coords]
+    xmin, xmax = min(xs), max(xs)
+    ymin, ymax = min(ys), max(ys)
+
+    col = int(round((xmax - xmin) / img_w)) + 1
+    row = int(round((ymax - ymin) / img_h)) + 1
+
+    if col * row != len(test_blocks):
         return 0, 0
-    return col_int, row_int
+
+    expected_positions = {
+        (xmin + c * img_w, ymin + r * img_h)
+        for c in range(col)
+        for r in range(row)
+    }
+    if set(coords) != expected_positions:
+        return 0, 0
+
+    return col, row
 
 
 def _get_heads(

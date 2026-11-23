@@ -28,6 +28,7 @@ Public APIs:
     - `Affine`: Type alias for raster Affine transform.
     - `BoundingBox`: Type alias for raster bounding box.
     - `CRS`: Type alias for raster coordinate reference system.
+    - `DEFAULT_GDAL_CONFIG`: Default cloud-optimized GDAL options.
     - `DatasetInfo`: Container for structural raster dataset info.
     - `DatasetReader`: Type alias for opened raster reader.
     - `Resampling`: Type alias for raster resampling algorithms.
@@ -38,6 +39,8 @@ Public APIs:
     - `check_raster_crs`: Verify coordinate reference system alignment.
     - `check_raster_resolution`: Verify pixel size consistency.
     - `compute_overlap_bounds`: Calculate intersected bounding box.
+    - `configure_gdal_defaults`: Apply cloud GDAL defaults to environment.
+    - `gdal_cloud_env`: Context manager applying cloud GDAL options.
     - `get_info`: Retrieve structured dataset info from a raster.
     - `is_same_crs`: Compare two coordinate reference systems for equality.
     - `parse_vrt_tag`: Decode serialized JSON or literal VRT tag value.
@@ -48,6 +51,7 @@ Public APIs:
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
     - `stack_rasters`: Stack spatially aligned rasters into a VRT.
     - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `write_warped_gtiff`: Write a materialized tiled GeoTIFF to disk.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''
 
@@ -83,6 +87,7 @@ __all__ = [
     'resolve_resampling_algorithm',
     'stack_rasters',
     'unify_nodata_mask',
+    'write_warped_gtiff',
     'write_warped_vrt',
 ]
 
@@ -127,6 +132,7 @@ if typing.TYPE_CHECKING:
     from .warp import (
         is_same_crs,
         resolve_resampling_algorithm,
+        write_warped_gtiff,
         write_warped_vrt,
     )
 
@@ -191,6 +197,7 @@ def __getattr__(name: str):
     if name in {
         'is_same_crs',
         'resolve_resampling_algorithm',
+        'write_warped_gtiff',
         'write_warped_vrt',
     }:
         obj = importlib.import_module('.warp', __package__)

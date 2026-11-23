@@ -38,8 +38,9 @@ import pathlib
 import typing
 # third-party imports
 import numpy
-# typing imports
+# local imports
 import landseg.geopipe.core as geo_core
+import landseg.utils.npzio as npzio
 
 
 # ----- public types
@@ -172,7 +173,7 @@ class DataBlock:
             raise ValueError(f'Output path must end with .npz: {fpath}')
 
         manifest_str = json.dumps(self.manifest, separators=(',', ':'))
-        numpy.savez_compressed(
+        npzio.savez_compressed(
             fpath,
             image=self.data.image,
             label=self.data.label,

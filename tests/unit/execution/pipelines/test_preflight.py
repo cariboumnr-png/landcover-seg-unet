@@ -127,6 +127,55 @@ def test_probe_hardware():
     assert 'torch_version' in results[0].details
 
 
+def test_probe_hardware_host_gpu_detected(monkeypatch):
+    '''
+    Given: PyTorch lacking CUDA but physical host GPU detected.
+    When: `hardware_info()` is called.
+    Then: Return cuda_device WARN probe referencing host GPU.
+    '''
+    monkeypatch.setattr('torch.cuda.is_available', lambda: False)
+    monkeypatch.setattr(
+        'landseg.execution.preflight.checks.hardware._detect_host_gpu',
+        lambda: 'NVIDIA GeForce RTX 3060 Ti'
+    )
+    cfg = configs.RootConfig()
+    cfg.session.engine.engine_exec.use_amp = False
+    ctx = context.InspectionContext.from_config(cfg)
+    results = checks.hardware.hardware_info(ctx)
+
+    assert len(results) == 1
+    assert results[0].pid == 'cuda_device'
+    assert results[0].status == schema.ProbeStatus.WARN
+    assert 'RTX 3060 Ti' in results[0].message
+    assert results[0].details.get('host_gpu') == 'NVIDIA GeForce RTX 3060 Ti'
+
+
+def test_probe_hardware_cpu_amp_headroom(monkeypatch):
+    '''
+    Given: Compute running on CPU with AMP enabled on non-BF16 CPU.
+    When: `hardware_info()` is called.
+    Then: Return cpu_amp_headroom WARN probe alerting on emulation.
+    '''
+    monkeypatch.setattr('torch.cuda.is_available', lambda: False)
+    monkeypatch.setattr(
+        'landseg.execution.preflight.checks.hardware._detect_host_gpu',
+        lambda: None
+    )
+    monkeypatch.setattr(
+        'landseg.runtime.hardware.is_cpu_bf16_supported',
+        lambda: False
+    )
+    cfg = configs.RootConfig()
+    cfg.session.engine.engine_exec.use_amp = True
+    ctx = context.InspectionContext.from_config(cfg)
+    results = checks.hardware.hardware_info(ctx)
+
+    assert len(results) == 2
+    assert results[1].pid == 'cpu_amp_headroom'
+    assert results[1].status == schema.ProbeStatus.WARN
+    assert 'lacks hardware acceleration' in results[1].message
+
+
 def test_probe_filesystem(tmp_path):
     '''
     Given: A writable directory path and a missing path.
@@ -523,7 +572,12 @@ def test_probe_canonical_ordering(monkeypatch):
     '''
     # pin CPU so `hardware` yields only `cuda_device` (no `vram_headroom`)
     monkeypatch.setattr('torch.cuda.is_available', lambda: False)
+    monkeypatch.setattr(
+        'landseg.execution.preflight.checks.hardware._detect_host_gpu',
+        lambda: None
+    )
     cfg = configs.RootConfig()
+    cfg.session.engine.engine_exec.use_amp = False
     ctx = context.InspectionContext.from_config(cfg)
     targets = (
         'world-grid', 'data-harmonize', 'data-ingest', 'data-prepare',

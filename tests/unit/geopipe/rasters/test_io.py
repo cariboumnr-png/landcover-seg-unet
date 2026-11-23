@@ -250,3 +250,36 @@ def test_read_window_invalid_edge_mode_raises(dummy_geotiff_factory):
                 rasters.Window(0, 0, 5, 5), # type: ignore
                 edge_mode='unsupported' # type: ignore
             )
+
+
+def test_read_window_mixed_dtypes(dummy_geotiff_factory, tmp_path):
+    '''
+    Given: A stacked raster with mixed band dtypes (uint8 and float32).
+    When: Reading window across all bands via `read_window`.
+    Then: Correctly groups dtypes and returns consolidated array.
+    '''
+    r1 = dummy_geotiff_factory(
+        filename='b_uint8.tif',
+        width=10,
+        height=10,
+        bands=1,
+        dtype=numpy.uint8,
+    )
+    r2 = dummy_geotiff_factory(
+        filename='b_float32.tif',
+        width=10,
+        height=10,
+        bands=1,
+        dtype=numpy.float32,
+    )
+    stacked_vrt = tmp_path / 'mixed_stacked.vrt'
+    rasters.stack_rasters([r1, r2], stacked_vrt)
+
+    with rasters.read_raster(stacked_vrt) as src:
+        arr = rasters.read_window(
+            src,
+            rasters.Window(2, 2, 4, 4), # type: ignore
+            edge_mode='boundless',
+        )
+        assert arr.shape == (2, 4, 4)
+        assert arr.dtype == numpy.float32
