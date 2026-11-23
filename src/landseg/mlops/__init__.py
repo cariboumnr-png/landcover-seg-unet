@@ -27,11 +27,6 @@ Unity Catalog Model Registry integration, runtime environment detection,
 lineage harvesting, and cloud volume storage resolution.
 
 Public APIs:
-    - `get_cluster_id`: Probe active compute cluster identifier.
-    - `get_dbutils`: Locate active dbutils instance.
-    - `get_git_commit`: Retrieve git commit SHA of active repository.
-    - `get_runtime_version`: Probe Databricks runtime version.
-    - `is_databricks`: Probe whether runtime is inside Databricks.
     - `load_study_trials`: Load persisted sweep trials dataframe or summary.
     - `register_unity_catalog_model`: Register checkpoint to Unity Catalog.
     - `resolve_exp_root`: Resolve experiment root path across contexts.
@@ -46,11 +41,6 @@ import typing
 
 __all__ = [
     # functions
-    'get_cluster_id',
-    'get_dbutils',
-    'get_git_commit',
-    'get_runtime_version',
-    'is_databricks',
     'load_study_trials',
     'register_unity_catalog_model',
     'resolve_exp_root',
@@ -61,13 +51,6 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from landseg.runtime.platform import (
-        get_cluster_id,
-        get_dbutils,
-        get_git_commit,
-        get_runtime_version,
-        is_databricks,
-    )
     from .registry import (
         register_unity_catalog_model,
     )
@@ -81,15 +64,6 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {
-        'get_cluster_id',
-        'get_dbutils',
-        'get_git_commit',
-        'get_runtime_version',
-        'is_databricks',
-    }:
-        obj = importlib.import_module('landseg.runtime.platform')
-        return getattr(obj, name)
 
     if name in {'register_unity_catalog_model'}:
         obj = importlib.import_module('.registry', __package__)

@@ -20,21 +20,27 @@
 # =========================================================================== #
 
 '''
-Interactive parameter widget abstraction for notebook environments.
+Interactive notebook abstractions: parameter widgets and session safety.
 
 Provides multi-environment parameter widgets bridging Databricks
-`dbutils.widgets` and local or headless execution environments.
+`dbutils.widgets` and local or headless execution environments, plus
+an interruption-safe wrapper for interactive training sessions.
 
 Public APIs:
     - `MissingRequiredInputError`: Raised on missing widget input.
     - `NotebookWidgets`: Multi-environment widget configuration bridge.
     - `require_widget`: Retrieve and validate required widget values.
+    - `safe_training_session`: Interruption-safe training context manager.
 '''
 
 # standard imports
+import contextlib
 import os
 import pathlib
+import time
 import typing
+# third-party imports
+import torch
 # local imports
 from landseg.runtime import platform
 
@@ -521,3 +527,59 @@ def require_widget(  # pylint: disable=too-many-arguments
             raise MissingRequiredInputError(msg) from err
 
     return val
+
+@contextlib.contextmanager
+def safe_training_session(
+    target_dpath: str | pathlib.Path | None = None,
+    *,
+    reraise: bool = False,
+    **kwargs: typing.Any,
+) -> typing.Generator[dict[str, typing.Any], None, None]:
+    '''
+    Run a training session with graceful cancellation handling.
+
+    Intercepts `KeyboardInterrupt` (including notebook cell stops) to:
+    1. Release the PyTorch CUDA memory cache, if CUDA is available.
+    2. Print a concise status message instead of a traceback.
+
+    Experiment tracking runs are not modified here.
+
+    Args:
+        target_dpath:
+            Reserved for the session output directory; currently unused.
+        reraise:
+            If True, re-raises `KeyboardInterrupt` after cleanup.
+            If False (default for interactive notebooks), halts the
+            cell cleanly without flooding it with tracebacks.
+        **kwargs:
+            Reserved for future options; currently unused.
+
+    Yields:
+        dict[str, typing.Any]:
+            Mutable session state with `interrupted` (bool) and
+            `start_time` (epoch seconds).
+    '''
+    _ = target_dpath, kwargs
+    session_state: dict[str, typing.Any] = {
+        'interrupted': False,
+        'start_time': time.time(),
+    }
+
+    try:
+        yield session_state
+    except KeyboardInterrupt as exc:
+        session_state['interrupted'] = True
+
+        # release CUDA allocations
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        # inform user cleanly
+        print(
+            '\n[INTERRUPTED] Training session safely halted by user.\n'
+            '- In-flight GPU memory cache released.\n'
+            '- Completed epoch checkpoints preserved in run directory.'
+        )
+
+        if reraise:
+            raise exc

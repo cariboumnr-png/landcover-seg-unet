@@ -19,12 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit test suite for `landseg.mlops.env` module.'''
+'''Unit test suite for platform environment probes (platform.py).'''
 
 # third-party imports
 import pytest
 # local imports
-import landseg.mlops as mlops
+import landseg.runtime.platform as platform
 
 
 def test_is_databricks_false_by_default(monkeypatch: pytest.MonkeyPatch):
@@ -35,7 +35,7 @@ def test_is_databricks_false_by_default(monkeypatch: pytest.MonkeyPatch):
     '''
     monkeypatch.delenv('DATABRICKS_RUNTIME_VERSION', raising=False)
     monkeypatch.delenv('DB_CLUSTER_ID', raising=False)
-    assert not mlops.is_databricks()
+    assert not platform.is_databricks()
 
 
 def test_is_databricks_true_when_runtime_set(monkeypatch: pytest.MonkeyPatch):
@@ -45,7 +45,7 @@ def test_is_databricks_true_when_runtime_set(monkeypatch: pytest.MonkeyPatch):
     Then: Returns True.
     '''
     monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '15.4')
-    assert mlops.is_databricks()
+    assert platform.is_databricks()
 
 
 def test_is_databricks_true_when_cluster_id_set(monkeypatch: pytest.MonkeyPatch):
@@ -56,7 +56,16 @@ def test_is_databricks_true_when_cluster_id_set(monkeypatch: pytest.MonkeyPatch)
     '''
     monkeypatch.delenv('DATABRICKS_RUNTIME_VERSION', raising=False)
     monkeypatch.setenv('DB_CLUSTER_ID', 'cluster-prod-01')
-    assert mlops.is_databricks()
+    assert platform.is_databricks()
+
+
+def test_is_notebook_false_in_test_process():
+    '''
+    Given: Standard non-interactive test process.
+    When: Probing is_notebook.
+    Then: Returns False.
+    '''
+    assert not platform.is_notebook()
 
 
 def test_get_cluster_id_default(monkeypatch: pytest.MonkeyPatch):
@@ -66,7 +75,7 @@ def test_get_cluster_id_default(monkeypatch: pytest.MonkeyPatch):
     Then: Returns 'local-environment'.
     '''
     monkeypatch.delenv('DB_CLUSTER_ID', raising=False)
-    assert mlops.get_cluster_id() == 'local-environment'
+    assert platform.get_cluster_id() == 'local-environment'
 
 
 def test_get_cluster_id_configured(monkeypatch: pytest.MonkeyPatch):
@@ -76,7 +85,7 @@ def test_get_cluster_id_configured(monkeypatch: pytest.MonkeyPatch):
     Then: Returns configured cluster ID.
     '''
     monkeypatch.setenv('DB_CLUSTER_ID', 'cluster-gpu-test')
-    assert mlops.get_cluster_id() == 'cluster-gpu-test'
+    assert platform.get_cluster_id() == 'cluster-gpu-test'
 
 
 def test_get_runtime_version_default(monkeypatch: pytest.MonkeyPatch):
@@ -86,7 +95,7 @@ def test_get_runtime_version_default(monkeypatch: pytest.MonkeyPatch):
     Then: Returns 'local'.
     '''
     monkeypatch.delenv('DATABRICKS_RUNTIME_VERSION', raising=False)
-    assert mlops.get_runtime_version() == 'local'
+    assert platform.get_runtime_version() == 'local'
 
 
 def test_get_runtime_version_configured(monkeypatch: pytest.MonkeyPatch):
@@ -96,7 +105,7 @@ def test_get_runtime_version_configured(monkeypatch: pytest.MonkeyPatch):
     Then: Returns configured version string.
     '''
     monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '14.3.x-gpu-ml')
-    assert mlops.get_runtime_version() == '14.3.x-gpu-ml'
+    assert platform.get_runtime_version() == '14.3.x-gpu-ml'
 
 
 def test_get_git_commit_env(monkeypatch: pytest.MonkeyPatch):
@@ -106,7 +115,7 @@ def test_get_git_commit_env(monkeypatch: pytest.MonkeyPatch):
     Then: Returns the environment commit SHA.
     '''
     monkeypatch.setenv('GIT_COMMIT', 'abc123def456')
-    assert mlops.get_git_commit() == 'abc123def456'
+    assert platform.get_git_commit() == 'abc123def456'
 
 
 def test_get_git_commit_databricks_env(monkeypatch: pytest.MonkeyPatch):
@@ -117,7 +126,19 @@ def test_get_git_commit_databricks_env(monkeypatch: pytest.MonkeyPatch):
     '''
     monkeypatch.delenv('GIT_COMMIT', raising=False)
     monkeypatch.setenv('DATABRICKS_GIT_COMMIT', 'db_commit_999')
-    assert mlops.get_git_commit() == 'db_commit_999'
+    assert platform.get_git_commit() == 'db_commit_999'
+
+
+def test_get_git_commit_github_sha(monkeypatch: pytest.MonkeyPatch):
+    '''
+    Given: GITHUB_SHA environment variable set.
+    When: Probing get_git_commit.
+    Then: Returns the GitHub SHA.
+    '''
+    monkeypatch.delenv('GIT_COMMIT', raising=False)
+    monkeypatch.delenv('DATABRICKS_GIT_COMMIT', raising=False)
+    monkeypatch.setenv('GITHUB_SHA', 'gh_commit_777')
+    assert platform.get_git_commit() == 'gh_commit_777'
 
 
 def test_get_dbutils_explicit():
@@ -127,4 +148,13 @@ def test_get_dbutils_explicit():
     Then: Returns the exact object.
     '''
     sentinel = object()
-    assert mlops.get_dbutils(sentinel) is sentinel
+    assert platform.get_dbutils(sentinel) is sentinel
+
+
+def test_get_dbutils_none_when_unavailable():
+    '''
+    Given: Standard execution without dbutils present.
+    When: Calling get_dbutils without arguments.
+    Then: Returns None.
+    '''
+    assert platform.get_dbutils() is None

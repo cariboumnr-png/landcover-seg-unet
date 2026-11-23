@@ -90,6 +90,7 @@ if typing.TYPE_CHECKING:
     from .interactive import (
         MissingRequiredInputError,
         NotebookWidgets,
+        safe_training_session,
         require_widget,
     )
     from .logger import (
@@ -102,9 +103,6 @@ if typing.TYPE_CHECKING:
         get_runtime_version,
         is_databricks,
         is_notebook,
-    )
-    from .session import (
-        safe_training_session,
     )
 
 
@@ -130,6 +128,7 @@ def __getattr__(name: str) -> typing.Any:
         'MissingRequiredInputError',
         'NotebookWidgets',
         'require_widget',
+        'safe_training_session'
     }:
         obj = importlib.import_module('.interactive', __package__)
         return getattr(obj, name)
@@ -147,10 +146,6 @@ def __getattr__(name: str) -> typing.Any:
         'is_notebook',
     }:
         obj = importlib.import_module('.platform', __package__)
-        return getattr(obj, name)
-
-    if name in {'safe_training_session'}:
-        obj = importlib.import_module('.session', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
