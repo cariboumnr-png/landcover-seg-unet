@@ -38,13 +38,12 @@ import landseg.artifacts as artifacts
 import landseg.configs.schema.models as models_schema
 import landseg.core as core
 import landseg.models as models
-import landseg.notebooks.env as env
+import landseg.runtime as runtime
 import landseg.session.data.collate as collate
 import landseg.session.data.dataset as dataset
-import landseg.utils as utils
 import landseg.visual.color as visual_color
 
-if not env.is_notebook():
+if not runtime.is_notebook():
     matplotlib.use('Agg')
 
 
@@ -296,7 +295,7 @@ def generate_prediction_previews(
             logger.warning(f'Checkpoint file not found: {ckpt_path}')
         return {}
 
-    target_device = utils.resolve_device(
+    target_device = runtime.resolve_device(
         device or (getattr(config.session, 'device', 'auto') if config else 'auto')
     )
 

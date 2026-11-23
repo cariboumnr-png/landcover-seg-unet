@@ -32,9 +32,10 @@ import matplotlib
 import matplotlib.pyplot
 import numpy
 # local imports
-import landseg.notebooks.env as env
+import landseg.runtime.platform as platform
 
-if not env.is_notebook():
+
+if not platform.is_notebook():
     matplotlib.use('Agg')
 
 

@@ -24,6 +24,25 @@ Top-level namespace for `landseg.runtime`.
 
 Provides environment detection, hardware capability resolution,
 concurrency orchestration, logging, and notebook abstractions.
+
+Public APIs:
+    - `Logger`: Manages file and console logging handlers.
+    - `MissingRequiredInputError`: Error raised on missing notebook parameters.
+    - `NotebookWidgets`: Ergonomic widget wrapper across runtimes.
+    - `ParallelExecutor`: Configurable process and thread task executor.
+    - `get_default_worker_count`: Resolve default worker parallelism.
+    - `get_device_name`: Query human-readable name of execution device.
+    - `get_cluster_id`: Probe active compute cluster identifier.
+    - `get_dbutils`: Locate active dbutils instance.
+    - `get_git_commit`: Retrieve git commit SHA of active repository.
+    - `get_runtime_version`: Probe Databricks runtime version.
+    - `is_notebook`: Probe whether code is running inside a notebook.
+    - `is_cpu_bf16_supported`: Probe whether CPU supports hardware BF16.
+    - `is_databricks`: Probe whether runtime is inside Databricks.
+    - `is_notebook`: Probe whether code executes in notebook shell.
+    - `resolve_device`: Resolve hardware execution target string.
+    - `require_widget`: Enforce and validate required notebook widgets.
+    - `safe_training_session`: Interruption-safe training context manager.
 '''
 
 # standard imports
@@ -32,28 +51,26 @@ import importlib
 import typing
 
 __all__ = [
-    # concurrency
+    # constants
     'CORE_N',
-    'ParallelExecutor',
-    'get_default_worker_count',
-    # hardware
-    'get_device_name',
-    'is_cpu_bf16_supported',
-    'resolve_device',
-    'resolve_amp_dtype',
-    # interactive
+    # classes
+    'Logger',
     'MissingRequiredInputError',
     'NotebookWidgets',
-    'require_widget',
-    # logger
-    'Logger',
-    # platform
+    'ParallelExecutor',
+    # funtions
+    'get_default_worker_count',
+    'get_device_name',
     'get_cluster_id',
     'get_dbutils',
     'get_git_commit',
     'get_runtime_version',
+    'is_cpu_bf16_supported',
     'is_databricks',
     'is_notebook',
+    'require_widget',
+    'resolve_device',
+    'safe_training_session',
 ]
 
 
@@ -86,10 +103,17 @@ if typing.TYPE_CHECKING:
         is_databricks,
         is_notebook,
     )
+    from .session import (
+        safe_training_session,
+    )
 
 
 def __getattr__(name: str) -> typing.Any:
-    if name in {'CORE_N', 'ParallelExecutor', 'get_default_worker_count'}:
+    if name in {
+        'CORE_N',
+        'ParallelExecutor',
+        'get_default_worker_count'
+    }:
         obj = importlib.import_module('.concurrency', __package__)
         return getattr(obj, name)
 
@@ -123,6 +147,10 @@ def __getattr__(name: str) -> typing.Any:
         'is_notebook',
     }:
         obj = importlib.import_module('.platform', __package__)
+        return getattr(obj, name)
+
+    if name in {'safe_training_session'}:
+        obj = importlib.import_module('.session', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
