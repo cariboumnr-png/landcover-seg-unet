@@ -70,8 +70,6 @@ __all__ = [
     'Window',
     # classes
     'DatasetInfo',
-    # constants
-    'DEFAULT_GDAL_CONFIG',
     # functions
     'add_band_description_to_vrt',
     'add_tag_to_vrt',
@@ -79,8 +77,6 @@ __all__ = [
     'check_raster_crs',
     'check_raster_resolution',
     'compute_overlap_bounds',
-    'configure_gdal_defaults',
-    'gdal_cloud_env',
     'get_info',
     'is_same_crs',
     'parse_vrt_tag',
@@ -105,11 +101,6 @@ if typing.TYPE_CHECKING:
         DatasetReader,
         Resampling,
         Window,
-    )
-    from .env import (
-        DEFAULT_GDAL_CONFIG,
-        configure_gdal_defaults,
-        gdal_cloud_env,
     )
     from .geometry import (
         check_raster_crs,
@@ -156,14 +147,6 @@ def __getattr__(name: str):
         'Window',
     }:
         obj = importlib.import_module('._types', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'DEFAULT_GDAL_CONFIG',
-        'configure_gdal_defaults',
-        'gdal_cloud_env',
-    }:
-        obj = importlib.import_module('.env', __package__)
         return getattr(obj, name)
 
     if name in {
