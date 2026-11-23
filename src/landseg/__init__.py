@@ -27,6 +27,6 @@ __all__ = [
     '__version__',
 ]
 
-__version__: str = '0.2.1'
+__version__: str = 'v0.4.0'
 __author__: str = 'Ontario Ministry of Natural Resources'
 __license__: str = 'Apache-2.0'
