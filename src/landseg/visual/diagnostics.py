@@ -32,9 +32,9 @@ Public APIs:
 
 # standard imports
 import pathlib
-import typing
 # third-party imports
 import matplotlib
+import matplotlib.figure
 import matplotlib.pyplot
 import numpy
 import torch
@@ -158,10 +158,7 @@ def plot_confusion_matrix(
                 fontsize=9,
             )
 
-    try:
-        fig.tight_layout()
-    except Exception:
-        pass
+    fig.tight_layout()
 
     if save_path is not None:
         save_target = pathlib.Path(save_path)
@@ -252,10 +249,10 @@ def plot_per_class_metrics(
         )
         ax.legend(loc='lower right')
 
-    for bar, val in zip(bars, values):
+    for b, val in zip(bars, values):
         ax.text(
-            bar.get_width() + 0.02,
-            bar.get_y() + bar.get_height() / 2,
+            b.get_width() + 0.02,
+            b.get_y() + b.get_height() / 2,
             f'{val:.3f}',
             va='center',
             fontsize=9,
@@ -265,10 +262,7 @@ def plot_per_class_metrics(
     chart_title = title or f'Per-Class {metric_name} Breakdown'
     ax.set_title(chart_title, fontsize=12, fontweight='bold')
 
-    try:
-        fig.tight_layout()
-    except Exception:
-        pass
+    fig.tight_layout()
 
     if save_path is not None:
         save_target = pathlib.Path(save_path)

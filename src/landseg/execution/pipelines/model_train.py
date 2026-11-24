@@ -130,8 +130,6 @@ class ModelTraining(base.SessionPipeline):
 
     def _generate_post_run_visuals(self) -> None:
         '''Generate post-training curves plot and test prediction previews.'''
-        logger = getattr(self, 'logger', None)
-
         # 1. Training curves plot
         if self.pipeline_paths.step_results.is_file():
             try:
@@ -141,32 +139,28 @@ class ModelTraining(base.SessionPipeline):
                     save_path=curves_path,
                     show=False,
                 )
-                if logger:
-                    logger.info(f'[OUTPUT] Saved training curves plot to {curves_path}')
-            except Exception as err:
-                if logger:
-                    logger.warning(f'Could not generate training curves plot: {err}')
+                self.logger.info(f'[OUTPUT] Saved training curves plot to {curves_path}')
+            except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError) as err:
+                self.logger.warning(f'Could not generate training curves plot: {err}')
 
         # 2. Inferred preview PNGs using best checkpoint
         dataspecs = getattr(self, 'context', None)
         if dataspecs is None:
             try:
                 dataspecs = self._build_context()
-            except Exception:
+            except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError):
                 dataspecs = None
 
         if dataspecs is None or not getattr(dataspecs.splits, 'test', None):
-            if logger:
-                logger.info(
-                    'No test dataset provided or split; skipping post-training preview generation.'
-                )
+            self.logger.info(
+                'No test dataset provided or split; skipping post-training preview generation.'
+            )
             return
 
         try:
             best_ckpts = list(self.pipeline_paths.checkpoints.glob('*_best.pt'))
             if not best_ckpts:
-                if logger:
-                    logger.warning('No best checkpoint found for preview generation.')
+                self.logger.warning('No best checkpoint found for preview generation.')
                 return
             best_ckpt = max(best_ckpts, key=lambda p: p.stat().st_mtime)
 
@@ -175,13 +169,12 @@ class ModelTraining(base.SessionPipeline):
                 dataspecs=dataspecs,
                 config=self.config,
                 previews_dpath=self.pipeline_paths.previews,
-                logger=logger,
+                logger=self.logger,
             )
-            if previews and logger:
-                logger.info(
+            if previews:
+                self.logger.info(
                     f'[OUTPUT] Generated {len(previews)} test preview PNG(s) in '
                     f'{self.pipeline_paths.previews}'
                 )
-        except Exception as err:
-            if logger:
-                logger.warning(f'Could not generate preview PNGs: {err}')
+        except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError) as err:
+            self.logger.warning(f'Could not generate preview PNGs: {err}')

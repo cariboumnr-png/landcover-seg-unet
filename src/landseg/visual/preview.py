@@ -30,12 +30,11 @@ import typing
 import matplotlib
 import matplotlib.pyplot
 import numpy
-import omegaconf
 import torch
 import torch.utils.data
 # local imports
 import landseg.artifacts as artifacts
-import landseg.configs.schema.models as models_schema
+import landseg.configs as configs
 import landseg.core as core
 import landseg.models as models
 import landseg.runtime as runtime
@@ -136,10 +135,7 @@ def plot_qualitative_predictions(
         axes[3].axis('off')
 
     fig.suptitle(title, fontsize=13, fontweight='bold', y=0.98)
-    try:
-        matplotlib.pyplot.tight_layout()
-    except Exception:
-        pass
+    matplotlib.pyplot.tight_layout()
 
     if save_path is not None:
         save_target = pathlib.Path(save_path)
@@ -183,65 +179,38 @@ def select_representative_block(
     best_path: pathlib.Path | None = None
     best_score = -1
 
-    # Check candidate blocks (up to 20 to preserve fast I/O)
+    # check candidate blocks (up to 20 to preserve fast I/O)
     sorted_items = sorted(test_blocks.items())
     candidates = sorted_items[:min(len(sorted_items), 20)]
 
     for name, path in candidates:
         try:
-            with numpy.load(path) as data:
-                if label_key in data:
-                    lbl = data[label_key]
-                    unique_classes = len(numpy.unique(lbl))
-                    valid_px = int(numpy.count_nonzero(lbl))
-                    score = unique_classes * 1_000_000 + valid_px
-                    if score > best_score:
-                        best_score = score
-                        best_name = name
-                        best_path = path
-        except Exception:
+            data = artifacts.Controller(path).fetch()
+            if not isinstance(data, dict) or label_key not in data:
+                continue
+            lbl = data[label_key]
+            unique_classes = len(numpy.unique(lbl))
+            valid_px = int(numpy.count_nonzero(lbl))
+            score = unique_classes * 1_000_000 + valid_px
+            if score > best_score:
+                best_score = score
+                best_name = name
+                best_path = path
+        except (artifacts.ArtifactError, OSError, KeyError, TypeError, ValueError):
             continue
 
     if best_name is not None and best_path is not None:
         return best_name, best_path
 
-    # Fallback to middle candidate
+    # fallback to middle candidate
     mid = len(sorted_items) // 2
     return sorted_items[mid]
-
-
-def _place_patch_predictions(
-    canvas_pred: dict[str, torch.Tensor],
-    canvas_gt: dict[str, torch.Tensor],
-    active_heads: list[str],
-    preds_batch: dict[str, torch.Tensor],
-    y_cpu: torch.Tensor | None,
-    hmap: dict[str, int],
-    ignore_index: int | list[int] | tuple[int, ...],
-    i: int,
-    y0: int,
-    y1: int,
-    x0: int,
-    x1: int,
-) -> None:
-    """Helper to place prediction and ground-truth patches onto canvases."""
-    for h in active_heads:
-        if h in preds_batch:
-            canvas_pred[h][y0:y1, x0:x1] = preds_batch[h][i]
-        if y_cpu is not None and h in hmap and y_cpu.shape[1] > hmap[h]:
-            tgt_patch = y_cpu[i, hmap[h], :, :].clone()
-            if isinstance(ignore_index, (list, tuple)):
-                for ign in ignore_index:
-                    tgt_patch[tgt_patch == ign] = 0
-            else:
-                tgt_patch[tgt_patch == ignore_index] = 0
-            canvas_gt[h][y0:y1, x0:x1] = tgt_patch
 
 
 def generate_prediction_previews(
     checkpoint_fpath: str | pathlib.Path,
     dataspecs: core.DataSpecs,
-    config: typing.Any = None,
+    config: configs.RootConfig | None = None,
     previews_dpath: str | pathlib.Path | None = None,
     *,
     patch_size: int | None = None,
@@ -351,30 +320,14 @@ def generate_prediction_previews(
     )
 
     # Assemble model and load checkpoint
-    models_cfg = getattr(config, 'models', None)
-    if models_cfg is not None and hasattr(models_cfg, '_content'):
-        models_cfg = omegaconf.OmegaConf.to_object(models_cfg)
-
-    if models_cfg is None:
-        models_cfg = models_schema.ModelsConfig()
-
-    backbone_cfg = getattr(models_cfg, 'unet_backbone_config', None)
-    cond_cfg = getattr(models_cfg, 'conditioning_config', None)
-    safety_cfg = getattr(models_cfg, 'numeric_safety', None)
-    enable_clamp = getattr(safety_cfg, 'enable_clamp', False) if safety_cfg is not None else False
-    clamp_range = (
-        getattr(safety_cfg, 'clamp_range', (-10.0, 10.0))
-        if safety_cfg is not None
-        else (-10.0, 10.0)
-    )
-
+    cfg = config if config is not None else configs.RootConfig()
     model = models.build_multihead_unet(
         patch_size=ps,
         dataspecs=dataspecs,
-        unet_backbone_config=backbone_cfg,
-        conditioning_config=cond_cfg,
-        enable_clamp=enable_clamp,
-        clamp_range=clamp_range,
+        unet_backbone_config=cfg.models.unet_backbone_config,
+        conditioning_config=cfg.models.conditioning_config,
+        enable_clamp=cfg.models.numeric_safety.enable_clamp,
+        clamp_range=cfg.models.numeric_safety.clamp_range,
     )
     artifacts.load_checkpoint(
         model=model,
@@ -592,6 +545,34 @@ def render_prediction_preview(
 
 
 # ----- private helpers
+def _place_patch_predictions(
+    canvas_pred: dict[str, torch.Tensor],
+    canvas_gt: dict[str, torch.Tensor],
+    active_heads: list[str],
+    preds_batch: dict[str, torch.Tensor],
+    y_cpu: torch.Tensor | None,
+    hmap: dict[str, int],
+    ignore_index: int | list[int] | tuple[int, ...],
+    i: int,
+    y0: int,
+    y1: int,
+    x0: int,
+    x1: int,
+) -> None:
+    '''Helper to place prediction and ground-truth patches onto canvases.'''
+    for h in active_heads:
+        if h in preds_batch:
+            canvas_pred[h][y0:y1, x0:x1] = preds_batch[h][i]
+        if y_cpu is not None and h in hmap and y_cpu.shape[1] > hmap[h]:
+            tgt_patch = y_cpu[i, hmap[h], :, :].clone()
+            if isinstance(ignore_index, (list, tuple)):
+                for ign in ignore_index:
+                    tgt_patch[tgt_patch == ign] = 0
+            else:
+                tgt_patch[tgt_patch == ignore_index] = 0
+            canvas_gt[h][y0:y1, x0:x1] = tgt_patch
+
+
 def _to_numpy_image(arr: typing.Any) -> numpy.ndarray:
     '''Convert input array or tensor to normalized HxWx3 RGB numpy array.'''
     if hasattr(arr, 'detach'):

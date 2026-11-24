@@ -37,6 +37,7 @@ import pathlib
 import typing
 # third-party imports
 import matplotlib
+import matplotlib.figure
 import matplotlib.patches
 import matplotlib.pyplot
 import numpy
@@ -116,7 +117,7 @@ def plot_grid_layout(
 
     for r in range(rows):
         for c in range(cols):
-            assigned = tile_assignment.get((c, r), None)
+            assigned = tile_assignment.get((c, r), '')
             color = split_colors.get(assigned, '#E8ECEF')
             rect = matplotlib.patches.Rectangle(
                 (c, rows - 1 - r),
@@ -157,10 +158,7 @@ def plot_grid_layout(
         legend_patches.append(matplotlib.patches.Patch(color='#E8ECEF', label='Unassigned'))
         ax.legend(handles=legend_patches, loc='upper right', bbox_to_anchor=(1.25, 1.0))
 
-    try:
-        fig.tight_layout()
-    except Exception:
-        pass
+    fig.tight_layout()
 
     if save_path is not None:
         save_target = pathlib.Path(save_path)
@@ -243,10 +241,10 @@ def plot_class_frequencies(
     ax.grid(axis='y', linestyle=':', alpha=0.6)
 
     # annotate percentage on each bar
-    for bar, pct in zip(bars, pcts):
+    for b, pct in zip(bars, pcts):
         ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + max(values) * 0.015,
+            b.get_x() + b.get_width() / 2,
+            b.get_height() + max(values) * 0.015,
             f'{pct:.1f}%',
             ha='center',
             va='bottom',
@@ -256,10 +254,7 @@ def plot_class_frequencies(
 
     ax.set_ylim(0, max(values) * 1.15 if max(values) > 0 else 1.0)
 
-    try:
-        fig.tight_layout()
-    except Exception:
-        pass
+    fig.tight_layout()
 
     if save_path is not None:
         save_target = pathlib.Path(save_path)
@@ -316,7 +311,7 @@ def plot_spectral_composite(
     if arr.shape[2] < arr.shape[0] and arr.shape[2] in {3, 4, 8, 12, 16}:
         arr = numpy.transpose(arr, (2, 0, 1))
 
-    c, h, w = arr.shape
+    c, _, _ = arr.shape
     b_r, b_g, b_b = bands
 
     if max(bands) >= c or min(bands) < 0:
@@ -340,10 +335,7 @@ def plot_spectral_composite(
     ax.set_title(title, fontsize=12, fontweight='bold')
     ax.axis('off')
 
-    try:
-        fig.tight_layout()
-    except Exception:
-        pass
+    fig.tight_layout()
 
     if save_path is not None:
         save_target = pathlib.Path(save_path)

@@ -88,11 +88,10 @@ class ModelEvaluation(base.SessionPipeline):
 
     def _generate_evaluation_visuals(
         self,
-        results: core.SessionStepSummary,
+        results: core.SessionStepResults,
         runner: typing.Any,
     ) -> None:
         '''Generate diagnostic evaluation plots (confusion matrix and per-class metrics).'''
-        logger = getattr(self, 'logger', None)
         if not results.validation or not results.validation.head_metrics:
             return
 
@@ -117,13 +116,11 @@ class ModelEvaluation(base.SessionPipeline):
                         save_path=p_path,
                         show=False,
                     )
-                    if logger:
-                        logger.info(f'[OUTPUT] Saved per-class IoU plot to {p_path}')
-            except Exception as err:
-                if logger:
-                    logger.warning(
-                        f'Could not plot per-class metrics for {head_name}: {err}'
-                    )
+                    self.logger.info(f'[OUTPUT] Saved per-class IoU plot to {p_path}')
+            except (ValueError, TypeError, KeyError, RuntimeError, OSError) as err:
+                self.logger.warning(
+                    f'Could not plot per-class metrics for {head_name}: {err}'
+                )
 
             try:
                 cm_matrix = getattr(h_metrics, 'confusion_matrix', None)
@@ -139,15 +136,13 @@ class ModelEvaluation(base.SessionPipeline):
                         save_path=cm_path,
                         show=False,
                     )
-                    if logger:
-                        logger.info(
-                            f'[OUTPUT] Saved confusion matrix plot to {cm_path}'
-                        )
-            except Exception as err:
-                if logger:
-                    logger.warning(
-                        f'Could not plot confusion matrix for {head_name}: {err}'
+                    self.logger.info(
+                        f'[OUTPUT] Saved confusion matrix plot to {cm_path}'
                     )
+            except (ValueError, TypeError, KeyError, RuntimeError, OSError) as err:
+                self.logger.warning(
+                    f'Could not plot confusion matrix for {head_name}: {err}'
+                )
 
     def _create_logger(self) -> session.SessionLogger:
         logger = session.SessionLogger(

@@ -31,8 +31,6 @@ Public APIs:
     - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
 '''
 
-# standard imports
-import typing
 # third-party imports
 import matplotlib
 import numpy
@@ -119,12 +117,7 @@ def colorize(
         raise ValueError('palette must be shaped [N, 3]')
 
     idx = canvas.to(torch.long)
-
-    idx = torch.clamp(
-        idx,
-        0,
-        palette.shape[0] - 1
-    )
+    idx = torch.clamp(idx, 0, palette.shape[0] - 1)
 
     rgb = palette[idx]          # [H, W, 3]
     rgb = rgb.permute(2, 0, 1)  # [3, H, W]
@@ -163,8 +156,16 @@ def colorize_continuous(
         raise ValueError('canvas must be 2D [H, W]')
 
     arr = canvas.detach().cpu().to(torch.float32).numpy()
-    lo = float(vmin) if vmin is not None else float(numpy.nanmin(arr)) if arr.size > 0 else 0.0
-    hi = float(vmax) if vmax is not None else float(numpy.nanmax(arr)) if arr.size > 0 else 1.0
+
+    if arr.size > 0:
+        arr_min = float(numpy.nanmin(arr))
+        arr_max = float(numpy.nanmax(arr))
+    else:
+        arr_min = 0.0
+        arr_max = 1.0
+
+    lo = float(vmin) if vmin is not None else arr_min
+    hi = float(vmax) if vmax is not None else arr_max
 
     if hi <= lo:
         hi = lo + 1e-6
