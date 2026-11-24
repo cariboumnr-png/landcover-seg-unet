@@ -39,8 +39,8 @@ import typing
 # third-party imports
 import numpy
 # local imports
-import landseg.geopipe.core as geo_core
-import landseg.artifacts.storage.npzio as npzio
+import landseg.artifacts as artifacts
+import landseg.knowledge as knowledge
 
 
 # ----- public types
@@ -66,7 +66,7 @@ class DataBlockManifest(typing.TypedDict):
     label_num_cls: dict[str, int]
     label_cls_names: dict[str, list[str]] # head name: list of class names
     label_cls_clr_map: dict[str, dict[str, tuple[int, int, int]]] # {head: {class: RGB}}
-    label_taxonomy: dict[str, geo_core.TaxonomySpec]
+    label_taxonomy: dict[str, knowledge.TaxonomySpec]
     # derived stats
     valid_ratios: dict[str, float]
     image_stats: dict[str, dict[str, int | float]]
@@ -173,7 +173,7 @@ class DataBlock:
             raise ValueError(f'Output path must end with .npz: {fpath}')
 
         manifest_str = json.dumps(self.manifest, separators=(',', ':'))
-        npzio.savez_compressed(
+        artifacts.savez_compressed(
             fpath,
             image=self.data.image,
             label=self.data.label,

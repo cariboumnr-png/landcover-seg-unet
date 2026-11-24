@@ -27,15 +27,23 @@ mappings against canonical knowledge base profiles and resolves target
 integer classes to deterministic embedding matrix indices.
 
 Public APIs:
+    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
     - `validate_specs`: Validate taxonomy specs against knowledge base.
 '''
 
 # standard imports
 import pathlib
+import typing
 # local imports
 import landseg.artifacts as artifacts
-import landseg.geopipe.core as geo_core
 import landseg.knowledge.embeddings as embeddings
+
+
+# ----- public types
+class TaxonomySpec(typing.TypedDict):
+    '''Typed dictionary for domain taxonomy specification.'''
+    profile: str
+    canonical_indices: typing.NotRequired[dict[str, int]]
 
 
 # ----- public functions
@@ -44,7 +52,7 @@ def validate_specs(
     species_mapping: dict[str, str],
     num_cls: int,
     knowledge_root: pathlib.Path | str | None = None,
-) -> geo_core.TaxonomySpec:
+) -> TaxonomySpec:
     '''
     Validate a label layer taxonomy specification against knowledge base.
 
@@ -59,7 +67,7 @@ def validate_specs(
             Root directory of the knowledge base.
 
     Returns:
-        geo_core.TaxonomySpec:
+        TaxonomySpec:
             Resolved taxonomy specification dictionary.
     '''
     if knowledge_root is None:
@@ -92,7 +100,7 @@ def validate_specs(
 
         canonical_indices[class_idx] = entry['index']
 
-    _specs: geo_core.TaxonomySpec = {
+    _specs: TaxonomySpec = {
         'profile': profile,
         'canonical_indices': canonical_indices
     }

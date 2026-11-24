@@ -84,7 +84,7 @@ def test_api_run_preflight_delegates(mocker):
     '''
     Given: A valid `RootConfig` and explicit target string.
     When: Calling `api.run_preflight`.
-    Then: Delegate execution to `preflight.run_preflight`.
+    Then: Delegate execution to `execution.run_preflight`.
     '''
     mock_preflight = mocker.patch(
         'landseg.execution.preflight.run_preflight',

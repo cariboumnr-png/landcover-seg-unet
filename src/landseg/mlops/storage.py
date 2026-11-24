@@ -45,8 +45,8 @@ import typing
 import optuna
 import pandas
 # local imports
-import landseg.runtime.platform as env_mod
-import landseg.study.analysis.trials as trials_analysis
+import landseg.runtime as runtime
+import landseg.study as study
 
 
 # ----- public functions
@@ -87,7 +87,7 @@ def resolve_exp_root(
     if exp_root is not None and str(exp_root).strip():
         target = pathlib.Path(str(exp_root).strip())
     else:
-        db = env_mod.get_dbutils(dbutils)
+        db = runtime.get_dbutils(dbutils)
         widget_val: str | None = None
         if db is not None and hasattr(db, 'widgets'):
             for wname in ('output_root', 'exp_root'):
@@ -190,7 +190,7 @@ def validate_output_root(
         )
 
     # Guard 2: Enforce UC Volumes or local scratch when running on Databricks
-    if env_mod.is_databricks():
+    if runtime.is_databricks():
         valid_prefixes = ('/Volumes/', '/local_disk0', '/tmp')
         if not any(norm_path.startswith(prefix) for prefix in valid_prefixes):
             raise ValueError(
@@ -250,10 +250,10 @@ def resolve_optuna_storage(
     if storage is not None:
         return storage
 
-    db = env_mod.get_dbutils(dbutils)
+    db = runtime.get_dbutils(dbutils)
     if default is not None:
         fallback = default
-    elif env_mod.is_databricks():
+    elif runtime.is_databricks():
         fallback = 'sqlite:////tmp/optuna.db'
     else:
         fallback = 'sqlite:///optuna.db'
@@ -317,7 +317,7 @@ def sync_optuna_study(
     resolved_storage = resolve_optuna_storage(storage, dbutils=dbutils)
 
     # Load Optuna study from scratch or remote storage
-    study = optuna.load_study(study_name=study_name, storage=resolved_storage)
+    _study = optuna.load_study(study_name=study_name, storage=resolved_storage)
 
     # Prepare persistent volume destination
     sweeps_dir = target_dest / 'sweeps' / study_name
@@ -326,7 +326,7 @@ def sync_optuna_study(
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Rank top completed trials
-    ranked = trials_analysis.rank_trials(
+    ranked = study.rank_trials(
         study_name=study_name,
         storage=resolved_storage,
         top_k=top_k,
@@ -338,16 +338,16 @@ def sync_optuna_study(
     best_params = {}
     best_trial_num = None
     try:
-        best_value = float(study.best_value)
-        best_params = dict(study.best_params)
-        best_trial_num = int(study.best_trial.number)
+        best_value = float(_study.best_value)
+        best_params = dict(_study.best_params)
+        best_trial_num = int(_study.best_trial.number)
     except ValueError:
         pass
 
     summary_data = {
         'study_name': study_name,
         'storage': resolved_storage,
-        'total_trials': len(study.trials),
+        'total_trials': len(_study.trials),
         'best_trial_number': best_trial_num,
         'best_value': best_value,
         'best_params': best_params,
@@ -361,7 +361,7 @@ def sync_optuna_study(
     # 3. Export complete trials dataframe (CSV / Parquet)
     trials_csv = sweeps_dir / f'{study_name}_trials.csv'
     try:
-        df = study.trials_dataframe()
+        df = _study.trials_dataframe()
         df.to_csv(trials_csv, index=False)
     except Exception:  # pylint: disable=broad-exception-caught
         trials_csv = None
@@ -383,7 +383,7 @@ def sync_optuna_study(
 
     print(
         f'[SWEEP SYNC] Optuna study {study_name!r} successfully synchronized:\n'
-        f'- Total trials: {len(study.trials)} | Best value: {best_value}\n'
+        f'- Total trials: {len(_study.trials)} | Best value: {best_value}\n'
         f'- Summary persisted: {summary_file}\n'
         f'- Trials table: {trials_csv}'
     )
@@ -393,7 +393,7 @@ def sync_optuna_study(
     return {
         'study_name': study_name,
         'storage': resolved_storage,
-        'total_trials': len(study.trials),
+        'total_trials': len(_study.trials),
         'best_value': best_value,
         'best_params': best_params,
         'summary_file': str(summary_file),

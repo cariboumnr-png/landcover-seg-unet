@@ -36,10 +36,10 @@ import typing
 # third-party imports
 import numpy
 # local imports
+import landseg.artifacts as artifacts
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset as dataset
-import landseg.artifacts.storage.npzio as npzio
 import landseg.runtime as runtime
 import landseg.runtime.validator as val
 
@@ -161,7 +161,7 @@ def _materialize_one_block(
     filename = block_fpath.name
     save_fpath = target_dpath / filename
     # key names: image, label
-    npzio.savez_compressed(save_fpath, image=img_arr, label=lbl_arr)
+    artifacts.savez_compressed(save_fpath, image=img_arr, label=lbl_arr)
 
 
 def _normalize_image(

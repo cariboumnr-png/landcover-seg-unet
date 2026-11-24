@@ -22,7 +22,19 @@
 '''
 Top-level namespace for `landseg.adapters`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes the programmatic API (`api`) and Hydra CLI (`cli`) adapter
+surfaces.
+
+Public APIs:
+    - `api`: Programmatic configurators and execution entry points.
+    - `cli`: Hydra-backed command-line interface and config resolver.
 '''
 
+# local imports
+import landseg.adapters.api as api
+import landseg.adapters.cli as cli
+
+__all__ = [
+    'api',
+    'cli',
+]

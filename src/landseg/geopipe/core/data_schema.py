@@ -34,6 +34,7 @@ Public APIs:
 from __future__ import annotations
 import typing
 # typing imports
+import landseg.knowledge as knowledge
 import landseg.geopipe.core as geo_core
 
 
@@ -139,4 +140,4 @@ class _LabelsInfo(typing.TypedDict):
     label_ignore_cls: dict[str, list[int]]
     label_class_names: dict[str, list[str]]
     label_class_color_map: dict[str, list[int]] | None
-    label_taxonomy: dict[str, geo_core.TaxonomySpec]
+    label_taxonomy: dict[str, knowledge.TaxonomySpec]

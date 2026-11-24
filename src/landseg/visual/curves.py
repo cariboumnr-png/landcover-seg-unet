@@ -34,10 +34,10 @@ import matplotlib.pyplot
 import numpy
 # local imports
 import landseg.artifacts as artifacts
-import landseg.runtime.platform as platform
+import landseg.runtime as runtime
 
 
-if not platform.is_notebook():
+if not runtime.is_notebook():
     matplotlib.use('Agg')
 
 

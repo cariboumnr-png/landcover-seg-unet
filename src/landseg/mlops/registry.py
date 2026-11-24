@@ -38,7 +38,7 @@ import typing
 import mlflow
 # local imports
 import landseg.mlops.storage as storage_mod
-import landseg.runtime.platform as env_mod
+import landseg.runtime as runtime
 
 
 # ----- public functions
@@ -91,9 +91,9 @@ def register_unity_catalog_model(
 
     # Collect governance metadata
     manifest_hash = _probe_manifest_hash(resolved_root)
-    git_sha = env_mod.get_git_commit()
-    cluster_id = env_mod.get_cluster_id()
-    runtime_version = env_mod.get_runtime_version()
+    git_sha = runtime.get_git_commit()
+    cluster_id = runtime.get_cluster_id()
+    runtime_version = runtime.get_runtime_version()
     full_model_name = f'{catalog}.{schema}.{model_name}'
 
     governance_tags = {
@@ -107,7 +107,7 @@ def register_unity_catalog_model(
         governance_tags.update(tags)
 
     # In local or CI non-Databricks environment: safe bypass
-    if not env_mod.is_databricks():
+    if not runtime.is_databricks():
         print(
             f'\n[UNITY CATALOG] Model registration bypassed (outside Databricks runtime):\n'
             f'- Target Model: models:/{full_model_name}\n'

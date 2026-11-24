@@ -22,8 +22,18 @@
 '''
 Top-level namespace for `landseg.knowledge`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes ecological domain taxonomy validation, species embedding
+generation, and profile resolution APIs via lazy resolution to keep
+import order simple and circular-free.
+
+Public APIs:
+    - `SpeciesEmbeddingsMetadata`: TypedDict for embeddings profile metadata.
+    - `SpeciesEntry`: TypedDict for per-species embedding entry metadata.
+    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
+    - `generate_embeddings_and_matrix`: Build species embeddings and matrix.
+    - `resolve_profile_metadata`: Load embeddings metadata for a profile.
+    - `resolve_similarity_matrix`: Load precomputed species similarity matrix.
+    - `validate_specs`: Validate taxonomy specs against knowledge base.
 '''
 
 # standard imports
@@ -40,6 +50,7 @@ __all__ = [
     # typing
     'SpeciesEmbeddingsMetadata',
     'SpeciesEntry',
+    'TaxonomySpec',
 ]
 
 
@@ -55,6 +66,7 @@ if typing.TYPE_CHECKING:
         resolve_similarity_matrix,
     )
     from .taxonomy import (
+        TaxonomySpec,
         validate_specs,
     )
 
@@ -76,6 +88,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
+        'TaxonomySpec',
         'validate_specs',
     }:
         obj = importlib.import_module('.taxonomy', __package__)

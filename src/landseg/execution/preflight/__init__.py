@@ -24,6 +24,12 @@ Top-level namespace for `landseg.execution.preflight`.
 
 Provides unified, non-destructive pre-flight diagnostic validation
 routines, probe schemas, and terminal status dashboard generators.
+
+Public APIs:
+    - `PreflightResult`: Aggregated pre-flight validation result record.
+    - `assert_target_ready`: Fail-fast readiness gate for a target.
+    - `inspect_target`: Run pre-flight probes for a single target.
+    - `run_preflight`: Dispatch pre-flight validation across targets.
 '''
 
 # standard imports
@@ -32,6 +38,8 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
+    'PreflightResult',
     # functions
     'assert_target_ready',
     'inspect_target',
@@ -46,6 +54,9 @@ if typing.TYPE_CHECKING:
         inspect_target,
         run_preflight,
     )
+    from .schema import (
+        PreflightResult,
+    )
 
 
 def __getattr__(name: str):
@@ -56,6 +67,12 @@ def __getattr__(name: str):
         'run_preflight',
     }:
         obj = importlib.import_module('.engine', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'PreflightResult',
+    }:
+        obj = importlib.import_module('.schema', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

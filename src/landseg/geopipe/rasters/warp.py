@@ -42,7 +42,7 @@ import rasterio.errors
 import rasterio.shutil
 import rasterio.vrt
 # local imports
-import landseg.artifacts.storage.scratch as scratch
+import landseg.artifacts as artifacts
 import landseg.geopipe.rasters._types as t
 import landseg.geopipe.rasters.io as io
 
@@ -253,7 +253,7 @@ def _write_warped_gtiff( # pylint: disable=too-many-arguments
 ) -> pathlib.Path:
     '''Warp an open reader to disk as a tiled GeoTIFF via scratch staging.'''
     effective_nodata = reader.nodata if nodata is None else nodata
-    with scratch.stage_to_scratch(out_p, scratch_dir=scratch_dir) as stage_f:
+    with artifacts.stage_to_scratch(out_p, scratch_dir=scratch_dir) as stage_f:
         with rasterio.vrt.WarpedVRT(
             reader,
             crs=crs,

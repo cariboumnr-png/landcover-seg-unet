@@ -37,7 +37,7 @@ import torch
 # local imports
 import landseg.execution.preflight.context as context
 import landseg.execution.preflight.schema as schema
-import landseg.runtime.hardware as hardware
+import landseg.runtime as runtime
 
 
 # ----- public functions
@@ -78,7 +78,7 @@ def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
         )
 
         use_amp = _resolve_use_amp(ctx)
-        if use_amp and not hardware.is_cpu_bf16_supported():
+        if use_amp and not runtime.is_cpu_bf16_supported():
             results.append(
                 schema.ProbeResult(
                     pid='cpu_amp_headroom',
@@ -113,7 +113,7 @@ def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
         )
     )
 
-    if _resolve_use_amp(ctx) and hardware.resolve_amp_dtype('cuda') is None:
+    if _resolve_use_amp(ctx) and runtime.resolve_amp_dtype('cuda') is None:
         results.append(
             schema.ProbeResult(
                 pid='cuda_amp_headroom',

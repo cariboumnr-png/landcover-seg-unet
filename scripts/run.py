@@ -44,7 +44,7 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 # local imports after sys path modification
-from landseg.adapters.cli.cli import main
+from landseg.adapters.cli import main
 
 if __name__ == '__main__':
     main()
