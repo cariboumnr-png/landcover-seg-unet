@@ -23,8 +23,8 @@
 Top-level namespace for `landseg.visual`.
 
 Provides pure visualization utilities for metric plotting, segmentation
-prediction previews, palette colorization, and multi-head qualitative
-inspections across CLI and interactive notebook environments.
+prediction previews, palette colorization, diagnostic heatmaps, spatial
+layout grids, and multi-band spectral composites.
 
 Public APIs:
     - `DEFAULT_ERROR_PALETTE`: Standard orange/gray error highlight palette.
@@ -34,7 +34,12 @@ Public APIs:
     - `colorize`: Map 2D class integer masks to 3D RGB tensors.
     - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
     - `generate_prediction_previews`: Produce inferred preview figures per head.
+    - `plot_class_frequencies`: Render class pixel count and imbalance chart.
+    - `plot_confusion_matrix`: Render normalized evaluation confusion matrix.
+    - `plot_grid_layout`: Render spatial grid tiling and partition splits.
+    - `plot_per_class_metrics`: Render horizontal bar chart for per-class metrics.
     - `plot_qualitative_predictions`: Side-by-side segmentation inspection.
+    - `plot_spectral_composite`: Render stretched RGB/false-color composite.
     - `plot_training_curves`: Plot multi-head training and validation curves.
     - `render_prediction_preview`: Automated prediction preview display.
     - `select_representative_block`: Deterministically select a diverse block.
@@ -55,9 +60,12 @@ __all__ = [
     'colorize',
     'colorize_continuous',
     'generate_prediction_previews',
+    'plot_class_frequencies',
     'plot_confusion_matrix',
+    'plot_grid_layout',
     'plot_per_class_metrics',
     'plot_qualitative_predictions',
+    'plot_spectral_composite',
     'plot_training_curves',
     'render_prediction_preview',
     'select_representative_block',
@@ -86,6 +94,11 @@ if typing.TYPE_CHECKING:
         plot_qualitative_predictions,
         render_prediction_preview,
         select_representative_block,
+    )
+    from .spatial import (
+        plot_class_frequencies,
+        plot_grid_layout,
+        plot_spectral_composite,
     )
 
 
@@ -119,6 +132,14 @@ def __getattr__(name: str):
         'select_representative_block',
     }:
         obj = importlib.import_module('.preview', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'plot_class_frequencies',
+        'plot_grid_layout',
+        'plot_spectral_composite',
+    }:
+        obj = importlib.import_module('.spatial', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
