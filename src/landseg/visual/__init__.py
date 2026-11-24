@@ -27,7 +27,12 @@ prediction previews, palette colorization, and multi-head qualitative
 inspections across CLI and interactive notebook environments.
 
 Public APIs:
+    - `DEFAULT_ERROR_PALETTE`: Standard orange/gray error highlight palette.
+    - `DEFAULT_MATCH_PALETTE`: Standard green/gray match highlight palette.
+    - `FORESTRY_FRI_PALETTE`: Standard Ontario FRI tree species palette.
+    - `NLCD_16_PALETTE`: Standard 16-class National Land Cover Database palette.
     - `colorize`: Map 2D class integer masks to 3D RGB tensors.
+    - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
     - `generate_prediction_previews`: Produce inferred preview figures per head.
     - `plot_qualitative_predictions`: Side-by-side segmentation inspection.
     - `plot_training_curves`: Plot multi-head training and validation curves.
@@ -41,8 +46,14 @@ import importlib
 import typing
 
 __all__ = [
+    # constants
+    'DEFAULT_ERROR_PALETTE',
+    'DEFAULT_MATCH_PALETTE',
+    'FORESTRY_FRI_PALETTE',
+    'NLCD_16_PALETTE',
     # functions
     'colorize',
+    'colorize_continuous',
     'generate_prediction_previews',
     'plot_qualitative_predictions',
     'plot_training_curves',
@@ -54,7 +65,12 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .color import (
+        DEFAULT_ERROR_PALETTE,
+        DEFAULT_MATCH_PALETTE,
+        FORESTRY_FRI_PALETTE,
+        NLCD_16_PALETTE,
         colorize,
+        colorize_continuous,
     )
     from .curves import (
         plot_training_curves,
@@ -68,7 +84,14 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'colorize'}:
+    if name in {
+        'DEFAULT_ERROR_PALETTE',
+        'DEFAULT_MATCH_PALETTE',
+        'FORESTRY_FRI_PALETTE',
+        'NLCD_16_PALETTE',
+        'colorize',
+        'colorize_continuous',
+    }:
         obj = importlib.import_module('.color', __package__)
         return getattr(obj, name)
 

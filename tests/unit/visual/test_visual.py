@@ -59,6 +59,46 @@ def test_colorize_invalid_dim():
         visual.colorize(canvas)
 
 
+def test_colorize_default_error_palette():
+    '''Test colorizing with canonical DEFAULT_ERROR_PALETTE.'''
+    canvas = torch.tensor([[0, 1]], dtype=torch.long)
+    rgb = visual.colorize(canvas, palette=visual.DEFAULT_ERROR_PALETTE)
+    assert rgb.shape == (3, 1, 2)
+    # 0 -> [255, 140, 0] (orange)
+    assert rgb[:, 0, 0].tolist() == [255, 140, 0]
+    # 1 -> [40, 40, 40] (dark gray)
+    assert rgb[:, 0, 1].tolist() == [40, 40, 40]
+
+
+def test_colorize_reference_palettes():
+    '''Test colorizing with NLCD and FRI forestry palettes.'''
+    canvas = torch.tensor([[1, 2], [8, 9]], dtype=torch.long)
+    nlcd_rgb = visual.colorize(canvas, palette=visual.NLCD_16_PALETTE)
+    assert nlcd_rgb.shape == (3, 2, 2)
+    assert nlcd_rgb[:, 0, 0].tolist() == [70, 107, 159]
+
+    fri_rgb = visual.colorize(canvas, palette=visual.FORESTRY_FRI_PALETTE)
+    assert fri_rgb.shape == (3, 2, 2)
+    assert fri_rgb[:, 0, 0].tolist() == [34, 139, 34]
+
+
+def test_colorize_continuous_viridis():
+    '''Test continuous float tensor colorization.'''
+    canvas = torch.tensor([[0.0, 0.5], [1.0, 0.2]], dtype=torch.float32)
+    rgb = visual.colorize_continuous(canvas, cmap='viridis')
+    assert rgb.shape == (3, 2, 2)
+    assert rgb.dtype == torch.uint8
+    # non-empty, non-zero values generated
+    assert rgb.sum() > 0
+
+
+def test_colorize_continuous_invalid_dim():
+    '''Test continuous colorization rejects non-2D tensors.'''
+    canvas = torch.zeros((2, 2, 2), dtype=torch.float32)
+    with pytest.raises(ValueError, match='2D'):
+        visual.colorize_continuous(canvas)
+
+
 # ----- Curves Plotting Tests
 def test_plot_training_curves_multi_head(tmp_path: pathlib.Path):
     '''Test plotting curves with multiple active heads.'''

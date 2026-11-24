@@ -52,7 +52,7 @@ class InferTrackingCallback(base.BaseCallback):
             )
             head_tensors[f'{head}_errors'] = visual.colorize(
                 infer_results.infer_errors[head],
-                palette={'1': [40, 40, 40], '0': [255, 140, 0]} # grey vs orange
+                palette=visual.DEFAULT_ERROR_PALETTE
             )
             head_metrics[f'{head}_metrics'] = (
                 results.raw_metrics.inference_metrics

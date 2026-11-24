@@ -128,9 +128,8 @@ def plot_qualitative_predictions(
     # Panel 4: Errors (if provided)
     if has_errors:
         err_np = _to_numpy_mask(errors)
-        err_pal = {'0': [255, 140, 0], '1': [40, 40, 40]}  # orange error vs gray match
         err_vis = visual_color.colorize(
-            torch.as_tensor(err_np), palette=err_pal
+            torch.as_tensor(err_np), palette=visual_color.DEFAULT_ERROR_PALETTE
         ).permute(1, 2, 0).cpu().numpy()
         axes[3].imshow(err_vis)
         axes[3].set_title('Prediction Match / Error', fontsize=11, fontweight='bold')
@@ -149,6 +148,8 @@ def plot_qualitative_predictions(
 
     if show:
         matplotlib.pyplot.show()
+    else:
+        matplotlib.pyplot.close(fig)
 
     return fig
 
@@ -554,6 +555,8 @@ def render_prediction_preview(
                 fig.savefig(save_path, bbox_inches='tight', dpi=150)
             if show:
                 matplotlib.pyplot.show()
+            else:
+                matplotlib.pyplot.close(fig)
             last_fig = fig
         return last_fig
 
