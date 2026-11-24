@@ -55,6 +55,8 @@ __all__ = [
     'colorize',
     'colorize_continuous',
     'generate_prediction_previews',
+    'plot_confusion_matrix',
+    'plot_per_class_metrics',
     'plot_qualitative_predictions',
     'plot_training_curves',
     'render_prediction_preview',
@@ -74,6 +76,10 @@ if typing.TYPE_CHECKING:
     )
     from .curves import (
         plot_training_curves,
+    )
+    from .diagnostics import (
+        plot_confusion_matrix,
+        plot_per_class_metrics,
     )
     from .preview import (
         generate_prediction_previews,
@@ -97,6 +103,13 @@ def __getattr__(name: str):
 
     if name in {'plot_training_curves'}:
         obj = importlib.import_module('.curves', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'plot_confusion_matrix',
+        'plot_per_class_metrics',
+    }:
+        obj = importlib.import_module('.diagnostics', __package__)
         return getattr(obj, name)
 
     if name in {
