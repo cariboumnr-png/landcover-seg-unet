@@ -25,7 +25,7 @@
 import dataclasses
 import typing
 # local imports
-import landseg.utils.validator as validator
+import landseg.runtime.validator as validator
 
 
 # ----- typing aliases

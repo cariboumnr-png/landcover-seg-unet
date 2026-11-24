@@ -37,7 +37,7 @@ import typing
 import landseg.artifacts as artifacts
 import landseg.geopipe.harmonize.manifest.normalizer as normalizer
 import landseg.geopipe.harmonize.manifest.schema as schema
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- public classes

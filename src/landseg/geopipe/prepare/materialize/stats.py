@@ -37,7 +37,7 @@ import pathlib
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- public functions

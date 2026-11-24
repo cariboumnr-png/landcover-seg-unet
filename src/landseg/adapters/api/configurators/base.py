@@ -30,7 +30,7 @@ import typing
 import landseg.adapters.api.api as api
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 class BaseConfigurator:
     '''Base configurator for execution commands.'''

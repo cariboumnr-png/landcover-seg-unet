@@ -42,6 +42,7 @@ Public APIs:
     - `get_scratch_dir`: Resolve and validate active scratch directory.
     - `load_checkpoint`: Restore model and optimizer checkpoint.
     - `save_checkpoint`: Persist model and optimizer checkpoint.
+    - `savez_compressed`: Write arrays to a compressed npz archive sequentially.
     - `scratch_file`: Context-managed temporary file in scratch storage.
     - `stage_to_scratch`: Context manager staging writes before publishing.
 '''
@@ -71,6 +72,7 @@ __all__ = [
     'get_scratch_dir',
     'load_checkpoint',
     'save_checkpoint',
+    'savez_compressed',
     'scratch_file',
     'stage_to_scratch',
     # typing
@@ -109,6 +111,7 @@ if typing.TYPE_CHECKING:
     from .storage import (
         cleanup_scratch,
         get_scratch_dir,
+        savez_compressed,
         scratch_file,
         stage_to_scratch,
     )
@@ -118,6 +121,7 @@ def __getattr__(name: str):
     if name in {
         'cleanup_scratch',
         'get_scratch_dir',
+        'savez_compressed',
         'scratch_file',
         'stage_to_scratch',
     }:

@@ -38,7 +38,7 @@ import re
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.rasters as rasters
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- public functions

@@ -36,7 +36,7 @@ import landseg.execution.preflight.checks as checks
 import landseg.execution.preflight.context as context
 import landseg.execution.preflight.reporter as reporter
 import landseg.execution.preflight.schema as schema
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- `inspect_target` tests

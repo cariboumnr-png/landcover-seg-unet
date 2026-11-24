@@ -28,11 +28,15 @@ staged file writing to remote filesystems.
 Public APIs:
     - `cleanup_scratch`: Remove lingering temporary files from scratch.
     - `get_scratch_dir`: Resolve and validate active scratch directory.
+    - `savez_compressed`: Write arrays to a compressed npz archive sequentially.
     - `scratch_file`: Context-managed temporary file in scratch storage.
     - `stage_to_scratch`: Context manager staging writes before publishing.
 '''
 
 # local imports
+from landseg.artifacts.storage.npzio import (
+    savez_compressed,
+)
 from landseg.artifacts.storage.scratch import (
     cleanup_scratch,
     get_scratch_dir,
@@ -43,6 +47,7 @@ from landseg.artifacts.storage.scratch import (
 __all__ = [
     'cleanup_scratch',
     'get_scratch_dir',
+    'savez_compressed',
     'scratch_file',
     'stage_to_scratch',
 ]

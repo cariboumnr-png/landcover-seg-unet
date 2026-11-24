@@ -29,7 +29,7 @@ import pytest
 # local imports
 import landseg.geopipe.contracts as contracts
 import landseg.geopipe.prepare.materialize.materialize as mat
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- `_normalize_image` tests

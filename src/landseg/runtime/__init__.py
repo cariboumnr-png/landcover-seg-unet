@@ -43,6 +43,7 @@ Public APIs:
     - `resolve_device`: Resolve hardware execution target string.
     - `require_widget`: Enforce and validate required notebook widgets.
     - `safe_training_session`: Interruption-safe training context manager.
+    - `validator`: Parameter and directory validation routines.
 '''
 
 # standard imports
@@ -71,11 +72,14 @@ __all__ = [
     'require_widget',
     'resolve_device',
     'safe_training_session',
+    # modules
+    'validator',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
+    from . import validator
     from .concurrency import (
         CORE_N,
         ParallelExecutor,
@@ -147,5 +151,8 @@ def __getattr__(name: str) -> typing.Any:
     }:
         obj = importlib.import_module('.platform', __package__)
         return getattr(obj, name)
+
+    if name == 'validator':
+        return importlib.import_module('.validator', __package__)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

@@ -27,7 +27,7 @@ import types
 # third-party imports
 import pytest
 # local imports
-from landseg.utils.validator import (
+from landseg.runtime.validator import (
     ValidationError,
     require_file,
     require_finite,

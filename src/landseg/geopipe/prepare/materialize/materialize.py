@@ -39,9 +39,9 @@ import numpy
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.prepare.dataset as dataset
+import landseg.artifacts.storage.npzio as npzio
 import landseg.runtime as runtime
-import landseg.utils.npzio as npzio
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- public functions

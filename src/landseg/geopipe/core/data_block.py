@@ -40,7 +40,7 @@ import typing
 import numpy
 # local imports
 import landseg.geopipe.core as geo_core
-import landseg.utils.npzio as npzio
+import landseg.artifacts.storage.npzio as npzio
 
 
 # ----- public types
