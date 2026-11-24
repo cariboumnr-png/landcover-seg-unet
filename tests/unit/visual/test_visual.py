@@ -107,37 +107,127 @@ def test_plot_training_curves_multi_head(tmp_path: pathlib.Path):
             'epoch_in_phase': 1,
             'training': {'total_objective': 1.5},
             'validation': {
-                'mtl_metrics': {'total_loss': 1.2},
                 'head_metrics': {
                     'landcover': {'mean': 0.40},
                     'species': {'mean': 0.30},
                 },
+                'mtl_metrics': {'gem': 0.35},
             },
         },
         {
             'epoch_in_phase': 2,
             'training': {'total_objective': 1.0},
             'validation': {
-                'mtl_metrics': {'total_loss': 0.8},
                 'head_metrics': {
                     'landcover': {'mean': 0.65},
                     'species': {'mean': 0.55},
                 },
+                'mtl_metrics': {'gem': 0.60},
             },
         },
     ]
 
+    json_path = tmp_path / 'step_results.json'
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(steps, f)
+
     out_file = tmp_path / 'curves.png'
-    fig = visual.plot_training_curves(steps, save_path=out_file, show=False)
+    fig = visual.plot_training_curves(json_path, save_path=out_file, show=False)
     assert fig is not None
     assert out_file.is_file()
     assert out_file.stat().st_size > 0
 
 
-def test_plot_training_curves_empty_steps():
-    '''Test that empty steps raise ValueError.'''
+def test_plot_training_curves_from_step_summaries(tmp_path: pathlib.Path):
+    '''Test plotting curves from serialized SessionStepSummary records.'''
+    training1 = core.TrainStepResults(total_objective=1.5)
+    validation1 = core.ValStepResults(
+        head_metrics={'landcover': core.AccumulatedMetrics(mean=0.45)}
+    )
+    step1 = core.SessionStepSummary(
+        phase_name='train',
+        phase_index=0,
+        phase_max_epoch=10,
+        epoch_in_phase=1,
+        global_epoch=1,
+        is_phase_end=False,
+        is_run_end=False,
+        stop_reason=None,
+        val_metrics_name='IoU from landcover',
+        val_metrics_value=0.45,
+        best_value_so_far=0.45,
+        best_epoch_so_far=1,
+        is_best_epoch=True,
+        raw_metrics=core.SessionStepResults(
+            training=training1,
+            validation=validation1,
+        ),
+    )
+
+    training2 = core.TrainStepResults(total_objective=1.0)
+    validation2 = core.ValStepResults(
+        head_metrics={'landcover': core.AccumulatedMetrics(mean=0.60)}
+    )
+    step2 = core.SessionStepSummary(
+        phase_name='train',
+        phase_index=0,
+        phase_max_epoch=10,
+        epoch_in_phase=2,
+        global_epoch=2,
+        is_phase_end=False,
+        is_run_end=False,
+        stop_reason=None,
+        val_metrics_name='IoU from landcover',
+        val_metrics_value=0.60,
+        best_value_so_far=0.60,
+        best_epoch_so_far=2,
+        is_best_epoch=True,
+        raw_metrics=core.SessionStepResults(
+            training=training2,
+            validation=validation2,
+        ),
+    )
+
+    json_path = tmp_path / 'step_results.json'
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump([step1.as_dict, step2.as_dict], f)
+
+    out_file = tmp_path / 'summary_curves.png'
+    fig = visual.plot_training_curves(json_path, save_path=out_file, show=False)
+    assert fig is not None
+    assert out_file.is_file()
+    assert out_file.stat().st_size > 0
+
+
+def test_plot_training_curves_empty_steps(tmp_path: pathlib.Path):
+    '''Test that empty step results file raises ValueError.'''
+    json_path = tmp_path / 'step_results.json'
+    json_path.write_text('[]', encoding='utf-8')
     with pytest.raises(ValueError, match='No training step records found'):
-        visual.plot_training_curves([])
+        visual.plot_training_curves(json_path)
+
+
+def test_plot_training_curves_nonexistent_path(tmp_path: pathlib.Path):
+    '''Test that non-existent path raises FileNotFoundError.'''
+    missing = tmp_path / 'nonexistent.json'
+    with pytest.raises(
+        FileNotFoundError, match='Specified path does not exist'
+    ):
+        visual.plot_training_curves(missing)
+
+
+def test_plot_training_curves_no_validation_metrics(tmp_path: pathlib.Path):
+    '''Test plotting curves when no validation head metrics are recorded.'''
+    step_data = [
+        {'epoch_in_phase': 1, 'training': {'total_objective': 1.5}},
+        {'epoch_in_phase': 2, 'training': {'total_objective': 1.1}},
+    ]
+    json_path = tmp_path / 'step_results.json'
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(step_data, f)
+
+    fig = visual.plot_training_curves(json_path, show=False)
+    assert fig is not None
 
 
 # ----- Qualitative Inspection Tests
@@ -228,8 +318,8 @@ def test_plot_training_curves_from_file_and_dir(tmp_path: pathlib.Path):
             'epoch_in_phase': 1,
             'training': {'total_objective': 2.0},
             'validation': {
-                'mtl_metrics': {'total_loss': 1.8},
                 'head_metrics': {'h1': {'mean': 0.45}},
+                'mtl_metrics': {'gem': 0.40},
             },
         }
     ]
