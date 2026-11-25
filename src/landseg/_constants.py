@@ -68,3 +68,24 @@ E2E_RECIPES = [
 ]
 
 RECIPES = SECTION_RECIPES + E2E_RECIPES
+
+SWEEP_PRESETS: tuple[str, ...] = (
+    'base',
+    'optimizer',
+    'throughput',
+    'data_geometry',
+    'context_window',
+    'architecture',
+    'bottleneck',
+    'conditioning',
+    'loss_major',
+    'loss_auxiliary',
+    'regularization',
+    'head_weights',
+    'mtl_joint',
+    'hierarchy',
+    'quick',
+    'capacity',
+    'mtl_quality',
+    'production_candidate',
+)

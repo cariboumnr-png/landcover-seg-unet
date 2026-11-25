@@ -27,8 +27,8 @@ Study sweep configurator
 import pathlib
 import typing
 # local imports
+import landseg._constants as c
 import landseg.adapters.api.configurators as configurators
-import landseg.study.sweep.presets as presets
 
 class StudySweepConfigurator(configurators.BaseConfigurator):
     '''Configure a study sweep session.'''
@@ -68,7 +68,10 @@ class StudySweepConfigurator(configurators.BaseConfigurator):
     ) -> typing.Self:
         '''Set study sweep parameters.'''
 
-        presets.resolve(preset_name)
+        if preset_name not in c.SWEEP_PRESETS:
+            raise ValueError(
+                f'Unknown preset: {preset_name!r}; allowed: {c.SWEEP_PRESETS}'
+            )
         sweep_cfg = self.cfg.study.sweep
         sweep_cfg.study_name = study_name
         sweep_cfg.preset_name = preset_name

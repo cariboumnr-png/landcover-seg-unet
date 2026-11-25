@@ -21,8 +21,14 @@
 
 '''Unit tests for API configurator classes.'''
 
+# standard imports
+import subprocess
+import sys
+# third-party imports
+import pytest
 # local imports
 import landseg.adapters.api.configurators as configurators
+import landseg.configs.schema.base as cfg_base
 
 
 # ----- `WorldGridConfigurator` tests
@@ -314,6 +320,65 @@ def test_study_sweep_configurator_canonical(tmp_path):
     assert root.session.output_dpath == str(results_out)
     assert root.data.preparation.output_dpath == str(prep_out)
     assert root.study.sweep.storage == storage
+
+
+def test_study_sweep_configurator_set_sweep_and_validation(tmp_path):
+    '''
+    Given: A `StudySweepConfigurator` instance.
+    When: Calling `set_sweep` with valid or unknown presets, or mutating
+        `preset_name` before reading `running_root_config`.
+    Then: Accept valid presets, raise ValueError eagerly in `set_sweep`, and
+        validate study sweep config in `running_root_config`.
+    '''
+    prep_out = tmp_path / 'prepared_data'
+    prep_out.mkdir(parents=True, exist_ok=True)
+    sweep_cfg = configurators.StudySweepConfigurator(
+        output_dpath=tmp_path / 'sweep_results',
+        upstream_dpath=prep_out,
+    )
+    sweep_cfg.set_runtime(
+        max_epochs=1,
+        active_heads=None,
+        patience_epoch=None,
+        track_heads=None,
+    )
+    sweep_cfg.set_sweep('my_study', 'quick', 25, direction='minimize')
+
+    root = sweep_cfg.running_root_config
+    assert root.study.sweep.study_name == 'my_study'
+    assert root.study.sweep.preset_name == 'quick'
+    assert root.study.sweep.n_trials == 25
+    assert root.study.sweep.direction == 'minimize'
+
+    with pytest.raises(ValueError, match='Unknown preset'):
+        sweep_cfg.set_sweep('my_study', 'unknown_preset', 10)
+
+    sweep_cfg.cfg.study.sweep.preset_name = 'unknown_preset'
+    with pytest.raises(cfg_base.ConfigValidationError):
+        _ = sweep_cfg.running_root_config
+
+
+def test_study_sweep_configurator_does_not_import_optuna():
+    '''
+    Given: A fresh Python interpreter importing `landseg.adapters.api`.
+    When: Accessing and instantiating `StudySweepConfigurator`.
+    Then: Neither `optuna` nor `landseg.study` is imported.
+    '''
+    probe = (
+        'import sys; '
+        'import landseg.adapters.api as api; '
+        'cfg = api.StudySweepConfigurator(); '
+        'cfg.set_sweep("s", "base", 1); '
+        'assert "optuna" not in sys.modules; '
+        'assert "landseg.study" not in sys.modules'
+    )
+    result = subprocess.run(
+        [sys.executable, '-c', probe],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_configurator_set_output_and_upstream_dpaths(tmp_path):
