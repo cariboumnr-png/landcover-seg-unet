@@ -40,12 +40,12 @@ import pathlib
 import typing
 # third-party imports
 import numpy
-import torch
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.geopipe.core as geo_core
 import landseg.knowledge as knowledge
+
 
 # ----- public functions
 def build_dataspec(
@@ -250,39 +250,12 @@ def _get_heads(
                 counts[k] = v
     else:
         counts = {k: v for k, v in raw_counts.items() if k != 'original'}
-    taxonomy: dict[str, dict[str, typing.Any]] = {
-        k: dict(v)
-        for k, v in data_schema['labels'].get('label_taxonomy', {}).items()
-    }
-    class_names = data_schema['labels'].get('label_class_names', {})
-    sim_matrices: dict[str, torch.Tensor] = {}
-    if knowledge_paths is not None and knowledge_paths.root.exists():
-        for hname, tax_dict in taxonomy.items():
-            if isinstance(tax_dict, dict) and 'profile' in tax_dict:
-                profile = tax_dict['profile']
-                cls_list = class_names.get(hname)
-                num_cls = len(counts[hname])
-                if cls_list and len(cls_list) == num_cls:
-                    mapping = {
-                        str(i): c for i, c in enumerate(cls_list, 1)
-                    }
-                    try:
-                        resolved = knowledge.validate_specs(
-                            profile,
-                            mapping,
-                            num_cls,
-                            knowledge_root=knowledge_paths.root,
-                        )
-                        taxonomy[hname] = dict(resolved)
-                    except (ValueError, FileNotFoundError):
-                        pass
-                try:
-                    sim_matrices[hname] = knowledge.resolve_similarity_matrix(
-                        profile,
-                        knowledge_root=knowledge_paths.root,
-                    )
-                except (FileNotFoundError, artifacts.ArtifactError):
-                    pass
+    taxonomy, sim_matrices = knowledge.resolve_head_knowledge(
+        counts,
+        data_schema['labels'].get('label_taxonomy', {}),
+        data_schema['labels'].get('label_class_names', {}),
+        knowledge_paths.root if knowledge_paths is not None else None,
+    )
 
     head_parent: dict[str, str | None]
     head_parent_cls: dict[str, int | None]

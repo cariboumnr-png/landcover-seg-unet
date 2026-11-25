@@ -31,6 +31,7 @@ Public APIs:
     - `SpeciesEntry`: TypedDict for per-species embedding entry metadata.
     - `TaxonomySpec`: TypedDict for domain taxonomy specification.
     - `generate_embeddings_and_matrix`: Build species embeddings and matrix.
+    - `resolve_head_knowledge`: Resolve head taxonomies and similarity matrices.
     - `resolve_profile_metadata`: Load embeddings metadata for a profile.
     - `resolve_similarity_matrix`: Load precomputed species similarity matrix.
     - `validate_specs`: Validate taxonomy specs against knowledge base.
@@ -44,6 +45,7 @@ import typing
 __all__ = [
     # functions
     'generate_embeddings_and_matrix',
+    'resolve_head_knowledge',
     'resolve_profile_metadata',
     'resolve_similarity_matrix',
     'validate_specs',
@@ -62,6 +64,7 @@ if typing.TYPE_CHECKING:
         generate_embeddings_and_matrix,
     )
     from .resolver import (
+        resolve_head_knowledge,
         resolve_profile_metadata,
         resolve_similarity_matrix,
     )
@@ -81,6 +84,7 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
+        'resolve_head_knowledge',
         'resolve_profile_metadata',
         'resolve_similarity_matrix',
     }:

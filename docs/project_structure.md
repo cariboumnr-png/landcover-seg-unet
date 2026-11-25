@@ -176,6 +176,7 @@ src/landseg/
 |   |   |-- stack.py              Multi-channel raster stacking
 |   |   |-- vrt.py                Virtual raster writing and VRT tag parsing
 |   |   `-- warp.py               Reprojection, warping, and bounds transforms
+|   |-- diagnostic.py             Diagnostic single-block DataSpecs builder
 |   |-- factory.py                DataSpecs factory
 |   `-- validation.py             Public pre-flight and stage contract validation facade
 |

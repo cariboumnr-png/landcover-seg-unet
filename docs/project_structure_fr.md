@@ -178,6 +178,7 @@ src/landseg/
 |   |   |-- stack.py              Empilement multi-canaux de rasters
 |   |   |-- vrt.py                Écriture de rasters virtuels et analyse de balises VRT
 |   |   `-- warp.py               Reprojection, distorsion et transformations de limites
+|   |-- diagnostic.py             Constructeur diagnostique de DataSpecs sur bloc unique
 |   |-- factory.py                Factory des DataSpecs
 |   `-- validation.py             Façade publique de validation pre-flight et des contrats d'étape
 |
