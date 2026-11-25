@@ -154,7 +154,7 @@ def test_block_dataset_getitem_no_augment_flip(tmp_path):
     )
 
 
-def test_block_dataset_getitem_hflip_only(tmp_path):
+def test_block_dataset_getitem_hflip_only(tmp_path, monkeypatch: pytest.MonkeyPatch):
     '''
     Given: A `_BlockDataset` configured with augment flip.
     When: manually set hflip only and call `__getitem__`.
@@ -166,8 +166,7 @@ def test_block_dataset_getitem_hflip_only(tmp_path):
         torch.tensor(0.1),  # < 0.5 horizontal flip
         torch.tensor(0.9),  # > 0.5 no vertical flip
     ])
-    patch = pytest.MonkeyPatch()
-    patch.setattr('torch.rand', lambda _: next(values))
+    monkeypatch.setattr('torch.rand', lambda _: next(values))
 
     x, y, _ = dt[0]
 
@@ -181,7 +180,7 @@ def test_block_dataset_getitem_hflip_only(tmp_path):
     )
 
 
-def test_block_dataset_getitem_vflip_only(tmp_path):
+def test_block_dataset_getitem_vflip_only(tmp_path, monkeypatch: pytest.MonkeyPatch):
     '''
     Given: A `_BlockDataset` configured with augment flip.
     When: manually set vflip only and call `__getitem__`.
@@ -193,8 +192,7 @@ def test_block_dataset_getitem_vflip_only(tmp_path):
         torch.tensor(0.9),  # > 0.5 no horizontal flip
         torch.tensor(0.1),  # < 0.5 vertical flip
     ])
-    patch = pytest.MonkeyPatch()
-    patch.setattr('torch.rand', lambda _: next(values))
+    monkeypatch.setattr('torch.rand', lambda _: next(values))
 
     x, y, _ = dt[0]
 
@@ -208,7 +206,7 @@ def test_block_dataset_getitem_vflip_only(tmp_path):
     )
 
 
-def test_block_dataset_getitem_both_flip(tmp_path):
+def test_block_dataset_getitem_both_flip(tmp_path, monkeypatch: pytest.MonkeyPatch):
     '''
     Given: A `_BlockDataset` configured with augment flip.
     When: manually set to flip both directions and call `__getitem__`.
@@ -220,8 +218,7 @@ def test_block_dataset_getitem_both_flip(tmp_path):
         torch.tensor(0.1),  # < 0.5 horizontal flip
         torch.tensor(0.1),  # < 0.5 vertical flip
     ])
-    patch = pytest.MonkeyPatch()
-    patch.setattr('torch.rand', lambda _: next(values))
+    monkeypatch.setattr('torch.rand', lambda _: next(values))
 
     x, y, _ = dt[0]
 

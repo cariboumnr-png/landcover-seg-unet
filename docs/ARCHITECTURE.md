@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last updated: 2026-10-24**
+**Last updated: 2026-11-25**
 
 ---
 
@@ -49,7 +49,7 @@ Model Representation (`landseg.models`) & Runtime Session (`landseg.session`)
   [DataLoaders ──► Engines ──► Multi-Task Objectives ──► Callbacks & Orchestration]
   │
   ▼
-Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
+Artifact Results (`SessionResults`), Evaluated Checkpoints, Visual Diagnostics, & Study Reports
 ```
 
 ---
@@ -57,7 +57,7 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 ## Architectural Layers (What Each Owns)
 
 ### 1. Geospatial Pipeline ([`geopipe`](../src/landseg/geopipe))
-- Owns pure, deterministic raster transformations and spatial layouts:
+- Owns pure, deterministic raster transformations, stage orchestration, and spatial layouts:
   - **Rasters Subsystem (`rasters`)**: Consolidates low-level raster I/O, window
     reading, geometry and coordinate validation, CRS checks, bounds
     reprojection, masking, virtual mosaicking, and VRT manipulation. Acts as
@@ -67,34 +67,43 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     bounding extent, tile dimensions, and stride via [`GridLayout`](../src/landseg/geopipe/grid/layout.py).
   - **Data Harmonization (`harmonize`)**: Reprojects, warps, and stacks
     heterogeneous multi-band rasters into aligned Virtual Rasters (VRT) with
-    central manifest metadata compilation and processor composition.
+    central manifest metadata compilation (`DatasetManifestBuilder`, `SensorPreset`)
+    and processor composition.
   - **Data Ingestion (`ingest`)**: Slices harmonized rasters into unpartitioned
     canonical `.npz` data blocks, extracts categorical domain maps and PCA,
     resolves block collisions (`skip` vs `overwrite`), and registers batch runs.
   - **Data Preparation (`prepare`)**: Provides an in-memory dataset catalog view,
     applies geographic AOI partitioning (train/val/test splits), computes
     online Welford normalization statistics, and materializes datasets.
-- Emits the runtime [`DataSpecs`](../src/landseg/core/data_specs.py) contract. Free of persistence logic
-  and runtime training dependencies.
+- Exposes lazy public facades on top-level `landseg.geopipe`:
+  - **Stage Runners (`stages.py`)**: Public `run_*_stage` entrypoints encapsulating
+    stage loggers, `build_*_context`, execution, and ledger updates.
+  - **Contract Validation (`validation.py`)**: Plain-data `validate_*` wrappers for
+    pre-flight contract probes.
+  - **DataSpecs & Diagnostics (`factory.py`, `diagnostic.py`)**: Emits runtime
+    [`DataSpecs`](../src/landseg/core/data_specs.py) (`build_dataspec`, `build_overfit_dataspec`)
+    free of session training loop dependencies.
 
 ---
 
 ### 2. Domain Knowledge & Embeddings ([`knowledge`](../src/landseg/knowledge))
 - Owns curated ecological domain assets and taxonomic alignment:
-  - **Species Profiles & Taxonomies (`knowledge.taxonomy`)**: Validates target
-    class taxonomies against official Forest Resources Inventory (FRI) species
-    codes.
+  - **Species Profiles & Taxonomies (`knowledge.taxonomy`)**: Defines
+    `TaxonomySpec` and validates target class taxonomies against official Forest
+    Resources Inventory (FRI) species codes.
   - **Embeddings & Similarity (`knowledge.embeddings`, `knowledge.resolver`)**:
     Encodes ecological descriptions into dense vector spaces and resolves
-    class cosine similarity matrices for ecological loss regularization.
-- Decoupled as an optional external asset (`execution.knowledge_dir`). Missing or
-  null knowledge paths gracefully bypass ecological regularization without
-  blocking execution.
+    head taxonomies and cosine similarity matrices (`resolve_head_knowledge`)
+    for regularizers, `geopipe.factory`, and `geopipe.diagnostic`.
+- Decoupled as an acyclic domain asset configured via `execution.knowledge_dir`.
+  Missing or null knowledge paths gracefully bypass ecological regularization
+  without blocking execution.
 
 ---
 
 ### 3. Artifacts & Lifecycle Policy ([`artifacts`](../src/landseg/artifacts))
-- Centralized persistence, validation, and lifecycle governance via
+- Centralized persistence, validation, storage primitives (`storage.npzio`,
+  `storage.scratch`), and lifecycle governance via
   [`controller`](../src/landseg/artifacts/controller.py).
 - Implements [`ArtifactPolicy`](../src/landseg/artifacts/policy.py): determines whether to `build`, `reuse`,
   or `overwrite` artifacts based on file presence, content hashes, and CLI flags.
@@ -112,12 +121,13 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
   - **Lineage**: Upstream stage prerequisites and ledger run presence.
   - **Filesystem**: Output directory writability and safe overwrite detection.
   - **Domain & Spatial**: CRS compatibility, raster origin alignment, raw
-    manifest schemas, and model dimension parity.
+    manifest schemas, and model dimension parity (delegating stage contract checks
+    through top-level `landseg.geopipe.validate_*`).
   - **Hardware**: CUDA availability, device detection, and VRAM headroom.
 - Emits standardized 120-column terminal dashboards and structured JSON reports.
 - **Diagnostic, not authoritative**: Preflight passed does not guarantee stage
   execution success (`preflight checks passed != geopipe stage guarantees to run`).
-  Authoritative gating occurs via config schema validation and runtime context
+  Authoritative gating occurs via config schema validation and stage runtime context
   building (`build_*_context`); converting context building into preflight checks
   was dropped to prevent scope creeping.
 
@@ -129,12 +139,14 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 - Enforces strict structural separation between:
   - **Atomic Pipelines ([`pipelines`](../src/landseg/execution/pipelines))**: Strict 1:1 execution invariants
     for individual stages (`world_grid`, `data_harmonize`, `data_ingest`,
-    `data_prepare`, `model_train`, `model_evaluate`).
+    `data_prepare`, `model_train`, `model_evaluate`), delegating geospatial stages
+    through top-level `landseg.geopipe.run_*_stage` facades.
   - **Composite Workflows ([`workflows`](../src/landseg/execution/workflows))**: Orchestrated multi-stage execution
     flows (`batch_ingest`, `diagnose_overfit`, `e2e_intake`, `e2e_experiment`,
-    `study_sweep`, `study_analysis`).
-- Resolves configuration and artifact lifecycles; delegates stage construction
-  to domain factories.
+    `study_sweep`, `study_analysis`) consuming top-level `landseg.geopipe`,
+    `landseg.session`, and `landseg.study` entrypoints.
+- Resolves configuration and artifact lifecycles; delegates domain construction
+  to top-level domain facades.
 
 ---
 
@@ -163,10 +175,13 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     optimizer/scheduler builders, and multi-task objectives (loss functions,
     evaluation metrics, and spectral/spatial/ecological regularizations).
   - **Instrumentation (`session.instrumentation`)**: Event callback dispatcher,
-    tracking facade (TensorBoard, MLflow, CSV/console), and visual prediction
-    preview formatters.
+    tracking facade (TensorBoard, MLflow, CSV/console), and report formatters
+    (`formatters.report`).
   - **Orchestration (`session.orchestration`)**: Continuous or curriculum
     runners, phase transitions, and training state preservation.
+  - **Preview Inference (`session.preview`)**: Representative test-block selection
+    and stitched inference (`select_representative_block`, `run_preview_inference`)
+    feeding `landseg.visual` without coupling visualization to session data/models.
 - Pre-flight assembled before execution; supports evaluation-only sessions
   without training scaffolding, emitting structured [`SessionResults`](../src/landseg/core/session_results.py).
 
@@ -174,10 +189,12 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 
 ### 8. Dual-Surface Configuration ([`configs`](../src/landseg/configs) & [`adapters`](../src/landseg/adapters))
 - Enforces strict separation between core schema contracts and user-facing
-  ergonomic surfaces:
+  ergonomic surfaces, resolving `adapters.api` and `adapters.cli` lazily from
+  [`landseg.adapters`](../src/landseg/adapters/__init__.py):
   - **Core Schemas (`configs.schema`)**: Strongly typed Python dataclass
     hierarchy ([`RootConfig`](../src/landseg/configs/schema/root.py)), strictly isomorphic and isolated from
-    CLI/notebook ergonomics.
+    CLI/notebook ergonomics, validating sweep preset names against `SWEEP_PRESETS`
+    in `_constants.py`.
   - **Hydra Trees (`configs.hydra`)**: Modular YAML composition defaults.
   - **User CLI Surface (`adapters.cli`)**: Task-specific, modular recipes
     (`configs/*.yaml`) resolved directly into structured Hydra configs
@@ -185,9 +202,10 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     via `execution.recipe_fpath` / `--recipe`, and unified environment
     fallbacks (`${oc.env:LANDSEG_*}`).
   - **Programmatic API Surface (`adapters.api`)**: Notebook-first configurators
-    with typed, programmatically safe builder methods. Implements canonical
-    decoupled stage I/O (`upstream_dpath`, `output_dpath`) with single-upstream
-    provenance forwarding and auxiliary `from_experiment_root(...)` macros (ADR-0067).
+    with typed, programmatically safe builder methods (without eagerly loading
+    Hydra `cli` or Optuna `study` modules). Implements canonical decoupled stage I/O
+    (`upstream_dpath`, `output_dpath`) with single-upstream provenance forwarding
+    and auxiliary `from_experiment_root(...)` macros (ADR-0067).
 
 ---
 
@@ -201,31 +219,36 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 ---
 
 ### 10. Enterprise MLOps & Storage Resolution ([`mlops`](../src/landseg/mlops))
-- Provides standardized cloud workspace, environment detection, and governance
-  services across CLI and notebooks:
+- Provides standardized cloud workspace and governance services across CLI and
+  notebooks:
   - **Storage Resolution (`mlops.storage`)**: Precedence-based resolution of
     `exp_root` across Unity Catalog Volumes (`/Volumes/...`) and local POSIX
     filesystems; environment-safe two-tiered Optuna SQLite storage routing and
     volume synchronization.
-  - **Runtime & Lineage Probing (`runtime.platform`)**: Zero-crash environment
-    discovery for Databricks runtimes, `dbutils` handles, cluster IDs, and
-    git commit SHAs.
   - **Model Registry Integration (`mlops.registry`)**: Standardized model
     registration to Unity Catalog (`models:/<catalog>.<schema>.<model_name>`)
     with governance tags.
 
 ---
 
-### 11. Interactive Presentation & Telemetry ([`notebooks`](../src/landseg/notebooks))
-- Encapsulates interactive UI and process safety concerns without polluting
-  headless execution layers:
-  - **Multi-Runtime Widgets (`runtime.interactive`)**: Native `dbutils.widgets`
-    bridge with silent headless fallbacks and typed getters.
-  - **Process Safety & Interruption Handling (`notebooks.telemetry`)**: Graceful
-    `KeyboardInterrupt` capture, emergency checkpoint flushing, and CUDA
-    memory cleanup.
-  - **In-Cell Visual Telemetry (`notebooks.telemetry`)**: Live loss/metric curves
-    and qualitative side-by-side segmentation previewers.
+### 11. Visual Presentation & Diagnostics ([`visual`](../src/landseg/visual))
+- Pure, headless visualization layer (Matplotlib `Agg`) decoupled from host
+  interactive globals, training loops, model construction, and dataloaders:
+  - **Palettes & Colorization (`visual.color`)**: Standardized land cover and
+    forestry palettes (`DEFAULT_ERROR_PALETTE`, `DEFAULT_MATCH_PALETTE`,
+    `FORESTRY_FRI_PALETTE`, `NLCD_16_PALETTE`), categorical color mapping,
+    and continuous colormaps.
+  - **Curves & Trends (`visual.curves`)**: Multi-head training and validation
+    metric plotting from persisted artifact paths.
+  - **Qualitative Previews (`visual.preview`)**: Pure side-by-side input, ground
+    truth, and multi-head prediction masks rendered directly from
+    [`InferStepResults`](../src/landseg/core/session_results.py) and
+    [`DataSpecs`](../src/landseg/core/data_specs.py).
+  - **Diagnostic Heatmaps (`visual.diagnostics`)**: Normalized confusion matrices
+    and per-class metric bar charts integrated into model evaluation.
+  - **Spatial Stage-Zero Visuals (`visual.spatial`)**: World grid tiling layouts,
+    AOI partition footprints, class pixel frequency audits, and multi-band
+    spectral composites.
 
 ---
 
@@ -237,33 +260,44 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
     device querying, and CPU/GPU hardware capability probes.
   - **Parallel Concurrency (`runtime.concurrency`)**: Core-aware worker pool sizing
     (`ParallelExecutor`) supporting threads and processes with progress bars.
-  - **Interactive Widgets (`runtime.interactive`)**: Multi-runtime notebook
-    widgets with graceful local CLI and Databricks fallbacks.
+  - **Interactive Session Safety & Widgets (`runtime.interactive`)**: Multi-runtime
+    notebook widgets and graceful `KeyboardInterrupt` / CUDA memory cleanup
+    via `safe_training_session`.
   - **Unified Logging (`runtime.logger`)**: Formatted file and console loggers
     with structured run reports.
+  - **Contract & Type Validation (`runtime.validator`)**: Zero-dependency primitive
+    type, choice, and directory boundary validation.
 
 ---
 
 ## Key Rules
 
+- **Top-level lazy facades across subsystems**: Cross-subsystem consumers in
+  `src/landseg/`, `scripts/`, and `notebooks/` import only top-level `landseg.<pkg>`
+  public APIs (with zero-dependency `landseg.runtime.validator` leaf imports as the
+  only permitted internal submodule exception).
 - **No implicit recomputation**: All data exchange passes through verified
   artifacts governed by [`artifacts.controller`](../src/landseg/artifacts/controller.py).
-- **Pure geospatial computation**: [`geopipe`](../src/landseg/geopipe) stages never make persistence
-  decisions or track training state; persistence is strictly mediated by artifact
-  lifecycle policies.
+- **Pure geospatial computation & encapsulated stage orchestration**:
+  [`geopipe`](../src/landseg/geopipe) internals never track training state or make
+  lifecycle decisions outside injected policies; external callers invoke
+  `geopipe`'s top-level `stages`, `validation`, and `diagnostic` facades rather
+  than internal stage subpackages.
 - **No construction in execution pipelines**: Execution pipelines orchestrate
   lifecycle contracts; stage-specific construction is delegated to domain
-  factories.
+  factories and facades.
 - **Pre-flight readiness before execution**: Non-destructive diagnostic audits
   validate hardware, spatial alignment, and lineage before compute is allocated.
 - **Decoupled model from session**: [`models`](../src/landseg/models) strictly owns neural network
   architectures ([`ModelProtocol`](../src/landseg/core/model_protocol.py)); [`session`](../src/landseg/session) owns dataloaders, loss functions,
-  metrics, optimization, and training loops.
-- **DataSpecs is the only dataset contract**: Model and session layers
+  metrics, optimization, preview inference, and training loops.
+- **Pure visual presentation**: [`visual`](../src/landseg/visual) renders figures
+  from persisted logs and [`core`](../src/landseg/core) contracts without constructing models, schemas, or dataloaders.
+- **DataSpecs is the only dataset contract**: Model, session, and visual layers
   interface with geospatial data exclusively through [`DataSpecs`](../src/landseg/core/data_specs.py).
 - **Isomorphic schemas & decoupled surfaces**: Ergonomic user YAML configs and
-  API configurators are translated into immutable structured config dataclasses,
-  preventing UI logic from leaking into core schemas.
+  API configurators translate into immutable structured config dataclasses without
+  pulling `study`/`optuna` or UI formatting into core schemas.
 - **Decoupled stage I/O & single-upstream lineage**: Stages operate on
   explicit upstream and output paths without requiring a shared directory root;
   model training stages depend strictly on preparation outputs with lineage
@@ -277,19 +311,21 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
 ## Mental Model
 
 - **Geopipe prepares data**: World grid, raster harmonization, canonical block
-  pooling, and AOI-aware dataset preparation.
+  pooling, AOI-aware dataset preparation, and public stage/validation/diagnostic facades.
 - **Artifacts guarantee reproducibility**: Centralized lifecycle policy (build,
-  reuse, overwrite), canonical path contracts, and run ledgers.
+  reuse, overwrite), canonical path contracts, storage primitives, and run ledgers.
 - **Preflight validates readiness**: Non-destructive dry-run audits across
   lineage, storage, spatial alignment, and hardware VRAM headroom.
 - **Models define representations**: Modular backbones, conditioning, heads,
   and model frames.
-- **Session executes training**: Data streaming, batch/epoch execution engines,
-  multi-task objectives, callbacks, and curriculum orchestration.
+- **Session executes training & previews**: Data streaming, batch/epoch execution
+  engines, multi-task objectives, preview inference, callbacks, and curriculum orchestration.
+- **Visual renders diagnostics**: Pure headless plots, heatmaps, spatial layouts,
+  and qualitative prediction comparisons.
 - **Execution orchestrates dispatch**: Unified dispatcher separating atomic
   pipelines from composite workflows.
 - **Configuration adapts ergonomics**: Strongly typed Hydra schemas decoupled
-  from ergonomic YAML configs and programmatic API configurators.
+  from ergonomic YAML configs and lazy API/CLI adapters.
 
 ---
 
@@ -299,9 +335,10 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, & Study Reports
   identical artifacts and model states.
 - **No silent rebuilds or accidental overwrites**: Lifecycle policy explicitly
   controls reuse vs rebuild; run ledgers maintain full auditability.
-- **Clear boundary separation**: Build-time geospatial transformations are
-  strictly decoupled from runtime GPU training loops.
+- **Clear boundary separation**: Build-time geospatial transformations, runtime
+  GPU sessions, and headless figure rendering interact strictly via public facades
+  and `landseg.core` contracts.
 - **Non-destructive validation**: Pre-flight readiness probes verify environment
   integrity without mutating disk state or consuming training resources.
 - **Isomorphic configuration contracts**: Core dataclasses validate contracts
-  without leaking user-interface or formatting abstractions.
+  without leaking user-interface, Optuna, or formatting abstractions.

@@ -46,10 +46,11 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- knowledge/                Domain taxonomy validation, species embeddings, similarity matrices
 |   |-- mlops/                    Cloud volume storage, environment probing, Unity Catalog registry
 |   |-- models/                   Model frames, backbones, heads, conditioning, factories
-|   |-- notebooks/                Interactive widgets, visual telemetry, and cancellation safety
+|   |-- runtime/                  Hardware detection, platform environment, concurrency, logger, validator, interactive widgets
 |   |-- session/                  Runtime session construction, orchestration, and engines
 |   |-- study/                    Sweep and post-run study analysis utilities
-|   |-- utils/                    Shared logging and multiprocessing helpers
+|   |-- testing/                  Dedicated test fixtures and factory builders
+|   |-- visual/                   Palette colorization, training curves, prediction previews, diagnostic heatmaps, spatial layouts
 |   |-- py.typed                  PEP 561 type annotation marker
 |   |-- _constants.py             Shared constants
 |   `-- __init__.py
@@ -99,7 +100,8 @@ src/landseg/
 |   |-- ledger.py                 Fingerprint calculation and run collision detection
 |   |-- paths/                    Canonical artifact path definitions
 |   |-- payload_io.py             Structured payload and metadata persistence
-|   `-- policy.py                 Artifact lifecycle rules
+|   |-- policy.py                 Artifact lifecycle rules
+|   `-- storage/                  Sequential archive persistence (npzio)
 |
 |-- configs/
 |   |-- hydra/
@@ -110,9 +112,12 @@ src/landseg/
 |   |   |-- session/              Dataloader, engine, task, and orchestration configs
 |   |   `-- study/                Study/sweep defaults
 |   `-- schema/
+|       |-- base.py               Base schema classes and validation helpers
 |       |-- root.py               Root structured config schema
-|       |-- utils.py              Schema helper utilities
-|       `-- sections/             Section dataclasses for commands, session, models, data, etc.
+|       |-- data/                 Geospatial stage config schemas
+|       |-- models/               Model architecture config schemas
+|       |-- session/              Session runtime config schemas
+|       `-- study/                Study and sweep config schemas
 |
 |-- core/
 |   |-- data_specs.py             Runtime data specification contract
@@ -200,6 +205,14 @@ src/landseg/
 |   |-- frames/                   Full model frames that wire backbones and heads
 |   `-- factory.py                Top-level model construction
 |
+|-- runtime/
+|   |-- concurrency.py            Core-aware worker pool sizing and parallel execution
+|   |-- hardware.py               Device detection, memory querying, and capability probes
+|   |-- interactive.py            Notebook widgets and safe training session interrupt handling
+|   |-- logger.py                 Unified logging and structured reports
+|   |-- platform.py               Cluster environment discovery, Databricks introspection, git lineage
+|   `-- validator.py              Zero-dependency primitive validation functions
+|
 |-- session/
 |   |-- contracts/                Shared data, observer, and phase protocols
 |   |-- data/                     Dataset, collation, memory, and dataloader construction
@@ -226,10 +239,16 @@ src/landseg/
 |   |-- analysis/                 Trial/result analysis helpers
 |   `-- sweep/                    Optuna objective, config, and optimization helpers
 |
-|-- utils/
-|   |-- logger.py                 Logging setup
-|   |-- multip.py                 Multiprocessing helpers
-|   `-- validator.py              Zero-dependency primitive validation functions
+|-- testing/
+|   |-- fixtures/                 Synthetic raster and dataset mock fixtures
+|   `-- factories/                Test data and model object builder factories
+|
+|-- visual/
+|   |-- color.py                  Canonical palettes and categorical/continuous colorization
+|   |-- curves.py                 Multi-head loss and metric curve plotting
+|   |-- diagnostics.py            Confusion matrix and per-class performance evaluation plotting
+|   |-- preview.py                Qualitative segmentation preview and error highlight rendering
+|   `-- spatial.py                World grid layout, class pixel frequency, and spectral composite plotting
 ```
 
 ### Current Boundary Notes
@@ -258,18 +277,24 @@ src/landseg/
 - Session Hydra configuration mirrors these boundaries: `dataloader` and the
   nested `engine` group (execution, optimization, schedule, and tasks) are
   distinct from `orchestration` monitoring, curriculum, and resume settings.
-- `geopipe/` stages (`harmonize`, `ingest`, `prepare`) provide symmetric triads
-  (`context.py`, `logger.py`, `pipeline.py`) governed by central `contracts/`.
+- `execution/pipelines/` orchestrates geospatial stages through public runners in
+  top-level `landseg.geopipe` (`stages.py`), while `geopipe/` internal subpackages
+  (`harmonize`, `ingest`, `prepare`) keep symmetric triads (`context.py`,
+  `logger.py`, `pipeline.py`) governed by central `contracts/`.
 - Task-oriented recipes in `configs/*.yaml` resolve directly into structured
   Hydra contracts without an intermediate translation layer.
 - `execution/preflight/` is a declarative, catalog-driven readiness engine.
   Target readiness suites are defined as data in `catalog.py` and evaluated via
-  categorized checks in `checks/`. Domain contract probes delegate directly to
-  stage `validators`.
+  categorized checks in `checks/`. Domain contract probes delegate through
+  `geopipe/validation.py` (`landseg.geopipe.validate_*`).
 - Preflight validation is diagnostic: passing preflight confirms prerequisite
   presence and path readiness but does not guarantee execution success. True
   execution gating is enforced by configuration schema validation (`configs/schema/`)
   and stage runtime context builders (`build_*_context`).
-- `geopipe/` stages (`grid`, `harmonize`, `ingest`, `prepare`) expose public,
-  read-only `validators` namespaces on their module roots (`__init__.py`),
-  providing a shared validation contract for preflight probes and internal execution.
+- Cross-subsystem consumers (`execution/`, `scripts/`, `notebooks/`) interact with
+  `geopipe/`, `knowledge/`, `session/`, and `visual/` strictly via top-level lazy
+  package facades (`landseg.<pkg>`), keeping `runtime/validator.py` as the sole
+  zero-dependency leaf exception.
+- `visual/` is pure headless presentation over `core` contracts (`DataSpecs`,
+  `InferStepResults`) and persisted paths; fallback inference orchestration lives
+  in `session/preview.py`.

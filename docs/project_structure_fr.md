@@ -112,9 +112,12 @@ src/landseg/
 |   |   |-- session/              Configs dataloader, moteur, taches et orchestration
 |   |   `-- study/                Defaults d'etude et de sweep
 |   `-- schema/
+|       |-- base.py               Classes de base et assistants de validation
 |       |-- root.py               Schema structure racine
-|       |-- utils.py              Utilitaires de schema
-|       `-- sections/             Dataclasses par section: commands, session, models, data, etc.
+|       |-- data/                 Schemas de config des etapes geospatiales
+|       |-- models/               Schemas de config des architectures modeles
+|       |-- session/              Schemas de config du runtime de session
+|       `-- study/                Schemas de config d'etude et de sweep
 |
 |-- core/
 |   |-- data_specs.py             Contrat runtime de specification des donnees
@@ -277,20 +280,25 @@ src/landseg/
   groupe `engine` imbrique (execution, optimisation, planification et taches)
   sont distincts des parametres de monitoring, curriculum et reprise de
   `orchestration`.
-- `geopipe/` est organisé en trois étapes (`harmonize`, `ingest`, `prepare`),
-  offrant des triades symétriques (`context.py`, `logger.py`, `pipeline.py`),
-  régies par les contrats centraux dans `contracts/`.
+- `execution/pipelines/` orchestre les étapes géospatiales via les exécuteurs
+  publics du module racine `landseg.geopipe` (`stages.py`), tandis que les
+  sous-packages internes de `geopipe/` (`harmonize`, `ingest`, `prepare`)
+  conservent leurs triades symétriques (`context.py`, `logger.py`, `pipeline.py`)
+  régies par `contracts/`.
 - Les recettes orientées tâches sous `configs/*.yaml` se résolvent directement
   dans les contrats Hydra structurés sans couche de traduction intermédiaire.
 - `execution/preflight/` est un moteur d'inspection déclaratif piloté par catalogue.
   Les suites de préparation par cible sont définies comme données dans `catalog.py`
   et évaluées via des vérifications catégorisées dans `checks/`. Les sondes de contrat
-  de domaine délèguent directement aux `validators` de chaque étape.
+  de domaine délèguent via `geopipe/validation.py` (`landseg.geopipe.validate_*`).
 - La validation avant vol est diagnostique : réussir preflight confirme la présence
   des prérequis mais ne garantit pas la réussite de l'exécution. Le filtrage effectif
   est assuré par la validation des schémas de configuration (`configs/schema/`) et
   les constructeurs de contexte d'exécution (`build_*_context`).
-- Les étapes de `geopipe/` (`grid`, `harmonize`, `ingest`, `prepare`) exposent des
-  espaces de noms publics et purs `validators` sur la racine de leur module
-  (`__init__.py`), fournissant un contrat de validation partagé pour les sondes et
-  l'exécution interne.
+- Les consommateurs inter-sous-systèmes (`execution/`, `scripts/`, `notebooks/`)
+  interagissent avec `geopipe/`, `knowledge/`, `session/` et `visual/` uniquement via
+  leurs façades paresseuses de niveau racine (`landseg.<pkg>`), `runtime/validator.py`
+  restant l'unique exception feuille sans dépendance.
+- `visual/` est une couche de présentation pure sans état opérant sur les contrats
+  `core` (`DataSpecs`, `InferStepResults`) et des chemins persistés ; l'inférence
+  d'aperçu réside dans `session/preview.py`.
