@@ -44,7 +44,7 @@ execution tiers (see
 - **Scheduled Notebook Execution**: When deployed in Databricks Workflows or
   Databricks Asset Bundles (DABs), the notebooks run end-to-end headlessly.
   Task parameters passed via Databricks Jobs are automatically captured by
-  `landseg.notebooks.NotebookWidgets`.
+  `landseg.runtime.NotebookWidgets`.
 
 ### 2. Tier 2: Interactive Researcher Exploration (Databricks)
 - **Target Audience**: Data scientists and domain colleagues exploring data,

@@ -45,7 +45,7 @@ d'exécution explicites (voir
   Databricks Workflows ou des Databricks Asset Bundles (DABs), les notebooks
   s'exécutent de bout en bout en mode headless. Les paramètres de tâche transmis
   via les Jobs Databricks sont automatiquement capturés par
-  `landseg.notebooks.NotebookWidgets`.
+  `landseg.runtime.NotebookWidgets`.
 
 ### 2. Niveau 2 : Exploration interactive pour les chercheurs (Databricks)
 - **Public cible** : Data scientists et collègues spécialistes du domaine explorant

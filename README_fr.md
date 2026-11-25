@@ -40,10 +40,12 @@ Actuellement utilisable:
 - Moteur de validation d'aptitude avant vol
 - Chemins de code pour les adaptateurs TensorBoard et MLflow
 - Points d'entree de commande pour le sweep d'etude et l'analyse d'etude orientes Optuna
-- Architecture de notebooks de production, widgets interactifs, télémétrie en
-  cellule et sécurité d'interruption (`landseg.notebooks`, ADR-0066)
+- Architecture de notebooks de production, widgets interactifs et sécurité
+  d'interruption (`landseg.runtime`, ADR-0066, ADR-0069)
 - Sous-système MLOps d'entreprise, intégration Unity Catalog Volumes & Model
   Registry (`landseg.mlops`, ADR-0066)
+- Visualisation sans interface : courbes d'entraînement, aperçus de prédiction,
+  diagnostics d'évaluation et graphiques spatiaux (`landseg.visual`, ADR-0069)
 
 Encore en maturation:
 
@@ -58,7 +60,7 @@ Encore en maturation:
 - [Schema du workflow](./docs/workflow_chart_fr.md)
 - [Guide de preparation des donnees](./docs/data_preparation_fr.md)
 - [Guide de preparation avant vol](./docs/preflight_readiness_fr.md)
-- [Notebooks interactifs](./notebooks/README.md)
+- [Notebooks interactifs](./notebooks/README_fr.md)
 - [Decisions d'architecture](./docs/ADRs/)
 
 ## Concepts Cles
@@ -290,13 +292,18 @@ src/landseg/
 |-- execution/       Dispatch de commandes, pipelines, workflows et moteur avant-vol
 |-- geopipe/         Sous-système rasters, grille, harmonisation, ingestion, préparation
 |-- knowledge/       Validation de taxonomie, plongements d'espèces, matrices de similarité
+|-- mlops/           Registre de modèles Unity Catalog et stockage Optuna
 |-- models/          Frames, backbones, tetes, conditionnement, factories
+|-- runtime/         Plateforme hôte, matériel, concurrence, logging, widgets, validation
 |-- session/         Donnees runtime, moteurs, taches, instrumentation, orchestration
 |-- study/           Utilitaires de sweep et d'analyse
-`-- utils/           Helpers partages de logging et multiprocessing
+|-- testing/         Données synthétiques pour les tests et les exécutions de notebooks
+`-- visual/          Graphiques sans interface, palettes, aperçus et diagnostics
 ```
 
-Pour une carte plus complete, consultez
+Chaque package de premier niveau expose une façade publique paresseuse; les
+autres sous-systèmes importent uniquement depuis cette façade (ADR-0069). Pour
+une carte plus complete, consultez
 [docs/project_structure_fr.md](./docs/project_structure_fr.md).
 
 ## Suivi Et Instrumentation
@@ -308,7 +315,8 @@ basee sur des callbacks. Le code actuel inclut:
 - hooks de tracking pour entrainement, validation et inference
 - adaptateur de tableau de bord TensorBoard
 - adaptateur de tableau de bord MLflow
-- helpers de rendu et formatage de rapports
+- helpers de formatage de rapports, les figures etant rendues par
+  `landseg.visual`
 
 Ces surfaces sont encore affineees, surtout pour la generation standardisee
 d'apercus, les exports d'evaluation et les rapports de comparaison.
@@ -317,16 +325,26 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
+- Renforcement des frontières des modules de premier niveau ([ADR-0069](./docs/ADRs/ADR-0069-first-class-module-boundary-hardening-and-subsystem-streamlining.md)) :
+  retrait de `landseg.utils` et `landseg.notebooks`, façades publiques
+  paresseuses pour chaque package de premier niveau, dépendance à sens unique
+  `geopipe` -> `knowledge`, et `landseg.visual` dédié au rendu, alimenté par
+  l'inférence de `session`.
+- I/O raster infonuagique et durcissement de l'exécution ([ADR-0068](./docs/ADRs/ADR-0068-cloud-raster-io-and-execution-hardening.md)) :
+  mise en scène sur disque local, reprojection matérialisée en GeoTIFF,
+  écriture séquentielle des npz pour les Volumes Unity Catalog, sous-système
+  `landseg.runtime` et choix du dtype AMP selon le matériel.
 - I/O d'étapes découplées et racine d'expérience auxiliaire ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)) :
   unification canonique de `upstream_dpath` et `output_dpath` sur tous les
   configurateurs d'API, transfert de lignée amont unique via `PreparedSchema` avec
   résolution défensive de bundles frères, découplage des schémas d'`exp_root`,
   `ArtifactPaths` autonomes avec validation `match-case`, et mise à jour des flux
   de travail dans les notebooks.
-- Architecture de notebooks de production et intégration Databricks : package
-  dédié `landseg.notebooks`, `NotebookWidgets` multi-environnements, télémétrie
-  visuelle en cellule, sécurité des processus (`safe_training_session`) et
-  préparation à l'orchestration multi-tâches (ADR-0066).
+- Architecture de notebooks de production et intégration Databricks :
+  `NotebookWidgets` multi-environnements, télémétrie visuelle en cellule,
+  sécurité des processus (`safe_training_session`) et préparation à
+  l'orchestration multi-tâches (ADR-0066; désormais dans `landseg.runtime` et
+  `landseg.visual`).
 - Sous-système MLOps d'entreprise (`landseg.mlops`) : intégration Unity Catalog
   Volumes et Model Registry, détection d'environnement d'exécution, traçabilité
   de lignée et synchronisation de stockage Optuna à deux niveaux (ADR-0066).

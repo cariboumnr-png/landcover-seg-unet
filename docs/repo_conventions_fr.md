@@ -107,7 +107,7 @@ import pandas
 import torch
 # local imports
 import landseg.configs as configs
-import landseg.utils as utils
+import landseg.runtime as runtime
 
 
 # ----- public functions

@@ -34,10 +34,12 @@ Currently usable:
 - Pre-flight readiness validation and dry-run diagnostics
 - TensorBoard and MLflow dashboard adapter code paths
 - Optuna-oriented study sweep and study analysis command entry points
-- Production notebook architecture, interactive widgets, in-cell telemetry,
-  and interruption safety (`landseg.notebooks`, ADR-0066)
+- Production notebook architecture, interactive widgets, and interruption
+  safety (`landseg.runtime`, ADR-0066, ADR-0069)
 - Enterprise MLOps, Unity Catalog Volumes & Model Registry integration
   (`landseg.mlops`, ADR-0066)
+- Headless visualization: training curves, prediction previews, evaluation
+  diagnostics, and spatial plots (`landseg.visual`, ADR-0069)
 
 Still maturing:
 
@@ -274,13 +276,18 @@ src/landseg/
 |-- execution/       Command dispatch, pipelines, workflows, and preflight engine
 |-- geopipe/         Geospatial rasters subsystem, grid, harmonize, ingest, prepare
 |-- knowledge/       Domain taxonomy validation, species embeddings, similarity matrices
+|-- mlops/           Unity Catalog model registry and Optuna storage integration
 |-- models/          Model frames, backbones, heads, conditioning, factories
+|-- runtime/         Host platform, hardware, concurrency, logging, widgets, validation
 |-- session/         Runtime data, engines, tasks, instrumentation, orchestration
 |-- study/           Sweep and analysis utilities
-`-- utils/           Shared logging and multiprocessing helpers
+|-- testing/         Synthetic dummy data for tests and notebook smoke runs
+`-- visual/          Headless plotting, palettes, previews, and diagnostics
 ```
 
-For a fuller map, see [docs/project_structure.md](./docs/project_structure.md).
+Each top-level package exposes a lazy public facade; other subsystems import
+only from that facade (ADR-0069). For a fuller map, see
+[docs/project_structure.md](./docs/project_structure.md).
 
 ## Tracking And Instrumentation
 
@@ -291,7 +298,7 @@ instrumentation. The current codebase includes:
 - training, validation, and inference tracking hooks
 - TensorBoard dashboard adapter
 - MLflow dashboard adapter
-- report rendering/formatting helpers
+- report formatting helpers, with figures rendered by `landseg.visual`
 
 These surfaces are still being refined, especially around standardized preview
 generation, evaluation exports, and comparison reports.
@@ -300,16 +307,24 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
+- First-class module boundary hardening ([ADR-0069](./docs/ADRs/ADR-0069-first-class-module-boundary-hardening-and-subsystem-streamlining.md)):
+  retired `landseg.utils` and `landseg.notebooks`, lazy public facades for
+  every top-level package, one-way `geopipe` -> `knowledge` dependency, and a
+  rendering-only `landseg.visual` fed by `session` inference.
+- Cloud raster I/O and execution hardening ([ADR-0068](./docs/ADRs/ADR-0068-cloud-raster-io-and-execution-hardening.md)):
+  local scratch staging, materialized GeoTIFF warping, sequential npz writes
+  for Unity Catalog Volumes, the `landseg.runtime` subsystem, and
+  device-aware AMP dtype selection.
 - Decoupled Stage I/O and Auxiliary Experiment Root ([ADR-0067](./docs/ADRs/ADR-0067-decoupled-stage-io-and-auxiliary-experiment-root.md)):
   canonical unification of `upstream_dpath` and `output_dpath` across all API
   configurators, single-upstream provenance forwarding via `PreparedSchema` with
   defensive sibling bundle resolution, optional `exp_root` schema decoupling,
   autonomous `ArtifactPaths` with lazy `match-case` validation, and updated
   notebook workflows.
-- Production notebook architecture and Databricks integration: dedicated
-  `landseg.notebooks` package, multi-runtime `NotebookWidgets`, in-cell visual
-  telemetry, process safety (`safe_training_session`), and multi-task workflow
-  orchestration readiness (ADR-0066).
+- Production notebook architecture and Databricks integration: multi-runtime
+  `NotebookWidgets`, in-cell visual telemetry, process safety
+  (`safe_training_session`), and multi-task workflow orchestration readiness
+  (ADR-0066; now hosted in `landseg.runtime` and `landseg.visual`).
 - Enterprise MLOps subsystem (`landseg.mlops`): Unity Catalog Volumes and Model
   Registry integration, runtime environment detection, lineage harvesting, and
   two-tiered Optuna storage synchronization (ADR-0066).
