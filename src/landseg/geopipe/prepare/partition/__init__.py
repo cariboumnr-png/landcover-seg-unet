@@ -26,23 +26,21 @@ Exposes partition configuration parameters and dataset split runner
 via lazy resolution.
 
 Public APIs:
-    - AOIConfig: configuration for AOI spatial boundaries.
-    - HydrationConfig: configuration for candidate hydration.
-    - PartitionConfig: configuration for data block partitioning.
-    - run_datablocks_partition: partition blocks into train/val/test.
+    - `AOIConfig`: Configuration for AOI spatial boundaries.
+    - `HydrationConfig`: Configuration for candidate hydration.
+    - `PartitionConfig`: Configuration for data block partitioning.
+    - `run_datablocks_partition`: Partition blocks into train/val/test.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'AOIConfig',
     'HydrationConfig',
     'PartitionConfig',
-    # functions
     'run_datablocks_partition',
 ]
 
@@ -54,23 +52,14 @@ if typing.TYPE_CHECKING:
         HydrationConfig,
         PartitionConfig,
     )
-    from .runner import (
-        run_datablocks_partition,
-    )
+    from .runner import run_datablocks_partition
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.orchestration': [
         'AOIConfig',
         'HydrationConfig',
         'PartitionConfig',
-    }:
-        obj = importlib.import_module('.orchestration', __package__)
-        return getattr(obj, name)
-
-    if name in {'run_datablocks_partition'}:
-        obj = importlib.import_module('.runner', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
-
+    ],
+    '.runner': ['run_datablocks_partition'],
+})

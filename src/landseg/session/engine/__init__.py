@@ -27,16 +27,14 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'EngineConfigShape',
     'EngineContext',
     'EpochRunner',
-    # functions
     'build_engine',
 ]
 
@@ -48,24 +46,14 @@ if typing.TYPE_CHECKING:
         EngineContext,
         build_engine,
     )
-    from .epoch import (
-        EpochRunner,
-    )
+    from .epoch import EpochRunner
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': [
         'EngineConfigShape',
         'EngineContext',
         'build_engine',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'EpochRunner',
-    }:
-        obj = importlib.import_module('.epoch', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.epoch': ['EpochRunner'],
+})

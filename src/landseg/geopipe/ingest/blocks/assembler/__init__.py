@@ -41,18 +41,16 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
-    'BlockBuildingInputs',
     'BlockBuildingConfig',
+    'BlockBuildingInputs',
     'BlockBuildingOutput',
     'RasterReadContext',
     'RasterReadOutput',
-    # functions
     'build_blocks',
     'build_data_block',
     'read_block_raster_data',
@@ -62,9 +60,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import (
-        build_data_block,
-    )
+    from .builder import build_data_block
     from .io import (
         RasterReadContext,
         RasterReadOutput,
@@ -72,36 +68,25 @@ if typing.TYPE_CHECKING:
         read_schemes,
     )
     from .lifecycle import (
-        BlockBuildingInputs,
         BlockBuildingConfig,
+        BlockBuildingInputs,
         BlockBuildingOutput,
         build_blocks,
     )
 
 
-def __getattr__(name: str):
-    if name in {
-        'build_data_block',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': ['build_data_block'],
+    '.io': [
         'RasterReadContext',
         'RasterReadOutput',
         'read_block_raster_data',
         'read_schemes',
-    }:
-        obj = importlib.import_module('.io', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'BlockBuildingInputs',
+    ],
+    '.lifecycle': [
         'BlockBuildingConfig',
+        'BlockBuildingInputs',
         'BlockBuildingOutput',
         'build_blocks',
-    }:
-        obj = importlib.import_module('.lifecycle', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

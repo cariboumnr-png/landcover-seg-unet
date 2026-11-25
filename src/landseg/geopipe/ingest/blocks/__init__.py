@@ -26,23 +26,21 @@ Coordinates data block construction, window mapping, and manifest
 management through lazy module resolution.
 
 Public APIs:
-    - BlockBuildingConfig: Config container for block pipeline.
-    - BlockBuildingInputs: I/O path inputs for block pipeline.
-    - BlockPipelineRuntimeContext: Context for block pipeline.
-    - run_blocks_building: Runs canonical data block pipeline.
+    - `BlockBuildingConfig`: Config container for block pipeline.
+    - `BlockBuildingInputs`: I/O path inputs for block pipeline.
+    - `BlockPipelineRuntimeContext`: Context for block pipeline.
+    - `run_blocks_building`: Runs canonical data block pipeline.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'BlockBuildingConfig',
     'BlockBuildingInputs',
     'BlockPipelineRuntimeContext',
-    # functions
     'run_blocks_building',
 ]
 
@@ -59,19 +57,13 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.assembler': [
         'BlockBuildingConfig',
         'BlockBuildingInputs',
-    }:
-        obj = importlib.import_module('.assembler', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.pipeline': [
         'BlockPipelineRuntimeContext',
         'run_blocks_building',
-    }:
-        obj = importlib.import_module('.pipeline', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

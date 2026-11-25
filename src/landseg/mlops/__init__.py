@@ -36,11 +36,11 @@ Public APIs:
 '''
 
 # standard imports
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # functions
     'load_study_trials',
     'register_unity_catalog_model',
     'resolve_exp_root',
@@ -51,9 +51,7 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .registry import (
-        register_unity_catalog_model,
-    )
+    from .registry import register_unity_catalog_model
     from .storage import (
         load_study_trials,
         resolve_exp_root,
@@ -63,20 +61,13 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-
-    if name in {'register_unity_catalog_model'}:
-        obj = importlib.import_module('.registry', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.registry': ['register_unity_catalog_model'],
+    '.storage': [
         'load_study_trials',
         'resolve_exp_root',
         'resolve_optuna_storage',
         'sync_optuna_study',
         'validate_output_root',
-    }:
-        obj = importlib.import_module('.storage', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

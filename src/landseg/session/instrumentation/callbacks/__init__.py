@@ -27,25 +27,20 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'CallbackDispatcher',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dispatcher import (
-        CallbackDispatcher,
-    )
+    from .dispatcher import CallbackDispatcher
 
-def __getattr__(name: str):
-    if name in {'CallbackDispatcher'}:
-        obj = importlib.import_module('.dispatcher', __package__)
-        return getattr(obj, name)
 
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.dispatcher': ['CallbackDispatcher'],
+})

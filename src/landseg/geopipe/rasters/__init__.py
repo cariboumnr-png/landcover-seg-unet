@@ -28,7 +28,6 @@ Public APIs:
     - `Affine`: Type alias for raster Affine transform.
     - `BoundingBox`: Type alias for raster bounding box.
     - `CRS`: Type alias for raster coordinate reference system.
-    - `DEFAULT_GDAL_CONFIG`: Default cloud-optimized GDAL options.
     - `DatasetInfo`: Container for structural raster dataset info.
     - `DatasetReader`: Type alias for opened raster reader.
     - `Resampling`: Type alias for raster resampling algorithms.
@@ -39,8 +38,6 @@ Public APIs:
     - `check_raster_crs`: Verify coordinate reference system alignment.
     - `check_raster_resolution`: Verify pixel size consistency.
     - `compute_overlap_bounds`: Calculate intersected bounding box.
-    - `configure_gdal_defaults`: Apply cloud GDAL defaults to environment.
-    - `gdal_cloud_env`: Context manager applying cloud GDAL options.
     - `get_info`: Retrieve structured dataset info from a raster.
     - `is_same_crs`: Compare two coordinate reference systems for equality.
     - `parse_vrt_tag`: Decode serialized JSON or literal VRT tag value.
@@ -56,21 +53,18 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # types
     'Affine',
     'BoundingBox',
     'CRS',
+    'DatasetInfo',
     'DatasetReader',
     'Resampling',
     'Window',
-    # classes
-    'DatasetInfo',
-    # functions
     'add_band_description_to_vrt',
     'add_tag_to_vrt',
     'build_vrt_mosaic',
@@ -115,18 +109,12 @@ if typing.TYPE_CHECKING:
         read_rasters,
         read_window,
     )
-    from .mask import (
-        unify_nodata_mask,
-    )
-    from .mosaic import (
-        build_vrt_mosaic
-    )
-    from .stack import (
-        stack_rasters
-    )
+    from .mask import unify_nodata_mask
+    from .mosaic import build_vrt_mosaic
+    from .stack import stack_rasters
     from .vrt import (
-        add_tag_to_vrt,
         add_band_description_to_vrt,
+        add_tag_to_vrt,
         parse_vrt_tag,
     )
     from .warp import (
@@ -137,70 +125,40 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '._types': [
         'Affine',
         'BoundingBox',
         'CRS',
         'DatasetReader',
         'Resampling',
         'Window',
-    }:
-        obj = importlib.import_module('._types', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.geometry': [
         'check_raster_crs',
         'check_raster_resolution',
         'compute_overlap_bounds',
         'reproject_bounds',
-    }:
-        obj = importlib.import_module('.geometry', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.io': [
         'DatasetInfo',
         'get_info',
         'read_raster',
         'read_rasters',
         'read_window',
-    }:
-        obj = importlib.import_module('.io', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'unify_nodata_mask'
-    }:
-        obj = importlib.import_module('.mask', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'build_vrt_mosaic'
-    }:
-        obj = importlib.import_module('.mosaic', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'stack_rasters'
-    }:
-        obj = importlib.import_module('.stack', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'add_tag_to_vrt',
+    ],
+    '.mask': ['unify_nodata_mask'],
+    '.mosaic': ['build_vrt_mosaic'],
+    '.stack': ['stack_rasters'],
+    '.vrt': [
         'add_band_description_to_vrt',
+        'add_tag_to_vrt',
         'parse_vrt_tag',
-    }:
-        obj = importlib.import_module('.vrt', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.warp': [
         'is_same_crs',
         'resolve_resampling_algorithm',
         'write_warped_gtiff',
         'write_warped_vrt',
-    }:
-        obj = importlib.import_module('.warp', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

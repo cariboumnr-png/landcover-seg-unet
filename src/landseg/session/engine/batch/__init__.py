@@ -27,40 +27,30 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'BatchEngine',
     'BatchExecConfigShape',
-    # functions
     'build_batch_engine',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import (
-        build_batch_engine,
-    )
+    from .builder import build_batch_engine
     from .engine import (
         BatchEngine,
         BatchExecConfigShape,
     )
 
 
-def __getattr__(name: str):
-    if name in {'build_batch_engine'}:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': ['build_batch_engine'],
+    '.engine': [
         'BatchEngine',
         'BatchExecConfigShape',
-    }:
-        obj = importlib.import_module('.engine', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

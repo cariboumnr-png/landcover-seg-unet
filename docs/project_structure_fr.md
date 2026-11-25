@@ -53,6 +53,7 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- visual/                   Colorisation par palettes, courbes d'entraînement, aperçus de prédiction, diagnostics et grilles spatiales
 |   |-- py.typed                  Marqueur d'annotations de type PEP 561
 |   |-- _constants.py             Constantes partagées
+|   |-- _lazy.py                  Assistant partagé d'imports paresseux PEP 562 (attach)
 |   `-- __init__.py
 |
 |-- configs/                      Recettes modulaires par tâche
@@ -299,6 +300,9 @@ src/landseg/
   interagissent avec `geopipe/`, `knowledge/`, `session/` et `visual/` uniquement via
   leurs façades paresseuses de niveau racine (`landseg.<pkg>`), `runtime/validator.py`
   restant l'unique exception feuille sans dépendance.
+- Les façades `__init__.py` des paquets délèguent la résolution paresseuse PEP 562
+  (`__getattr__` et `__dir__`) à `landseg._lazy.attach`, `src/landseg/__init__.py`
+  restant limité aux métadonnées du paquet et les marqueurs vides sans exports.
 - `visual/` est une couche de présentation pure sans état opérant sur les contrats
   `core` (`DataSpecs`, `InferStepResults`) et des chemins persistés ; l'inférence
   d'aperçu réside dans `session/preview.py`.

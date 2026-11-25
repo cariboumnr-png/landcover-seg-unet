@@ -12,6 +12,7 @@ Ces conventions s'appliquent à l'ensemble des contributions — qu'elles soient
 2. [Formatage du code et style structurel](#2-formatage-du-code-et-style-structurel)
    - [Limites de longueur de ligne](#limites-de-longueur-de-ligne)
    - [Organisation des imports](#organisation-des-imports)
+   - [Retours à la ligne et espaces de noms de paquets](#retours-à-la-ligne-et-espaces-de-noms-de-paquets)
    - [Espacement vertical et lignes vides](#espacement-vertical-et-lignes-vides)
    - [Délimiteurs de section et ordonnancement des scripts](#délimiteurs-de-section-et-ordonnancement-des-scripts)
    - [Formatage des commentaires](#formatage-des-commentaires)
@@ -115,6 +116,63 @@ def compute_metrics(...) -> dict:
     ...
 ```
 
+### Retours à la ligne et espaces de noms de paquets
+
+#### Règle « Un seul ou vertical » (pas de remplissage de ligne) :
+Ne remplissez jamais plusieurs lignes en entassant des éléments jusqu'à la limite de 80 caractères. Pour les instructions `from ... import ...`, les listes de symboles de `_lazy.attach(...)` et les listes `submodules` :
+
+* **0 ou 1 élément (dans la limite de 80 caractères)** : Gardez-le sur une seule ligne (p. ex., `from .logger import Logger`, `'.logger': ['Logger'],`).
+* **2 éléments ou plus (ou 1 élément > 80 caractères)** : Passez en mode multiligne avec **strictement un élément par ligne**, trié par ordre alphabétique, avec une **virgule finale** sur chaque élément (y compris le dernier).
+
+#### Espaces de noms `__init__.py` (`__all__` et `landseg._lazy.attach`) :
+* **Formatage et ordre de `__all__`** : Formatez toujours `__all__` en multiligne avec **un symbole par ligne** et des virgules finales (même pour une liste à un seul élément). N'ajoutez pas de commentaires de catégorie `# group` ; triez les entrées par **ordre alphabétique ASCII plat** (`sorted()`), ce qui ordonne naturellement les constantes `UPPER_SNAKE`, les classes/types `PascalCase` et les fonctions/sous-modules `snake_case`.
+* **Résolution paresseuse (`_lazy.attach`)** : Les fichiers `__init__.py` de paquets exposant des sous-modules ou symboles doivent utiliser `_lazy.attach` depuis `landseg._lazy` plutôt que des chaînes `if` dans `__getattr__` :
+  * Importez `import landseg._lazy as _lazy` sous `# local imports` (ajoutez `from __future__ import annotations` uniquement si des annotations évaluées à l'exécution référencent des types importés sous `TYPE_CHECKING`).
+  * Reflétez les exports sous `if typing.TYPE_CHECKING:` triés par ordre alphabétique selon le chemin de module relatif et formatés selon la règle « Un seul ou vertical » (y compris pour les imports multi-sous-modules `from . import (...)`).
+  * Triez les clés du dictionnaire `exports` par ordre alphabétique selon le chemin de module relatif (`'.mod': ...`), en plaçant chaque entrée sur sa propre ligne avec sa liste de symboles formatée selon la règle « Un seul ou vertical ».
+  * Lorsque `submodules` est fourni (ou que `exports` est `{}`), placez les arguments de `_lazy.attach(...)` un par ligne et appliquez la règle « Un seul ou vertical » à `submodules=[...]`.
+
+#### Exemple :
+```python
+# standard imports
+import typing
+# local imports
+import landseg._lazy as _lazy
+
+__all__ = [
+    'CORE_N',
+    'Logger',
+    'get_device_name',
+    'resolve_device',
+    'validator',
+]
+
+
+# for static check
+if typing.TYPE_CHECKING:
+    from . import validator
+    from .concurrency import CORE_N
+    from .hardware import (
+        get_device_name,
+        resolve_device,
+    )
+    from .logger import Logger
+
+
+__getattr__, __dir__ = _lazy.attach(
+    __name__,
+    {
+        '.concurrency': ['CORE_N'],
+        '.hardware': [
+            'get_device_name',
+            'resolve_device',
+        ],
+        '.logger': ['Logger'],
+    },
+    submodules=['validator'],
+)
+```
+
 ### Espacement vertical et lignes vides
 
 * **Définitions de premier niveau** : Laissez **exactement deux lignes vides** entre les classes, fonctions, fixtures et délimiteurs de section de premier niveau.
@@ -184,7 +242,7 @@ Chaque module Python requiert une docstring au niveau racine, positionnée immé
 * Structure :
   1. Un résumé concis en une seule ligne.
   2. Un ou plusieurs paragraphes courts expliquant le contexte, l'architecture et l'objectif du module.
-  3. Une section `Public APIs:` répertoriant les symboles exportés ainsi qu'une brève description.
+  3. Une section `Public APIs:` répertoriant les symboles exportés et leur brève description par **ordre alphabétique ASCII plat** (`sorted()`), sans sous-titres de catégorie, correspondant 1 pour 1 à `__all__` lorsqu'il est présent.
 
 ```python
 '''
@@ -409,11 +467,12 @@ Avant de soumettre du code, vérifiez le respect de cette liste de contrôle :
 | :--- | :--- | :--- |
 | **Droit d'auteur de la Couronne** | En-tête textuel de 20 lignes aux lignes 1 à 20 de chaque fichier `.py` | [Section 1](#1-droit-dauteur-de-la-couronne-et-conformité-légale) |
 | **Imports** | 3 catégories, en-têtes en minuscules, aucune ligne vide entre catégories, pas d'alias `np`/`pd` | [Section 2](#organisation-des-imports) |
+| **Retours à la ligne et `__all__`** | Un seul ou vertical (pas de remplissage) ; `__all__` trié en ASCII plat sans commentaires de groupe | [Section 2](#retours-à-la-ligne-et-espaces-de-noms-de-paquets) |
 | **Longueur de ligne** | Code $\le$ 80 caractères ; docstrings et commentaires $\le$ 72 caractères | [Section 2](#limites-de-longueur-de-ligne) |
 | **Espacement vertical** | 2 lignes vides au niveau racine ; 1 entre méthodes ; 0 après docstrings | [Section 2](#espacement-vertical-et-lignes-vides) |
 | **Délimiteurs de section** | `# ----- `[Symbol]` [action]`, 2 lignes vides avant, 0 après | [Section 2](#délimiteurs-de-section-et-ordonnancement-des-scripts) |
 | **Commentaires** | Débutent par une minuscule ou `` `Symbol` ``, 1 espace après `#` | [Section 2](#formatage-des-commentaires) |
-| **Docstrings** | Docstring de module avec `Public APIs:`; docstrings de fonctions au style Google | [Section 3](#3-spécifications-de-documentation-et-docstrings) |
+| **Docstrings** | Docstring de module avec `Public APIs:` trié en ASCII ; docstrings de fonctions au style Google | [Section 3](#3-spécifications-de-documentation-et-docstrings) |
 | **Protocoles de typage** | Compacts, sans ligne vide, stubs `@property`, pragma pylint en début de fichier | [Section 4](#protocoles-de-typage) |
 | **Pylint** | Pas de course au score ni d'abus de pragmas ; architecture saine d'abord | [Section 4](#philosophie-pylint-et-qualité-du-code) |
 | **Frontière de test** | Tests unitaires rapides dans `tests/unit/` ; pipelines bout en bout dans `tests/integration/` | [Section 5](#frontière-tests-unitaires-vs-intégration) |

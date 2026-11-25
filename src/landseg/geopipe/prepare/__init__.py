@@ -37,8 +37,9 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 
 class _Validators: # pylint: disable=R0903
@@ -96,13 +97,10 @@ validators = _Validators()
 
 
 __all__ = [
-    # classes
     'PreparationContext',
     'PreparationLogger',
-    # functions
     'build_preparation_context',
     'run_data_preparation',
-    # namespace
     'validators',
 ]
 
@@ -121,21 +119,11 @@ if typing.TYPE_CHECKING:
     from .pipeline import run_data_preparation
 
 
-def __getattr__(name: str):
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.context': [
         'PreparationContext',
-        'build_preparation_context'
-    }:
-        obj = importlib.import_module('.context', __package__)
-        return getattr(obj, name)
-
-    if name in {'PreparationLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    if name in {'run_data_preparation'}:
-        obj = importlib.import_module('.pipeline', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+        'build_preparation_context',
+    ],
+    '.logger': ['PreparationLogger'],
+    '.pipeline': ['run_data_preparation'],
+})

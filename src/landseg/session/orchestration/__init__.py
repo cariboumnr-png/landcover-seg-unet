@@ -27,49 +27,33 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'ContinuousRunner',
     'CurriculumRunner',
-    # functions
+    'OrchestrationConfigShape',
     'build_runner',
-    # typing
-    'OrchestrationConfigShape'
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .builder import (
-        build_runner,
-    )
-    from .protocols import (
-        OrchestrationConfigShape,
-    )
+    from .builder import build_runner
+    from .protocols import OrchestrationConfigShape
     from .runner import (
         ContinuousRunner,
         CurriculumRunner,
     )
 
 
-def __getattr__(name: str):
-    if name in {'build_runner'}:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {'OrchestrationConfigShape'}:
-        obj = importlib.import_module('.protocols', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': ['build_runner'],
+    '.protocols': ['OrchestrationConfigShape'],
+    '.runner': [
         'ContinuousRunner',
         'CurriculumRunner',
-    }:
-        obj = importlib.import_module('.runner', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

@@ -38,21 +38,19 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # functions
+    'SpeciesEmbeddingsMetadata',
+    'SpeciesEntry',
+    'TaxonomySpec',
     'generate_embeddings_and_matrix',
     'resolve_head_knowledge',
     'resolve_profile_metadata',
     'resolve_similarity_matrix',
     'validate_specs',
-    # typing
-    'SpeciesEmbeddingsMetadata',
-    'SpeciesEntry',
-    'TaxonomySpec',
 ]
 
 
@@ -74,28 +72,19 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.embeddings': [
         'SpeciesEmbeddingsMetadata',
         'SpeciesEntry',
         'generate_embeddings_and_matrix',
-    }:
-        obj = importlib.import_module('.embeddings', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.resolver': [
         'resolve_head_knowledge',
         'resolve_profile_metadata',
         'resolve_similarity_matrix',
-    }:
-        obj = importlib.import_module('.resolver', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.taxonomy': [
         'TaxonomySpec',
         'validate_specs',
-    }:
-        obj = importlib.import_module('.taxonomy', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

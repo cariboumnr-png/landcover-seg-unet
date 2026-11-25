@@ -12,6 +12,7 @@ These conventions apply to all contributions—whether written by human develope
 2. [Code Formatting & Structural Style](#2-code-formatting--structural-style)
    - [Line Length Limits](#line-length-limits)
    - [Imports Organization](#imports-organization)
+   - [Multi-Line Wrapping & Package Namespaces](#multi-line-wrapping--package-namespaces)
    - [Vertical Spacing & Blank Lines](#vertical-spacing--blank-lines)
    - [Section Delimiters & Script Ordering](#section-delimiters--script-ordering)
    - [Comments Formatting](#comments-formatting)
@@ -115,6 +116,63 @@ def compute_metrics(...) -> dict:
     ...
 ```
 
+### Multi-Line Wrapping & Package Namespaces
+
+#### One-or-Vertical Rule (No Line Bin-Packing):
+Never bin-pack multiple items across wrapped lines to fill the 80-character limit. For `from ... import ...` statements, `_lazy.attach(...)` symbol lists, and `submodules` lists:
+
+* **0 or 1 item (within 80 characters)**: Keep inline on a single line (e.g., `from .logger import Logger`, `'.logger': ['Logger'],`).
+* **2 or more items (or 1 item > 80 characters)**: Expand to multi-line with **strictly one item per line**, sorted alphabetically, with a **trailing comma** on every item (including the last).
+
+#### Package `__init__.py` Namespaces (`__all__` & `landseg._lazy.attach`):
+* **`__all__` Formatting & Ordering**: Always format `__all__` multi-line with **one symbol per line** and trailing commas (even for single-item lists). Do not add `# group` category comments; sort entries in **flat ASCII alphabetical order** (`sorted()`), which naturally sequences `UPPER_SNAKE` constants, `PascalCase` classes/types, and `snake_case` functions/submodules.
+* **Lazy Resolution (`_lazy.attach`)**: Package `__init__.py` files exposing submodules or symbols must use `_lazy.attach` from `landseg._lazy` rather than hand-written `__getattr__` chains:
+  * Import `import landseg._lazy as _lazy` under `# local imports` (include `from __future__ import annotations` only if runtime annotations reference `TYPE_CHECKING`-only types).
+  * Mirror exports under `if typing.TYPE_CHECKING:` ordered alphabetically by relative module path and formatted per the One-or-Vertical rule (including multi-submodule `from . import (...)`).
+  * Order `exports` dictionary keys alphabetically by relative module path (`'.mod': ...`), placing each entry on its own line with its symbol list formatted per the One-or-Vertical rule.
+  * When `submodules` is passed (or `exports` is `{}`), wrap `_lazy.attach(...)` arguments one per line and apply the One-or-Vertical rule to `submodules=[...]`.
+
+#### Example:
+```python
+# standard imports
+import typing
+# local imports
+import landseg._lazy as _lazy
+
+__all__ = [
+    'CORE_N',
+    'Logger',
+    'get_device_name',
+    'resolve_device',
+    'validator',
+]
+
+
+# for static check
+if typing.TYPE_CHECKING:
+    from . import validator
+    from .concurrency import CORE_N
+    from .hardware import (
+        get_device_name,
+        resolve_device,
+    )
+    from .logger import Logger
+
+
+__getattr__, __dir__ = _lazy.attach(
+    __name__,
+    {
+        '.concurrency': ['CORE_N'],
+        '.hardware': [
+            'get_device_name',
+            'resolve_device',
+        ],
+        '.logger': ['Logger'],
+    },
+    submodules=['validator'],
+)
+```
+
 ### Vertical Spacing & Blank Lines
 
 * **Top-Level Definitions**: Leave **exactly two blank lines** between top-level classes, functions, fixtures, and section delimiters.
@@ -184,7 +242,7 @@ Every Python module requires a top-level docstring placed immediately below the 
 * Structure:
   1. A concise one-liner summary.
   2. One or more short paragraphs explaining context, architecture, and purpose.
-  3. A `Public APIs:` section listing exported symbols and their brief descriptions.
+  3. A `Public APIs:` section listing exported symbols and their brief descriptions in **flat ASCII alphabetical order** (`sorted()`), with no category sub-headers, matching `__all__` 1-to-1 when present.
 
 ```python
 '''
@@ -409,11 +467,12 @@ Before submitting code, verify adherence to this checklist:
 | :--- | :--- | :--- |
 | **Crown Copyright** | Verbatim 20-line header at lines 1–20 of every `.py` file | [Section 1](#1-crown-copyright--legal-compliance) |
 | **Imports** | 3 categories, lowercase headers, no blank lines between categories, no `np`/`pd` | [Section 2](#imports-organization) |
+| **Wrapping & `__all__`** | One-or-vertical (never bin-pack); flat ASCII-sorted `__all__`, no group comments | [Section 2](#multi-line-wrapping--package-namespaces) |
 | **Line Length** | Code $\le$ 80 chars; docstrings and comments $\le$ 72 chars | [Section 2](#line-length-limits) |
 | **Vertical Spacing** | 2 blank lines top-level; 1 between methods; 0 after docstring | [Section 2](#vertical-spacing--blank-lines) |
 | **Section Delimiters** | `# ----- `[Symbol]` [action]`, 2 blank lines before, 0 after | [Section 2](#section-delimiters--script-ordering) |
 | **Comments** | Start with lowercase letter or `` `Symbol` ``, 1 space after `#` | [Section 2](#comments-formatting) |
-| **Docstrings** | Module docstring with `Public APIs:`; Google-style function docs | [Section 3](#3-documentation--docstring-specifications) |
+| **Docstrings** | Module docstring with ASCII-sorted `Public APIs:`; Google-style function docs | [Section 3](#3-documentation--docstring-specifications) |
 | **Typing Protocols** | Compact, no blank lines, `@property` stubs, top-level pylint disable | [Section 4](#typing-protocols) |
 | **Pylint** | No score chasing or pragma spam; clean architecture first | [Section 4](#pylint--code-quality-philosophy) |
 | **Test Boundary** | Fast unit tests in `tests/unit/`; e2e pipelines in `tests/integration/` | [Section 5](#unit-vs-integration-boundary) |

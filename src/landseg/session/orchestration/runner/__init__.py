@@ -27,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'BaseRunnerConfig',
     'ContinuousRunner',
     'CurriculumRunner',
@@ -41,28 +40,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        BaseRunnerConfig,
-    )
-    from .continuous import (
-        ContinuousRunner,
-    )
-    from .curriculum import (
-        CurriculumRunner,
-    )
+    from .base import BaseRunnerConfig
+    from .continuous import ContinuousRunner
+    from .curriculum import CurriculumRunner
 
 
-def __getattr__(name: str):
-    if name in {'BaseRunnerConfig'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'ContinuousRunner'}:
-        obj = importlib.import_module('.continuous', __package__)
-        return getattr(obj, name)
-
-    if name in {'CurriculumRunner'}:
-        obj = importlib.import_module('.curriculum', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': ['BaseRunnerConfig'],
+    '.continuous': ['ContinuousRunner'],
+    '.curriculum': ['CurriculumRunner'],
+})

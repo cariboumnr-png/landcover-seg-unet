@@ -27,22 +27,19 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'CompositeLoss',
     'ConfusionMatrix',
     'ConsistencyRegularizer',
     'EngineTasks',
     'HeadSpec',
     'MTLMetricsAggregator',
-    # functions
-    'build_engine_tasks',
-    # typing
     'TaskConfigShape',
+    'build_engine_tasks',
 ]
 
 
@@ -53,47 +50,26 @@ if typing.TYPE_CHECKING:
         TaskConfigShape,
         build_engine_tasks,
     )
-    from .heads import (
-        HeadSpec,
-    )
-    from .loss import (
-        CompositeLoss,
-    )
+    from .heads import HeadSpec
+    from .loss import CompositeLoss
     from .metrics import (
         ConfusionMatrix,
         MTLMetricsAggregator,
     )
-    from .regularization import (
-        ConsistencyRegularizer,
-    )
+    from .regularization import ConsistencyRegularizer
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': [
         'EngineTasks',
         'TaskConfigShape',
         'build_engine_tasks',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {'HeadSpec'}:
-        obj = importlib.import_module('.heads', __package__)
-        return getattr(obj, name)
-
-    if name in {'CompositeLoss'}:
-        obj = importlib.import_module('.loss', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.heads': ['HeadSpec'],
+    '.loss': ['CompositeLoss'],
+    '.metrics': [
         'ConfusionMatrix',
         'MTLMetricsAggregator',
-    }:
-        obj = importlib.import_module('.metrics', __package__)
-        return getattr(obj, name)
-
-    if name in {'ConsistencyRegularizer'}:
-        obj = importlib.import_module('.regularization', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.regularization': ['ConsistencyRegularizer'],
+})

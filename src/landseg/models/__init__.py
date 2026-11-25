@@ -30,26 +30,20 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # functions
     'build_multihead_unet',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .factory import (
-        build_multihead_unet,
-    )
+    from .factory import build_multihead_unet
 
 
-def __getattr__(name: str):
-    if name in {'build_multihead_unet'}:
-        obj = importlib.import_module('.factory', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.factory': ['build_multihead_unet'],
+})

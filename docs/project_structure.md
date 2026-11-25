@@ -53,6 +53,7 @@ adding or moving code over a fully exhaustive file listing.
 |   |-- visual/                   Palette colorization, training curves, prediction previews, diagnostic heatmaps, spatial layouts
 |   |-- py.typed                  PEP 561 type annotation marker
 |   |-- _constants.py             Shared constants
+|   |-- _lazy.py                  Shared PEP 562 lazy-export helper (attach)
 |   `-- __init__.py
 |
 |-- configs/                      Task-oriented modular recipes
@@ -295,6 +296,9 @@ src/landseg/
   `geopipe/`, `knowledge/`, `session/`, and `visual/` strictly via top-level lazy
   package facades (`landseg.<pkg>`), keeping `runtime/validator.py` as the sole
   zero-dependency leaf exception.
+- Package `__init__.py` facades delegate PEP 562 lazy resolution (`__getattr__`
+  and `__dir__`) to `landseg._lazy.attach`, keeping `src/landseg/__init__.py`
+  restricted to package metadata and empty markers free of exports.
 - `visual/` is pure headless presentation over `core` contracts (`DataSpecs`,
   `InferStepResults`) and persisted paths; fallback inference orchestration lives
   in `session/preview.py`.

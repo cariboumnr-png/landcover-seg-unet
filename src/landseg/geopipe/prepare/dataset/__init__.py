@@ -26,31 +26,28 @@ Exposes in-memory dataset view containers and builders via lazy resolution
 to keep import order simple and circular-free.
 
 Public APIs:
-    - `DatasetView`: unified immutable dataset preparation view.
-    - `DatasetViewConfig`: configuration parameters for dataset view.
-    - `build_dataset_view`: construct full preparation view.
+    - `DataBlocksManifestInputs`: Bundled datablocks manifest artifacts.
+    - `DatasetView`: Unified immutable dataset preparation view.
+    - `DatasetViewConfig`: Configuration parameters for dataset view.
+    - `build_dataset_view`: Construct full preparation view.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'DataBlocksManifestInputs',
     'DatasetView',
     'DatasetViewConfig',
-    # functions
     'build_dataset_view',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .normalizer import (
-        DataBlocksManifestInputs
-    )
+    from .normalizer import DataBlocksManifestInputs
     from .view import (
         DatasetView,
         DatasetViewConfig,
@@ -58,19 +55,11 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
-        'DataBlocksManifestInputs',
-    }:
-        obj = importlib.import_module('.normalizer', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.normalizer': ['DataBlocksManifestInputs'],
+    '.view': [
         'DatasetView',
         'DatasetViewConfig',
         'build_dataset_view',
-    }:
-        obj = importlib.import_module('.view', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

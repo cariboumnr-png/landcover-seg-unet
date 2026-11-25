@@ -38,39 +38,32 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'ContinuousRunner',
     'CurriculumRunner',
     'EpochRunner',
     'SessionBuildContext',
+    'SessionConfigShape',
     'SessionLogger',
-    # functions
     'build_session_runner',
     'run_preview_inference',
     'select_representative_block',
-    # typing
-    'SessionConfigShape',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .engine import (
-        EpochRunner,
-    )
-    from .logger import (
-        SessionLogger,
-    )
+    from .engine import EpochRunner
     from .factory import (
         SessionBuildContext,
         SessionConfigShape,
-        build_session_runner
+        build_session_runner,
     )
+    from .logger import SessionLogger
     from .orchestration import (
         ContinuousRunner,
         CurriculumRunner,
@@ -81,35 +74,20 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {'EpochRunner'}:
-        obj = importlib.import_module('.engine', __package__)
-        return getattr(obj, name)
-
-    if name in {'SessionLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.engine': ['EpochRunner'],
+    '.factory': [
         'SessionBuildContext',
         'SessionConfigShape',
         'build_session_runner',
-    }:
-        obj = importlib.import_module('.factory', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.logger': ['SessionLogger'],
+    '.orchestration': [
         'ContinuousRunner',
         'CurriculumRunner',
-    }:
-        obj = importlib.import_module('.orchestration', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.preview': [
         'run_preview_inference',
         'select_representative_block',
-    }:
-        obj = importlib.import_module('.preview', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

@@ -31,14 +31,12 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'ManifestProvenance',
-    # functions
     'update_manifest',
 ]
 
@@ -51,14 +49,9 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.lifecycle': [
         'ManifestProvenance',
         'update_manifest',
-    }:
-        obj = importlib.import_module('.lifecycle', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
-
-
+    ],
+})

@@ -27,25 +27,21 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'ConfusionMatrix',
     'HeadMetrics',
     'MTLMetricsAggregator',
-    # functions
     'build_headmetrics',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .diagnostics import (
-        MTLMetricsAggregator,
-    )
+    from .diagnostics import MTLMetricsAggregator
     from .segmentation import (
         ConfusionMatrix,
         HeadMetrics,
@@ -53,17 +49,11 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {'MTLMetricsAggregator'}:
-        obj = importlib.import_module('.diagnostics', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.diagnostics': ['MTLMetricsAggregator'],
+    '.segmentation': [
         'ConfusionMatrix',
         'HeadMetrics',
         'build_headmetrics',
-    }:
-        obj = importlib.import_module('.segmentation', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

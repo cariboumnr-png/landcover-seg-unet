@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
-
 '''
 Top-level namespace for `landseg.execution.pipelines`.
 
@@ -29,21 +27,19 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # types
     'BasePipeline',
-    'GeoPipeline',
-    'SessionPipeline',
-    # functions
     'DataHarmonization',
     'DataIngestion',
     'DataPreparation',
+    'GeoPipeline',
     'ModelEvaluation',
     'ModelTraining',
+    'SessionPipeline',
     'WorldGridGeneration',
 ]
 
@@ -55,55 +51,24 @@ if typing.TYPE_CHECKING:
         GeoPipeline,
         SessionPipeline,
     )
-    from .data_harmonize import (
-        DataHarmonization,
-    )
-    from .data_ingest import (
-        DataIngestion
-    )
-    from .data_prepare import (
-        DataPreparation,
-    )
-
-    from .model_evaluate import (
-        ModelEvaluation,
-    )
-    from .model_train import (
-        ModelTraining,
-    )
-
-    from .world_grid import (
-        WorldGridGeneration,
-    )
+    from .data_harmonize import DataHarmonization
+    from .data_ingest import DataIngestion
+    from .data_prepare import DataPreparation
+    from .model_evaluate import ModelEvaluation
+    from .model_train import ModelTraining
+    from .world_grid import WorldGridGeneration
 
 
-def __getattr__(name: str):
-    if name in {'BasePipeline', 'GeoPipeline', 'SessionPipeline'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataHarmonization'}:
-        obj = importlib.import_module('.data_harmonize', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataIngestion'}:
-        obj = importlib.import_module('.data_ingest', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataPreparation'}:
-        obj = importlib.import_module('.data_prepare', __package__)
-        return getattr(obj, name)
-
-    if name in {'ModelEvaluation'}:
-        obj = importlib.import_module('.model_evaluate', __package__)
-        return getattr(obj, name)
-
-    if name in {'ModelTraining'}:
-        obj = importlib.import_module('.model_train', __package__)
-        return getattr(obj, name)
-
-    if name in {'WorldGridGeneration'}:
-        obj = importlib.import_module('.world_grid', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': [
+        'BasePipeline',
+        'GeoPipeline',
+        'SessionPipeline',
+    ],
+    '.data_harmonize': ['DataHarmonization'],
+    '.data_ingest': ['DataIngestion'],
+    '.data_prepare': ['DataPreparation'],
+    '.model_evaluate': ['ModelEvaluation'],
+    '.model_train': ['ModelTraining'],
+    '.world_grid': ['WorldGridGeneration'],
+})

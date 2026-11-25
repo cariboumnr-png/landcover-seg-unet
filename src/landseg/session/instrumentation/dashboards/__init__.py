@@ -27,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'BaseTracker',
     'MLFlowTracker',
     'TensorBoardTracker',
@@ -41,28 +40,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        BaseTracker,
-    )
-    from .ml_flow import (
-        MLFlowTracker,
-    )
-    from .tensor_board import (
-        TensorBoardTracker,
-    )
+    from .base import BaseTracker
+    from .ml_flow import MLFlowTracker
+    from .tensor_board import TensorBoardTracker
 
 
-def __getattr__(name: str):
-    if name in {'BaseTracker'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'MLFlowTracker'}:
-        obj = importlib.import_module('.ml_flow', __package__)
-        return getattr(obj, name)
-
-    if name in {'TensorBoardTracker'}:
-        obj = importlib.import_module('.tensor_board', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': ['BaseTracker'],
+    '.ml_flow': ['MLFlowTracker'],
+    '.tensor_board': ['TensorBoardTracker'],
+})

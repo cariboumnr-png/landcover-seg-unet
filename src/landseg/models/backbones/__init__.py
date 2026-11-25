@@ -27,41 +27,30 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'Backbone',
-    # functions
-    'build_unet_backbone',
-    # typing
     'UNetBackboneConfig',
+    'build_unet_backbone',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        Backbone,
-    )
+    from .base import Backbone
     from .factory import (
         UNetBackboneConfig,
         build_unet_backbone,
     )
 
 
-def __getattr__(name: str):
-    if name in {'Backbone'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': ['Backbone'],
+    '.factory': [
         'UNetBackboneConfig',
         'build_unet_backbone',
-    }:
-        obj = importlib.import_module('.factory', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

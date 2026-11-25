@@ -27,14 +27,12 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'TrialMutator',
-    # functions
     'make_objective',
     'run_sweep',
 ]
@@ -42,28 +40,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .mutator import (
-        TrialMutator,
-    )
-    from .objectives import (
-        make_objective,
-    )
-    from .optimize import (
-        run_sweep,
-    )
+    from .mutator import TrialMutator
+    from .objectives import make_objective
+    from .optimize import run_sweep
 
 
-def __getattr__(name: str):
-    if name in {'TrialMutator'}:
-        obj = importlib.import_module('.mutator', __package__)
-        return getattr(obj, name)
-
-    if name in {'make_objective'}:
-        obj = importlib.import_module('.objectives', __package__)
-        return getattr(obj, name)
-
-    if name in {'run_sweep'}:
-        obj = importlib.import_module('.optimize', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.mutator': ['TrialMutator'],
+    '.objectives': ['make_objective'],
+    '.optimize': ['run_sweep'],
+})

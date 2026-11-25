@@ -23,35 +23,45 @@
 Top-level namespace for `landseg.geopipe.contracts`.
 
 Public APIs:
-    - `GridReportSchema`: Execution report for world grid pipeline.
-    - `WorldGridReport`: Summary report for world grid layout.
-    - `HarmonizationReportSchema`: Report schema for harmonization.
-    - `ProvenanceRecord`: Provenance record for raw source raster.
     - `BlocksBuildingStats`: Data block build statistics.
+    - `BlocksPartition`: TypedDict mapping block IDs across splits.
+    - `CollisionPolicyType`: Literal type for block collision policies.
+    - `CollisionRecord`: Record of block collision and action taken.
     - `DataBlocksReport`: Execution report for data block partitioning.
+    - `DataPartitionReport`: Report for dataset splitting.
     - `DomainMapReport`: Execution report for domain map preparation.
     - `DomainStats`: Re-indexing statistics for a domain layer.
-    - `IngestReportSchema`: Root report for data ingestion pipeline.
-    - `ManifestStats`: Catalog and schema update details.
-    - `BlocksPartition`: TypedDict mapping block IDs across splits.
-    - `DataPartitionReport`: Report for dataset splitting.
+    - `GridReportSchema`: Execution report for world grid pipeline.
+    - `HarmonizationPipelineConfig`: Harmonization pipeline config.
+    - `HarmonizationReportSchema`: Report schema for harmonization.
+    - `HarmonizationRunRecord`: Single harmonization run manifest entry.
     - `ImageBandStats`: TypedDict for image band statistics.
+    - `IngestReportSchema`: Root report for data ingestion pipeline.
+    - `IngestionPipelineConfig`: Ingestion pipeline config shape.
+    - `IngestionRunRecord`: Single ingestion run manifest entry.
+    - `ManifestStats`: Catalog and schema update details.
+    - `MappedRasterWindowsPayload`: Serialized raster window map.
     - `NormalizationReport`: Report for block materialization.
-    - `PartitionSummary`: Summary of raw splits and hydration.
     - `PREPARED_SCHEMA_ID`: Constant string for prepared schema ID.
+    - `PartitionSummary`: Summary of raw splits and hydration.
+    - `PreparationDatasetViewConfig`: Preparation dataset view config.
+    - `PreparationPipelineConfig`: Preparation pipeline config shape.
     - `PreparationReportSchema`: Root summary schema for prepare runs.
     - `PreparedSchema`: TypedDict for dataset preparation schema.
+    - `ProvenanceRecord`: Provenance record for raw source raster.
+    - `RunCollisionManifest`: Collision audit manifest for ingest runs.
     - `SchemaReport`: Report for dataset schema generation.
     - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
+    - `WorldGridPrepConfig`: Config shape to prepare world grid.
+    - `WorldGridReport`: Summary report for world grid layout.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # typing
     'BlocksBuildingStats',
     'BlocksPartition',
     'CollisionPolicyType',
@@ -65,12 +75,13 @@ __all__ = [
     'HarmonizationReportSchema',
     'HarmonizationRunRecord',
     'ImageBandStats',
-    'IngestionPipelineConfig',
     'IngestReportSchema',
+    'IngestionPipelineConfig',
     'IngestionRunRecord',
     'ManifestStats',
     'MappedRasterWindowsPayload',
     'NormalizationReport',
+    'PREPARED_SCHEMA_ID',
     'PartitionSummary',
     'PreparationDatasetViewConfig',
     'PreparationPipelineConfig',
@@ -82,8 +93,6 @@ __all__ = [
     'TargetHeadsSchema',
     'WorldGridPrepConfig',
     'WorldGridReport',
-    # constants
-    'PREPARED_SCHEMA_ID',
 ]
 
 
@@ -107,8 +116,8 @@ if typing.TYPE_CHECKING:
         DataBlocksReport,
         DomainMapReport,
         DomainStats,
-        IngestionPipelineConfig,
         IngestReportSchema,
+        IngestionPipelineConfig,
         IngestionRunRecord,
         ManifestStats,
         MappedRasterWindowsPayload,
@@ -130,42 +139,33 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.grid': [
         'GridReportSchema',
         'WorldGridPrepConfig',
         'WorldGridReport',
-    }:
-        obj = importlib.import_module('.grid', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.harmonization': [
         'HarmonizationPipelineConfig',
         'HarmonizationReportSchema',
         'HarmonizationRunRecord',
         'ProvenanceRecord',
-    }:
-        obj = importlib.import_module('.harmonization', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.ingestion': [
         'BlocksBuildingStats',
         'CollisionPolicyType',
         'CollisionRecord',
         'DataBlocksReport',
         'DomainMapReport',
         'DomainStats',
-        'IngestionPipelineConfig',
         'IngestReportSchema',
+        'IngestionPipelineConfig',
         'IngestionRunRecord',
         'ManifestStats',
         'MappedRasterWindowsPayload',
         'RunCollisionManifest',
-    }:
-        obj = importlib.import_module('.ingestion', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.preparation': [
         'BlocksPartition',
         'DataPartitionReport',
         'ImageBandStats',
@@ -178,8 +178,5 @@ def __getattr__(name: str):
         'PreparedSchema',
         'SchemaReport',
         'TargetHeadsSchema',
-    }:
-        obj = importlib.import_module('.preparation', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

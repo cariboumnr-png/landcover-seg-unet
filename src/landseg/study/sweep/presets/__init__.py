@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
-
 '''
 Top-level namespace for `landseg.study.sweep.objective_presets`.
 
@@ -29,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # functions
     'comp_candidate',
     'comp_capacity',
     'comp_mtl_quality',
@@ -59,17 +56,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from ._registry import (
-        resolve,
-    )
+    from ._registry import resolve
     from .architecture import (
         obj_architecture,
         obj_bottleneck,
         obj_conditioning,
     )
-    from .base import (
-        obj_base,
-    )
+    from .base import obj_base
     from .composite import (
         comp_candidate,
         comp_capacity,
@@ -96,60 +89,36 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {'resolve'}:
-        obj = importlib.import_module('._registry', __package__)
-        return getattr(obj, name)
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '._registry': ['resolve'],
+    '.architecture': [
         'obj_architecture',
         'obj_bottleneck',
         'obj_conditioning',
-    }:
-        obj = importlib.import_module('.architecture', __package__)
-        return getattr(obj, name)
-
-    if name in {'obj_base'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.base': ['obj_base'],
+    '.composite': [
         'comp_candidate',
         'comp_capacity',
         'comp_mtl_quality',
         'comp_quick',
-    }:
-        obj = importlib.import_module('.composite', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.data': [
         'obj_context_window',
         'obj_data_geometry',
-    }:
-        obj = importlib.import_module('.data', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.losses': [
         'obj_loss_aux',
         'obj_loss_balance',
         'obj_regularization',
-    }:
-        obj = importlib.import_module('.losses', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.multitask': [
         'obj_head_weights',
         'obj_hierarchy',
         'obj_mtl_joint',
-    }:
-        obj = importlib.import_module('.multitask', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.optimizer': [
         'obj_optimizer',
         'obj_throughput',
-    }:
-        obj = importlib.import_module('.optimizer', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

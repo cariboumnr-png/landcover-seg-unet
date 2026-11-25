@@ -30,12 +30,14 @@ resolution to keep import order simple and circular-free.
 Public APIs:
     - `GridLogger`: Logger tracking world grid execution and report.
     - `prepare_world_grid`: Build or load persisted world grid artifact.
+    - `validators`: Preflight validation namespace.
 '''
 
 # standard imports
 from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 
 class _Validators: # pylint: disable=R0903
@@ -50,11 +52,8 @@ validators = _Validators()
 
 
 __all__ = [
-    # classes
     'GridLogger',
-    # functions
     'prepare_world_grid',
-    # validators
     'validators',
 ]
 
@@ -67,14 +66,7 @@ if typing.TYPE_CHECKING:
     from .logger import GridLogger
 
 
-def __getattr__(name: str):
-
-    if name in {'prepare_world_grid'}:
-        obj = importlib.import_module('.lifecycle', __package__)
-        return getattr(obj, name)
-
-    if name in {'GridLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.lifecycle': ['prepare_world_grid'],
+    '.logger': ['GridLogger'],
+})

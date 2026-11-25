@@ -27,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # typing
     'DatasetItem',
     'PhaseLike',
     'SessionObserverLike',
@@ -42,31 +41,19 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .data import(
+    from .data import (
+        DatasetItem,
         TensorDict,
-        DatasetItem
     )
-
-    from .observer import (
-        SessionObserverLike,
-    )
-
-    from .phases import (
-        PhaseLike,
-    )
+    from .observer import SessionObserverLike
+    from .phases import PhaseLike
 
 
-def __getattr__(name: str):
-    if name in {'DatasetItem', 'TensorDict'}:
-        obj = importlib.import_module('.data', __package__)
-        return getattr(obj, name)
-
-    if name in {'SessionObserverLike'}:
-        obj = importlib.import_module('.observer', __package__)
-        return getattr(obj, name)
-
-    if name in {'PhaseLike'}:
-        obj = importlib.import_module('.phases', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.data': [
+        'DatasetItem',
+        'TensorDict',
+    ],
+    '.observer': ['SessionObserverLike'],
+    '.phases': ['PhaseLike'],
+})

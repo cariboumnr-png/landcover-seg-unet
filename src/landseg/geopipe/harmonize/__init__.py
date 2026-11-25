@@ -31,14 +31,15 @@ Public APIs:
     - `HarmonizationContext`: Execution context for harmonization.
     - `HarmonizationLogger`: Logger tracking ETL progress and summary.
     - `build_harmonization_context`: Load reference context from report.
-    - `run_data_harmonization`: pipeline runner.
+    - `run_data_harmonization`: Pipeline runner.
+    - `validators`: Preflight validation namespace.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import pathlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 
 class _Validators:
@@ -58,13 +59,10 @@ validators = _Validators()
 
 
 __all__ = [
-    # classes
     'HarmonizationContext',
     'HarmonizationLogger',
-    # functions
     'build_harmonization_context',
     'run_data_harmonization',
-    # validators
     'validators',
 ]
 
@@ -79,20 +77,11 @@ if typing.TYPE_CHECKING:
     from .pipeline import run_data_harmonization
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.context': [
         'HarmonizationContext',
-        'build_harmonization_context'
-    }:
-        obj = importlib.import_module('.context', __package__)
-        return getattr(obj, name)
-
-    if name in {'HarmonizationLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    if name in {'run_data_harmonization'}:
-        obj = importlib.import_module('.pipeline', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+        'build_harmonization_context',
+    ],
+    '.logger': ['HarmonizationLogger'],
+    '.pipeline': ['run_data_harmonization'],
+})

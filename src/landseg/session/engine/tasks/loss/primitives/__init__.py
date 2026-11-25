@@ -28,12 +28,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'DiceLoss',
     'EcologicalSimilarityLoss',
     'FocalLoss',
@@ -44,43 +43,17 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .dice import (
-        DiceLoss,
-    )
-    from .ecological import (
-        EcologicalSimilarityLoss,
-    )
-    from .focal import (
-        FocalLoss,
-    )
-    from .spectral import (
-        SpectralSmoothnessLoss,
-    )
-    from .tv import (
-        TotalVariationLoss,
-    )
+    from .dice import DiceLoss
+    from .ecological import EcologicalSimilarityLoss
+    from .focal import FocalLoss
+    from .spectral import SpectralSmoothnessLoss
+    from .tv import TotalVariationLoss
 
 
-def __getattr__(name: str):
-
-    if name in {'DiceLoss'}:
-        obj = importlib.import_module('.dice', __package__)
-        return getattr(obj, name)
-
-    if name in {'EcologicalSimilarityLoss'}:
-        obj = importlib.import_module('.ecological', __package__)
-        return getattr(obj, name)
-
-    if name in {'FocalLoss'}:
-        obj = importlib.import_module('.focal', __package__)
-        return getattr(obj, name)
-
-    if name in {'SpectralSmoothnessLoss'}:
-        obj = importlib.import_module('.spectral', __package__)
-        return getattr(obj, name)
-
-    if name in {'TotalVariationLoss'}:
-        obj = importlib.import_module('.tv', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.dice': ['DiceLoss'],
+    '.ecological': ['EcologicalSimilarityLoss'],
+    '.focal': ['FocalLoss'],
+    '.spectral': ['SpectralSmoothnessLoss'],
+    '.tv': ['TotalVariationLoss'],
+})

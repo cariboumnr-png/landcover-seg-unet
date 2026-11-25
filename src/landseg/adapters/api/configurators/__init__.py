@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-return-statements
-
 '''
 Top-level namespace for `landseg.adapters.api.configurators`.
 
@@ -29,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'BaseConfigurator',
     'DataHarmonizationConfigurator',
     'DataIngestionConfigurator',
@@ -47,56 +44,21 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        BaseConfigurator,
-    )
-    from .data_harmonize import (
-        DataHarmonizationConfigurator,
-    )
-    from .data_ingest import (
-        DataIngestionConfigurator,
-    )
-    from .data_prepare import (
-        DataPreparationConfigurator,
-    )
-    from .model_train import (
-        TrainingSessionConfigurator,
-    )
-    from .study_sweep import (
-        StudySweepConfigurator,
-    )
-    from .world_grid import (
-        WorldGridConfigurator,
-    )
+    from .base import BaseConfigurator
+    from .data_harmonize import DataHarmonizationConfigurator
+    from .data_ingest import DataIngestionConfigurator
+    from .data_prepare import DataPreparationConfigurator
+    from .model_train import TrainingSessionConfigurator
+    from .study_sweep import StudySweepConfigurator
+    from .world_grid import WorldGridConfigurator
 
 
-def __getattr__(name: str):
-    if name in {'BaseConfigurator'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataHarmonizationConfigurator'}:
-        obj = importlib.import_module('.data_harmonize', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataIngestionConfigurator'}:
-        obj = importlib.import_module('.data_ingest', __package__)
-        return getattr(obj, name)
-
-    if name in {'DataPreparationConfigurator'}:
-        obj = importlib.import_module('.data_prepare', __package__)
-        return getattr(obj, name)
-
-    if name in {'TrainingSessionConfigurator'}:
-        obj = importlib.import_module('.model_train', __package__)
-        return getattr(obj, name)
-
-    if name in {'StudySweepConfigurator'}:
-        obj = importlib.import_module('.study_sweep', __package__)
-        return getattr(obj, name)
-
-    if name in {'WorldGridConfigurator'}:
-        obj = importlib.import_module('.world_grid', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': ['BaseConfigurator'],
+    '.data_harmonize': ['DataHarmonizationConfigurator'],
+    '.data_ingest': ['DataIngestionConfigurator'],
+    '.data_prepare': ['DataPreparationConfigurator'],
+    '.model_train': ['TrainingSessionConfigurator'],
+    '.study_sweep': ['StudySweepConfigurator'],
+    '.world_grid': ['WorldGridConfigurator'],
+})

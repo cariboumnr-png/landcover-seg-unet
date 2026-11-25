@@ -45,17 +45,15 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # constants
     'DEFAULT_ERROR_PALETTE',
     'DEFAULT_MATCH_PALETTE',
     'FORESTRY_FRI_PALETTE',
     'NLCD_16_PALETTE',
-    # functions
     'colorize',
     'colorize_continuous',
     'generate_prediction_previews',
@@ -80,9 +78,7 @@ if typing.TYPE_CHECKING:
         colorize,
         colorize_continuous,
     )
-    from .curves import (
-        plot_training_curves,
-    )
+    from .curves import plot_training_curves
     from .diagnostics import (
         plot_confusion_matrix,
         plot_per_class_metrics,
@@ -99,43 +95,28 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.color': [
         'DEFAULT_ERROR_PALETTE',
         'DEFAULT_MATCH_PALETTE',
         'FORESTRY_FRI_PALETTE',
         'NLCD_16_PALETTE',
         'colorize',
         'colorize_continuous',
-    }:
-        obj = importlib.import_module('.color', __package__)
-        return getattr(obj, name)
-
-    if name in {'plot_training_curves'}:
-        obj = importlib.import_module('.curves', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.curves': ['plot_training_curves'],
+    '.diagnostics': [
         'plot_confusion_matrix',
         'plot_per_class_metrics',
-    }:
-        obj = importlib.import_module('.diagnostics', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.preview': [
         'generate_prediction_previews',
         'plot_qualitative_predictions',
         'render_prediction_preview',
-    }:
-        obj = importlib.import_module('.preview', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.spatial': [
         'plot_class_frequencies',
         'plot_grid_layout',
         'plot_spectral_composite',
-    }:
-        obj = importlib.import_module('.spatial', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

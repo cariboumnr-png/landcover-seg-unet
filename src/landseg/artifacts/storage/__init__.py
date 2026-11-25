@@ -33,16 +33,10 @@ Public APIs:
     - `stage_to_scratch`: Context manager staging writes before publishing.
 '''
 
+# standard imports
+import typing
 # local imports
-from landseg.artifacts.storage.npzio import (
-    savez_compressed,
-)
-from landseg.artifacts.storage.scratch import (
-    cleanup_scratch,
-    get_scratch_dir,
-    scratch_file,
-    stage_to_scratch,
-)
+import landseg._lazy as _lazy
 
 __all__ = [
     'cleanup_scratch',
@@ -51,3 +45,25 @@ __all__ = [
     'scratch_file',
     'stage_to_scratch',
 ]
+
+
+# for static check
+if typing.TYPE_CHECKING:
+    from .npzio import savez_compressed
+    from .scratch import (
+        cleanup_scratch,
+        get_scratch_dir,
+        scratch_file,
+        stage_to_scratch,
+    )
+
+
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.npzio': ['savez_compressed'],
+    '.scratch': [
+        'cleanup_scratch',
+        'get_scratch_dir',
+        'scratch_file',
+        'stage_to_scratch',
+    ],
+})

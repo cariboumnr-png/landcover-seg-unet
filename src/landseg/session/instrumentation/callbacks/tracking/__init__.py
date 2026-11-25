@@ -28,12 +28,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'InferTrackingCallback',
     'TrainTrackingCallback',
     'ValTrackingCallback',
@@ -42,28 +41,13 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .inference import (
-        InferTrackingCallback,
-    )
-    from .training import (
-        TrainTrackingCallback,
-    )
-    from .validation import (
-        ValTrackingCallback,
-    )
+    from .inference import InferTrackingCallback
+    from .training import TrainTrackingCallback
+    from .validation import ValTrackingCallback
 
 
-def __getattr__(name: str):
-    if name in {'InferTrackingCallback'}:
-        obj = importlib.import_module('.inference', __package__)
-        return getattr(obj, name)
-
-    if name in {'TrainTrackingCallback'}:
-        obj = importlib.import_module('.training', __package__)
-        return getattr(obj, name)
-
-    if name in {'ValTrackingCallback'}:
-        obj = importlib.import_module('.validation', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.inference': ['InferTrackingCallback'],
+    '.training': ['TrainTrackingCallback'],
+    '.validation': ['ValTrackingCallback'],
+})

@@ -32,14 +32,12 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'MappedRasterWindows',
-    # functions
     'map_rasters_to_grid',
     'validate_raster_alignment',
 ]
@@ -47,22 +45,17 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .lifecycle import (
-        map_rasters_to_grid,
-    )
+    from .lifecycle import map_rasters_to_grid
     from .mapper import (
         MappedRasterWindows,
         validate_raster_alignment,
     )
 
 
-def __getattr__(name: str):
-    if name in {'map_rasters_to_grid'}:
-        obj = importlib.import_module('.lifecycle', __package__)
-        return getattr(obj, name)
-
-    if name in {'MappedRasterWindows', 'validate_raster_alignment'}:
-        obj = importlib.import_module('.mapper', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.lifecycle': ['map_rasters_to_grid'],
+    '.mapper': [
+        'MappedRasterWindows',
+        'validate_raster_alignment',
+    ],
+})

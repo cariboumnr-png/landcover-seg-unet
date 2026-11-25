@@ -26,12 +26,11 @@ Exposes artifact and session path dataclasses for all pipelines.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'ArtifactPaths',
     'HarmonizationPaths',
     'IngestionPaths',
@@ -45,63 +44,23 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        PipelineArtifactsPaths,
-    )
-    from .data_harmonization import (
-        HarmonizationPaths,
-    )
-    from .data_ingestion import (
-        IngestionPaths,
-    )
-    from .data_preparation import (
-        PreparationPaths,
-    )
-    from .knowledge import (
-        KnowledgePaths,
-    )
-    from .root import (
-        ArtifactPaths,
-    )
-    from .session import (
-        SessionPaths,
-    )
-    from .world_grid import (
-        WorldGridPaths
-    )
+    from .base import PipelineArtifactsPaths
+    from .data_harmonization import HarmonizationPaths
+    from .data_ingestion import IngestionPaths
+    from .data_preparation import PreparationPaths
+    from .knowledge import KnowledgePaths
+    from .root import ArtifactPaths
+    from .session import SessionPaths
+    from .world_grid import WorldGridPaths
 
 
-def __getattr__(name: str):
-    if name in {'HarmonizationPaths'}:
-        obj = importlib.import_module('.data_harmonization', __package__)
-        return getattr(obj, name)
-
-    if name in {'IngestionPaths'}:
-        obj = importlib.import_module('.data_ingestion', __package__)
-        return getattr(obj, name)
-
-    if name in {'PreparationPaths'}:
-        obj = importlib.import_module('.data_preparation', __package__)
-        return getattr(obj, name)
-
-    if name in {'KnowledgePaths'}:
-        obj = importlib.import_module('.knowledge', __package__)
-        return getattr(obj, name)
-
-    if name in {'ArtifactPaths'}:
-        obj = importlib.import_module('.root', __package__)
-        return getattr(obj, name)
-
-    if name in {'PipelineArtifactsPaths'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'SessionPaths'}:
-        obj = importlib.import_module('.session', __package__)
-        return getattr(obj, name)
-
-    if name in {'WorldGridPaths'}:
-        obj = importlib.import_module('.world_grid', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': ['PipelineArtifactsPaths'],
+    '.data_harmonization': ['HarmonizationPaths'],
+    '.data_ingestion': ['IngestionPaths'],
+    '.data_preparation': ['PreparationPaths'],
+    '.knowledge': ['KnowledgePaths'],
+    '.root': ['ArtifactPaths'],
+    '.session': ['SessionPaths'],
+    '.world_grid': ['WorldGridPaths'],
+})

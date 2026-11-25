@@ -27,14 +27,10 @@ Each submodule groups checks by `ProbeCategory`. All checks accept an
 `ProbeResult`; none mutate pipeline state.
 '''
 
+# standard imports
+import typing
 # local imports
-from . import contracts
-from . import filesystem
-from . import hardware
-from . import ledger
-from . import lineage
-from . import model
-from . import policy
+import landseg._lazy as _lazy
 
 __all__ = [
     'contracts',
@@ -45,3 +41,31 @@ __all__ = [
     'model',
     'policy',
 ]
+
+
+# for static check
+if typing.TYPE_CHECKING:
+    from . import (
+        contracts,
+        filesystem,
+        hardware,
+        ledger,
+        lineage,
+        model,
+        policy,
+    )
+
+
+__getattr__, __dir__ = _lazy.attach(
+    __name__,
+    {},
+    submodules=[
+        'contracts',
+        'filesystem',
+        'hardware',
+        'ledger',
+        'lineage',
+        'model',
+        'policy',
+    ],
+)

@@ -29,59 +29,44 @@ Public APIs:
     - `DatasetManifestError`: Error raised during manifest compilation.
     - `ManifestEntry`: TypedDict defining per-raster configuration.
     - `SensorPreset`: Standard sensor band definitions and presets.
+    - `normalize_manifest_entry`: Normalize a single manifest entry.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
-    'DatasetManifestError',
     'DatasetManifestBuilder',
-    # functions
-    'normalize_manifest_entry',
-    # typing
+    'DatasetManifestError',
     'ManifestEntry',
     'SensorPreset',
+    'normalize_manifest_entry',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import (
-        DatasetManifestError,
         DatasetManifestBuilder,
+        DatasetManifestError,
     )
-    from .normalizer import (
-        normalize_manifest_entry,
-    )
+    from .normalizer import normalize_manifest_entry
     from .schema import (
         ManifestEntry,
         SensorPreset,
     )
 
 
-def __getattr__(name: str):
-    if name in {
-        'DatasetManifestError',
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': [
         'DatasetManifestBuilder',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'normalize_manifest_entry',
-    }:
-        obj = importlib.import_module('.normalizer', __package__)
-        return getattr(obj, name)
-
-    if name in {
+        'DatasetManifestError',
+    ],
+    '.normalizer': ['normalize_manifest_entry'],
+    '.schema': [
         'ManifestEntry',
         'SensorPreset',
-    }:
-        obj = importlib.import_module('.schema', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

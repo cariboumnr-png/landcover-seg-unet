@@ -27,16 +27,14 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'CompositeLoss',
     'CompositeLossConfig',
     'HeadLosses',
-    # functions
     'build_headlosses',
 ]
 
@@ -53,19 +51,13 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': [
         'HeadLosses',
         'build_headlosses',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.composite': [
         'CompositeLoss',
         'CompositeLossConfig',
-    }:
-        obj = importlib.import_module('.composite', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

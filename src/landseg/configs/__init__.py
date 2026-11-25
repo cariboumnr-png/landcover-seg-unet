@@ -35,43 +35,39 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
-    'ExecutionContext',
-    'RootConfig',
     'DataConfig',
+    'ExecutionContext',
     'ModelsConfig',
+    'RootConfig',
     'SessionConfig',
-    'StudyConfig'
+    'StudyConfig',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
     from .schema import (
-        ExecutionContext,
-        RootConfig,
         DataConfig,
+        ExecutionContext,
         ModelsConfig,
+        RootConfig,
         SessionConfig,
-        StudyConfig
+        StudyConfig,
     )
 
 
-def __getattr__(name: str):
-    if name in {
-        'ExecutionContext',
-        'RootConfig',
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.schema': [
         'DataConfig',
+        'ExecutionContext',
         'ModelsConfig',
+        'RootConfig',
         'SessionConfig',
-        'StudyConfig'
-    }:
-        obj = importlib.import_module('.schema', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+        'StudyConfig',
+    ],
+})

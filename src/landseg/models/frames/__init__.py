@@ -27,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'MultiHeadBaseModel',
     'MultiHeadUNet',
 ]
@@ -40,21 +39,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import (
-        MultiHeadBaseModel,
-    )
-    from .unet import (
-        MultiHeadUNet,
-    )
+    from .base import MultiHeadBaseModel
+    from .unet import MultiHeadUNet
 
 
-def __getattr__(name: str):
-    if name in {'MultiHeadBaseModel'}:
-        obj = importlib.import_module('.base', __package__)
-        return getattr(obj, name)
-
-    if name in {'MultiHeadUNet'}:
-        obj = importlib.import_module('.unet', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.base': ['MultiHeadBaseModel'],
+    '.unet': ['MultiHeadUNet'],
+})

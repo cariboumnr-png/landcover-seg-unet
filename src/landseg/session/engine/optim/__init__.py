@@ -27,17 +27,14 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
-    'Optimization',
-    # functions
-    'build_optimization',
-    # typing
     'OptimConfigShape',
+    'Optimization',
+    'build_optimization',
 ]
 
 
@@ -47,21 +44,13 @@ if typing.TYPE_CHECKING:
         OptimConfigShape,
         build_optimization,
     )
-    from .optimization import (
-        Optimization,
-    )
+    from .optimization import Optimization
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': [
         'OptimConfigShape',
         'build_optimization',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {'Optimization'}:
-        obj = importlib.import_module('.optimization', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.optimization': ['Optimization'],
+})

@@ -34,8 +34,10 @@ Public APIs:
     - `IngestionPaths`: Ingestion artifact directory paths.
     - `KnowledgePaths`: Knowledge artifact directory paths.
     - `LifecyclePolicy`: Artifact lifecycle retention policy.
+    - `PipelineArtifactsPaths`: Base paths dataclass for pipeline runs.
     - `PreparationPaths`: Preparation artifact directory paths.
     - `SessionPaths`: Session artifact directory paths.
+    - `WorldGridPaths`: Canonical filesystem paths for world grid runs.
     - `cleanup_scratch`: Remove obsolete temporary files from scratch.
     - `compute_fingerprint`: Deterministic SHA-256 hash of payload.
     - `find_run_collision`: Search runs manifest for matching run.
@@ -48,14 +50,14 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'ArtifactError',
     'ArtifactPaths',
+    'CheckpointMeta',
     'Controller',
     'HarmonizationPaths',
     'IngestionPaths',
@@ -65,7 +67,6 @@ __all__ = [
     'PreparationPaths',
     'SessionPaths',
     'WorldGridPaths',
-    # functions
     'cleanup_scratch',
     'compute_fingerprint',
     'find_run_collision',
@@ -75,8 +76,6 @@ __all__ = [
     'savez_compressed',
     'scratch_file',
     'stage_to_scratch',
-    # typing
-    'CheckpointMeta',
 ]
 
 
@@ -105,9 +104,7 @@ if typing.TYPE_CHECKING:
         SessionPaths,
         WorldGridPaths,
     )
-    from .policy import (
-        LifecyclePolicy,
-    )
+    from .policy import LifecyclePolicy
     from .storage import (
         cleanup_scratch,
         get_scratch_dir,
@@ -117,39 +114,21 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
-        'cleanup_scratch',
-        'get_scratch_dir',
-        'savez_compressed',
-        'scratch_file',
-        'stage_to_scratch',
-    }:
-        obj = importlib.import_module('.storage', __package__)
-        return getattr(obj, name)
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.checkpoint': [
         'CheckpointMeta',
         'load_checkpoint',
         'save_checkpoint',
-    }:
-        obj = importlib.import_module('.checkpoint', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.controller': [
         'ArtifactError',
         'Controller',
-    }:
-        obj = importlib.import_module('.controller', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.ledger': [
         'compute_fingerprint',
         'find_run_collision',
-    }:
-        obj = importlib.import_module('.ledger', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.paths': [
         'ArtifactPaths',
         'HarmonizationPaths',
         'IngestionPaths',
@@ -158,12 +137,13 @@ def __getattr__(name: str):
         'PreparationPaths',
         'SessionPaths',
         'WorldGridPaths',
-    }:
-        obj = importlib.import_module('.paths', __package__)
-        return getattr(obj, name)
-
-    if name in {'LifecyclePolicy'}:
-        obj = importlib.import_module('.policy', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.policy': ['LifecyclePolicy'],
+    '.storage': [
+        'cleanup_scratch',
+        'get_scratch_dir',
+        'savez_compressed',
+        'scratch_file',
+        'stage_to_scratch',
+    ],
+})

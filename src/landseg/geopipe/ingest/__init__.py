@@ -40,9 +40,10 @@ Public APIs:
 
 # standard imports
 from __future__ import annotations
-import importlib
 import pathlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 
 class _Validators:
@@ -91,14 +92,11 @@ validators = _Validators()
 
 
 __all__ = [
-    # classes
     'IngestionContext',
     'IngestionLogger',
-    # functions
     'build_ingestion_context',
     'resolve_pending_ingestion_batches',
     'run_data_ingestion',
-    # validators
     'validators',
 ]
 
@@ -106,6 +104,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     import landseg.geopipe.core as geo_core
+
     from .context import (
         IngestionContext,
         build_ingestion_context,
@@ -115,22 +114,12 @@ if typing.TYPE_CHECKING:
     from .pipeline import run_data_ingestion
 
 
-def __getattr__(name: str):
-
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.context': [
         'IngestionContext',
         'build_ingestion_context',
         'resolve_pending_ingestion_batches',
-    }:
-        obj = importlib.import_module('.context', __package__)
-        return getattr(obj, name)
-
-    if name in {'IngestionLogger'}:
-        obj = importlib.import_module('.logger', __package__)
-        return getattr(obj, name)
-
-    if name in {'run_data_ingestion'}:
-        obj = importlib.import_module('.pipeline', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.logger': ['IngestionLogger'],
+    '.pipeline': ['run_data_ingestion'],
+})

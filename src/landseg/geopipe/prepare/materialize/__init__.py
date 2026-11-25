@@ -26,31 +26,25 @@ Exposes block materialization and image normalization pipeline runners
 via lazy resolution.
 
 Public APIs:
-    - run_materialize_blocks: orchestrate stats aggregation and block
+    - `run_materialize_blocks`: Orchestrate stats aggregation and block
       materialization.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # functions
     'run_materialize_blocks',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .runner import (
-        run_materialize_blocks,
-    )
+    from .runner import run_materialize_blocks
 
 
-def __getattr__(name: str):
-    if name in {'run_materialize_blocks'}:
-        obj = importlib.import_module('.runner', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.runner': ['run_materialize_blocks'],
+})

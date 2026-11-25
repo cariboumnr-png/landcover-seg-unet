@@ -33,14 +33,12 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'PreflightResult',
-    # functions
     'assert_target_ready',
     'inspect_target',
     'run_preflight',
@@ -54,25 +52,14 @@ if typing.TYPE_CHECKING:
         inspect_target,
         run_preflight,
     )
-    from .schema import (
-        PreflightResult,
-    )
+    from .schema import PreflightResult
 
 
-def __getattr__(name: str):
-
-    if name in {
-        'inspect_target',
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.engine': [
         'assert_target_ready',
+        'inspect_target',
         'run_preflight',
-    }:
-        obj = importlib.import_module('.engine', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'PreflightResult',
-    }:
-        obj = importlib.import_module('.schema', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.schema': ['PreflightResult'],
+})

@@ -38,16 +38,14 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'AoiSplitsResult',
     'HydrationResults',
     'SplitsResult',
-    # functions
     'filter_safe_tiles',
     'hydrate_train_split',
     'intersect_aoi_raster',
@@ -64,51 +62,32 @@ if typing.TYPE_CHECKING:
         intersect_aoi_raster,
         resolve_aoi_partitions,
     )
-    from .filter import (
-        filter_safe_tiles,
-    )
+    from .filter import filter_safe_tiles
     from .hydrate import (
         HydrationResults,
         hydrate_train_split,
     )
-    from .score import (
-        score_blocks,
-    )
+    from .score import score_blocks
     from .stratify import (
         SplitsResult,
         stratified_splitter,
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.aoi': [
         'AoiSplitsResult',
         'intersect_aoi_raster',
         'resolve_aoi_partitions',
-    }:
-        obj = importlib.import_module('.aoi', __package__)
-        return getattr(obj, name)
-
-    if name in {'filter_safe_tiles'}:
-        obj = importlib.import_module('.filter', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.filter': ['filter_safe_tiles'],
+    '.hydrate': [
         'HydrationResults',
         'hydrate_train_split',
-    }:
-        obj = importlib.import_module('.hydrate', __package__)
-        return getattr(obj, name)
-
-    if name in {'score_blocks'}:
-        obj = importlib.import_module('.score', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.score': ['score_blocks'],
+    '.stratify': [
         'SplitsResult',
         'stratified_splitter',
-    }:
-        obj = importlib.import_module('.stratify', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

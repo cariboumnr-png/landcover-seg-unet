@@ -27,21 +27,18 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'EngineRuntime',
     'EpochRunner',
     'EpochRunnerContext',
     'MultiHeadEvaluator',
     'MultiHeadTrainer',
-    # functions
-    'build_epoch_runner',
-    # typing
     'ScheduleConfigShape',
+    'build_epoch_runner',
 ]
 
 
@@ -52,35 +49,24 @@ if typing.TYPE_CHECKING:
         ScheduleConfigShape,
         build_epoch_runner,
     )
-    from .runner import (
-        EpochRunner,
-    )
     from .policy import (
         EngineRuntime,
         MultiHeadEvaluator,
         MultiHeadTrainer,
     )
+    from .runner import EpochRunner
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.builder': [
         'EpochRunnerContext',
         'ScheduleConfigShape',
         'build_epoch_runner',
-    }:
-        obj = importlib.import_module('.builder', __package__)
-        return getattr(obj, name)
-
-    if name in {'EpochRunner'}:
-        obj = importlib.import_module('.runner', __package__)
-        return getattr(obj, name)
-
-    if name in {
+    ],
+    '.policy': [
         'EngineRuntime',
         'MultiHeadEvaluator',
         'MultiHeadTrainer',
-    }:
-        obj = importlib.import_module('.policy', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+    '.runner': ['EpochRunner'],
+})

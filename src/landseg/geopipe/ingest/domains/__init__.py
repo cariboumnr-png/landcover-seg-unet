@@ -32,14 +32,12 @@ Public APIs:
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # classes
     'DomainBuildingConfig',
-    # functions
     'prepare_domain_maps',
 ]
 
@@ -52,12 +50,9 @@ if typing.TYPE_CHECKING:
     )
 
 
-def __getattr__(name: str):
-    if name in {
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.lifecycle': [
         'DomainBuildingConfig',
         'prepare_domain_maps',
-    }:
-        obj = importlib.import_module('.lifecycle', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    ],
+})

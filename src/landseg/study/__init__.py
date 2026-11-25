@@ -27,12 +27,11 @@ order simple and circular-free.
 '''
 
 # standard imports
-from __future__ import annotations
-import importlib
 import typing
+# local imports
+import landseg._lazy as _lazy
 
 __all__ = [
-    # functions
     'rank_trials',
     'run_sweep',
 ]
@@ -40,21 +39,11 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .analysis import (
-        rank_trials,
-    )
-    from .sweep import (
-        run_sweep,
-    )
+    from .analysis import rank_trials
+    from .sweep import run_sweep
 
 
-def __getattr__(name: str):
-    if name in {'rank_trials'}:
-        obj = importlib.import_module('.analysis', __package__)
-        return getattr(obj, name)
-
-    if name in {'run_sweep'}:
-        obj = importlib.import_module('.sweep', __package__)
-        return getattr(obj, name)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+__getattr__, __dir__ = _lazy.attach(__name__, {
+    '.analysis': ['rank_trials'],
+    '.sweep': ['run_sweep'],
+})
