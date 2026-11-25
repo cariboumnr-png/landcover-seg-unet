@@ -23,18 +23,32 @@
 Top-level namespace for `landseg.adapters`.
 
 Exposes the programmatic API (`api`) and Hydra CLI (`cli`) adapter
-surfaces.
+surfaces via lazy resolution so importing either side avoids eagerly
+loading the other.
 
 Public APIs:
     - `api`: Programmatic configurators and execution entry points.
     - `cli`: Hydra-backed command-line interface and config resolver.
 '''
 
-# local imports
-import landseg.adapters.api as api
-import landseg.adapters.cli as cli
+# standard imports
+from __future__ import annotations
+import importlib
+import typing
 
 __all__ = [
     'api',
     'cli',
 ]
+
+
+# for static check
+if typing.TYPE_CHECKING:
+    from . import api, cli
+
+
+def __getattr__(name: str):
+    if name in {'api', 'cli'}:
+        return importlib.import_module(f'.{name}', __package__)
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
