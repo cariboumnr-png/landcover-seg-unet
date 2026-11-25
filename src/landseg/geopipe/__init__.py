@@ -28,6 +28,13 @@ through structured pipelines and lazy module resolution.
 
 Public APIs:
     - `build_dataspec`: Assembles runtime DataSpecs from artifacts.
+    - `validate_feature_specs`: Validate requested feature specs.
+    - `validate_grid_reference`: Validate a persisted world grid reference.
+    - `validate_grid_specs`: Validate world grid definition inputs.
+    - `validate_manifest_contract`: Validate input dataset manifest entries.
+    - `validate_pool_compatibility`: Validate grid/pool compatibility.
+    - `validate_prepare_semantics`: Validate preparation feature & head specs.
+    - `validate_raster_alignment`: Validate raster/grid alignment for ingest.
 '''
 
 # standard imports
@@ -38,6 +45,13 @@ import typing
 __all__ = [
     # functions
     'build_dataspec',
+    'validate_feature_specs',
+    'validate_grid_reference',
+    'validate_grid_specs',
+    'validate_manifest_contract',
+    'validate_pool_compatibility',
+    'validate_prepare_semantics',
+    'validate_raster_alignment',
 ]
 
 
@@ -46,11 +60,32 @@ if typing.TYPE_CHECKING:
     from .factory import (
         build_dataspec,
     )
+    from .validation import (
+        validate_feature_specs,
+        validate_grid_reference,
+        validate_grid_specs,
+        validate_manifest_contract,
+        validate_pool_compatibility,
+        validate_prepare_semantics,
+        validate_raster_alignment,
+    )
 
 
 def __getattr__(name: str):
     if name in {'build_dataspec'}:
         obj = importlib.import_module('.factory', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'validate_feature_specs',
+        'validate_grid_reference',
+        'validate_grid_specs',
+        'validate_manifest_contract',
+        'validate_pool_compatibility',
+        'validate_prepare_semantics',
+        'validate_raster_alignment',
+    }:
+        obj = importlib.import_module('.validation', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

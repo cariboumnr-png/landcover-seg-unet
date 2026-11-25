@@ -176,7 +176,8 @@ src/landseg/
 |   |   |-- stack.py              Multi-channel raster stacking
 |   |   |-- vrt.py                Virtual raster writing and VRT tag parsing
 |   |   `-- warp.py               Reprojection, warping, and bounds transforms
-|   `-- factory.py                DataSpecs factory
+|   |-- factory.py                DataSpecs factory
+|   `-- validation.py             Public pre-flight and stage contract validation facade
 |
 |-- knowledge/
 |   |-- embeddings.py             Sentence Transformer embedding tensors and similarity matrices

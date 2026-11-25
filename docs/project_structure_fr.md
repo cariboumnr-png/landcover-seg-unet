@@ -178,7 +178,8 @@ src/landseg/
 |   |   |-- stack.py              Empilement multi-canaux de rasters
 |   |   |-- vrt.py                Écriture de rasters virtuels et analyse de balises VRT
 |   |   `-- warp.py               Reprojection, distorsion et transformations de limites
-|   `-- factory.py                Factory des DataSpecs
+|   |-- factory.py                Factory des DataSpecs
+|   `-- validation.py             Façade publique de validation pre-flight et des contrats d'étape
 |
 |-- knowledge/
 |   |-- embeddings.py             Tenseurs de plongements Sentence Transformer et matrices de similarité
