@@ -164,12 +164,22 @@ class ModelTraining(base.SessionPipeline):
                 return
             best_ckpt = max(best_ckpts, key=lambda p: p.stat().st_mtime)
 
-            previews = visual.generate_prediction_previews(
+            model = self._build_model(dataspecs)
+            infer_results = session.run_preview_inference(
                 checkpoint_fpath=best_ckpt,
                 dataspecs=dataspecs,
-                config=self.config,
-                previews_dpath=self.pipeline_paths.previews,
+                model=model,
+                config=self.config.session,
+                device=self.config.session.device,
                 logger=self.logger,
+            )
+            if infer_results is None:
+                return
+
+            previews = visual.generate_prediction_previews(
+                infer_results=infer_results,
+                dataspecs=dataspecs,
+                previews_dpath=self.pipeline_paths.previews,
             )
             if previews:
                 self.logger.info(

@@ -1,6 +1,6 @@
 ## Structure actuelle du projet
 
-Dernière mise à jour: 2026-10-24
+Dernière mise à jour: 2026-11-25
 
 Ce document resume l'organisation actuelle du depot et la responsabilite
 principale de chaque zone. Il privilegie les frontieres utiles pour ajouter ou
@@ -45,13 +45,14 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- geopipe/                  Sous-système rasters, grille, harmonisation, ingestion, préparation
 |   |-- knowledge/                Validation de taxonomie, plongements d'espèces, matrices de similarité
 |   |-- mlops/                    Stockage cloud volumes, détection d'environnement, registre Unity Catalog
-|   |-- models/                   Frames, backbones, tetes, conditionnement, factories
-|   |-- notebooks/                Widgets interactifs, télémétrie visuelle et sécurité d'interruption
+|   |-- models/                   Frames, backbones, têtes, conditionnement, factories
+|   |-- runtime/                  Détection matériel, environnement plateforme, concurrence, logger, validateur, widgets interactifs
 |   |-- session/                  Construction, orchestration et moteurs runtime
-|   |-- study/                    Sweeps et analyse post-execution
-|   |-- utils/                    Helpers partages de logging et multiprocessing
+|   |-- study/                    Sweeps et analyse post-exécution
+|   |-- testing/                  Fixtures de test dédiées et factories de construction
+|   |-- visual/                   Colorisation par palettes, courbes d'entraînement, aperçus de prédiction, diagnostics et grilles spatiales
 |   |-- py.typed                  Marqueur d'annotations de type PEP 561
-|   |-- _constants.py             Constantes partagees
+|   |-- _constants.py             Constantes partagées
 |   `-- __init__.py
 |
 |-- configs/                      Recettes modulaires par tâche
@@ -99,7 +100,8 @@ src/landseg/
 |   |-- ledger.py                 Calcul d'empreintes et detection de collisions
 |   |-- paths/                    Chemins canoniques des artefacts
 |   |-- payload_io.py             Persistance des payloads et metadonnees
-|   `-- policy.py                 Regles de cycle de vie des artefacts
+|   |-- policy.py                 Regles de cycle de vie des artefacts
+|   `-- storage/                  Persistance d'archives séquentielles (npzio)
 |
 |-- configs/
 |   |-- hydra/
@@ -197,6 +199,14 @@ src/landseg/
 |   |-- frames/                   Modeles complets assemblant backbones et tetes
 |   `-- factory.py                Construction modele de haut niveau
 |
+|-- runtime/
+|   |-- concurrency.py            Dimensionnement du pool de workers et exécution parallèle
+|   |-- hardware.py               Détection de périphérique, requêtes mémoire et sondes de capacité
+|   |-- interactive.py            Widgets notebook et gestion sécurisée des interruptions d'entraînement
+|   |-- logger.py                 Journalisation unifiée et rapports structurés
+|   |-- platform.py               Découverte d'environnement cluster, introspection Databricks, lignage git
+|   `-- validator.py              Fonctions de validation primitives sans dépendance externe
+|
 |-- session/
 |   |-- contracts/                Protocoles partages de donnees, observateur et phases
 |   |-- data/                     Dataset, collation, memoire et construction des dataloaders
@@ -216,16 +226,23 @@ src/landseg/
 |   |   |-- policy/               Policies d'epoch et de phase
 |   |   `-- runner/               Runners continuous et curriculum
 |   |-- factory.py                Factory de session
-|   `-- logger.py                 Logging propre a la session
+|   |-- logger.py                 Logging propre a la session
+|   `-- preview.py                Inférence d'aperçu et sélection de bloc représentatif
 |
 |-- study/
 |   |-- analysis/                 Helpers d'analyse de trials/resultats
 |   `-- sweep/                    Objectif Optuna, config et optimisation
 |
-|-- utils/
-|   |-- logger.py                 Configuration du logging
-|   |-- multip.py                 Helpers de multiprocessing
-|   `-- validator.py              Primitives de validation sans dépendance externe
+|-- testing/
+|   |-- fixtures/                 Fixtures simulées de rasters synthétiques et jeux de données
+|   `-- factories/                Factories de construction de données de test et d'objets modèles
+|
+|-- visual/
+|   |-- color.py                  Palettes canoniques et colorisation catégorielle/continue
+|   |-- curves.py                 Tracé des courbes de perte et métriques multi-têtes
+|   |-- diagnostics.py            Matrices de confusion et graphiques de performance par classe
+|   |-- preview.py                Aperçus qualitatifs de segmentation et rendu des erreurs
+|   `-- spatial.py                Grille monde, fréquences de classes et composites spectraux
 ```
 
 ### Notes Sur Les Frontieres Actuelles

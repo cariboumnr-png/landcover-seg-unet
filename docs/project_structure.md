@@ -1,6 +1,6 @@
 ## Current Project Structure
 
-Last updated: 2026-10-24
+Last updated: 2026-11-25
 
 This document summarizes the repository's current package layout and the main
 responsibility of each area. It favors the working boundaries that matter when
@@ -216,7 +216,8 @@ src/landseg/
 |   |   |-- policy/               Epoch and phase policies
 |   |   `-- runner/               Continuous and curriculum runners
 |   |-- factory.py                Session factory
-|   `-- logger.py                 Session-scoped logging
+|   |-- logger.py                 Session-scoped logging
+|   `-- preview.py                Preview inference and representative block selection
 |
 |-- study/
 |   |-- analysis/                 Trial/result analysis helpers

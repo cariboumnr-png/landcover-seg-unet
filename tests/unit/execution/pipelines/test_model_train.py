@@ -235,7 +235,7 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
     '''
     Given: ModelTraining pipeline with finished run, step_results, and test split.
     When: Calling `_generate_post_run_visuals`.
-    Then: Delegate to `visual.plot_training_curves` and `visual.generate_prediction_previews`.
+    Then: Delegate curves, session preview inference, and pure preview rendering.
     '''
     exp_root = tmp_path / 'exp'
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -263,8 +263,18 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
     mock_specs.splits.test = {'blk1': 'path1'}
     pipeline.context = mock_specs
 
+    mock_model = mocker.Mock()
+    mock_infer_results = mocker.Mock()
+    mocker.patch.object(pipeline, '_build_model', return_value=mock_model)
+    mock_run_infer = mocker.patch(
+        'landseg.session.run_preview_inference',
+        return_value=mock_infer_results,
+    )
     mock_plot_curves = mocker.patch('landseg.visual.plot_training_curves')
-    mock_gen_previews = mocker.patch('landseg.visual.generate_prediction_previews', return_value={'head1': mocker.Mock()})
+    mock_gen_previews = mocker.patch(
+        'landseg.visual.generate_prediction_previews',
+        return_value={'head1': mocker.Mock()},
+    )
 
     pipeline._generate_post_run_visuals()
 
@@ -273,11 +283,50 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
         save_path=pipeline.pipeline_paths.plots / 'training_curves.png',
         show=False,
     )
-    mock_gen_previews.assert_called_once_with(
+    mock_run_infer.assert_called_once_with(
         checkpoint_fpath=best_ckpt,
         dataspecs=mock_specs,
-        config=pipeline.config,
-        previews_dpath=pipeline.pipeline_paths.previews,
+        model=mock_model,
+        config=pipeline.config.session,
+        device=pipeline.config.session.device,
         logger=pipeline.logger,
     )
+    mock_gen_previews.assert_called_once_with(
+        infer_results=mock_infer_results,
+        dataspecs=mock_specs,
+        previews_dpath=pipeline.pipeline_paths.previews,
+    )
 
+
+def test_train_generate_post_run_visuals_skips_when_infer_none(tmp_path, mocker):
+    '''
+    Given: ModelTraining pipeline where `session.run_preview_inference` returns None.
+    When: Calling `_generate_post_run_visuals`.
+    Then: Skip calling `visual.generate_prediction_previews`.
+    '''
+    schema = omegaconf.OmegaConf.structured(configs.RootConfig)
+    schema.execution.exp_root = tmp_path / 'exp'
+    schema.data.preparation.output_dpath = tmp_path / 'prep'
+
+    config = typing.cast(
+        configs.RootConfig,
+        omegaconf.OmegaConf.to_object(schema)
+    )
+    pipeline = train_pipeline.ModelTraining(config)
+    pipeline.logger = mocker.Mock()
+
+    pipeline.pipeline_paths.checkpoints.mkdir(parents=True, exist_ok=True)
+    best_ckpt = pipeline.pipeline_paths.checkpoints / 'checkpoint_epoch_0005_best.pt'
+    best_ckpt.write_bytes(b'ckpt')
+
+    mock_specs = mocker.Mock()
+    mock_specs.splits.test = {'blk1': 'path1'}
+    pipeline.context = mock_specs
+
+    mocker.patch.object(pipeline, '_build_model', return_value=mocker.Mock())
+    mocker.patch('landseg.session.run_preview_inference', return_value=None)
+    mock_gen_previews = mocker.patch('landseg.visual.generate_prediction_previews')
+
+    pipeline._generate_post_run_visuals()
+
+    mock_gen_previews.assert_not_called()

@@ -24,6 +24,17 @@ Top-level namespace for `landseg.session`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `ContinuousRunner`: Single-phase training session runner.
+    - `CurriculumRunner`: Multi-phase curriculum session runner.
+    - `EpochRunner`: Single-epoch execution runner.
+    - `SessionBuildContext`: Runtime context for session building.
+    - `SessionConfigShape`: Configuration protocol for session assembly.
+    - `SessionLogger`: Session-scoped structured logger.
+    - `build_session_runner`: Build a configured session runner variant.
+    - `run_preview_inference`: Execute stitched preview inference on test.
+    - `select_representative_block`: Select a diverse fallback block.
 '''
 
 # standard imports
@@ -40,6 +51,8 @@ __all__ = [
     'SessionLogger',
     # functions
     'build_session_runner',
+    'run_preview_inference',
+    'select_representative_block',
     # typing
     'SessionConfigShape',
 ]
@@ -62,6 +75,10 @@ if typing.TYPE_CHECKING:
         ContinuousRunner,
         CurriculumRunner,
     )
+    from .preview import (
+        run_preview_inference,
+        select_representative_block,
+    )
 
 
 def __getattr__(name: str):
@@ -82,10 +99,17 @@ def __getattr__(name: str):
         return getattr(obj, name)
 
     if name in {
-    'ContinuousRunner',
-    'CurriculumRunner',
+        'ContinuousRunner',
+        'CurriculumRunner',
     }:
         obj = importlib.import_module('.orchestration', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'run_preview_inference',
+        'select_representative_block',
+    }:
+        obj = importlib.import_module('.preview', __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

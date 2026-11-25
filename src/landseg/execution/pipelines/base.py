@@ -210,14 +210,7 @@ class SessionPipeline(BasePipeline):
         # setup the model
         self.logger.info('[START] Model assembly')
         start_t = time.perf_counter()
-        model = models.build_multihead_unet(
-            patch_size=self.config.session.dataloader.patch_size,
-            dataspecs=dataspecs,
-            unet_backbone_config=self.config.models.unet_backbone_config,
-            conditioning_config=self.config.models.conditioning_config,
-            enable_clamp=self.config.models.numeric_safety.enable_clamp,
-            clamp_range=self.config.models.numeric_safety.clamp_range
-        )
+        model = self._build_model(dataspecs)
         self.timer['model'] = time.perf_counter() - start_t
         self.logger.info(f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
 
@@ -265,4 +258,18 @@ class SessionPipeline(BasePipeline):
                 is_databricks=runtime.is_databricks(),
             ),
             session_type=session_type,
+        )
+
+    def _build_model(
+        self,
+        dataspecs: core.DataSpecs,
+    ) -> core.MultiheadModelLike:
+        '''Assemble multi-head UNet model from dataspecs and config.'''
+        return models.build_multihead_unet(
+            patch_size=self.config.session.dataloader.patch_size,
+            dataspecs=dataspecs,
+            unet_backbone_config=self.config.models.unet_backbone_config,
+            conditioning_config=self.config.models.conditioning_config,
+            enable_clamp=self.config.models.numeric_safety.enable_clamp,
+            clamp_range=self.config.models.numeric_safety.clamp_range,
         )

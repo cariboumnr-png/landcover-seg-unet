@@ -33,7 +33,7 @@ Public APIs:
     - `NLCD_16_PALETTE`: Standard 16-class National Land Cover Database palette.
     - `colorize`: Map 2D class integer masks to 3D RGB tensors.
     - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
-    - `generate_prediction_previews`: Produce inferred preview figures per head.
+    - `generate_prediction_previews`: Render preview figures per head.
     - `plot_class_frequencies`: Render class pixel count and imbalance chart.
     - `plot_confusion_matrix`: Render normalized evaluation confusion matrix.
     - `plot_grid_layout`: Render spatial grid tiling and partition splits.
@@ -42,7 +42,6 @@ Public APIs:
     - `plot_spectral_composite`: Render stretched RGB/false-color composite.
     - `plot_training_curves`: Plot multi-head training and validation curves.
     - `render_prediction_preview`: Automated prediction preview display.
-    - `select_representative_block`: Deterministically select a diverse block.
 '''
 
 # standard imports
@@ -68,7 +67,6 @@ __all__ = [
     'plot_spectral_composite',
     'plot_training_curves',
     'render_prediction_preview',
-    'select_representative_block',
 ]
 
 
@@ -93,7 +91,6 @@ if typing.TYPE_CHECKING:
         generate_prediction_previews,
         plot_qualitative_predictions,
         render_prediction_preview,
-        select_representative_block,
     )
     from .spatial import (
         plot_class_frequencies,
@@ -129,7 +126,6 @@ def __getattr__(name: str):
         'generate_prediction_previews',
         'plot_qualitative_predictions',
         'render_prediction_preview',
-        'select_representative_block',
     }:
         obj = importlib.import_module('.preview', __package__)
         return getattr(obj, name)

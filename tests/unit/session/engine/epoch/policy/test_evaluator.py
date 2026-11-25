@@ -144,7 +144,37 @@ def test_evaluator_infer(
     results = evaluator.infer(epoch=1)
 
     assert isinstance(results, core.InferStepResults)
+    assert isinstance(results.infer_inputs, torch.Tensor)
+    assert results.infer_inputs.shape == (4, 256, 256)
     assert 'head_1' in results.head_metrics
     assert 'head_1' in results.infer_preds
     on_begin.assert_called_once()
     on_end.assert_called_once_with(results)
+
+
+def test_evaluator_stitch_patches_without_inputs(
+    mock_runtime,
+    mock_dataloaders,
+    mock_dispatcher,
+):
+    '''
+    Given: `MultiHeadEvaluator` with populated labels/preds/errors and no inputs.
+    When: Calling `_stitch_patches`.
+    Then: Set `infer_inputs` to None while stitching 2D head tensors.
+    '''
+    evaluator = eval_mod.MultiHeadEvaluator(
+        infer_every=1,
+        engine_runtime=mock_runtime,
+        dataloaders=mock_dataloaders,
+        dispatcher=mock_dispatcher,
+        device='cpu',
+    )
+    evaluator.state.infer_out.clear()
+    evaluator.state.infer_out.labels['head_1'] = {(0, 0): torch.ones(128, 128)}
+    evaluator.state.infer_out.preds['head_1'] = {(0, 0): torch.ones(128, 128)}
+    evaluator.state.infer_out.errors['head_1'] = {(0, 0): torch.ones(128, 128)}
+
+    evaluator._stitch_patches()  # pylint: disable=protected-access
+
+    assert evaluator.infer_results.infer_inputs is None
+    assert evaluator.infer_results.infer_preds['head_1'].shape == (256, 256)

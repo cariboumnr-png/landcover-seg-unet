@@ -229,9 +229,13 @@ class MultiHeadEvaluator(base.EngineBase):
             metrics_mod.reset(self.device)
         # reset head metrics dictionary
         self.infer_results.head_metrics.clear()
-        # reset inference outputs
-        self.state.infer_out.clear()
         self.infer_results.mtl_metrics.clear()
+        # reset inference outputs
+        self.infer_results.infer_inputs = None
+        self.infer_results.infer_labels.clear()
+        self.infer_results.infer_preds.clear()
+        self.infer_results.infer_errors.clear()
+        self.state.infer_out.clear()
 
         # reset mtl aggregator if present
         if self.state.heads.multihead_metrics is not None:
@@ -266,14 +270,11 @@ class MultiHeadEvaluator(base.EngineBase):
         return self.infer_results
 
     def _stitch_patches(self) -> None:
-        '''
-        Merge {(col, row): patch[Hp, Wp]} into a full RGB tensor.
+        '''Stitch collected input, label, prediction, and error patches.'''
 
-        Returns:
-            RGB tensor of shape [3, H_total, W_total] uint8.
-        '''
-        def stitch(placements: dict[tuple[int, int], torch.Tensor]):
-            # stitch patches and return
+        def stitch_2d(
+            placements: dict[tuple[int, int], torch.Tensor],
+        ) -> torch.Tensor:
             canvas = torch.full(
                 (rows_total * hp, cols_total * wp),
                 fill_value=0,
@@ -287,6 +288,27 @@ class MultiHeadEvaluator(base.EngineBase):
                 canvas[y:y + hp, x:x + wp] = patch
             return canvas
 
+        def stitch_inputs(
+            placements: dict[tuple[int, int], torch.Tensor],
+        ) -> torch.Tensor | None:
+            if not placements:
+                return None
+            sample = next(iter(placements.values()))
+            if sample.dim() == 2:
+                sample = sample.unsqueeze(0)
+            canvas = torch.zeros(
+                (sample.shape[0], rows_total * hp, cols_total * wp),
+                dtype=sample.dtype,
+                device=sample.device,
+            )
+            for (col, row), patch in placements.items():
+                if patch.dim() == 2:
+                    patch = patch.unsqueeze(0)
+                y = row * hp
+                x = col * wp
+                canvas[:, y:y + hp, x:x + wp] = patch
+            return canvas
+
         # parse variables
         preview_ctx = self.dataloaders.meta.preview_context
         assert preview_ctx
@@ -294,9 +316,14 @@ class MultiHeadEvaluator(base.EngineBase):
         hp = wp = self.dataloaders.meta.patch_size
 
         # stitch and pass to inference results container
-        labels = {h: stitch(p) for h, p in self.state.infer_out.labels.items()}
-        preds = {h: stitch(p) for h, p in self.state.infer_out.preds.items()}
-        errors = {h: stitch(p) for h, p in self.state.infer_out.errors.items()}
-        self.infer_results.infer_labels = labels
-        self.infer_results.infer_preds = preds
-        self.infer_results.infer_errors = errors
+        infer_out = self.state.infer_out
+        self.infer_results.infer_inputs = stitch_inputs(infer_out.inputs)
+        self.infer_results.infer_labels = {
+            h: stitch_2d(p) for h, p in infer_out.labels.items()
+        }
+        self.infer_results.infer_preds = {
+            h: stitch_2d(p) for h, p in infer_out.preds.items()
+        }
+        self.infer_results.infer_errors = {
+            h: stitch_2d(p) for h, p in infer_out.errors.items()
+        }

@@ -260,7 +260,8 @@ class BatchEngine:
 
         # batch end
         # update per-head confusion matrix and aggregate MTL metrics
-        self._update_metrics()
+        if self.state.batch_cxt.y_dict:
+            self._update_metrics()
         # aggregate to epoch storage (CPU detach)
         self._aggregate_batch_predictions()
 
