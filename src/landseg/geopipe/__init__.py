@@ -27,7 +27,10 @@ data block construction, and runtime dataset specification creation
 through structured pipelines and lazy module resolution.
 
 Public APIs:
+    - `DatasetManifestBuilder`: Fluent builder for dataset manifests.
+    - `SensorPreset`: Standard sensor band definitions and presets.
     - `build_dataspec`: Assembles runtime DataSpecs from artifacts.
+    - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
     - `validate_feature_specs`: Validate requested feature specs.
     - `validate_grid_reference`: Validate a persisted world grid reference.
     - `validate_grid_specs`: Validate world grid definition inputs.
@@ -43,8 +46,12 @@ import importlib
 import typing
 
 __all__ = [
+    # classes
+    'DatasetManifestBuilder',
+    'SensorPreset',
     # functions
     'build_dataspec',
+    'build_vrt_mosaic',
     'validate_feature_specs',
     'validate_grid_reference',
     'validate_grid_specs',
@@ -60,6 +67,13 @@ if typing.TYPE_CHECKING:
     from .factory import (
         build_dataspec,
     )
+    from .harmonize.manifest import (
+        DatasetManifestBuilder,
+        SensorPreset,
+    )
+    from .rasters import (
+        build_vrt_mosaic,
+    )
     from .validation import (
         validate_feature_specs,
         validate_grid_reference,
@@ -74,6 +88,17 @@ if typing.TYPE_CHECKING:
 def __getattr__(name: str):
     if name in {'build_dataspec'}:
         obj = importlib.import_module('.factory', __package__)
+        return getattr(obj, name)
+
+    if name in {
+        'DatasetManifestBuilder',
+        'SensorPreset',
+    }:
+        obj = importlib.import_module('.harmonize.manifest', __package__)
+        return getattr(obj, name)
+
+    if name in {'build_vrt_mosaic'}:
+        obj = importlib.import_module('.rasters', __package__)
         return getattr(obj, name)
 
     if name in {
