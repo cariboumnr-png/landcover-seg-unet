@@ -266,9 +266,8 @@ def test_autocast_ctx_cpu_fallback_without_bf16(
         context=_get_context()
     )
 
-    mocker.patch.object(
-        engine_mod.hardware,
-        'is_cpu_bf16_supported',
+    mocker.patch(
+        'landseg.runtime.hardware.is_cpu_bf16_supported',
         return_value=False
     )
     ctx = engine._autocast_ctx()
@@ -302,9 +301,8 @@ def test_autocast_ctx_cpu_bf16_supported(
         context=_get_context()
     )
 
-    mocker.patch.object(
-        engine_mod.hardware,
-        'is_cpu_bf16_supported',
+    mocker.patch(
+        'landseg.runtime.hardware.is_cpu_bf16_supported',
         return_value=True
     )
     ctx = engine._autocast_ctx()

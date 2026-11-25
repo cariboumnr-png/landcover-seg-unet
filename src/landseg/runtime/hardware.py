@@ -29,11 +29,19 @@ along with microarchitecture capability probes for BF16 and cuDNN.
 Public APIs:
     - `get_device_name`: Query human-readable name of execution device.
     - `is_cpu_bf16_supported`: Probe whether CPU supports hardware BF16.
+    - `resolve_amp_dtype`: Resolve the safe autocast dtype for a device.
     - `resolve_device`: Resolve hardware execution target string.
 '''
 
+# standard imports
+import re
 # third-party imports
 import torch
+
+# turing TU116/TU117 GPUs report cc 7.5 but lack Tensor Cores (#88)
+_NO_TENSOR_CORE_GPUS = re.compile(
+    r'GTX 16\d\d|\bT(?:400|600|1000)\b|\bMX(?:450|550)\b'
+)
 
 
 # ----- public functions
@@ -105,6 +113,37 @@ def get_device_name(device: str | torch.device = 'auto') -> str:
         return 'Apple Silicon (MPS)'
 
     return dev.type
+
+
+def resolve_amp_dtype(device: str | torch.device) -> torch.dtype | None:
+    '''
+    Resolve the autocast dtype that is safe on the given device.
+
+    CPUs use BF16 only with hardware acceleration. CUDA devices use
+    FP16 only when they have Tensor Cores (compute capability >= 7.0
+    and not a TU116/TU117 part), since cuDNN FP16 convolutions emit
+    `NaN` on those GPUs (Issue #88). Other devices keep FP16.
+
+    Args:
+        device:
+            Concrete device identifier (e.g., 'cpu', 'cuda', 'cuda:0',
+            'mps') or a torch.device instance.
+
+    Returns:
+        torch.dtype | None:
+            Autocast dtype, or None when the device should run FP32.
+    '''
+    dev = torch.device(device)
+    if dev.type == 'cpu':
+        return torch.bfloat16 if is_cpu_bf16_supported() else None
+    if dev.type == 'cuda':
+        idx = dev.index if dev.index is not None else 0
+        major, _ = torch.cuda.get_device_capability(idx)
+        name = torch.cuda.get_device_name(idx)
+        if major < 7 or _NO_TENSOR_CORE_GPUS.search(name):
+            return None
+        return torch.float16
+    return torch.float16
 
 
 def is_cpu_bf16_supported() -> bool:

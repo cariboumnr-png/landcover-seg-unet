@@ -1,7 +1,7 @@
 # ADR-0068: Cloud Raster I/O, Materialization, and Execution Hardening
 
 **Status:** Accepted — Implemented<br>
-**Date:** 2026-11-19 (Updated 2026-11-23)<br>
+**Date:** 2026-11-19 (Updated 2026-11-25)<br>
 **Branch:** `cloud-raster-io`<br>
 **Related:**
 [ADR-0066](ADR-0066-production-notebook-architecture-and-databricks-integration.md),
@@ -380,3 +380,26 @@ boundless padding selectively only to raster perimeters.
 * Added the optional `05_scratch_dir` widget to `notebooks/01_data_ingestion.ipynb`
 (empty by default, falling back to the system temp directory); on Databricks,
 set it to node-local scratch (e.g. `/local_disk0`).
+
+---
+
+## Addendum (2026-11-25): CUDA AMP Dtype Routing (Issue #88 follow-up)
+
+The Issue #88 hardening in Section 2.1 made non-finite logits fail fast
+and added a CPU BF16 fallback, but CUDA kept unconditional FP16 autocast.
+On a TU117 GPU (NVIDIA T600 Laptop GPU, `torch 2.10.0+cu126`) training
+still raised `FloatingPointError` in the validation forward pass.
+
+* `landseg.runtime.hardware.resolve_amp_dtype()` is the single source of
+  the autocast dtype: CPU uses BF16 only with hardware acceleration; CUDA
+  uses FP16 only with Tensor Cores (compute capability >= 7.0 and not a
+  TU116/TU117 part, matched by device name); other devices keep FP16.
+  Devices without a safe dtype run FP32.
+* `BatchEngine._autocast_ctx()` routes through it for training,
+  validation, and inference.
+* `GradScaler` is enabled only when the resolved dtype is FP16, and
+  `MultiHeadTrainer` branches on `scaler.is_enabled()` instead of
+  `use_amp`.
+* Preflight adds a `cuda_amp_headroom` WARN probe when FP16 AMP is
+  downgraded on CUDA.
+* BF16 on Ampere+ GPUs was considered and left out of scope.

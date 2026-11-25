@@ -42,6 +42,7 @@ import typing
 # third-party imports
 import torch
 # local imports
+import landseg.runtime as runtime
 import landseg.session.contracts as contracts
 import landseg.session.engine.tasks as tasks
 
@@ -199,10 +200,14 @@ def initialize_state(
         - Head-specific active/frozen configurations are assigned later\
           during phase orchestration.
     '''
+    # loss scaling is only needed when autocast resolves to FP16
+    use_scaler = (
+        use_amp and runtime.resolve_amp_dtype(device) == torch.float16
+    )
     # create an instance with default values
     runtime_state = EngineState(
         optim=_OptimRuntime(
-            scaler=torch.GradScaler(device=device, enabled=use_amp)
+            scaler=torch.GradScaler(device=device, enabled=use_scaler)
         )
     )
     # update

@@ -58,7 +58,7 @@ import typing
 import torch
 # local imports
 import landseg.core as core
-import landseg.runtime.hardware as hardware
+import landseg.runtime as runtime
 import landseg.session.engine.batch.objective as objective
 import landseg.session.engine.batch.state as state
 
@@ -349,13 +349,10 @@ class BatchEngine:
         if not self.config.use_amp:
             return contextlib.nullcontext()
 
-        # on CPU, fall back to FP32 if hardware lacks BF16 acceleration
-        if device_type == 'cpu':
-            if not hardware.is_cpu_bf16_supported():
-                return contextlib.nullcontext()
-            dtype = torch.bfloat16
-        else:
-            dtype = torch.float16
+        # fall back to FP32 where the device lacks a safe AMP dtype
+        dtype = runtime.resolve_amp_dtype(device_type)
+        if dtype is None:
+            return contextlib.nullcontext()
 
         return torch.autocast(
             device_type=device_type,

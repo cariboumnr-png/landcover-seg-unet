@@ -133,3 +133,60 @@ def test_is_cpu_bf16_supported(mocker):
 
     mock_cpu._is_amx_tile_supported.return_value = False
     assert hardware.is_cpu_bf16_supported() is False
+
+
+@pytest.mark.parametrize(
+    'bf16_supported, expected',
+    [(True, torch.bfloat16), (False, None)],
+)
+def test_resolve_amp_dtype_cpu(
+    monkeypatch: pytest.MonkeyPatch,
+    bf16_supported: bool,
+    expected: torch.dtype | None,
+):
+    '''
+    Given: CPU device with or without hardware BF16.
+    When: Calling resolve_amp_dtype.
+    Then: Return bfloat16 when supported, otherwise None (FP32).
+    '''
+    monkeypatch.setattr(
+        hardware, 'is_cpu_bf16_supported', lambda: bf16_supported
+    )
+    assert hardware.resolve_amp_dtype('cpu') is expected
+
+
+@pytest.mark.parametrize(
+    'name, capability, expected',
+    [
+        ('NVIDIA T600 Laptop GPU', (7, 5), None),
+        ('NVIDIA GeForce GTX 1650', (7, 5), None),
+        ('NVIDIA GeForce GTX 1080', (6, 1), None),
+        ('NVIDIA GeForce RTX 2080', (7, 5), torch.float16),
+        ('NVIDIA RTX 4090', (8, 9), torch.float16),
+    ],
+)
+def test_resolve_amp_dtype_cuda(
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    capability: tuple[int, int],
+    expected: torch.dtype | None,
+):
+    '''
+    Given: CUDA device with a given name and compute capability.
+    When: Calling resolve_amp_dtype.
+    Then: Return float16 only for GPUs with Tensor Cores, else None.
+    '''
+    monkeypatch.setattr(torch.cuda, 'get_device_name', lambda idx: name)
+    monkeypatch.setattr(
+        torch.cuda, 'get_device_capability', lambda idx: capability
+    )
+    assert hardware.resolve_amp_dtype('cuda:0') is expected
+
+
+def test_resolve_amp_dtype_mps():
+    '''
+    Given: MPS device identifier.
+    When: Calling resolve_amp_dtype.
+    Then: Return float16 (unchanged behaviour).
+    '''
+    assert hardware.resolve_amp_dtype('mps') is torch.float16

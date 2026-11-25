@@ -113,6 +113,23 @@ def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
         )
     )
 
+    if _resolve_use_amp(ctx) and hardware.resolve_amp_dtype('cuda') is None:
+        results.append(
+            schema.ProbeResult(
+                pid='cuda_amp_headroom',
+                category=schema.ProbeCategory.HARDWARE,
+                status=schema.ProbeStatus.WARN,
+                message=(
+                    f'AMP (float16) is unsafe on {device_name} without '
+                    'Tensor Cores (see Issue #88). Auto-fallback to FP32.'
+                ),
+                details={
+                    'use_amp': True,
+                    'amp_dtype': None,
+                },
+            )
+        )
+
     try:
         free_b, total_b = torch.cuda.mem_get_info(0)
     except Exception:  # pylint: disable=broad-exception-caught

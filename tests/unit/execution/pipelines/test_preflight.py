@@ -176,6 +176,30 @@ def test_probe_hardware_cpu_amp_headroom(monkeypatch):
     assert 'lacks hardware acceleration' in results[1].message
 
 
+def test_probe_hardware_cuda_amp_headroom(monkeypatch):
+    '''
+    Given: CUDA GPU without Tensor Cores and AMP enabled.
+    When: `hardware_info()` is called.
+    Then: Return cuda_amp_headroom WARN probe alerting on FP32 fallback.
+    '''
+    monkeypatch.setattr('torch.cuda.is_available', lambda: True)
+    monkeypatch.setattr(
+        'torch.cuda.get_device_name', lambda idx=0: 'NVIDIA T600 Laptop GPU'
+    )
+    monkeypatch.setattr(
+        'torch.cuda.get_device_capability', lambda idx=0: (7, 5)
+    )
+    cfg = configs.RootConfig()
+    cfg.session.engine.engine_exec.use_amp = True
+    ctx = context.InspectionContext.from_config(cfg)
+    results = checks.hardware.hardware_info(ctx)
+
+    assert results[0].pid == 'cuda_device'
+    assert results[1].pid == 'cuda_amp_headroom'
+    assert results[1].status == schema.ProbeStatus.WARN
+    assert 'Auto-fallback to FP32' in results[1].message
+
+
 def test_probe_filesystem(tmp_path):
     '''
     Given: A writable directory path and a missing path.

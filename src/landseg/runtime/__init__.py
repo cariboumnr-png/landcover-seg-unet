@@ -40,6 +40,7 @@ __all__ = [
     'get_device_name',
     'is_cpu_bf16_supported',
     'resolve_device',
+    'resolve_amp_dtype',
     # interactive
     'MissingRequiredInputError',
     'NotebookWidgets',
@@ -66,6 +67,7 @@ if typing.TYPE_CHECKING:
     from .hardware import (
         get_device_name,
         is_cpu_bf16_supported,
+        resolve_amp_dtype,
         resolve_device,
     )
     from .interactive import (
@@ -94,6 +96,7 @@ def __getattr__(name: str) -> typing.Any:
     if name in {
         'get_device_name',
         'is_cpu_bf16_supported',
+        'resolve_amp_dtype',
         'resolve_device',
     }:
         obj = importlib.import_module('.hardware', __package__)

@@ -201,3 +201,26 @@ def test_initialize_state_creation():
     assert state.heads.all_heads == all_heads
     assert state.batch_cxt.batch_size == 8
     assert state.optim.scaler is not None
+
+
+def test_initialize_state_scaler_follows_amp_dtype(monkeypatch):
+    '''
+    Given: `use_amp=True` with the resolved AMP dtype varied.
+    When: Calling `initialize_state`.
+    Then: Enable `GradScaler` only when autocast resolves to FP16.
+    '''
+    for dtype, enabled in [
+        (torch.float16, True),
+        (torch.bfloat16, False),
+        (None, False),
+    ]:
+        monkeypatch.setattr(
+            state_mod.runtime, 'resolve_amp_dtype', lambda d, t=dtype: t
+        )
+        state = state_mod.initialize_state(
+            all_heads=['head_1'],
+            batch_size=2,
+            use_amp=True,
+            device='cpu'
+        )
+        assert state.optim.scaler.is_enabled() is enabled
