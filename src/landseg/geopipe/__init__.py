@@ -23,8 +23,8 @@
 Top-level namespace for `landseg.geopipe`.
 
 Coordinates raw geospatial raster harmonization, domain tile mapping,
-data block construction, and runtime dataset specification creation
-through structured pipelines and lazy module resolution.
+data block construction, stage execution, and runtime dataset
+specification creation through structured pipelines and lazy resolution.
 
 Public APIs:
     - `DatasetManifestBuilder`: Fluent builder for dataset manifests.
@@ -32,6 +32,11 @@ Public APIs:
     - `build_dataspec`: Assembles runtime DataSpecs from artifacts.
     - `build_overfit_dataspec`: Build single-block DataSpecs for overfit.
     - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
+    - `resolve_pending_ingestion_batches`: Resolve pending ingest batches.
+    - `run_world_grid_stage`: Execute world-grid generation stage.
+    - `run_data_harmonization_stage`: Execute data-harmonize stage.
+    - `run_data_ingestion_stage`: Execute data-ingest stage.
+    - `run_data_preparation_stage`: Execute data-prepare stage.
     - `validate_feature_specs`: Validate requested feature specs.
     - `validate_grid_reference`: Validate a persisted world grid reference.
     - `validate_grid_specs`: Validate world grid definition inputs.
@@ -54,6 +59,11 @@ __all__ = [
     'build_dataspec',
     'build_overfit_dataspec',
     'build_vrt_mosaic',
+    'resolve_pending_ingestion_batches',
+    'run_data_harmonization_stage',
+    'run_data_ingestion_stage',
+    'run_data_preparation_stage',
+    'run_world_grid_stage',
     'validate_feature_specs',
     'validate_grid_reference',
     'validate_grid_specs',
@@ -62,6 +72,26 @@ __all__ = [
     'validate_prepare_semantics',
     'validate_raster_alignment',
 ]
+
+_LAZY_SUBMODULES: dict[str, str] = {
+    'DatasetManifestBuilder': '.harmonize.manifest',
+    'SensorPreset': '.harmonize.manifest',
+    'build_dataspec': '.factory',
+    'build_overfit_dataspec': '.diagnostic',
+    'build_vrt_mosaic': '.rasters',
+    'resolve_pending_ingestion_batches': '.ingest',
+    'run_data_harmonization_stage': '.stages',
+    'run_data_ingestion_stage': '.stages',
+    'run_data_preparation_stage': '.stages',
+    'run_world_grid_stage': '.stages',
+    'validate_feature_specs': '.validation',
+    'validate_grid_reference': '.validation',
+    'validate_grid_specs': '.validation',
+    'validate_manifest_contract': '.validation',
+    'validate_pool_compatibility': '.validation',
+    'validate_prepare_semantics': '.validation',
+    'validate_raster_alignment': '.validation',
+}
 
 
 # for static check
@@ -76,8 +106,17 @@ if typing.TYPE_CHECKING:
         DatasetManifestBuilder,
         SensorPreset,
     )
+    from .ingest import (
+        resolve_pending_ingestion_batches,
+    )
     from .rasters import (
         build_vrt_mosaic,
+    )
+    from .stages import (
+        run_data_harmonization_stage,
+        run_data_ingestion_stage,
+        run_data_preparation_stage,
+        run_world_grid_stage,
     )
     from .validation import (
         validate_feature_specs,
@@ -91,35 +130,9 @@ if typing.TYPE_CHECKING:
 
 
 def __getattr__(name: str):
-    if name in {'build_overfit_dataspec'}:
-        obj = importlib.import_module('.diagnostic', __package__)
-        return getattr(obj, name)
-
-    if name in {'build_dataspec'}:
-        obj = importlib.import_module('.factory', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'DatasetManifestBuilder',
-        'SensorPreset',
-    }:
-        obj = importlib.import_module('.harmonize.manifest', __package__)
-        return getattr(obj, name)
-
-    if name in {'build_vrt_mosaic'}:
-        obj = importlib.import_module('.rasters', __package__)
-        return getattr(obj, name)
-
-    if name in {
-        'validate_feature_specs',
-        'validate_grid_reference',
-        'validate_grid_specs',
-        'validate_manifest_contract',
-        'validate_pool_compatibility',
-        'validate_prepare_semantics',
-        'validate_raster_alignment',
-    }:
-        obj = importlib.import_module('.validation', __package__)
+    submod = _LAZY_SUBMODULES.get(name)
+    if submod is not None:
+        obj = importlib.import_module(submod, __package__)
         return getattr(obj, name)
 
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

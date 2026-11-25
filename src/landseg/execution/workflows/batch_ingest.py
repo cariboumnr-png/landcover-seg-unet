@@ -30,7 +30,7 @@ the immutable raw block catalogue for later experiments.
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
-import landseg.geopipe.ingest as ingest
+import landseg.geopipe as geopipe
 import landseg.runtime as runtime
 
 
@@ -50,7 +50,7 @@ def execute_batch_ingest(config: configs.RootConfig) -> None:
     '''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
 
-    planned_batches = ingest.resolve_pending_ingestion_batches(
+    planned_batches = geopipe.resolve_pending_ingestion_batches(
         artifact_paths.data_harmonization.runs_manifest,
         artifact_paths.data_ingestion.runs_manifest,
         target=config.data.ingestion.harmonization_run,

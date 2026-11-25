@@ -681,18 +681,6 @@ def test_pipeline_default_path_resolution(monkeypatch):
     Then: Resolve automatically to expected domain paths from ArtifactPaths.
     '''
     monkeypatch.setattr(
-        pipelines.WorldGridGeneration, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataHarmonization, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataIngestion, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataPreparation, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
         pipelines.ModelTraining, '_create_logger', lambda self: None
     )
     monkeypatch.setattr(

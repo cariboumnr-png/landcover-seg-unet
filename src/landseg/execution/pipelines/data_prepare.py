@@ -29,7 +29,7 @@ statistics, normalizes all splits, and emits the final dataset schema.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
-import landseg.geopipe.prepare as prepare
+import landseg.geopipe as geopipe
 
 
 # ----- public classes
@@ -37,7 +37,6 @@ class DataPreparation(base.GeoPipeline):
     '''Data preparation pipeline.'''
 
     pipeline_name: str = 'data-prepare'
-    logger: prepare.PreparationLogger
     pipeline_paths: artifacts.PreparationPaths
 
     @property
@@ -48,49 +47,8 @@ class DataPreparation(base.GeoPipeline):
     def run(self) -> None:
         '''Run data preparation pipeline.'''
         self._initialize_run()
-        context = self._build_context()
-
-        try:
-            self.logger.log_sep()
-
-            # resolve lifecycle policy dynamically
-            policy = (
-                artifacts.LifecyclePolicy.REBUILD
-                if self.config.data.preparation.rebuild
-                else artifacts.LifecyclePolicy.BUILD_IF_MISSING
-            )
-
-            # run pipeline
-            prepare.run_data_preparation(
-                context,
-                self.pipeline_paths,
-                self.config.data.preparation,
-                policy=policy,
-                logger=self.logger,
-            )
-
-        except Exception as e:
-            self.logger.set_status('FAILED')
-            self.logger.error(f'Preparation pipeline failed: {e}', exc_info=True)
-            raise e
-
-        finally:
-            self.logger.log_sep()
-            self.logger.close()
-
-    def _create_logger(self) -> prepare.PreparationLogger:
-        logger = prepare.PreparationLogger(
-            name=self.pipeline_name,
-            log_file=self.pipeline_paths.report,
-            enable_file_log=False,
-        )
-        logger.init_summary(run_id='prepare')
-        return logger
-
-    def _build_context(self) -> prepare.PreparationContext:
-        return prepare.build_preparation_context(
-            self.upstream_paths.windows,
-            self.upstream_paths.data_blocks.catalog,
-            self.upstream_paths.data_blocks.schema,
+        geopipe.run_data_preparation_stage(
             self.config.data.preparation,
+            self.upstream_paths,
+            self.pipeline_paths,
         )

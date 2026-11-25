@@ -180,6 +180,7 @@ src/landseg/
 |   |   `-- warp.py               Reprojection, distorsion et transformations de limites
 |   |-- diagnostic.py             Constructeur diagnostique de DataSpecs sur bloc unique
 |   |-- factory.py                Factory des DataSpecs
+|   |-- stages.py                 Exécuteurs publics d'étapes ETL géospatiales
 |   `-- validation.py             Façade publique de validation pre-flight et des contrats d'étape
 |
 |-- knowledge/

@@ -32,7 +32,7 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
-import landseg.geopipe.harmonize as harmonize
+import landseg.geopipe as geopipe
 
 
 # ----- `DataHarmonization` validation tests
@@ -59,9 +59,9 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
 # ----- `DataHarmonization` execution and lifecycle tests
 def test_data_harmonize_pipeline_success(tmp_path, mocker):
     '''
-    Given: Upstream world-grid report and mocked harmonization runner.
+    Given: Upstream world-grid report and mocked geopipe harmonization runner.
     When: Calling `run` on `DataHarmonization`.
-    Then: Execute harmonization, update manifest, and write SUCCESS report.
+    Then: Initialize folders/config and delegate to `geopipe`.
     '''
     grid_dpath = tmp_path / 'world_grids'
     grid_report = grid_dpath / 'report.json'
@@ -82,36 +82,25 @@ def test_data_harmonize_pipeline_success(tmp_path, mocker):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
 
-    mock_context = mocker.Mock(is_collision=False)
-    mocker.patch.object(
-        harmonize,
-        'build_harmonization_context',
-        return_value=mock_context,
-    )
-    mock_run = mocker.patch.object(harmonize, 'run_data_harmonization')
+    mock_stage = mocker.patch.object(geopipe, 'run_data_harmonization_stage')
     mocker.patch('landseg.execution.preflight.assert_target_ready')
 
     pipeline = pipelines.DataHarmonization(config)
     pipeline.run()
 
-    mock_run.assert_called_once()
-    report_fpath = harm_dpath / 'run_0001' / 'report.json'
-    assert report_fpath.exists()
-    report = artifacts.Controller[dict](report_fpath).fetch()
-    assert report
-    assert report['status'] == 'SUCCESS'
-
-    runs_fpath = harm_dpath / 'harmonization_runs.json'
-    assert runs_fpath.exists()
-    runs = artifacts.Controller[dict](runs_fpath).fetch()
-    assert runs
+    mock_stage.assert_called_once_with(
+        config.data.harmonization,
+        pipeline.pipeline_paths,
+        grid_report,
+    )
+    assert (harm_dpath / 'run_0001' / 'config.json').exists()
 
 
 def test_data_harmonize_pipeline_failure(tmp_path, mocker):
     '''
-    Given: Upstream world-grid report and runner that raises an error.
+    Given: Upstream world-grid report and stage runner raising an error.
     When: Calling `run` on `DataHarmonization`.
-    Then: Re-raise error and mark report status as FAILED.
+    Then: Propagate error to caller cleanly.
     '''
     grid_dpath = tmp_path / 'world_grids'
     grid_report = grid_dpath / 'report.json'
@@ -132,25 +121,13 @@ def test_data_harmonize_pipeline_failure(tmp_path, mocker):
         omegaconf.OmegaConf.to_object(cfg_schema)
     )
 
-    mock_context = mocker.Mock(is_collision=False)
     mocker.patch.object(
-        harmonize,
-        'build_harmonization_context',
-        return_value=mock_context,
-    )
-    mocker.patch.object(
-        harmonize,
-        'run_data_harmonization',
-        side_effect=RuntimeError('Harmonization failed unexpectedly')
+        geopipe,
+        'run_data_harmonization_stage',
+        side_effect=RuntimeError('Harmonization failed unexpectedly'),
     )
     mocker.patch('landseg.execution.preflight.assert_target_ready')
 
     pipeline = pipelines.DataHarmonization(config)
     with pytest.raises(RuntimeError, match='Harmonization failed unexpectedly'):
         pipeline.run()
-
-    report_fpath = harm_dpath / 'run_0001' / 'report.json'
-    assert report_fpath.exists()
-    report = artifacts.Controller[dict](report_fpath).fetch()
-    assert report
-    assert report['status'] == 'FAILED'

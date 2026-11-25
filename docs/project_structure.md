@@ -178,6 +178,7 @@ src/landseg/
 |   |   `-- warp.py               Reprojection, warping, and bounds transforms
 |   |-- diagnostic.py             Diagnostic single-block DataSpecs builder
 |   |-- factory.py                DataSpecs factory
+|   |-- stages.py                 Public geospatial ETL stage execution runners
 |   `-- validation.py             Public pre-flight and stage contract validation facade
 |
 |-- knowledge/

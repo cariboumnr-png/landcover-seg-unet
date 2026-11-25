@@ -87,16 +87,8 @@ class BasePipeline(abc.ABC):
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve canonical artifact paths based on pipeline name.'''
 
-    @abc.abstractmethod
-    def _create_logger(self) -> typing.Any:
-        '''Instantiate and configure the logger for this pipeline.'''
-
-    @abc.abstractmethod
-    def _build_context(self) -> typing.Any:
-        '''Build the necessary pipeline running context object.'''
-
     def _initialize_run(self) -> None:
-        '''Initialize run directories, persist config, and open logger.'''
+        '''Validate environment, init folders, and persist config.'''
         self._validate()
 
         assert isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths)
@@ -104,8 +96,6 @@ class BasePipeline(abc.ABC):
 
         config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
         config_ctrl.persist(self.config.as_dict)
-
-        self.logger = self._create_logger()
 
     def _validate(self) -> typing.Any:
         '''Validate pipeline environment and upstream requirements.'''
@@ -142,8 +132,17 @@ class SessionPipeline(BasePipeline):
     pipeline_paths: artifacts.SessionPaths
 
     @abc.abstractmethod
+    def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the session logger for this pipeline.'''
+
+    @abc.abstractmethod
     def _build_context(self) -> core.DataSpecs:
         '''Build the necessary pipeline running context object.'''
+
+    def _initialize_run(self) -> None:
+        '''Initialize session directories, config, and logger.'''
+        super()._initialize_run()
+        self.logger = self._create_logger()
 
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve session artifact paths.'''
