@@ -19,32 +19,52 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Top-level namespace for `landseg.utils`.
-
-Exposes general-purpose validation primitives and helpers.
-
-Public APIs:
-    - `validator`: Standalone validation primitives and composed checks.
-'''
+'''Unit tests for lazy resolution on top-level `landseg.adapters`.'''
 
 # standard imports
-from __future__ import annotations
-import importlib
-import typing
-
-__all__ = [
-    'validator',
-]
+import subprocess
+import sys
 
 
-# for static check
-if typing.TYPE_CHECKING:
-    from . import validator
+# ----- lazy isolation tests
+def test_importing_adapters_api_does_not_load_cli_or_hydra():
+    '''
+    Given: A fresh Python interpreter.
+    When: Importing `landseg.adapters.api` directly or via `adapters.api`.
+    Then: Neither `landseg.adapters.cli` nor `hydra` is imported.
+    '''
+    probe = (
+        'import sys; '
+        'import landseg.adapters.api as api; '
+        'assert hasattr(api, "run"); '
+        'assert "landseg.adapters.cli" not in sys.modules; '
+        'assert "hydra" not in sys.modules'
+    )
+    res = subprocess.run(
+        [sys.executable, '-c', probe],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stderr
 
 
-def __getattr__(name: str):
-    if name == 'validator':
-        return importlib.import_module('.validator', __package__)
-
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+def test_importing_adapters_cli_does_not_load_api():
+    '''
+    Given: A fresh Python interpreter.
+    When: Importing `landseg.adapters.cli`.
+    Then: `landseg.adapters.api` is not imported eagerly.
+    '''
+    probe = (
+        'import sys; '
+        'import landseg.adapters.cli as cli; '
+        'assert hasattr(cli, "main"); '
+        'assert "landseg.adapters.api" not in sys.modules'
+    )
+    res = subprocess.run(
+        [sys.executable, '-c', probe],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stderr

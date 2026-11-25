@@ -28,7 +28,7 @@ import argparse
 import pathlib
 import sys
 # local imports
-import landseg.geopipe.rasters as rasters
+import landseg.geopipe as geopipe
 
 
 # ----- public functions
@@ -157,7 +157,7 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
 
     print(f'Building VRT mosaic from {len(input_files)} raster sources...')
-    out_vrt = rasters.build_vrt_mosaic(
+    out_vrt = geopipe.build_vrt_mosaic(
         input_paths=input_files,
         output_path=args.output,
         target_crs=args.target_crs,

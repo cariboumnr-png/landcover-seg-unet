@@ -22,8 +22,16 @@
 '''
 Top-level namespace for `landseg.configs.schema`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes structured configuration schemas via lazy resolution to keep
+import order simple and circular-free.
+
+Public APIs:
+    - `DataConfig`: Composite configuration for geospatial data stages.
+    - `ExecutionContext`: Runtime execution and path settings.
+    - `ModelsConfig`: Composite configuration for model architectures.
+    - `RootConfig`: Root structured configuration schema.
+    - `SessionConfig`: Composite configuration for training and evaluation.
+    - `StudyConfig`: Composite configuration for hyperparameter sweeps.
 '''
 
 # standard imports
@@ -35,6 +43,10 @@ __all__ = [
     # classes
     'ExecutionContext',
     'RootConfig',
+    'DataConfig',
+    'ModelsConfig',
+    'SessionConfig',
+    'StudyConfig',
 ]
 
 
@@ -43,11 +55,22 @@ if typing.TYPE_CHECKING:
     from .root import (
         ExecutionContext,
         RootConfig,
+        DataConfig,
+        ModelsConfig,
+        SessionConfig,
+        StudyConfig,
     )
 
 
 def __getattr__(name: str):
-    if name in {'ExecutionContext', 'RootConfig'}:
+    if name in {
+        'ExecutionContext',
+        'RootConfig',
+        'DataConfig',
+        'ModelsConfig',
+        'SessionConfig',
+        'StudyConfig'
+    }:
         obj = importlib.import_module('.root', __package__)
         return getattr(obj, name)
 

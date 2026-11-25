@@ -37,7 +37,7 @@ import rasterio
 import rasterio.shutil
 import rasterio.vrt
 # local imports
-import landseg.artifacts.storage.scratch as scratch
+import landseg.artifacts as artifacts
 
 
 # ----- public functions
@@ -94,7 +94,7 @@ def unify_nodata_mask(
         nodatavals = src.nodatavals or [None] * src.count
         same_dtype = len(set(src.dtypes)) <= 1
 
-        with scratch.stage_to_scratch(
+        with artifacts.stage_to_scratch(
             target_tif,
             scratch_dir=scratch_dir,
         ) as stage_f:

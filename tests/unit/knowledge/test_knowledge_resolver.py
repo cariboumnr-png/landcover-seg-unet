@@ -107,3 +107,52 @@ def test_resolve_profile_metadata_none_root():
         FileNotFoundError, match='Knowledge root not configured'
     ):
         knowledge.resolve_profile_metadata(profile='any')
+
+
+# ----- `resolve_head_knowledge` tests
+def test_resolve_head_knowledge(tmp_path, monkeypatch):
+    '''
+    Given: Per-head counts, taxonomy specs, class names, and knowledge root.
+    When: Calling `resolve_head_knowledge` with missing or populated root.
+    Then: Bypass missing roots and resolve validated taxonomy + tensors.
+    '''
+    counts = {'leadspc': [10, 20]}
+    raw_taxonomy = {'leadspc': {'profile': 'ontario_tree_species'}}
+    class_names = {'leadspc': ['SB', 'PJ']}
+
+    # missing knowledge root preserves raw taxonomy cleanly
+    tax_empty, sims_empty = knowledge.resolve_head_knowledge(
+        counts,
+        raw_taxonomy,
+        class_names,
+        tmp_path / 'missing',
+    )
+    assert tax_empty == raw_taxonomy
+    assert not sims_empty
+
+    # valid knowledge root resolves validated taxonomy & matrix
+    kroot = tmp_path / 'knowledge'
+    kroot.mkdir()
+    kp = artifacts.KnowledgePaths(root=kroot)
+    mat = torch.eye(2, dtype=torch.float32)
+    artifacts.Controller[torch.Tensor](
+        kp.similarity_matrix_fpath('ontario_tree_species')
+    ).persist(mat)
+    monkeypatch.setattr(
+        'landseg.knowledge.validate_specs',
+        lambda profile, mapping, num_cls, knowledge_root: {
+            'profile': profile,
+            'verified': num_cls,
+        },
+    )
+
+    tax_ok, sims_ok = knowledge.resolve_head_knowledge(
+        counts,
+        raw_taxonomy,
+        class_names,
+        kroot,
+    )
+    assert tax_ok == {
+        'leadspc': {'profile': 'ontario_tree_species', 'verified': 2}
+    }
+    assert torch.allclose(sims_ok['leadspc'], mat)

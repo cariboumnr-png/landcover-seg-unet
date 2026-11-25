@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for the data preparation execution pipeline.'''
 
 # standard imports
@@ -32,7 +30,7 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
-import landseg.geopipe.prepare as prepare
+import landseg.geopipe as geopipe
 
 
 # ----- `DataPreparation` validation tests
@@ -47,10 +45,7 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
     cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested')
     cfg_schema.data.preparation.output_dpath = str(tmp_path / 'prepared')
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
+    config = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg_schema))
     pipeline = pipelines.DataPreparation(config)
     with pytest.raises(RuntimeError, match='Upstream pipeline "data-ingest"'):
         pipeline.run()
@@ -59,9 +54,9 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
 # ----- `DataPreparation` execution and lifecycle tests
 def test_data_prepare_pipeline_success(tmp_path, mocker):
     '''
-    Given: Upstream ingestion artifacts and mocked prepare runner.
+    Given: Upstream ingestion artifacts and mocked geopipe preparation stage.
     When: Calling `run` on `DataPreparation`.
-    Then: Execute preparation and persist report with status SUCCESS.
+    Then: Initialize folders/config and delegate execution to `geopipe`.
     '''
     ingest_dpath = tmp_path / 'ingested'
     catalog_fpath = ingest_dpath / 'data_blocks' / 'catalog.json'
@@ -80,36 +75,27 @@ def test_data_prepare_pipeline_success(tmp_path, mocker):
     cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
     cfg_schema.data.preparation.output_dpath = str(prep_dpath)
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
+    config = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg_schema))
 
-    mock_context = mocker.Mock()
-    mocker.patch.object(
-        pipelines.DataPreparation,
-        '_build_context',
-        return_value=mock_context,
-    )
-    mock_run = mocker.patch.object(prepare, 'run_data_preparation')
-
+    mock_stage = mocker.patch.object(geopipe, 'run_data_preparation_stage')
     mocker.patch('landseg.execution.preflight.assert_target_ready')
+
     pipeline = pipelines.DataPreparation(config)
     pipeline.run()
 
-    mock_run.assert_called_once()
-    report_fpath = prep_dpath / 'report.json'
-    assert report_fpath.exists()
-    report = artifacts.Controller[dict](report_fpath).fetch()
-    assert report
-    assert report['status'] == 'SUCCESS'
+    mock_stage.assert_called_once_with(
+        config.data.preparation,
+        pipeline.upstream_paths,
+        pipeline.pipeline_paths,
+    )
+    assert (prep_dpath / 'config.json').exists()
 
 
 def test_data_prepare_pipeline_failure(tmp_path, mocker):
     '''
-    Given: Upstream ingestion artifacts and runner that raises an error.
+    Given: Upstream ingestion artifacts and stage runner raising an error.
     When: Calling `run` on `DataPreparation`.
-    Then: Re-raise error and mark report status as FAILED.
+    Then: Propagate error to caller cleanly.
     '''
     ingest_dpath = tmp_path / 'ingested'
     catalog_fpath = ingest_dpath / 'data_blocks' / 'catalog.json'
@@ -128,30 +114,15 @@ def test_data_prepare_pipeline_failure(tmp_path, mocker):
     cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
     cfg_schema.data.preparation.output_dpath = str(prep_dpath)
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
+    config = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg_schema))
 
-    mock_context = mocker.Mock()
     mocker.patch.object(
-        pipelines.DataPreparation,
-        '_build_context',
-        return_value=mock_context,
-    )
-    mocker.patch.object(
-        prepare,
-        'run_data_preparation',
+        geopipe,
+        'run_data_preparation_stage',
         side_effect=RuntimeError('partitioning failure'),
     )
-
     mocker.patch('landseg.execution.preflight.assert_target_ready')
+
     pipeline = pipelines.DataPreparation(config)
     with pytest.raises(RuntimeError, match='partitioning failure'):
         pipeline.run()
-
-    report_fpath = prep_dpath / 'report.json'
-    assert report_fpath.exists()
-    report = artifacts.Controller[dict](report_fpath).fetch()
-    assert report
-    assert report['status'] == 'FAILED'

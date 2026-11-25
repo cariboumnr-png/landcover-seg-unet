@@ -36,7 +36,7 @@ import landseg.execution.preflight.checks as checks
 import landseg.execution.preflight.context as context
 import landseg.execution.preflight.reporter as reporter
 import landseg.execution.preflight.schema as schema
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- `inspect_target` tests
@@ -681,18 +681,6 @@ def test_pipeline_default_path_resolution(monkeypatch):
     Then: Resolve automatically to expected domain paths from ArtifactPaths.
     '''
     monkeypatch.setattr(
-        pipelines.WorldGridGeneration, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataHarmonization, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataIngestion, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
-        pipelines.DataPreparation, '_create_logger', lambda self: None
-    )
-    monkeypatch.setattr(
         pipelines.ModelTraining, '_create_logger', lambda self: None
     )
     monkeypatch.setattr(
@@ -916,3 +904,91 @@ def test_preflight_data_ingest_pool_compatibility_decoupled(tmp_path):
     res = checks.contracts.pool_compatibility(ctx)
     assert res.status == schema.ProbeStatus.PASS
     assert 'decoupled' in res.message.lower()
+
+
+def test_probe_feature_specs_skip_pass_and_fail(monkeypatch, tmp_path):
+    '''
+    Given: A RootConfig configured for data-ingest feature specs.
+    When: `checks.contracts.feature_specs()` delegates to `geopipe`.
+    Then: Map skip, pass, and failure outcomes to matching ProbeStatus values.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+
+    monkeypatch.setattr(
+        'landseg.geopipe.validate_feature_specs',
+        lambda *_a, **_kw: {
+            'status': 'skip',
+            'message': 'Skipped: unable to resolve harmonization batch',
+        },
+    )
+    skip_res = checks.contracts.feature_specs(ctx)
+    assert skip_res.status == schema.ProbeStatus.SKIP
+    assert 'unable to resolve harmonization batch' in skip_res.message
+
+    monkeypatch.setattr(
+        'landseg.geopipe.validate_feature_specs',
+        lambda *_a, **_kw: {
+            'status': 'pass',
+            'add_spectral': ['ndvi'],
+            'add_topo': [],
+        },
+    )
+    pass_res = checks.contracts.feature_specs(ctx)
+    assert pass_res.status == schema.ProbeStatus.PASS
+    assert pass_res.details == {'add_spectral': ['ndvi'], 'add_topo': []}
+
+    def _bad_specs(*_a, **_kw):
+        raise ValueError('Missing NIR band')
+
+    monkeypatch.setattr('landseg.geopipe.validate_feature_specs', _bad_specs)
+    fail_res = checks.contracts.feature_specs(ctx)
+    assert fail_res.status == schema.ProbeStatus.FAIL
+    assert 'Missing NIR band' in fail_res.message
+
+
+def test_probe_raster_alignment_skip_pass_and_fail(monkeypatch, tmp_path):
+    '''
+    Given: A RootConfig configured for data-ingest raster alignment.
+    When: `checks.contracts.raster_alignment()` delegates to `geopipe`.
+    Then: Map skip, pass, and failure outcomes to matching ProbeStatus values.
+    '''
+    cfg = configs.RootConfig()
+    paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
+    ctx = context.InspectionContext.from_config(cfg, artifact_paths=paths)
+
+    monkeypatch.setattr(
+        'landseg.geopipe.validate_raster_alignment',
+        lambda *_a, **_kw: {
+            'status': 'skip',
+            'message': 'Skipped: unable to resolve harmonization batch',
+        },
+    )
+    skip_res = checks.contracts.raster_alignment(ctx)
+    assert skip_res.status == schema.ProbeStatus.SKIP
+
+    monkeypatch.setattr(
+        'landseg.geopipe.validate_raster_alignment',
+        lambda *_a, **_kw: {
+            'status': 'pass',
+            'features': '/tmp/features.vrt',
+            'labels': '/tmp/labels.vrt',
+            'grid_id': 'gid_01',
+        },
+    )
+    pass_res = checks.contracts.raster_alignment(ctx)
+    assert pass_res.status == schema.ProbeStatus.PASS
+    assert pass_res.details == {
+        'features': '/tmp/features.vrt',
+        'labels': '/tmp/labels.vrt',
+        'grid_id': 'gid_01',
+    }
+
+    def _bad_align(*_a, **_kw):
+        raise RuntimeError('CRS mismatch')
+
+    monkeypatch.setattr('landseg.geopipe.validate_raster_alignment', _bad_align)
+    fail_res = checks.contracts.raster_alignment(ctx)
+    assert fail_res.status == schema.ProbeStatus.FAIL
+    assert 'CRS mismatch' in fail_res.message

@@ -45,7 +45,7 @@ import yaml
 # local imports
 import landseg._constants as c
 import landseg.artifacts as artifacts
-import landseg.utils.npzio as npzio
+import landseg.artifacts.storage.npzio as npzio
 
 # ----- typing aliases
 T = typing.TypeVar('T')

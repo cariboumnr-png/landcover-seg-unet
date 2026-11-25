@@ -35,8 +35,6 @@ import typing
 # local imports
 import landseg.configs as configs
 import landseg.execution as execution
-import landseg.execution.preflight as preflight
-import landseg.execution.preflight.schema as pre_schema
 import landseg.runtime as runtime
 
 
@@ -71,7 +69,7 @@ def run_preflight(
     *,
     strict: bool | None = None,
     exp_root: str | pathlib.Path | None = None,
-) -> pre_schema.PreflightResult | list[pre_schema.PreflightResult]:
+) -> execution.PreflightResult | list[execution.PreflightResult]:
     '''
     Run pre-flight diagnostic validation checks programmatically.
 
@@ -98,7 +96,7 @@ def run_preflight(
             Optional experiment root directory override.
 
     Returns:
-        pre_schema.PreflightResult | list[pre_schema.PreflightResult]:
+        execution.PreflightResult | list[execution.PreflightResult]:
             Pre-flight validation report or list of reports across
             targets.
     '''
@@ -118,7 +116,7 @@ def run_preflight(
         else:
             resolved_target = cfg.execution.preflight_target or 'all'
 
-    return preflight.run_preflight(
+    return execution.run_preflight(
         root_config=cfg,
         target=resolved_target,
         exp_root=pathlib.Path(exp_root) if exp_root else None,

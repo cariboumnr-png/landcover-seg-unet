@@ -36,7 +36,7 @@ import typing
 # local imports
 import landseg.geopipe.core as geo_core
 import landseg.geopipe.harmonize.manifest.schema as schema
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- public functions

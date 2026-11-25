@@ -238,6 +238,44 @@ def test_run_infer_batch_spatial_aggregation(
     assert (0, 0) in engine.state.infer_out.labels['head_1']
 
 
+def test_run_infer_batch_unlabeled(
+    mock_model,
+    mock_hmetrics,
+    session_config
+):
+    '''
+    Given: Unlabeled inference batch (empty `y`).
+    When: Invoking `run_infer_batch`.
+    Then: Aggregate input and prediction patches without metric failure.
+    '''
+    state = state_mod.initialize_state(
+        all_heads=['head_1'],
+        batch_size=1,
+        use_amp=False,
+        device='cpu'
+    )
+    state.heads.active_hmetrics = {'head_1': mock_hmetrics['head_1']}
+
+    x = torch.randn(1, 4, 256, 256)
+    y = torch.empty(1, 0, dtype=torch.long)
+    state.batch_cxt.refresh(bidx=1, batch=(x, y, {}))
+
+    engine = engine_mod.BatchEngine(
+        model=mock_model,
+        engine_state=state,
+        config=session_config.engine_exec,
+        context=_get_context()
+    )
+    engine.model.set_active_heads(['head_1'])
+
+    engine.run_infer_batch()
+
+    assert (0, 0) in engine.state.infer_out.inputs
+    assert (0, 0) in engine.state.infer_out.preds['head_1']
+    assert engine.state.infer_out.labels == {}
+    assert engine.state.infer_out.errors == {}
+
+
 # ----- `_autocast_ctx` precision and fallback tests
 def test_autocast_ctx_cpu_fallback_without_bf16(
     mock_model,

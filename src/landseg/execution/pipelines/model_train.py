@@ -38,6 +38,7 @@ import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
+import landseg.visual as visual
 
 
 # ----- public classes
@@ -68,6 +69,8 @@ class ModelTraining(base.SessionPipeline):
             self.logger.info(f'[COMPLETE] Training session (D_{t:.2f}s)')
             self.logger.set_status('SUCCESS')
             self.logger.set_results(self._summarize_results(final))
+
+            self._generate_post_run_visuals()
 
         except Exception as e:
             self.logger.set_status('FAILED')
@@ -124,3 +127,64 @@ class ModelTraining(base.SessionPipeline):
                 'peak_gpu_memory_mb': float(peak_gpu_mb)
             }
         }
+
+    def _generate_post_run_visuals(self) -> None:
+        '''Generate post-training curves plot and test prediction previews.'''
+        # 1. Training curves plot
+        if self.pipeline_paths.step_results.is_file():
+            try:
+                curves_path = self.pipeline_paths.plots / 'training_curves.png'
+                visual.plot_training_curves(
+                    self.pipeline_paths.step_results,
+                    save_path=curves_path,
+                    show=False,
+                )
+                self.logger.info(f'[OUTPUT] Saved training curves plot to {curves_path}')
+            except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError) as err:
+                self.logger.warning(f'Could not generate training curves plot: {err}')
+
+        # 2. Inferred preview PNGs using best checkpoint
+        dataspecs = getattr(self, 'context', None)
+        if dataspecs is None:
+            try:
+                dataspecs = self._build_context()
+            except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError):
+                dataspecs = None
+
+        if dataspecs is None or not getattr(dataspecs.splits, 'test', None):
+            self.logger.info(
+                'No test dataset provided or split; skipping post-training preview generation.'
+            )
+            return
+
+        try:
+            best_ckpts = list(self.pipeline_paths.checkpoints.glob('*_best.pt'))
+            if not best_ckpts:
+                self.logger.warning('No best checkpoint found for preview generation.')
+                return
+            best_ckpt = max(best_ckpts, key=lambda p: p.stat().st_mtime)
+
+            model = self._build_model(dataspecs)
+            infer_results = session.run_preview_inference(
+                checkpoint_fpath=best_ckpt,
+                dataspecs=dataspecs,
+                model=model,
+                config=self.config.session,
+                device=self.config.session.device,
+                logger=self.logger,
+            )
+            if infer_results is None:
+                return
+
+            previews = visual.generate_prediction_previews(
+                infer_results=infer_results,
+                dataspecs=dataspecs,
+                previews_dpath=self.pipeline_paths.previews,
+            )
+            if previews:
+                self.logger.info(
+                    f'[OUTPUT] Generated {len(previews)} test preview PNG(s) in '
+                    f'{self.pipeline_paths.previews}'
+                )
+        except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError) as err:
+            self.logger.warning(f'Could not generate preview PNGs: {err}')

@@ -30,7 +30,6 @@ Public APIs:
 import typing
 # local imports
 import landseg.configs as configs
-import landseg.configs.schema.study as study_config
 
 
 class TrialMutator: # pylint: disable=too-many-public-methods
@@ -40,7 +39,7 @@ class TrialMutator: # pylint: disable=too-many-public-methods
         self.config = config
 
     @property
-    def study(self) -> study_config.StudyConfig:
+    def study(self) -> configs.StudyConfig:
         '''Expose study configuration search spaces.'''
         return self.config.study
 

@@ -28,7 +28,7 @@ import typing
 import numpy
 import pytest
 # local imports
-import landseg.utils.npzio as npzio
+import landseg.artifacts.storage.npzio as npzio
 
 
 # ----- `savez_compressed` round trip

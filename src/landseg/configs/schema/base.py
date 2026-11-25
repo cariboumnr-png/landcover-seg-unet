@@ -25,11 +25,11 @@
 import dataclasses
 import typing
 # local imports
-import landseg.utils.validator as validator
+import landseg.runtime.validator as val
 
 
 # ----- typing aliases
-ConfigValidationError = validator.ValidationError
+ConfigValidationError = val.ValidationError
 
 
 # ----- public classes
@@ -45,4 +45,4 @@ class BaseConfigSection:
         '''Validate section integrity. Default is a no-op.'''
         return None
 
-    val = validator
+    val = val

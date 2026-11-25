@@ -20,21 +20,21 @@
 # =========================================================================== #
 
 '''
-Categorical raster and taxonomy specification types.
+Categorical raster and label reclassification scheme types.
 
 This module defines typing contracts and structures for categorical
 rasters, including category count, ignore classes, color maps,
-taxonomies, and label reclassification schemes.
+taxonomic references, and label reclassification schemes.
 
 Public APIs:
     - `CategoricalSpec`: TypedDict for categorical raster specs.
-    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
     - `LabelScheme`: TypedDict for named reclassification scheme.
 '''
 
 # standard imports
-from __future__ import annotations
 import typing
+# local imports
+import landseg.knowledge as knowledge
 
 
 # ----- public types
@@ -47,13 +47,7 @@ class CategoricalSpec(typing.TypedDict):
     # optional
     class_name: typing.NotRequired[dict[str, str]]
     color_map: typing.NotRequired[dict[str, tuple[int, int, int]]] # RGB
-    taxonomy: typing.NotRequired[TaxonomySpec]
-
-
-class TaxonomySpec(typing.TypedDict):
-    '''Typed dictionary for domain taxonomy specification.'''
-    profile: str
-    canonical_indices: typing.NotRequired[dict[str, int]]
+    taxonomy: typing.NotRequired[knowledge.TaxonomySpec]
 
 
 class LabelScheme(typing.TypedDict):

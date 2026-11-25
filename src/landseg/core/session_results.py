@@ -214,9 +214,10 @@ class ValStepResults:
 
 @dataclasses.dataclass
 class InferStepResults:
-    '''Containe for inference results.'''
+    '''Container for inference results.'''
     head_metrics: dict[str, AccumulatedMetrics] = field(default_factory=dict)
     mtl_metrics: dict[str, float] = field(default_factory=dict)
+    infer_inputs: torch.Tensor | None = None
     infer_labels: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_preds: dict[str, torch.Tensor] = field(default_factory=dict)
     infer_errors: dict[str, torch.Tensor] = field(default_factory=dict)

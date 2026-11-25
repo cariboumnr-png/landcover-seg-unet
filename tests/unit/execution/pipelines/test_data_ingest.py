@@ -32,7 +32,7 @@ import pytest
 import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
-import landseg.geopipe.ingest as ingest
+import landseg.geopipe as geopipe
 
 
 # ----- `DataIngestion` validation tests
@@ -47,10 +47,7 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
     cfg_schema.data.harmonization.output_dpath = str(tmp_path / 'harmonized')
     cfg_schema.data.ingestion.output_dpath = str(tmp_path / 'ingested')
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
+    config = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg_schema))
     pipeline = pipelines.DataIngestion(config)
     with pytest.raises(
         RuntimeError,
@@ -62,9 +59,9 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
 # ----- `DataIngestion` execution and lifecycle tests
 def test_data_ingest_pipeline_success(tmp_path, mocker):
     '''
-    Given: Upstream harmonization runs and mocked ingest runner.
+    Given: Upstream harmonization runs and mocked geopipe ingestion stage.
     When: Calling `run` on `DataIngestion`.
-    Then: Execute ingestion, update manifest, and write SUCCESS report.
+    Then: Initialize folders/config and forward record/settings to `geopipe`.
     '''
     harm_dpath = tmp_path / 'harmonized'
     runs_fpath = harm_dpath / 'harmonization_runs.json'
@@ -79,46 +76,31 @@ def test_data_ingest_pipeline_success(tmp_path, mocker):
     cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
     cfg_schema.data.ingestion.rebuild = False
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
+    config = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg_schema))
 
-    mock_context = mocker.Mock(
-        harmonization_run_id='run_0001',
-        run_uid='hash_123',
-    )
-    mocker.patch.object(
-        pipelines.DataIngestion,
-        '_build_context',
-        return_value=mock_context,
-    )
-    mock_run = mocker.patch.object(ingest, 'run_data_ingestion')
-
+    mock_stage = mocker.patch.object(geopipe, 'run_data_ingestion_stage')
     mocker.patch('landseg.execution.preflight.assert_target_ready')
+
+    record = {'run_uid': 'hash_123', 'run_id': 'run_0001'}
     pipeline = pipelines.DataIngestion(config)
-    pipeline.run()
+    pipeline.run(record)
 
-    mock_run.assert_called_once()
-    report_fpath = ingest_dpath / 'run_0001' / 'report.json'
-    assert report_fpath.exists()
-    report = artifacts.Controller[dict](report_fpath).fetch()
-    assert report
-    assert report['status'] == 'SUCCESS'
-
-    runs_fpath = ingest_dpath / 'ingestion_runs.json'
-    assert runs_fpath.exists()
-    runs = artifacts.Controller[dict](runs_fpath).fetch()
-    assert runs
-    uids = list(runs.keys())
-    assert runs[uids[0]]['status'] == 'SUCCESS'
+    mock_stage.assert_called_once_with(
+        config.data.ingestion,
+        pipeline.upstream_paths,
+        pipeline.pipeline_paths,
+        harmonization_run=config.data.ingestion.harmonization_run,
+        rebuild=False,
+        harmonization_record=record,
+    )
+    assert (ingest_dpath / 'run_0001' / 'config.json').exists()
 
 
 def test_data_ingest_pipeline_failure(tmp_path, mocker):
     '''
-    Given: Upstream harmonization runs and runner that raises an error.
+    Given: Upstream harmonization runs and stage runner raising an error.
     When: Calling `run` on `DataIngestion`.
-    Then: Re-raise error and mark report status as FAILED.
+    Then: Propagate error to caller cleanly.
     '''
     harm_dpath = tmp_path / 'harmonized'
     runs_fpath = harm_dpath / 'harmonization_runs.json'
@@ -132,33 +114,15 @@ def test_data_ingest_pipeline_failure(tmp_path, mocker):
     cfg_schema.data.harmonization.output_dpath = str(harm_dpath)
     cfg_schema.data.ingestion.output_dpath = str(ingest_dpath)
 
-    config = typing.cast(
-        configs.RootConfig,
-        omegaconf.OmegaConf.to_object(cfg_schema)
-    )
+    config = typing.cast(configs.RootConfig, omegaconf.OmegaConf.to_object(cfg_schema))
 
-    mock_context = mocker.Mock(
-        harmonization_run_id='run_0001',
-        run_uid='hash_123',
-    )
     mocker.patch.object(
-        pipelines.DataIngestion,
-        '_build_context',
-        return_value=mock_context,
-    )
-    mocker.patch.object(
-        ingest,
-        'run_data_ingestion',
+        geopipe,
+        'run_data_ingestion_stage',
         side_effect=RuntimeError('Ingestion failed unexpectedly')
     )
-
     mocker.patch('landseg.execution.preflight.assert_target_ready')
+
     pipeline = pipelines.DataIngestion(config)
     with pytest.raises(RuntimeError, match='Ingestion failed unexpectedly'):
         pipeline.run()
-
-    report_fpath = ingest_dpath / 'run_0001' / 'report.json'
-    assert report_fpath.exists()
-    report = artifacts.Controller[dict](report_fpath).fetch()
-    assert report
-    assert report['status'] == 'FAILED'

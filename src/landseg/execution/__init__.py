@@ -22,8 +22,15 @@
 '''
 Top-level namespace for `landseg.execution`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes execution dispatchers and pre-flight diagnostic validation
+functions via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `PreflightResult`: Aggregated pre-flight validation result record.
+    - `execute_command`: Dispatch a configured pipeline or workflow.
+    - `inspect_target`: Run pre-flight probes for a single target.
+    - `run_preflight`: Dispatch pre-flight validation across targets.
 '''
 
 # standard imports
@@ -32,7 +39,9 @@ import importlib
 import typing
 
 __all__ = [
-    # typing
+    # classes
+    'PreflightResult',
+    # functions
     'execute_command',
     'inspect_target',
     'run_preflight',
@@ -45,6 +54,7 @@ if typing.TYPE_CHECKING:
         execute_command,
     )
     from .preflight import (
+        PreflightResult,
         inspect_target,
         run_preflight,
     )
@@ -55,7 +65,11 @@ def __getattr__(name: str):
         obj = importlib.import_module('.executor', __package__)
         return getattr(obj, name)
 
-    if name in {'inspect_target', 'run_preflight'}:
+    if name in {
+        'PreflightResult',
+        'inspect_target',
+        'run_preflight'
+    }:
         obj = importlib.import_module('.preflight', __package__)
         return getattr(obj, name)
 

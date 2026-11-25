@@ -31,7 +31,7 @@ import pytest
 # local imports
 import landseg.geopipe.contracts.preparation as contracts
 import landseg.geopipe.prepare.materialize.stats as mat_stats
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 # ----- `count_label` tests

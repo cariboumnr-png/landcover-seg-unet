@@ -1,6 +1,6 @@
 ## Structure actuelle du projet
 
-Dernière mise à jour: 2026-10-24
+Dernière mise à jour: 2026-11-25
 
 Ce document resume l'organisation actuelle du depot et la responsabilite
 principale de chaque zone. Il privilegie les frontieres utiles pour ajouter ou
@@ -45,13 +45,14 @@ deplacer du code, plutot qu'une liste exhaustive de tous les fichiers.
 |   |-- geopipe/                  Sous-système rasters, grille, harmonisation, ingestion, préparation
 |   |-- knowledge/                Validation de taxonomie, plongements d'espèces, matrices de similarité
 |   |-- mlops/                    Stockage cloud volumes, détection d'environnement, registre Unity Catalog
-|   |-- models/                   Frames, backbones, tetes, conditionnement, factories
-|   |-- notebooks/                Widgets interactifs, télémétrie visuelle et sécurité d'interruption
+|   |-- models/                   Frames, backbones, têtes, conditionnement, factories
+|   |-- runtime/                  Détection matériel, environnement plateforme, concurrence, logger, validateur, widgets interactifs
 |   |-- session/                  Construction, orchestration et moteurs runtime
-|   |-- study/                    Sweeps et analyse post-execution
-|   |-- utils/                    Helpers partages de logging et multiprocessing
+|   |-- study/                    Sweeps et analyse post-exécution
+|   |-- testing/                  Fixtures de test dédiées et factories de construction
+|   |-- visual/                   Colorisation par palettes, courbes d'entraînement, aperçus de prédiction, diagnostics et grilles spatiales
 |   |-- py.typed                  Marqueur d'annotations de type PEP 561
-|   |-- _constants.py             Constantes partagees
+|   |-- _constants.py             Constantes partagées
 |   `-- __init__.py
 |
 |-- configs/                      Recettes modulaires par tâche
@@ -99,7 +100,8 @@ src/landseg/
 |   |-- ledger.py                 Calcul d'empreintes et detection de collisions
 |   |-- paths/                    Chemins canoniques des artefacts
 |   |-- payload_io.py             Persistance des payloads et metadonnees
-|   `-- policy.py                 Regles de cycle de vie des artefacts
+|   |-- policy.py                 Regles de cycle de vie des artefacts
+|   `-- storage/                  Persistance d'archives séquentielles (npzio)
 |
 |-- configs/
 |   |-- hydra/
@@ -110,9 +112,12 @@ src/landseg/
 |   |   |-- session/              Configs dataloader, moteur, taches et orchestration
 |   |   `-- study/                Defaults d'etude et de sweep
 |   `-- schema/
+|       |-- base.py               Classes de base et assistants de validation
 |       |-- root.py               Schema structure racine
-|       |-- utils.py              Utilitaires de schema
-|       `-- sections/             Dataclasses par section: commands, session, models, data, etc.
+|       |-- data/                 Schemas de config des etapes geospatiales
+|       |-- models/               Schemas de config des architectures modeles
+|       |-- session/              Schemas de config du runtime de session
+|       `-- study/                Schemas de config d'etude et de sweep
 |
 |-- core/
 |   |-- data_specs.py             Contrat runtime de specification des donnees
@@ -176,7 +181,10 @@ src/landseg/
 |   |   |-- stack.py              Empilement multi-canaux de rasters
 |   |   |-- vrt.py                Écriture de rasters virtuels et analyse de balises VRT
 |   |   `-- warp.py               Reprojection, distorsion et transformations de limites
-|   `-- factory.py                Factory des DataSpecs
+|   |-- diagnostic.py             Constructeur diagnostique de DataSpecs sur bloc unique
+|   |-- factory.py                Factory des DataSpecs
+|   |-- stages.py                 Exécuteurs publics d'étapes ETL géospatiales
+|   `-- validation.py             Façade publique de validation pre-flight et des contrats d'étape
 |
 |-- knowledge/
 |   |-- embeddings.py             Tenseurs de plongements Sentence Transformer et matrices de similarité
@@ -197,6 +205,14 @@ src/landseg/
 |   |-- frames/                   Modeles complets assemblant backbones et tetes
 |   `-- factory.py                Construction modele de haut niveau
 |
+|-- runtime/
+|   |-- concurrency.py            Dimensionnement du pool de workers et exécution parallèle
+|   |-- hardware.py               Détection de périphérique, requêtes mémoire et sondes de capacité
+|   |-- interactive.py            Widgets notebook et gestion sécurisée des interruptions d'entraînement
+|   |-- logger.py                 Journalisation unifiée et rapports structurés
+|   |-- platform.py               Découverte d'environnement cluster, introspection Databricks, lignage git
+|   `-- validator.py              Fonctions de validation primitives sans dépendance externe
+|
 |-- session/
 |   |-- contracts/                Protocoles partages de donnees, observateur et phases
 |   |-- data/                     Dataset, collation, memoire et construction des dataloaders
@@ -216,16 +232,23 @@ src/landseg/
 |   |   |-- policy/               Policies d'epoch et de phase
 |   |   `-- runner/               Runners continuous et curriculum
 |   |-- factory.py                Factory de session
-|   `-- logger.py                 Logging propre a la session
+|   |-- logger.py                 Logging propre a la session
+|   `-- preview.py                Inférence d'aperçu et sélection de bloc représentatif
 |
 |-- study/
 |   |-- analysis/                 Helpers d'analyse de trials/resultats
 |   `-- sweep/                    Objectif Optuna, config et optimisation
 |
-|-- utils/
-|   |-- logger.py                 Configuration du logging
-|   |-- multip.py                 Helpers de multiprocessing
-|   `-- validator.py              Primitives de validation sans dépendance externe
+|-- testing/
+|   |-- fixtures/                 Fixtures simulées de rasters synthétiques et jeux de données
+|   `-- factories/                Factories de construction de données de test et d'objets modèles
+|
+|-- visual/
+|   |-- color.py                  Palettes canoniques et colorisation catégorielle/continue
+|   |-- curves.py                 Tracé des courbes de perte et métriques multi-têtes
+|   |-- diagnostics.py            Matrices de confusion et graphiques de performance par classe
+|   |-- preview.py                Aperçus qualitatifs de segmentation et rendu des erreurs
+|   `-- spatial.py                Grille monde, fréquences de classes et composites spectraux
 ```
 
 ### Notes Sur Les Frontieres Actuelles
@@ -257,20 +280,25 @@ src/landseg/
   groupe `engine` imbrique (execution, optimisation, planification et taches)
   sont distincts des parametres de monitoring, curriculum et reprise de
   `orchestration`.
-- `geopipe/` est organisé en trois étapes (`harmonize`, `ingest`, `prepare`),
-  offrant des triades symétriques (`context.py`, `logger.py`, `pipeline.py`),
-  régies par les contrats centraux dans `contracts/`.
+- `execution/pipelines/` orchestre les étapes géospatiales via les exécuteurs
+  publics du module racine `landseg.geopipe` (`stages.py`), tandis que les
+  sous-packages internes de `geopipe/` (`harmonize`, `ingest`, `prepare`)
+  conservent leurs triades symétriques (`context.py`, `logger.py`, `pipeline.py`)
+  régies par `contracts/`.
 - Les recettes orientées tâches sous `configs/*.yaml` se résolvent directement
   dans les contrats Hydra structurés sans couche de traduction intermédiaire.
 - `execution/preflight/` est un moteur d'inspection déclaratif piloté par catalogue.
   Les suites de préparation par cible sont définies comme données dans `catalog.py`
   et évaluées via des vérifications catégorisées dans `checks/`. Les sondes de contrat
-  de domaine délèguent directement aux `validators` de chaque étape.
+  de domaine délèguent via `geopipe/validation.py` (`landseg.geopipe.validate_*`).
 - La validation avant vol est diagnostique : réussir preflight confirme la présence
   des prérequis mais ne garantit pas la réussite de l'exécution. Le filtrage effectif
   est assuré par la validation des schémas de configuration (`configs/schema/`) et
   les constructeurs de contexte d'exécution (`build_*_context`).
-- Les étapes de `geopipe/` (`grid`, `harmonize`, `ingest`, `prepare`) exposent des
-  espaces de noms publics et purs `validators` sur la racine de leur module
-  (`__init__.py`), fournissant un contrat de validation partagé pour les sondes et
-  l'exécution interne.
+- Les consommateurs inter-sous-systèmes (`execution/`, `scripts/`, `notebooks/`)
+  interagissent avec `geopipe/`, `knowledge/`, `session/` et `visual/` uniquement via
+  leurs façades paresseuses de niveau racine (`landseg.<pkg>`), `runtime/validator.py`
+  restant l'unique exception feuille sans dépendance.
+- `visual/` est une couche de présentation pure sans état opérant sur les contrats
+  `core` (`DataSpecs`, `InferStepResults`) et des chemins persistés ; l'inférence
+  d'aperçu réside dans `session/preview.py`.

@@ -26,7 +26,7 @@ Data harmonization pipeline command implementation.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
-import landseg.geopipe.harmonize as harmonize
+import landseg.geopipe as geopipe
 
 
 # ----- public classes
@@ -34,7 +34,6 @@ class DataHarmonization(base.GeoPipeline):
     '''Data harmonization pipeline.'''
 
     pipeline_name: str = 'data-harmonize'
-    logger: harmonize.HarmonizationLogger
     pipeline_paths: artifacts.HarmonizationPaths
 
     @property
@@ -45,45 +44,8 @@ class DataHarmonization(base.GeoPipeline):
     def run(self) -> None:
         '''Execute data harmonization pipeline.'''
         self._initialize_run()
-        context = self._build_context()
-
-        try:
-            self.logger.log_sep()
-            self.logger.info('[START] Data harmonization')
-            harmonize.run_data_harmonization(
-                context,
-                self.pipeline_paths,
-                self.config.data.harmonization,
-                logger=self.logger
-            )
-            self.logger.info('[COMPLETE] Data harmonization')
-
-        except Exception as e:
-            self.logger.set_status('FAILED')
-            self.logger.error(f'Data harmonization failed: {e}')
-            raise
-
-        finally:
-            self.logger.update_runs_manifest(
-                self.pipeline_paths.runs_manifest,
-                self.pipeline_paths.effective_run_folder,
-                self.config.data.harmonization.dataset_manifest
-            )
-            self.logger.log_sep()
-            self.logger.close()
-
-    def _create_logger(self) -> harmonize.HarmonizationLogger:
-        logger = harmonize.HarmonizationLogger(
-            name=self.pipeline_name,
-            log_file=self.pipeline_paths.report,
-            enable_file_log=False,
-        )
-        logger.init_summary(run_id=self.pipeline_paths.run_id)
-        return logger
-
-    def _build_context(self) -> harmonize.HarmonizationContext:
-        return harmonize.build_harmonization_context(
+        geopipe.run_data_harmonization_stage(
+            self.config.data.harmonization,
+            self.pipeline_paths,
             self.upstream_paths.report,
-            self.pipeline_paths.runs_manifest,
-            self.config.data.harmonization
         )

@@ -25,6 +25,7 @@
 
 # third-party imports
 import pytest
+import torch
 # local imports
 import landseg.core.session_results as session_results
 
@@ -191,6 +192,27 @@ def test_session_step_results_inference_metrics_default_mean():
     results = session_results.SessionStepResults(inference=inference)
 
     assert results.inference_metrics == pytest.approx(0.8)
+
+
+def test_infer_step_results_inputs_and_as_dict():
+    '''
+    Given: InferStepResults with tensor fields including infer_inputs.
+    When: Inspecting defaults, setting infer_inputs, and serializing as_dict.
+    Then: Default infer_inputs is None and tensor fields are excluded from as_dict.
+    '''
+    empty = session_results.InferStepResults()
+    assert empty.infer_inputs is None
+
+    inputs = torch.zeros((3, 16, 16), dtype=torch.float32)
+    populated = session_results.InferStepResults(
+        head_metrics=_make_head_metrics(head1={'mean': 0.5}),
+        mtl_metrics={'gem': 0.5},
+        infer_inputs=inputs,
+    )
+    assert populated.infer_inputs is inputs
+    serialized = populated.as_dict
+    assert 'infer_inputs' not in serialized
+    assert serialized['mtl_metrics'] == {'gem': 0.5}
 
 
 def test_session_step_results_track_weighted_heads():

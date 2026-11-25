@@ -46,7 +46,6 @@ Public APIs:
     - `PreparedSchema`: TypedDict for dataset preparation schema.
     - `RasterWindowDict`: TypedDict for raster window serialized dict.
     - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
-    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
 '''
 
 # standard imports
@@ -78,7 +77,6 @@ __all__ = [
     'PreparedSchema',
     'RasterWindowDict',
     'TargetHeadsSchema',
-    'TaxonomySpec',
 ]
 
 
@@ -87,7 +85,6 @@ if typing.TYPE_CHECKING:
     from .label_scheme import (
         CategoricalSpec,
         LabelScheme,
-        TaxonomySpec,
     )
     from .coords import (
         name_xy,
@@ -127,7 +124,6 @@ def __getattr__(name: str):
     if name in {
         'CategoricalSpec',
         'LabelScheme',
-        'TaxonomySpec',
     }:
         obj = importlib.import_module('.label_scheme', __package__)
         return getattr(obj, name)

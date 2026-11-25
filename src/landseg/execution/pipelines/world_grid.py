@@ -26,7 +26,7 @@ World grid pipeline command implementation.
 # local imports
 import landseg.artifacts as artifacts
 import landseg.execution.pipelines.base as base
-import landseg.geopipe.grid as grid
+import landseg.geopipe as geopipe
 
 
 # ----- public classes
@@ -34,46 +34,12 @@ class WorldGridGeneration(base.GeoPipeline):
     '''World grid generation pipeline.'''
 
     pipeline_name: str = 'world-grid'
-    context: None
-    logger: grid.GridLogger
     pipeline_paths: artifacts.WorldGridPaths
 
     def run(self) -> None:
         '''Execute the world-grid pipeline.'''
         self._initialize_run()
-
-        try:
-            self.logger.log_sep()
-            self.logger.info('Building/loading canonical world grid')
-
-            cfg = self.config.data.world_grid
-            is_loaded, grid_fp, world_grid = grid.prepare_world_grid(cfg)
-            status_str = 'loaded' if is_loaded else 'created and persisted'
-            self.logger.set_grid_report(world_grid, grid_fp)
-
-            self.logger.info(f'[COMPLETE] World grid {status_str}')
-            self.logger.info(f'Grid ID: {world_grid.gid}')
-            self.logger.info(f'Grid artifact file path: {grid_fp}')
-            self.logger.info(f'CRS: {world_grid.crs}')
-            self.logger.info(f'Total Tiles: {len(world_grid)}')
-
-        except Exception as err:
-            self.logger.set_status('FAILED')
-            self.logger.error(f'World grid execution failed: {err}')
-            raise
-
-        finally:
-            self.logger.log_sep()
-            self.logger.close()
-
-    def _create_logger(self) -> grid.GridLogger:
-        '''Instantiate and configure the grid logger.'''
-        logger = grid.GridLogger(
-            name=self.pipeline_name,
-            log_file=self.pipeline_paths.report,
-            enable_file_log=False,
+        geopipe.run_world_grid_stage(
+            self.config.data.world_grid,
+            self.pipeline_paths,
         )
-        logger.init_summary(run_id='world-grid')
-        return logger
-
-    def _build_context(self):...

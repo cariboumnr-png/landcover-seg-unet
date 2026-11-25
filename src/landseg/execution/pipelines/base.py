@@ -42,7 +42,6 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.core as core
 import landseg.execution.preflight as preflight
-import landseg.mlops as mlops
 import landseg.models as models
 import landseg.runtime as runtime
 import landseg.session as session
@@ -88,16 +87,8 @@ class BasePipeline(abc.ABC):
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve canonical artifact paths based on pipeline name.'''
 
-    @abc.abstractmethod
-    def _create_logger(self) -> typing.Any:
-        '''Instantiate and configure the logger for this pipeline.'''
-
-    @abc.abstractmethod
-    def _build_context(self) -> typing.Any:
-        '''Build the necessary pipeline running context object.'''
-
     def _initialize_run(self) -> None:
-        '''Initialize run directories, persist config, and open logger.'''
+        '''Validate environment, init folders, and persist config.'''
         self._validate()
 
         assert isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths)
@@ -105,8 +96,6 @@ class BasePipeline(abc.ABC):
 
         config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)
         config_ctrl.persist(self.config.as_dict)
-
-        self.logger = self._create_logger()
 
     def _validate(self) -> typing.Any:
         '''Validate pipeline environment and upstream requirements.'''
@@ -143,8 +132,17 @@ class SessionPipeline(BasePipeline):
     pipeline_paths: artifacts.SessionPaths
 
     @abc.abstractmethod
+    def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the session logger for this pipeline.'''
+
+    @abc.abstractmethod
     def _build_context(self) -> core.DataSpecs:
         '''Build the necessary pipeline running context object.'''
+
+    def _initialize_run(self) -> None:
+        '''Initialize session directories, config, and logger.'''
+        super()._initialize_run()
+        self.logger = self._create_logger()
 
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve session artifact paths.'''
@@ -202,6 +200,7 @@ class SessionPipeline(BasePipeline):
                 instantiated session runner.
         '''
         dataspecs = self._build_context()
+        self.context = dataspecs
 
         for s in dataspecs.summary:
             self.logger.info(s)
@@ -210,14 +209,7 @@ class SessionPipeline(BasePipeline):
         # setup the model
         self.logger.info('[START] Model assembly')
         start_t = time.perf_counter()
-        model = models.build_multihead_unet(
-            patch_size=self.config.session.dataloader.patch_size,
-            dataspecs=dataspecs,
-            unet_backbone_config=self.config.models.unet_backbone_config,
-            conditioning_config=self.config.models.conditioning_config,
-            enable_clamp=self.config.models.numeric_safety.enable_clamp,
-            clamp_range=self.config.models.numeric_safety.clamp_range
-        )
+        model = self._build_model(dataspecs)
         self.timer['model'] = time.perf_counter() - start_t
         self.logger.info(f'[COMPLETE] Model assembly (D_{self.timer['model']:.2f}s)')
 
@@ -262,7 +254,21 @@ class SessionPipeline(BasePipeline):
                 logger=self.logger,
                 trackers=getattr(self.config.session, 'trackers', None),
                 tracking_uri=getattr(self.config.session, 'tracking_uri', None),
-                is_databricks=mlops.is_databricks(),
+                is_databricks=runtime.is_databricks(),
             ),
             session_type=session_type,
+        )
+
+    def _build_model(
+        self,
+        dataspecs: core.DataSpecs,
+    ) -> core.MultiheadModelLike:
+        '''Assemble multi-head UNet model from dataspecs and config.'''
+        return models.build_multihead_unet(
+            patch_size=self.config.session.dataloader.patch_size,
+            dataspecs=dataspecs,
+            unet_backbone_config=self.config.models.unet_backbone_config,
+            conditioning_config=self.config.models.conditioning_config,
+            enable_clamp=self.config.models.numeric_safety.enable_clamp,
+            clamp_range=self.config.models.numeric_safety.clamp_range,
         )

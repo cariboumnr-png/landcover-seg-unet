@@ -27,7 +27,7 @@ import pathlib
 import pytest
 # local imports
 import landseg.geopipe.harmonize.manifest.normalizer as normalizer_mod
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 
 normalize_manifest_entry = normalizer_mod.normalize_manifest_entry

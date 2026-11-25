@@ -23,12 +23,15 @@
 Evaluating a model.
 '''
 
+# standard imports
+import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.execution.pipelines.base as base
 import landseg.geopipe as geopipe
 import landseg.session as session
+import landseg.visual as visual
 
 
 # ----- public classes
@@ -70,6 +73,8 @@ class ModelEvaluation(base.SessionPipeline):
             self.logger.set_status('SUCCESS')
             self.logger.set_results({'final': results.target_metrics})
 
+            self._generate_evaluation_visuals(results, runner)
+
         except Exception as e:
             self.logger.set_status('FAILED')
             self.logger.error(f'Evaluation pipeline failed: {e}', exc_info=True)
@@ -80,6 +85,64 @@ class ModelEvaluation(base.SessionPipeline):
             self.logger.close()
 
         return results.target_metrics
+
+    def _generate_evaluation_visuals(
+        self,
+        results: core.SessionStepResults,
+        runner: typing.Any,
+    ) -> None:
+        '''Generate diagnostic evaluation plots (confusion matrix and per-class metrics).'''
+        if not results.validation or not results.validation.head_metrics:
+            return
+
+        plots_dir = (
+            getattr(self.pipeline_paths, 'plots', None) or
+            (self.pipeline_paths.effective_run_folder / 'plots')
+        )
+        plots_dir.mkdir(parents=True, exist_ok=True)
+
+        for head_name, h_metrics in results.validation.head_metrics.items():
+            try:
+                per_cls = (
+                    getattr(h_metrics, 'class_iou', None) or
+                    getattr(h_metrics, 'per_class_iou', None)
+                )
+                if per_cls is not None:
+                    p_path = plots_dir / f'{head_name}_per_class_iou.png'
+                    visual.plot_per_class_metrics(
+                        per_cls,
+                        metric_name='IoU',
+                        title=f'Per-Class IoU - [{head_name}]',
+                        save_path=p_path,
+                        show=False,
+                    )
+                    self.logger.info(f'[OUTPUT] Saved per-class IoU plot to {p_path}')
+            except (ValueError, TypeError, KeyError, RuntimeError, OSError) as err:
+                self.logger.warning(
+                    f'Could not plot per-class metrics for {head_name}: {err}'
+                )
+
+            try:
+                cm_matrix = getattr(h_metrics, 'confusion_matrix', None)
+                if cm_matrix is None and hasattr(runner, 'evaluator'):
+                    cm_obj = getattr(runner.evaluator, 'metrics', {}).get(head_name, None)
+                    cm_matrix = getattr(cm_obj, 'matrix', None)
+
+                if cm_matrix is not None:
+                    cm_path = plots_dir / f'{head_name}_confusion_matrix.png'
+                    visual.plot_confusion_matrix(
+                        cm_matrix,
+                        title=f'Confusion Matrix - [{head_name}]',
+                        save_path=cm_path,
+                        show=False,
+                    )
+                    self.logger.info(
+                        f'[OUTPUT] Saved confusion matrix plot to {cm_path}'
+                    )
+            except (ValueError, TypeError, KeyError, RuntimeError, OSError) as err:
+                self.logger.warning(
+                    f'Could not plot confusion matrix for {head_name}: {err}'
+                )
 
     def _create_logger(self) -> session.SessionLogger:
         logger = session.SessionLogger(

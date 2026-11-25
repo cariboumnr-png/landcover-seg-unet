@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit test suite for `landseg.notebooks` dedicated package.'''
+'''Unit test suite for interactive notebook widgets and session safety (interactive.py).'''
 
 # standard imports
 import json
@@ -27,7 +27,7 @@ import pathlib
 # third-party imports
 import pytest
 # local imports
-import landseg.notebooks as nb
+import landseg.runtime.interactive as interactive
 
 
 # Helper fake classes for testing Databricks widgets
@@ -99,16 +99,6 @@ def _create_fake_dbutils(
     return _FakeDbutils(initial)
 
 
-# ----- `is_notebook` tests
-def test_is_notebook_false_in_test_process():
-    '''
-    Given: Standard non-interactive test process.
-    When: Probing is_notebook.
-    Then: Returns False.
-    '''
-    assert not nb.is_notebook()
-
-
 # ----- `NotebookWidgets` tests
 def test_notebook_widgets_fallback_types(
     monkeypatch: pytest.MonkeyPatch,
@@ -120,7 +110,7 @@ def test_notebook_widgets_fallback_types(
     Then: Accurately parses and returns typed default values.
     '''
     monkeypatch.delenv('LANDSEG_BATCH_SIZE', raising=False)
-    widgets = nb.NotebookWidgets()
+    widgets = interactive.NotebookWidgets()
     assert not widgets.has_dbutils
 
     text_val = widgets.text('exp_name', 'run_01')
@@ -165,7 +155,7 @@ def test_notebook_widgets_env_override(monkeypatch: pytest.MonkeyPatch):
     Then: Uses the environment variable override.
     '''
     monkeypatch.setenv('LANDSEG_DEVICE', 'cuda:1')
-    widgets = nb.NotebookWidgets()
+    widgets = interactive.NotebookWidgets()
     val = widgets.dropdown(
         'device',
         default='cpu',
@@ -184,7 +174,7 @@ def test_notebook_widgets_with_dbutils():
         'batch_size': '32',
         'is_eval': 'false',
     })
-    widgets = nb.NotebookWidgets(dbutils=fake_db)
+    widgets = interactive.NotebookWidgets(dbutils=fake_db)
     assert widgets.has_dbutils
 
     int_val = widgets.int('batch_size', default=16)
@@ -206,13 +196,13 @@ def test_require_widget_raises_on_missing(monkeypatch: pytest.MonkeyPatch):
     '''
     monkeypatch.delenv('LANDSEG_OUTPUT_ROOT', raising=False)
     monkeypatch.delenv('OUTPUT_ROOT', raising=False)
-    widgets = nb.NotebookWidgets()
+    widgets = interactive.NotebookWidgets()
     widgets.remove_all()
 
-    with pytest.raises(nb.MissingRequiredInputError) as exc_info:
-        nb.require_widget('output_root', widgets=widgets)
+    with pytest.raises(interactive.MissingRequiredInputError) as exc_info:
+        interactive.require_widget('output_root', widgets=widgets)
 
-    assert "output_root" in str(exc_info.value)
+    assert 'output_root' in str(exc_info.value)
 
 
 def test_require_widget_succeeds_with_value(tmp_path: pathlib.Path):
@@ -221,10 +211,10 @@ def test_require_widget_succeeds_with_value(tmp_path: pathlib.Path):
     When: Calling require_widget.
     Then: Returns stored value.
     '''
-    widgets = nb.NotebookWidgets()
+    widgets = interactive.NotebookWidgets()
     widgets.text('output_root', str(tmp_path / 'vol'))
 
-    val = nb.require_widget('output_root', widgets=widgets)
+    val = interactive.require_widget('output_root', widgets=widgets)
     assert val == str(tmp_path / 'vol')
 
 
@@ -234,7 +224,7 @@ def test_require_widget_runs_validator(tmp_path: pathlib.Path):
     When: Calling require_widget.
     Then: Runs validator and returns transformed result.
     '''
-    widgets = nb.NotebookWidgets()
+    widgets = interactive.NotebookWidgets()
     widgets.text('output_root', str(tmp_path / 'valid'))
 
     def _validator(v):
@@ -242,7 +232,11 @@ def test_require_widget_runs_validator(tmp_path: pathlib.Path):
         p.mkdir(parents=True, exist_ok=True)
         return p
 
-    val = nb.require_widget('output_root', validator=_validator, widgets=widgets)
+    val = interactive.require_widget(
+        'output_root',
+        validator=_validator,
+        widgets=widgets,
+    )
     assert isinstance(val, pathlib.Path)
     assert val == tmp_path / 'valid'
 
@@ -253,7 +247,7 @@ def test_require_widget_validator_failure():
     When: Calling require_widget.
     Then: Wraps failure in MissingRequiredInputError.
     '''
-    widgets = nb.NotebookWidgets()
+    widgets = interactive.NotebookWidgets()
     widgets.text('output_root', '/Workspace/Users/test')
 
     def _reject_workspace(v):
@@ -261,8 +255,8 @@ def test_require_widget_validator_failure():
             raise ValueError('Workspace disallowed')
         return True
 
-    with pytest.raises(nb.MissingRequiredInputError) as exc_info:
-        nb.require_widget(
+    with pytest.raises(interactive.MissingRequiredInputError) as exc_info:
+        interactive.require_widget(
             'output_root',
             validator=_reject_workspace,
             widgets=widgets,
@@ -271,6 +265,46 @@ def test_require_widget_validator_failure():
     assert 'Workspace disallowed' in str(exc_info.value)
 
 
+# ----- `safe_training_session` tests
+def test_safe_training_session_normal_exit():
+    '''
+    Given: An uninterrupted training block wrapped in safe_training_session.
+    When: Block executes to completion.
+    Then: State records uninterrupted execution.
+    '''
+    with interactive.safe_training_session() as state:
+        assert state['interrupted'] is False
+        _ = 1 + 1
+
+    assert state['interrupted'] is False
+
+
+def test_safe_training_session_handles_keyboard_interrupt(capsys: pytest.CaptureFixture):
+    '''
+    Given: A simulated KeyboardInterrupt inside safe_training_session.
+    When: Cell is interrupted.
+    Then: State records interruption and halts cleanly without crash.
+    '''
+    with interactive.safe_training_session(reraise=False) as state:
+        raise KeyboardInterrupt('Simulated notebook stop button click')
+
+    assert state['interrupted'] is True
+    captured = capsys.readouterr()
+    assert '[INTERRUPTED]' in captured.out
+
+
+def test_safe_training_session_reraises_when_requested():
+    '''
+    Given: safe_training_session with reraise=True.
+    When: KeyboardInterrupt occurs.
+    Then: Re-raises KeyboardInterrupt after cleanup.
+    '''
+    with pytest.raises(KeyboardInterrupt):
+        with interactive.safe_training_session(reraise=True):
+            raise KeyboardInterrupt('User stop')
+
+
+# ----- Notebook structure audit tests
 def test_02_model_train_notebook_structure():
     '''
     Given: 02_model_train.ipynb notebook file.
@@ -285,10 +319,10 @@ def test_02_model_train_notebook_structure():
 
     cell_sources = [''.join(c.get('source', [])) for c in data['cells']]
 
-    # 1. Check for separate widget and validation cells
+    # 1. Check for separate widget, validation, and training cells
     widget_cell = next(s for s in cell_sources if "widgets.text" in s and "'output_root'" in s)
-    val_cell = next(s for s in cell_sources if "nb.require_widget" in s and "'output_root'" in s)
-    train_cell = next(s for s in cell_sources if "nb.safe_training_session" in s)
+    val_cell = next(s for s in cell_sources if "runtime.require_widget" in s and "'output_root'" in s)
+    train_cell = next(s for s in cell_sources if "runtime.safe_training_session" in s)
 
     # 2. Check that output_root defaults to empty string
     assert "default=''" in widget_cell or 'default=""' in widget_cell

@@ -30,7 +30,7 @@ import typing
 import landseg.adapters.api.api as api
 import landseg.artifacts as artifacts
 import landseg.configs as configs
-import landseg.utils.validator as val
+import landseg.runtime.validator as val
 
 class BaseConfigurator:
     '''Base configurator for execution commands.'''
@@ -155,14 +155,17 @@ class BaseConfigurator:
             case 'model-evaluate':
                 self.cfg.models.validate()
                 self.cfg.session.validate()
-            case (
-                'model-train' |
-                'diagnose-overfit' |
-                'study-sweep' |
-                'study-analysis'
-            ):
+            case 'model-train' | 'diagnose-overfit':
                 self.cfg.models.validate()
                 self.cfg.session.validate()
+            case 'study-sweep':
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+                self.cfg.study.validate()
+            case 'study-analysis':
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+                self.cfg.study.sweep.validate()
         return self.cfg
 
     def preflight(self, strict: bool = False) -> typing.Any:

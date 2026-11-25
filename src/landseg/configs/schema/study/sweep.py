@@ -24,6 +24,7 @@
 # standard imports
 import dataclasses
 # local imports
+import landseg._constants as c
 import landseg.configs.schema.base as base
 
 
@@ -40,7 +41,7 @@ class StudySweepConfig(base.BaseConfigSection):
     def validate(self) -> None:
         self.val.require_string(self.study_name)
         self.val.require_string(self.storage)
-        self.val.require_string(self.preset_name)
+        self.val.require_value_from(self.preset_name, c.SWEEP_PRESETS, str)
         self.val.require_value_from(self.direction, ['minimize', 'maximize'], str)
         self.val.require_numeric_min(self.n_trials, 1, int)
         self.val.require_numeric_min(self.seed, 0, int)

@@ -21,7 +21,11 @@
 
 '''Unit tests for `landseg.configs.schema.study`.'''
 
+# third-party imports
+import pytest
 # local imports
+import landseg._constants as c
+import landseg.configs.schema.base as base
 import landseg.configs.schema.study as study
 import landseg.configs.schema.study.architecture as architecture
 import landseg.configs.schema.study.objectives as objectives
@@ -67,3 +71,25 @@ def test_study_config_custom_objective():
 
     assert cfg.architecture.architecture.model_body == ['unet']
     assert cfg.architecture.architecture.base_channel == (32, 64, 32)
+
+
+@pytest.mark.parametrize('preset_name', c.SWEEP_PRESETS)
+def test_study_sweep_config_accepts_registered_presets(preset_name: str):
+    '''
+    Given: A preset name declared in `c.SWEEP_PRESETS`.
+    When: Validating `StudySweepConfig` with that preset.
+    Then: Validation succeeds without raising.
+    '''
+    cfg = sweep.StudySweepConfig(preset_name=preset_name)
+    cfg.validate()
+
+
+def test_study_sweep_config_rejects_unknown_preset():
+    '''
+    Given: A `StudySweepConfig` with an unrecognized preset name.
+    When: Calling `StudySweepConfig.validate()`.
+    Then: Raise `ConfigValidationError`.
+    '''
+    cfg = sweep.StudySweepConfig(preset_name='non_existent_preset')
+    with pytest.raises(base.ConfigValidationError):
+        cfg.validate()

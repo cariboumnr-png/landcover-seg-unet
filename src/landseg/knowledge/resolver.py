@@ -25,6 +25,7 @@ Resolution helper for knowledge base assets and profiles.
 
 # standard imports
 import pathlib
+import typing
 # third-party imports
 import torch
 # local imports
@@ -90,3 +91,50 @@ def resolve_profile_metadata(
     meta_path = kp.metadata_fpath(profile)
     ctrl = artifacts.Controller[knowledge.SpeciesEmbeddingsMetadata](meta_path)
     return ctrl.fetch()
+
+
+def resolve_head_knowledge(
+    counts: typing.Mapping[str, typing.Sequence[int]],
+    raw_taxonomy: typing.Mapping[str, typing.Mapping[str, typing.Any]],
+    class_names: typing.Mapping[str, typing.Sequence[str]],
+    knowledge_root: pathlib.Path | str | None = None,
+) -> tuple[dict[str, dict[str, typing.Any]], dict[str, torch.Tensor]]:
+    '''Resolve validated head taxonomies and similarity matrices.'''
+    taxonomy: dict[str, dict[str, typing.Any]] = {
+        k: dict(v) for k, v in raw_taxonomy.items()
+    }
+    sim_matrices: dict[str, torch.Tensor] = {}
+    k_paths = (
+        artifacts.KnowledgePaths(pathlib.Path(knowledge_root))
+        if knowledge_root is not None
+        else None
+    )
+    if k_paths is None or not k_paths.root.exists():
+        return taxonomy, sim_matrices
+
+    for hname, tax_dict in taxonomy.items():
+        if not isinstance(tax_dict, dict) or 'profile' not in tax_dict:
+            continue
+        profile = tax_dict['profile']
+        cls_list = class_names.get(hname)
+        if cls_list and hname in counts and len(cls_list) == len(counts[hname]):
+            mapping = {str(i): c for i, c in enumerate(cls_list, 1)}
+            try:
+                resolved = knowledge.validate_specs(
+                    profile,
+                    mapping,
+                    len(counts[hname]),
+                    knowledge_root=k_paths.root,
+                )
+                taxonomy[hname] = dict(resolved)
+            except (ValueError, FileNotFoundError):
+                pass
+        try:
+            sim_matrices[hname] = resolve_similarity_matrix(
+                profile,
+                knowledge_root=k_paths.root,
+            )
+        except (FileNotFoundError, artifacts.ArtifactError):
+            pass
+
+    return taxonomy, sim_matrices
