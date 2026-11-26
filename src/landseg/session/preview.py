@@ -44,7 +44,6 @@ import landseg.session.data as data
 import landseg.session.engine as engine_mod
 import landseg.session.factory as factory
 import landseg.session.instrumentation as instrumentation
-import landseg.session.logger as session_logger
 
 
 # ----- public functions
@@ -99,13 +98,12 @@ def select_representative_block(
 
 def run_preview_inference(
     *,
-    checkpoint_fpath: str | pathlib.Path,
+    checkpoint_fpath: pathlib.Path,
     dataspecs: core.DataSpecs,
     model: core.MultiheadModelLike,
     config: factory.SessionConfigShape,
     device: str = 'auto',
     active_heads: list[str] | None = None,
-    logger: session_logger.SessionLogger | None = None,
 ) -> core.InferStepResults | None:
     '''
     Load checkpoint weights and run stitched test preview inference.
@@ -127,49 +125,32 @@ def run_preview_inference(
             Target execution device (e.g. `'cuda'`, `'cpu'`, `'auto'`).
         active_heads:
             Optional subset of heads to activate; defaults to all heads.
-        logger:
-            Optional session logger for status messages.
 
     Returns:
         core.InferStepResults | None:
             Stitched inputs, labels, predictions, and errors, or `None`
             when no test blocks or checkpoint exist.
     '''
-    if not dataspecs.splits.test:
-        if logger:
-            logger.info(
-                'No test blocks found in dataspecs; skipping preview '
-                'inference.'
-            )
-        return None
-
-    ckpt_path = pathlib.Path(checkpoint_fpath)
-    if not ckpt_path.is_file():
-        if logger:
-            logger.warning(f'Checkpoint file not found: {ckpt_path}')
-        return None
-
     target_device = runtime.resolve_device(device)
+
     artifacts.load_checkpoint(
         model=model,
-        fpath=ckpt_path,
+        fpath=checkpoint_fpath,
         map_device=target_device,
     )
 
     preview_specs = _resolve_preview_dataspecs(dataspecs)
-    dataloaders = data.build_dataloaders(
-        preview_specs,
-        config.dataloader,
-        logger=None,
+    dataloaders = data.build_dataloaders(preview_specs, config.dataloader)
+    dispatcher = instrumentation.build_dispatcher()
+    engine_context = engine_mod.EngineContext(
+        dataspecs=preview_specs,
+        model=model,
+        dataloaders=dataloaders,
+        dispatcher=dispatcher,
     )
-    dispatcher = instrumentation.build_dispatcher(logger=logger)
+
     epoch_runner = engine_mod.build_engine(
-        engine_mod.EngineContext(
-            dataspecs=preview_specs,
-            model=model,
-            dataloaders=dataloaders,
-            dispatcher=dispatcher,
-        ),
+        engine_context,
         config.engine,
         mode='eval_only',
         eval_dataset='test',

@@ -37,6 +37,7 @@ import pathlib
 import typing
 # third-party imports
 import matplotlib
+import matplotlib.figure
 import matplotlib.pyplot
 import numpy
 import torch
@@ -60,7 +61,7 @@ def plot_qualitative_predictions(
     save_path: str | pathlib.Path | None = None,
     show: bool = True,
     color_map: dict[str, list[int]] | None = None,
-) -> typing.Any:
+) -> matplotlib.figure.Figure:
     '''
     Render comparative inspection panels of segmentation predictions.
 
@@ -161,11 +162,8 @@ def plot_qualitative_predictions(
 def generate_prediction_previews(
     infer_results: core.InferStepResults | None,
     dataspecs: core.DataSpecs,
-    previews_dpath: str | pathlib.Path | None = None,
-    *,
-    save_pngs: bool = True,
-    show: bool = False,
-) -> dict[str, typing.Any]:
+    previews_dpath: str | pathlib.Path,
+) -> dict[str, pathlib.Path]:
     '''
     Render qualitative prediction preview PNGs from inference results.
 
@@ -183,14 +181,10 @@ def generate_prediction_previews(
             metadata.
         previews_dpath:
             Output directory for saving rendered preview PNGs.
-        save_pngs:
-            Whether to save preview images to `previews_dpath`.
-        show:
-            Whether to display figures with `matplotlib.pyplot.show()`.
 
     Returns:
-        dict[str, matplotlib.figure.Figure]:
-            Mapping from head name to rendered matplotlib figure.
+        dict[str, pathlib.Path]:
+            Mapping from head name saved preview figure.
     '''
     if (
         infer_results is None
@@ -207,9 +201,11 @@ def generate_prediction_previews(
     color_map = dataspecs.meta.label_color_map
 
     result_figs: dict[str, typing.Any] = {}
+
     for head in active_heads:
         pred_tensor = infer_results.infer_preds[head]
         gt_tensor = infer_results.infer_labels.get(head)
+
         if gt_tensor is None:
             gt_display = torch.zeros_like(pred_tensor)
             err_display = None
@@ -221,78 +217,53 @@ def generate_prediction_previews(
 
         save_file = (
             pathlib.Path(previews_dpath) / f'{head}_preview.png'
-            if (save_pngs and previews_dpath)
+            if previews_dpath
             else None
         )
-        result_figs[head] = plot_qualitative_predictions(
+        fig = plot_qualitative_predictions(
             image=rgb_image,
             ground_truth=gt_display,
             prediction=pred_tensor,
             errors=err_display,
             title=f'Qualitative Segmentation Preview - [{head}]',
             save_path=save_file,
-            show=show,
+            show=False,
             color_map=color_map,
         )
+        matplotlib.pyplot.close(fig)
+        result_figs[head] = save_file
 
     return result_figs
 
 
-def render_prediction_preview(
-    target_dpath: str | pathlib.Path | None = None,
-    *,
-    save_path: str | pathlib.Path | None = None,
-    show: bool = True,
-) -> typing.Any:
+def render_prediction_preview(target_dpath: str | pathlib.Path) -> typing.Any:
     '''
-    Automated qualitative prediction preview for notebook inspection.
+    Display previously generated prediction preview PNGs.
 
-    Loads and displays previously generated preview PNGs from the
-    experiment results directory, or falls back to a clean mock preview
-    figure.
+    Resolves the latest experiment run and loads its existing preview
+    images. Does not execute inference or regenerate figures.
 
     Args:
         target_dpath:
-            Active destination output or experiment root directory.
-        save_path:
-            Optional destination path for figure export.
-        show:
-            Whether to display figure inline.
-
-    Returns:
-        matplotlib.figure.Figure:
-            Instantiated figure instance.
+            Experiment root or individual run directory.
     '''
-    target_path = pathlib.Path(target_dpath or './experiment')
+    run_dpath = _resolve_latest_run(target_dpath)
+    preview_dpath = run_dpath / 'previews'
 
-    # look for generated preview PNGs in previews directories
-    candidate_dirs = [
-        target_path / 'previews',
-        target_path / 'artifacts' / 'previews',
-    ]
-    if target_path.is_dir():
-        candidate_dirs.extend(target_path.glob('**/previews'))
+    if not preview_dpath.is_dir():
+        raise FileNotFoundError(f'No preview directory found: {preview_dpath}')
 
-    found_pngs: list[pathlib.Path] = []
-    for d in candidate_dirs:
-        if d.is_dir():
-            found_pngs.extend(sorted(d.glob('*_preview.png')))
-            found_pngs.extend(sorted(d.glob('prediction_preview.png')))
+    png_files = sorted(preview_dpath.glob('*_preview.png'))
 
-    # remove duplicates preserving order
-    seen = set()
-    unique_pngs: list[pathlib.Path] = []
-    for p in found_pngs:
-        if p.resolve() not in seen:
-            seen.add(p.resolve())
-            unique_pngs.append(p)
+    if not png_files:
+        raise FileNotFoundError(f'No preview PNGs found in {preview_dpath}')
 
-    if unique_pngs:
-        last_fig = None
-        for png_file in unique_pngs:
-            img = matplotlib.pyplot.imread(png_file)
-            fig, ax = matplotlib.pyplot.subplots(figsize=(14, 4))
-            ax.imshow(img)
+    for png_file in png_files:
+        image = matplotlib.pyplot.imread(png_file)
+        fig, ax = matplotlib.pyplot.subplots(figsize=(14, 4))
+
+        try:
+            ax.imshow(image)
             ax.set_title(
                 png_file.stem.replace('_', ' ').title(),
                 fontsize=12,
@@ -300,47 +271,29 @@ def render_prediction_preview(
             )
             ax.axis('off')
             matplotlib.pyplot.tight_layout()
-            if save_path is not None:
-                fig.savefig(save_path, bbox_inches='tight', dpi=150)
-            if show:
-                matplotlib.pyplot.show()
-            else:
-                matplotlib.pyplot.close(fig)
-            last_fig = fig
-        return last_fig
+            matplotlib.pyplot.show()
 
-    # fallback to generating a sample preview figure if none exist yet
-    h, w = 128, 128
-    numpy.random.seed(42)
-    sample_img = numpy.random.rand(h, w, 3).astype(numpy.float32)
-    sample_gt = numpy.zeros((h, w), dtype=numpy.int32)
-    sample_gt[20:80, 20:80] = 1
-    sample_gt[50:110, 50:110] = 2
-
-    sample_pred = sample_gt.copy()
-    noise = numpy.random.rand(h, w) > 0.92
-    sample_pred[noise] = numpy.random.randint(0, 3, size=int(numpy.sum(noise)))
-
-    if save_path is not None:
-        preview_dest = pathlib.Path(save_path)
-    elif target_path.name == 'results' or (target_path / 'previews').is_dir():
-        preview_dest = target_path / 'previews' / 'prediction_preview.png'
-    else:
-        preview_dest = (
-            target_path / 'artifacts' / 'previews' / 'prediction_preview.png'
-        )
-
-    return plot_qualitative_predictions(
-        sample_img,
-        sample_gt,
-        sample_pred,
-        title='Qualitative Segmentation Preview (Validation Split)',
-        save_path=preview_dest,
-        show=show,
-    )
+        finally:
+            matplotlib.pyplot.close(fig)
 
 
 # ----- private helpers
+def _resolve_latest_run(target_dpath: str | pathlib.Path) -> pathlib.Path:
+    '''Resolve the run directory containing the latest step results.'''
+    target = pathlib.Path(target_dpath)
+
+    if not target.is_dir():
+        raise FileNotFoundError(f'Results directory does not exist: {target}')
+
+    candidates = list(target.glob('**/step_results.json'))
+
+    if not candidates:
+        raise FileNotFoundError(f'No step_results.json found under {target}')
+
+    latest = max(candidates, key=lambda p: p.stat().st_mtime)
+    return latest.parent
+
+
 def _extract_rgb_image(
     image: torch.Tensor,
     band_map: dict[str, int] | None,

@@ -87,6 +87,34 @@ class BaseConfigurator:
         if output_dpath is not None:
             self.set_output(self._require_dir(output_dpath, writable=True))
 
+    @property
+    def running_root_config(self) -> configs.RootConfig:
+        '''Return validated `RootConfig` for the active command.'''
+        match self.cfg.command:
+            case 'world-grid':
+                self.cfg.data.world_grid.validate()
+            case 'data-harmonize':
+                self.cfg.data.harmonization.validate()
+            case 'data-ingest':
+                self.cfg.data.ingestion.validate()
+            case 'data-prepare':
+                self.cfg.data.preparation.validate()
+            case 'model-evaluate':
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+            case 'model-train' | 'diagnose-overfit':
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+            case 'study-sweep':
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+                self.cfg.study.validate()
+            case 'study-analysis':
+                self.cfg.models.validate()
+                self.cfg.session.validate()
+                self.cfg.study.sweep.validate()
+        return self.cfg
+
     @classmethod
     def from_experiment_root(
         cls,
@@ -111,6 +139,21 @@ class BaseConfigurator:
         '''
         return cls(experiment_root=experiment_root, **kwargs)
 
+    def preflight(self, strict: bool = False) -> typing.Any:
+        '''
+        Run pre-flight diagnostic validation for configured command.
+
+        Args:
+            strict:
+                Whether to enforce strict pre-flight validation mode.
+
+        Returns:
+            typing.Any:
+                Pre-flight validation report or list of reports.
+        '''
+        return api.run_preflight(self.cfg, self.cfg.command, strict=strict)
+
+    # ----- shared methods for configuring runtime sessions
     def set_output(self, output_dpath: str | pathlib.Path) -> typing.Self:
         '''Set destination output directory for the active command.'''
         dpath_str = str(output_dpath)
@@ -160,49 +203,6 @@ class BaseConfigurator:
                 self.cfg.data.preparation.output_dpath = dpath_str
         return self
 
-    @property
-    def running_root_config(self) -> configs.RootConfig:
-        '''Return validated `RootConfig` for the active command.'''
-        match self.cfg.command:
-            case 'world-grid':
-                self.cfg.data.world_grid.validate()
-            case 'data-harmonize':
-                self.cfg.data.harmonization.validate()
-            case 'data-ingest':
-                self.cfg.data.ingestion.validate()
-            case 'data-prepare':
-                self.cfg.data.preparation.validate()
-            case 'model-evaluate':
-                self.cfg.models.validate()
-                self.cfg.session.validate()
-            case 'model-train' | 'diagnose-overfit':
-                self.cfg.models.validate()
-                self.cfg.session.validate()
-            case 'study-sweep':
-                self.cfg.models.validate()
-                self.cfg.session.validate()
-                self.cfg.study.validate()
-            case 'study-analysis':
-                self.cfg.models.validate()
-                self.cfg.session.validate()
-                self.cfg.study.sweep.validate()
-        return self.cfg
-
-    def preflight(self, strict: bool = False) -> typing.Any:
-        '''
-        Run pre-flight diagnostic validation for configured command.
-
-        Args:
-            strict:
-                Whether to enforce strict pre-flight validation mode.
-
-        Returns:
-            typing.Any:
-                Pre-flight validation report or list of reports.
-        '''
-        return api.run_preflight(self.cfg, self.cfg.command, strict=strict)
-
-    # ----- shared methods for configuring runtime sessions
     def set_data_loading(
         self,
         batch_size: int,

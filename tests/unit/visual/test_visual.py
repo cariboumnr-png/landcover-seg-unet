@@ -25,6 +25,7 @@
 import pathlib
 # third-party imports
 import matplotlib
+import matplotlib.pyplot
 import numpy
 import pytest
 import torch
@@ -124,11 +125,11 @@ def test_colorize_continuous_invalid_dim():
 
 
 # ----- Curves Plotting Tests
-def test_plot_training_curves_multi_head(tmp_path: pathlib.Path):
+def test_generate_training_curves_multi_head(tmp_path: pathlib.Path):
     '''
     Given: A JSON file with multi-head step metrics and GEM scores.
-    When: Calling `plot_training_curves`.
-    Then: Return a figure and save a non-empty PNG file.
+    When: Calling `generate_training_curves`.
+    Then: Save a non-empty PNG and return its path.
     '''
     steps = [
         {
@@ -158,18 +159,20 @@ def test_plot_training_curves_multi_head(tmp_path: pathlib.Path):
     json_path = tmp_path / 'step_results.json'
     artifacts.Controller[list](json_path).persist(steps)
 
-    out_file = tmp_path / 'curves.png'
-    fig = visual.plot_training_curves(json_path, save_path=out_file, show=False)
-    assert fig is not None
-    assert out_file.is_file()
-    assert out_file.stat().st_size > 0
+    plots_dir = tmp_path / 'plots'
+    saved = visual.generate_training_curves(json_path, plots_dir)
+    assert saved == plots_dir / 'training_curves.png'
+    assert saved.is_file()
+    assert saved.stat().st_size > 0
 
 
-def test_plot_training_curves_from_step_summaries(tmp_path: pathlib.Path):
+def test_generate_training_curves_from_step_summaries(
+    tmp_path: pathlib.Path,
+):
     '''
     Given: Serialized `SessionStepSummary` records persisted to JSON.
-    When: Calling `plot_training_curves`.
-    Then: Return a figure and save a non-empty PNG file.
+    When: Calling `generate_training_curves`.
+    Then: Save a non-empty PNG and return its path.
     '''
     training1 = core.TrainStepResults(total_objective=1.5)
     validation1 = core.ValStepResults(
@@ -224,43 +227,43 @@ def test_plot_training_curves_from_step_summaries(tmp_path: pathlib.Path):
         [step1.as_dict, step2.as_dict]
     )
 
-    out_file = tmp_path / 'summary_curves.png'
-    fig = visual.plot_training_curves(json_path, save_path=out_file, show=False)
-    assert fig is not None
-    assert out_file.is_file()
-    assert out_file.stat().st_size > 0
+    saved = visual.generate_training_curves(json_path, tmp_path / 'plots')
+    assert saved.is_file()
+    assert saved.stat().st_size > 0
 
 
-def test_plot_training_curves_empty_steps(tmp_path: pathlib.Path):
+def test_generate_training_curves_empty_steps(tmp_path: pathlib.Path):
     '''
     Given: A `step_results.json` file containing an empty list.
-    When: Calling `plot_training_curves`.
+    When: Calling `generate_training_curves`.
     Then: Raise `ValueError`.
     '''
     json_path = tmp_path / 'step_results.json'
     artifacts.Controller[list](json_path).persist([])
     with pytest.raises(ValueError, match='No training step records found'):
-        visual.plot_training_curves(json_path)
+        visual.generate_training_curves(json_path, tmp_path / 'plots')
 
 
-def test_plot_training_curves_nonexistent_path(tmp_path: pathlib.Path):
+def test_generate_training_curves_nonexistent_path(tmp_path: pathlib.Path):
     '''
     Given: A path to a non-existent `step_results.json` file.
-    When: Calling `plot_training_curves`.
+    When: Calling `generate_training_curves`.
     Then: Raise `FileNotFoundError`.
     '''
     missing = tmp_path / 'nonexistent.json'
     with pytest.raises(
         FileNotFoundError, match='Specified path does not exist'
     ):
-        visual.plot_training_curves(missing)
+        visual.generate_training_curves(missing, tmp_path / 'plots')
 
 
-def test_plot_training_curves_no_validation_metrics(tmp_path: pathlib.Path):
+def test_generate_training_curves_no_validation_metrics(
+    tmp_path: pathlib.Path,
+):
     '''
     Given: Step records with training loss and no validation metrics.
-    When: Calling `plot_training_curves`.
-    Then: Render the loss curve cleanly and return a figure.
+    When: Calling `generate_training_curves`.
+    Then: Save the loss curve PNG cleanly and return its path.
     '''
     step_data = [
         {'epoch_in_phase': 1, 'training': {'total_objective': 1.5}},
@@ -269,8 +272,8 @@ def test_plot_training_curves_no_validation_metrics(tmp_path: pathlib.Path):
     json_path = tmp_path / 'step_results.json'
     artifacts.Controller[list](json_path).persist(step_data)
 
-    fig = visual.plot_training_curves(json_path, show=False)
-    assert fig is not None
+    saved = visual.generate_training_curves(json_path, tmp_path / 'plots')
+    assert saved.is_file()
 
 
 # ----- Qualitative Inspection Tests
@@ -297,30 +300,38 @@ def test_plot_qualitative_predictions(tmp_path: pathlib.Path):
 
 
 # ----- Preview Generation Empty / Rendering Tests
-def test_generate_prediction_previews_skips_empty_results():
+def test_generate_prediction_previews_skips_empty(tmp_path: pathlib.Path):
     '''
     Given: `None` or incomplete `InferStepResults` payloads.
     When: Calling `generate_prediction_previews`.
-    Then: Skip rendering and return an empty dictionary.
+    Then: Skip rendering, write no PNGs, and return an empty dictionary.
     '''
     specs = _make_mock_dataspecs()
+    previews_dir = tmp_path / 'previews'
 
-    assert not visual.generate_prediction_previews(None, specs)
+    assert not visual.generate_prediction_previews(
+        None,
+        specs,
+        previews_dir,
+    )
     assert not visual.generate_prediction_previews(
         core.InferStepResults(),
         specs,
+        previews_dir,
     )
     assert not visual.generate_prediction_previews(
         core.InferStepResults(infer_inputs=torch.zeros((4, 64, 64))),
         specs,
+        previews_dir,
     )
+    assert not list(tmp_path.glob('**/*.png'))
 
 
-def test_plot_training_curves_from_file_and_dir(tmp_path: pathlib.Path):
+def test_generate_training_curves_from_file_and_dir(tmp_path: pathlib.Path):
     '''
     Given: A `step_results.json` file path and its parent directory.
-    When: Calling `plot_training_curves` with both paths.
-    Then: Load records and return figures in both cases.
+    When: Calling `generate_training_curves` with both paths.
+    Then: Load records and save a PNG in both cases.
     '''
     step_data = [
         {
@@ -335,20 +346,20 @@ def test_plot_training_curves_from_file_and_dir(tmp_path: pathlib.Path):
     json_path = tmp_path / 'step_results.json'
     artifacts.Controller[list](json_path).persist(step_data)
 
-    # From file path
-    fig1 = visual.plot_training_curves(json_path, show=False)
-    assert fig1 is not None
+    # from file path
+    saved1 = visual.generate_training_curves(json_path, tmp_path / 'p1')
+    assert saved1.is_file()
 
-    # From directory path
-    fig2 = visual.plot_training_curves(tmp_path, show=False)
-    assert fig2 is not None
+    # from directory path
+    saved2 = visual.generate_training_curves(tmp_path, tmp_path / 'p2')
+    assert saved2.is_file()
 
 
 def test_generate_prediction_previews_renders_pngs(tmp_path: pathlib.Path):
     '''
     Given: Complete `InferStepResults` with labels, preds, and errors.
-    When: Calling `generate_prediction_previews` with `save_pngs=True`.
-    Then: Return figures and save per-head preview PNGs to disk.
+    When: Calling `generate_prediction_previews`.
+    Then: Save per-head preview PNGs and return their paths.
     '''
     specs = _make_mock_dataspecs(
         band_map={'red': 2, 'green': 1, 'blue': 0, 'nir': 3},
@@ -372,18 +383,16 @@ def test_generate_prediction_previews_renders_pngs(tmp_path: pathlib.Path):
         infer_results=infer_results,
         dataspecs=specs,
         previews_dpath=previews_dir,
-        save_pngs=True,
-        show=False,
     )
-    assert 'h1' in figs
-    assert (previews_dir / 'h1_preview.png').is_file()
+    assert figs['h1'] == previews_dir / 'h1_preview.png'
+    assert figs['h1'].is_file()
 
 
 def test_generate_prediction_previews_unlabeled(tmp_path: pathlib.Path):
     '''
     Given: `InferStepResults` with predictions but no labels or errors.
-    When: Calling `generate_prediction_previews` with `save_pngs=True`.
-    Then: Return figures and save per-head preview PNGs cleanly.
+    When: Calling `generate_prediction_previews`.
+    Then: Save per-head preview PNGs cleanly and return their paths.
     '''
     specs = _make_mock_dataspecs()
     infer_results = core.InferStepResults(
@@ -396,35 +405,78 @@ def test_generate_prediction_previews_unlabeled(tmp_path: pathlib.Path):
         infer_results=infer_results,
         dataspecs=specs,
         previews_dpath=previews_dir,
-        save_pngs=True,
-        show=False,
     )
-    assert 'h1' in figs
-    assert (previews_dir / 'h1_preview.png').is_file()
+    assert figs['h1'] == previews_dir / 'h1_preview.png'
+    assert figs['h1'].is_file()
 
 
-# ----- Render Prediction Preview Display
+# ----- Render Saved Figures Display
 def test_render_prediction_preview_loads_existing_png(tmp_path: pathlib.Path):
     '''
-    Given: An existing head preview PNG inside the `previews` directory.
-    When: Calling `render_prediction_preview`.
-    Then: Load the PNG and return the rendered figure.
+    Given: A run directory with `step_results.json` and a preview PNG.
+    When: Calling `render_prediction_preview` on the results root.
+    Then: Display the PNG without error and leave no figures open.
     '''
-    prev_dir = tmp_path / 'previews'
-    prev_dir.mkdir(parents=True)
-    sample_png = prev_dir / 'head1_preview.png'
+    run_dir = _make_run_dir(tmp_path)
+    _save_sample_png(run_dir / 'previews' / 'head1_preview.png')
 
-    # Save a small image
-    fig, ax = matplotlib.pyplot.subplots()
-    ax.plot([0, 1], [0, 1])
-    fig.savefig(sample_png)
-    matplotlib.pyplot.close(fig)
+    visual.render_prediction_preview(tmp_path)
+    assert not matplotlib.pyplot.get_fignums()
 
-    rendered_fig = visual.render_prediction_preview(tmp_path, show=False)
-    assert rendered_fig is not None
+
+def test_render_prediction_preview_missing_pngs(tmp_path: pathlib.Path):
+    '''
+    Given: A run directory with an empty `previews` directory.
+    When: Calling `render_prediction_preview`.
+    Then: Raise `FileNotFoundError`.
+    '''
+    run_dir = _make_run_dir(tmp_path)
+    (run_dir / 'previews').mkdir()
+    with pytest.raises(FileNotFoundError, match='No preview PNGs'):
+        visual.render_prediction_preview(tmp_path)
+
+
+def test_render_training_curves_loads_existing_png(tmp_path: pathlib.Path):
+    '''
+    Given: A run directory with `step_results.json` and a curves PNG.
+    When: Calling `render_training_curves` on the results root.
+    Then: Display the PNG without error and leave no figures open.
+    '''
+    run_dir = _make_run_dir(tmp_path)
+    _save_sample_png(run_dir / 'plots' / 'training_curves.png')
+
+    visual.render_training_curves(tmp_path)
+    assert not matplotlib.pyplot.get_fignums()
+
+
+def test_render_training_curves_missing_results(tmp_path: pathlib.Path):
+    '''
+    Given: A results directory without any `step_results.json`.
+    When: Calling `render_training_curves`.
+    Then: Raise `FileNotFoundError`.
+    '''
+    with pytest.raises(FileNotFoundError, match='No step_results.json'):
+        visual.render_training_curves(tmp_path)
 
 
 # ----- private helpers
+def _make_run_dir(root: pathlib.Path) -> pathlib.Path:
+    '''Create a run directory marked by an empty `step_results.json`.'''
+    run_dir = root / 'run_0001'
+    run_dir.mkdir(parents=True)
+    artifacts.Controller[list](run_dir / 'step_results.json').persist([])
+    return run_dir
+
+
+def _save_sample_png(fpath: pathlib.Path) -> None:
+    '''Save a small line-plot PNG to the given path.'''
+    fpath.parent.mkdir(parents=True, exist_ok=True)
+    fig, ax = matplotlib.pyplot.subplots()
+    ax.plot([0, 1], [0, 1])
+    fig.savefig(fpath)
+    matplotlib.pyplot.close(fig)
+
+
 def _make_mock_dataspecs(
     *,
     band_map: dict[str, int] | None = None,

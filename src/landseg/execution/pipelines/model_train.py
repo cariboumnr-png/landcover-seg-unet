@@ -138,61 +138,50 @@ class ModelTraining(base.SessionPipeline):
 
     def _generate_post_run_visuals(self) -> None:
         '''Plot training curves and test prediction previews.'''
-        # 1. Training curves plot
-        if self.pipeline_paths.step_results.is_file():
-            try:
-                curves_path = self.pipeline_paths.plots / 'training_curves.png'
-                visual.plot_training_curves(
-                    self.pipeline_paths.step_results,
-                    save_path=curves_path,
-                    show=False,
-                )
-                self.logger.info(f'[OUTPUT] Saved training curves plot to {curves_path}')
-            except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError) as err:
-                self.logger.warning(f'Could not generate training curves plot: {err}')
-
-        # 2. Inferred preview PNGs using best checkpoint
-        dataspecs = getattr(self, 'context', None)
-        if dataspecs is None:
-            try:
-                dataspecs = self._build_context()
-            except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError):
-                dataspecs = None
-
-        if dataspecs is None or not getattr(dataspecs.splits, 'test', None):
-            self.logger.info(
-                'No test dataset provided or split; skipping post-training preview generation.'
-            )
-            return
-
+        # 1. training curves plot
         try:
-            best_ckpts = list(self.pipeline_paths.checkpoints.glob('*_best.pt'))
-            if not best_ckpts:
-                self.logger.warning('No best checkpoint found for preview generation.')
-                return
-            best_ckpt = max(best_ckpts, key=lambda p: p.stat().st_mtime)
+            saved_plot = visual.generate_training_curves(
+                self.pipeline_paths.step_results,
+                self.pipeline_paths.plots,
+            )
+            self.logger.info(f'[OUTPUT] Training curves saved to {saved_plot}')
+        except Exception as err: # pylint: disable=W0718
+            self.logger.warning(f'Could not generate training curves: {err}')
 
-            model = self._build_model(dataspecs)
+        # 2. inferred preview PNGs using best checkpoint
+        # TODO this won't work properly for multi-phase training
+        # at artifacts management need to define a canon final checkpoint
+        try:
+            if not self.context.splits.test:
+                self.logger.info('No test blocks found for inference preview ')
+                return
+
+            best_ckpt = next(self.pipeline_paths.checkpoints.glob('*_best.pt'))
+            if not best_ckpt.is_file(): # expect one 'best' checkpoint
+                self.logger.warning(f'Checkpoint file not found: {best_ckpt}')
+                return
+
+            model = self._build_model(self.context)
             infer_results = session.run_preview_inference(
                 checkpoint_fpath=best_ckpt,
-                dataspecs=dataspecs,
+                dataspecs=self.context,
                 model=model,
                 config=self.config.session,
                 device=self.config.session.device,
-                logger=self.logger,
             )
             if infer_results is None:
+                self.logger.info('No inference results for preview ')
                 return
 
-            previews = visual.generate_prediction_previews(
-                infer_results=infer_results,
-                dataspecs=dataspecs,
-                previews_dpath=self.pipeline_paths.previews,
+            saved_previews = visual.generate_prediction_previews(
+                infer_results,
+                self.context,
+                self.pipeline_paths.previews,
             )
-            if previews:
+            if saved_previews:
                 self.logger.info(
-                    f'[OUTPUT] Generated {len(previews)} test preview PNG(s) in '
-                    f'{self.pipeline_paths.previews}'
+                    f'[OUTPUT] Generated {len(saved_previews)} test preview '
+                    f'PNG(s) in {self.pipeline_paths.previews}'
                 )
-        except (ValueError, KeyError, OSError, RuntimeError, artifacts.ArtifactError) as err:
+        except Exception as err: # pylint: disable=W0718
             self.logger.warning(f'Could not generate preview PNGs: {err}')

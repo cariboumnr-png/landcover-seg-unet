@@ -34,14 +34,15 @@ Public APIs:
     - `colorize`: Map 2D class integer masks to 3D RGB tensors.
     - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
     - `generate_prediction_previews`: Render preview figures per head.
+    - `generate_training_curves`: Plot multi-head training loss and metrics.
     - `plot_class_frequencies`: Render class pixel count chart.
     - `plot_confusion_matrix`: Render normalized confusion matrix.
     - `plot_grid_layout`: Render spatial grid tiling and splits.
     - `plot_per_class_metrics`: Render per-class metric bar chart.
     - `plot_qualitative_predictions`: Render comparative preview panels.
     - `plot_spectral_composite`: Render stretched spectral composite.
-    - `plot_training_curves`: Plot multi-head training loss and metrics.
     - `render_prediction_preview`: Automated prediction preview display.
+    - 'render_training_curves': Render training curves.
 '''
 
 # standard imports
@@ -57,14 +58,15 @@ __all__ = [
     'colorize',
     'colorize_continuous',
     'generate_prediction_previews',
+    'generate_training_curves',
     'plot_class_frequencies',
     'plot_confusion_matrix',
     'plot_grid_layout',
     'plot_per_class_metrics',
     'plot_qualitative_predictions',
     'plot_spectral_composite',
-    'plot_training_curves',
     'render_prediction_preview',
+    'render_training_curves',
 ]
 
 
@@ -78,7 +80,10 @@ if typing.TYPE_CHECKING:
         colorize,
         colorize_continuous,
     )
-    from .curves import plot_training_curves
+    from .curves import (
+        generate_training_curves,
+        render_training_curves,
+    )
     from .diagnostics import (
         plot_confusion_matrix,
         plot_per_class_metrics,
@@ -104,7 +109,10 @@ __getattr__, __dir__ = _lazy.attach(__name__, {
         'colorize',
         'colorize_continuous',
     ],
-    '.curves': ['plot_training_curves'],
+    '.curves': [
+        'generate_training_curves',
+        'render_training_curves',
+    ],
     '.diagnostics': [
         'plot_confusion_matrix',
         'plot_per_class_metrics',

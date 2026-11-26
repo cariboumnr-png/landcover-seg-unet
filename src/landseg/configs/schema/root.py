@@ -49,7 +49,7 @@ StudyConfig = study.StudyConfig
 @dataclasses.dataclass
 class ExecutionContext(base.BaseConfigSection):  # pylint: disable=too-many-instance-attributes
     '''Mutable execution context.'''
-    verbosity: str | int | None = 'full'
+    verbosity: str | int | None = 'select'
     exp_root: str | None = None
     scratch_dir: str | None = None # external fast local scratch directory
     recipe_dir: str = './configs' # external recipe directory path override

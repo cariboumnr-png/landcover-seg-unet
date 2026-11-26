@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Training loss and validation metric curve plotting utilities.'''
+'''
+Training loss and validation metric curve plotting utilities.
+
+Public APIs:
+    - `plot_training_curves`: Generate training loss and metrics curves.
+    - `render_training_curves`: Display the latest saved training curves.
+'''
 
 # standard imports
 import dataclasses
@@ -50,14 +56,12 @@ class _CurveStepPoint:
 
 
 # ----- public functions
-def plot_training_curves(
+def generate_training_curves(
     step_results: str | pathlib.Path,
-    *,
-    save_path: str | pathlib.Path | None = None,
-    show: bool = True,
-) -> typing.Any:
+    save_dpath: str | pathlib.Path,
+) -> pathlib.Path:
     '''
-    Plot training loss and validation metric trajectories across epochs.
+    Create training loss and validation metric curves across epochs.
 
     Renders a side-by-side visualization displaying:
     - Left: Training loss trajectory across epochs.
@@ -67,13 +71,11 @@ def plot_training_curves(
         step_results:
             Path to `step_results.json`.
         save_path:
-            Optional file path to persist figure (e.g. `.png`).
-        show:
-            Whether to display figure inline.
+            File path to persist figure (e.g. `.png`).
 
     Returns:
-        matplotlib.figure.Figure:
-            Instantiated figure instance.
+        pathlib.Path:
+            `pithlib.Path` to the generated figure.
     '''
     points = _load_step_results(step_results)
 
@@ -90,25 +92,69 @@ def plot_training_curves(
 
     fig, (ax1, ax2) = matplotlib.pyplot.subplots(1, 2, figsize=(14, 5))
 
-    # panel 1: Training Loss Trajectory
-    _render_loss_curve(ax1, loss_curve)
-    # panel 2: Multi-Head Evaluation Metrics
-    _render_head_curves(ax2, head_curves)
+    try:
+        _render_loss_curve(ax1, loss_curve)
+        _render_head_curves(ax2, head_curves)
 
-    matplotlib.pyplot.tight_layout()
+        matplotlib.pyplot.tight_layout()
 
-    if save_path is not None:
-        save_target = pathlib.Path(save_path)
-        save_target.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(save_target, bbox_inches='tight', dpi=150)
+        target = pathlib.Path(save_dpath) / 'training_curves.png'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(target, bbox_inches='tight', dpi=150)
 
-    if show:
+    finally:
+        matplotlib.pyplot.close(fig)
+
+    return target
+
+
+def render_training_curves(target_dpath: str | pathlib.Path) -> None:
+    '''
+    Display the saved training curves from the latest experiment run.
+
+    This function only loads existing PNG files. It does not recompute
+    training metrics or generate new plots.
+
+    Args:
+        target_dpath:
+            Results root or individual run directory.
+    '''
+    run_dpath = _resolve_latest_run(target_dpath)
+    png_path = run_dpath / 'plots' / 'training_curves.png'
+
+    if not png_path.is_file():
+        raise FileNotFoundError(f'No training curve PNG found: {png_path}')
+
+    image = matplotlib.pyplot.imread(png_path)
+    fig, ax = matplotlib.pyplot.subplots(figsize=(14, 5))
+
+    try:
+        ax.imshow(image)
+        ax.set_title('Training Curves', fontsize=12, fontweight='bold')
+        ax.axis('off')
+        matplotlib.pyplot.tight_layout()
         matplotlib.pyplot.show()
-
-    return fig
+    finally:
+        matplotlib.pyplot.close(fig)
 
 
 # ----- private helpers
+def _resolve_latest_run(target_dpath: str | pathlib.Path) -> pathlib.Path:
+    '''Resolve the run directory containing the latest step results.'''
+    target = pathlib.Path(target_dpath)
+
+    if not target.is_dir():
+        raise FileNotFoundError(f'Results directory does not exist: {target}')
+
+    candidates = list(target.glob('**/step_results.json'))
+
+    if not candidates:
+        raise FileNotFoundError(f'No step_results.json found under {target}')
+
+    latest = max(candidates, key=lambda p: p.stat().st_mtime)
+    return latest.parent
+
+
 def _load_step_results(
     source: str | pathlib.Path,
 ) -> list[_CurveStepPoint]:
