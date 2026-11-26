@@ -141,7 +141,7 @@ def get_runtime_version() -> str:
 
 def get_git_commit() -> str:
     '''
-    Retrieve git commit SHA from environment variables or git repository.
+    Retrieve git commit SHA from environment variables or git repo.
 
     Checks standard CI/CD and Databricks environment variables:
     `GIT_COMMIT`, `DATABRICKS_GIT_COMMIT`, `GITHUB_SHA`. Falls back to

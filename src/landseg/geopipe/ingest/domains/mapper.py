@@ -27,7 +27,8 @@ and remaps label values into a compact, zero-based index space suitable
 for downstream domain-feature construction.
 
 Public APIs:
-    - `map_domain_to_grid`: Map domain raster onto grid and re-index labels.
+    - `RasterTileDict`: Mapping of coordinates to tile array data.
+    - `map_domain_to_grid`: Map domain raster and re-index labels.
 '''
 
 # standard imports
@@ -63,7 +64,7 @@ def map_domain_to_grid(
 
     Returns:
         RasterTileDict:
-            Dictionary mapping tile coordinates to re-indexed raster tile
+            Dictionary mapping tile coordinates to re-indexed tile
             arrays.
     '''
     # read domain raster and get arrays indexed to the grid tiles

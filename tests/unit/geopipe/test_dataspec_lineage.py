@@ -68,7 +68,8 @@ def test_dataspec_rejects_missing_provenance(tmp_path):
 
 def test_dataspec_relocated_prepared_bundle(tmp_path):
     '''
-    Given: A self-contained bundle whose recorded absolute path is stale.
+    Given: A self-contained bundle whose recorded absolute path is
+        stale.
     When: Building `DataSpecs` from the relocated copy.
     Then: Resolve through the relative provenance and block fallback.
     '''
@@ -292,6 +293,7 @@ class _StubContext:
 
 class _StubLogger:
     '''Capture the schema report without touching disk.'''
+
     def __init__(self):
         self.report: dict[str, typing.Any] | None = None
 

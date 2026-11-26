@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for `landseg.study.sweep.presets` registry alignment.'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest
@@ -34,7 +34,7 @@ import landseg.study.sweep.presets._registry as registry
 # ----- preset registry synchronization tests
 def test_sweep_presets_constant_matches_registry():
     '''
-    Given: Project-wide `SWEEP_PRESETS` constants and preset `_REGISTRY`.
+    Given: Project-wide `SWEEP_PRESETS` and preset `_REGISTRY`.
     When: Comparing declared preset names against registered callables.
     Then: Both sets match exactly and every preset resolves cleanly.
     '''

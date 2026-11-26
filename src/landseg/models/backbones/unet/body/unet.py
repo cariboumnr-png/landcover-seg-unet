@@ -82,16 +82,16 @@ class UNet(base.UNetBackbone):
     binary/semantic segmentation, regression heatmaps) by attaching an
     appropriate 1x1 convolution head externally.
 
-    **Components**
-    - `inc`: init double-conv block to lift input channels to `base_ch`.
-    - `downs`: Four `DownsampleBlock` modules (x2 ch | ÷2 size).
-    - `bottleneck`: a DoubleConvBlock` operating at the coarsest scale.
-    - `ups`: Four `UpsampleBlock` modules (feature fusion + upsample).
+    Components:
+        - `inc`: Initial `DoubleConv` lifting inputs to `base_ch`.
+        - `downs`: `UNetEncoders` module with four downsampling levels.
+        - `bottleneck`: `BaseBottleneck` block at the coarsest scale.
+        - `ups`: `ModuleList` of four `Upsample` decoder stages.
 
-    **Notes**
-    - Skip connections are concatenated along the channel dimension.
-    - Convolution weights are Kaiming-initialized (fan-out, ReLU).
-    - The backbone's `out_channels` = `base_ch` (decoder's final width).
+    Notes:
+        - Skip connections are concatenated along the channel dimension.
+        - Convolution weights are Kaiming-initialized (fan-out, ReLU).
+        - The backbone's `out_channels` equals `base_ch`.
     '''
 
     # core UNet body
@@ -101,37 +101,19 @@ class UNet(base.UNetBackbone):
         config: configs.UNetBodyConfig
     ):
         '''
-        Construct UNet body with configurable normalization and dropout.
+        Construct UNet body with configurable encoder and decoder.
 
-        **Architecture**:
-        - Initial block: Converts input channels to `base_ch`.
-        - Down blocks: Halve spatial resolution and double channels at
-        each step.
-        - Bottom block: Deepest representation with `16 x base_ch`
-        channels.
-        - Up blocks: Double spatial resolution and reduce channels,
-        concatenating skips.
-        - Output heads: Apply 1x1 convolutions to produce per-pixel
-        class logits.
+        Initializes the encoder hierarchy via `UNetBackbone`, builds
+        four symmetric `Upsample` decoder stages, and applies Kaiming
+        normal initialization to all `Conv2d` weights.
 
         Args:
-            in_ch: Number of input channels.
-            base_ch: Base number of feature channels. Deeper layers use
-                multiples of this.
-            **kwargs: Section-level config for convolutional blocks.
-                Pass dictionaries keyed by section name, e.g.
-                `{'downs': {...}}`, `{'bottleneck': {...}}`, or
-                `{'ups': {...}}` These dictionaries are forwarded to
-                `DoubleConv` modules inside that section. See
-                `models.backbones.DoubleConv` for valid options (e.g.,
-                `norm`, `gn_groups`, `p_drop`).
-
-        **Notes**:
-        - Weight initialization uses Kaiming normal suited for ReLU.
-        - `out_channels` property exposes the decoder's final width
-            (`base_ch`).
+            in_ch:
+                Number of input channels.
+            config:
+                `UNetBodyConfig` specifying base channel width and
+                encoder/decoder convolution parameters.
         '''
-
         super().__init__(in_ch, config)
         self._out_channels = ch = config.base_ch
         # upsampling path (decoder) with 4 levels, concatenating encoder skips
@@ -160,12 +142,22 @@ class UNet(base.UNetBackbone):
 
     @property
     def spatial_divisor(self) -> int:
-        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        '''Return minimum spatial divisor induced by the encoder.'''
         return 2 ** len(self.downs)
 
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        '''Run the contracting path and return encoder features.'''
+        '''
+        Run the contracting path and bottleneck to extract features.
 
+        Args:
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
+        Returns:
+            tuple[torch.Tensor, ...]:
+                Five multi-scale feature tensors `(x1, x2, x3, x4, xb)`
+                ordered from finest to bottleneck resolution.
+        '''
         # unpack the 5 levels
         x1, x2, x3, x4, x5 = self.downs(x)
         # apply bottleneck to the deepest encoder feature
@@ -173,8 +165,18 @@ class UNet(base.UNetBackbone):
         return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
-        '''Fuse skips and upsample through the expanding path.'''
+        '''
+        Fuse encoder skip connections through the expanding path.
 
+        Args:
+            xs:
+                Five-element tuple `(x1, x2, x3, x4, xb)` produced by
+                `encode`.
+
+        Returns:
+            torch.Tensor:
+                Decoded feature map of shape `(B, out_channels, H, W)`.
+        '''
         x1, x2, x3, x4, xb = xs
         x = self.ups[0](xb, x4)
         x = self.ups[1](x, x3)
@@ -183,8 +185,17 @@ class UNet(base.UNetBackbone):
         return x
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        '''Compute the UNet feature map at input resolution.'''
+        '''
+        Compute the UNet feature map at input spatial resolution.
 
+        Args:
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
+        Returns:
+            torch.Tensor:
+                Output feature map of shape `(B, out_channels, H, W)`.
+        '''
         x1, x2, x3, x4, xb = self.encode(x)
         x = self.decode((x1, x2, x3, x4, xb))
         return x

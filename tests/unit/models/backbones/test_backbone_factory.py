@@ -33,7 +33,7 @@ def test_build_unet_backbone_unet(mock_backbone_config_factory):
     '''
     Given: UNet backbone type config.
     When: Running build_unet_backbone.
-    Then: Return a valid UNet body backbone with targeted output channels.
+    Then: Return a valid UNet backbone with targeted output channels.
     '''
     cfg = mock_backbone_config_factory(body_type='unet', base_ch=16)
     backbone = factory.build_unet_backbone(in_ch=3, input_size=256, config=cfg)
@@ -73,7 +73,7 @@ def test_build_unet_w_transformer_bottleneck(mock_backbone_config_factory):
     '''
     Given: UNet backbone type config with a transformer bottleneck.
     When: Running build_unet_backbone.
-    Then: Return a valid UNet body backbone with targeted output channels.
+    Then: Return a valid UNet backbone with targeted output channels.
     '''
     cfg = mock_backbone_config_factory(
         body_type='unet',
@@ -91,7 +91,7 @@ def test_build_unet_w_hybrid_bottleneck(mock_backbone_config_factory):
     '''
     Given: UNet backbone type config with a hybrid bottleneck.
     When: Running build_unet_backbone.
-    Then: Return a valid UNet body backbone with targeted output channels.
+    Then: Return a valid UNet backbone with targeted output channels.
     '''
     cfg = mock_backbone_config_factory(
         body_type='unet',

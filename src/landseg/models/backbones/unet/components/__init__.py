@@ -22,8 +22,22 @@
 '''
 Top-level namespace for `landseg.models.backbones.unet.components`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes UNet convolutional blocks, encoder stages, bottleneck modules,
+and configuration protocols via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `BaseBottleneck`: Abstract base class for UNet bottlenecks.
+    - `BottleneckConfig`: Protocol for bottleneck configuration.
+    - `ConvolutionParameters`: Protocol for convolution block options.
+    - `DoubleConv`: Stacked two-stage convolution-norm-ReLU block.
+    - `Downsample`: Max-pool downsampling stage with `DoubleConv`.
+    - `HybridBottleneck`: Combined convolutional-transformer bottleneck.
+    - `TransformerBottleneck`: Vision Transformer bottleneck stack.
+    - `TransformerParameters`: Protocol for transformer block options.
+    - `UNetBottleneck`: Standard convolutional UNet bottleneck block.
+    - `UNetEncoders`: Multi-stage UNet encoder pathway.
+    - `Upsample`: Bilinear upsampling and skip-fusion stage.
 '''
 
 # standard imports

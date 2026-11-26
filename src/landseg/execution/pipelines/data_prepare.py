@@ -35,7 +35,6 @@ import landseg.geopipe as geopipe
 # ----- public classes
 class DataPreparation(base.GeoPipeline):
     '''Data preparation pipeline.'''
-
     pipeline_name: str = 'data-prepare'
     pipeline_paths: artifacts.PreparationPaths
 

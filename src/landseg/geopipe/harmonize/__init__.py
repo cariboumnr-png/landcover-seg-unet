@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=import-outside-toplevel
-
 '''
 Top-level namespace for `landseg.geopipe.harmonize`.
 
@@ -35,6 +33,8 @@ Public APIs:
     - `validators`: Preflight validation namespace.
 '''
 
+# pylint: disable=import-outside-toplevel
+
 # standard imports
 import pathlib
 import typing
@@ -43,15 +43,37 @@ import landseg._lazy as _lazy
 
 
 class _Validators:
+    '''Validation namespace for harmonization preflight checks.'''
+
     @staticmethod
     def grid_reference(grid_report_path: pathlib.Path):
-        '''Load and validate world grid reference.'''
+        '''
+        Load and validate world grid reference.
+
+        Args:
+            grid_report_path:
+                Path to the persisted world grid JSON report.
+
+        Returns:
+            tuple[GridLayout, str, pathlib.Path]:
+                Tuple of loaded `GridLayout`, grid ID, and grid path.
+        '''
         import landseg.geopipe.harmonize.context as context
         return context.load_grid_reference(grid_report_path)
 
     @staticmethod
     def manifest_contract(manifest_path: pathlib.Path):
-        '''Validate input dataset manifest (JSON or YAML).'''
+        '''
+        Validate input dataset manifest (JSON or YAML).
+
+        Args:
+            manifest_path:
+                Path to the dataset manifest file.
+
+        Returns:
+            tuple[ManifestEntry, ...]:
+                Tuple of validated and normalized manifest entries.
+        '''
         import landseg.geopipe.harmonize.manifest.builder as builder
         return builder.DatasetManifestBuilder.from_file(manifest_path).compile()
 

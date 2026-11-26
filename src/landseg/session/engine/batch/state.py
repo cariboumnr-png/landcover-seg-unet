@@ -34,6 +34,10 @@ The state captures:
 
 All components are updated deterministically during execution and
 serve as the single source of truth for runtime behavior and results.
+
+Public APIs:
+    - `EngineState`: Composite mutable runtime state container.
+    - `initialize_state`: Build an initialized `EngineState` instance.
 '''
 
 # standard imports
@@ -88,7 +92,15 @@ class _BatchContex:
     domain: dict[str, torch.Tensor | None] = field(default_factory=dict)
 
     def refresh(self, bidx: int, batch: contracts.DatasetItem) -> None:
-        '''Reset batch context for a new iteration.'''
+        '''
+        Reset batch context for a new iteration.
+
+        Args:
+            bidx:
+                One-based batch index within the current epoch.
+            batch:
+                Incoming collated `(x, y, domain)` dataset item tuple.
+        '''
         # take input from new batch
         self.bidx = bidx
         self.batch = batch
@@ -111,7 +123,13 @@ class _BatchOutput:
     regularization: dict[str, float] = field(default_factory=dict)
 
     def refresh(self, bidx: int):
-        '''Clear outputs to start a new batch.'''
+        '''
+        Clear outputs to start a new batch.
+
+        Args:
+            bidx:
+                One-based batch index within the current epoch.
+        '''
         self.bidx = bidx                            # take input from new batch
         self.preds.clear()                          # clear the old batch
         self.total_objective = torch.empty(0)       # clear the old batch
@@ -175,7 +193,7 @@ def initialize_state(
     '''
     Initialize a runtime state container with default execution values.
 
-    Constructs an ``EngineState`` instance with initialized optimization
+    Constructs an `EngineState` instance with initialized optimization
     runtime (including AMP scaler) and populates essential static fields
     required before execution begins.
 
@@ -195,9 +213,9 @@ def initialize_state(
             subcomponents and ready for execution.
 
     Notes:
-        - Most fields are initialized with default placeholders and are\
+        - Most fields are initialized with default placeholders and are
           updated dynamically during batch execution.
-        - Head-specific active/frozen configurations are assigned later\
+        - Head-specific active/frozen configurations are assigned later
           during phase orchestration.
     '''
     # loss scaling is only needed when autocast resolves to FP16

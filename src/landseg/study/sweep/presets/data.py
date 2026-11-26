@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Data geometry preset objectives.'''
+'''
+Data geometry preset objectives.
+
+Public APIs:
+    - `obj_context_window`: Sample spatial context patch size.
+    - `obj_data_geometry`: Sample spatial patch size and batch size.
+'''
 
 # third-party imports
 import optuna
@@ -31,11 +37,18 @@ def obj_data_geometry(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Data geometry mutations:
-      - Patch size (`int`)
-      - Batch size (`int`)
-    '''
+    Sample spatial patch size and batch size for an Optuna trial.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.architecture.data_geometry
 
     trial_cfg.set_data_patch_size(
@@ -63,10 +76,18 @@ def obj_context_window(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Context window mutation:
-      - Patch size (`int`)
-    '''
+    Sample spatial context patch size for an Optuna trial.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.architecture.context_window
 
     trial_cfg.set_data_patch_size(

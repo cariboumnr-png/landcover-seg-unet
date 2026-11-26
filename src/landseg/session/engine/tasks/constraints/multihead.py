@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Compilation and validation of multi-task learning constraints.
 
@@ -50,10 +48,10 @@ tensors.
 configured.
 
 Public APIs:
-    - `MTLConstraint`: protocol defining multi-task constraint
+    - `CompiledMTLConstraint`: Tensor-ready compiled constraint.
+    - `MTLConstraint`: Protocol defining multi-task constraint
       configuration.
-    - `CompiledMTLConstraint`: tensor-ready compiled constraint.
-    - `compile_mtl_constraints`: validate and compile constraints.
+    - `compile_mtl_constraints`: Validate and compile constraints.
 '''
 
 # standard imports
@@ -64,6 +62,7 @@ import landseg.core as core
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class MTLConstraint(typing.Protocol):
     '''Protocol defining multi-task constraint configuration.'''
     @property
@@ -76,6 +75,7 @@ class MTLConstraint(typing.Protocol):
     def target_head(self) -> str: ...
     @property
     def forbidden(self) -> list[int]: ...   # 1-based
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -100,7 +100,26 @@ def compile_mtl_constraints(
     mtl_constraints: typing.Sequence[MTLConstraint] | None,
     data_specs: core.DataSpecs
 ) -> list[CompiledMTLConstraint] | None:
-    '''Validate constraints against data specifications.'''
+    '''
+    Validate constraints against data specs and compile 0-based indices.
+
+    Args:
+        mtl_constraints:
+            Optional sequence of 1-based constraint configurations.
+        data_specs:
+            Dataset specifications defining valid head names and class
+            counts.
+
+    Returns:
+        list[CompiledMTLConstraint] | None:
+            Compiled constraints with 0-based class indices, or `None`
+            when no constraints are provided.
+
+    Raises:
+        ValueError:
+            If constraint names are duplicated or any head name or class
+            index fails validation.
+    '''
     # early exit if list is empty or none provided
     if not bool(mtl_constraints):
         return None

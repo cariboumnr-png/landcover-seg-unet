@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Image normalization and block materialization pipeline.
 
@@ -29,8 +27,7 @@ training blocks only, normalizes all splits using these statistics, and
 writes normalized block artifacts along with updated split mappings.
 
 Public APIs:
-    - run_materialize_blocks: orchestrate stats aggregation and block
-      materialization.
+    - `run_materialize_blocks`: Orchestrate stats and normalization.
 '''
 
 # standard imports
@@ -48,7 +45,9 @@ import landseg.geopipe.prepare.materialize.stats as stats
 
 
 # ----- private types
+# pylint: disable=missing-function-docstring
 class _PipelinePaths(typing.Protocol):
+    '''Typed paths container for block materialization.'''
     @property
     def root(self) -> pathlib.Path: ...
     @property
@@ -67,6 +66,7 @@ class _PipelinePaths(typing.Protocol):
     def val_blocks(self) -> pathlib.Path: ...
     @property
     def test_blocks(self) -> pathlib.Path: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public functions
@@ -87,16 +87,16 @@ def run_materialize_blocks(
 
     Args:
         paths:
-            pipeline artifact and directory paths container.
+            Pipeline artifact and directory paths container.
         context:
-            dataset view containing features and target hierarchy.
+            Dataset view containing features and target hierarchy.
         ingestion_schema_fpath:
-            resolved ingestion schema path forwarded into the
+            Resolved ingestion schema path forwarded into the
             prepared schema for downstream single-upstream resolution.
         policy:
-            lifecycle policy guiding rebuild behavior.
+            Lifecycle policy guiding rebuild behavior.
         logger:
-            logger for progress and diagnostic output.
+            Logger for progress and diagnostic output.
     '''
     start_time = time.perf_counter()
 

@@ -19,10 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
-
 '''Fixtures for testing `landseg.session.orchestration` subpackage.'''
+
+# pylint: disable=too-few-public-methods
 
 # third-party imports
 import pytest
@@ -34,6 +33,7 @@ import landseg.session.orchestration.runner as runner_mod
 # ----- pytest fixtures
 @pytest.fixture
 def mock_epoch_engine(mock_trainer, mock_evaluator):
+    '''Build `EpochRunner` configured for `train_eval` mode.'''
     return epoch_executor.EpochRunner(
         mode='train_eval',
         trainer=mock_trainer,
@@ -43,4 +43,5 @@ def mock_epoch_engine(mock_trainer, mock_evaluator):
 
 @pytest.fixture
 def mock_runner_config(mock_session_paths):
+    '''Build `BaseRunnerConfig` bound to mock session paths.'''
     return runner_mod.BaseRunnerConfig(artifacts_paths=mock_session_paths)

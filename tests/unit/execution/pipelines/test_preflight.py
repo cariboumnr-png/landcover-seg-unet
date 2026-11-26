@@ -678,7 +678,7 @@ def test_pipeline_default_path_resolution(monkeypatch):
     '''
     Given: Instantiated pipeline runners with a valid RootConfig.
     When: Accessing `pipeline_paths`.
-    Then: Resolve automatically to expected domain paths from ArtifactPaths.
+    Then: Resolve automatically to domain paths from `ArtifactPaths`.
     '''
     monkeypatch.setattr(
         pipelines.ModelTraining, '_create_logger', lambda self: None
@@ -741,7 +741,7 @@ def test_format_preflight_report_multi():
     '''
     Given: A list of PreflightResult instances across multiple targets.
     When: `format_preflight_report()` is invoked.
-    Then: Include individual reports and an aggregate SYSTEM STATUS summary.
+    Then: Include individual reports and an aggregate status summary.
     '''
     results = [
         schema.PreflightResult(
@@ -775,7 +775,8 @@ def test_export_preflight_report_timestamped_uid(tmp_path):
     '''
     Given: A preflight result and configured exp_root.
     When: `export_preflight_report()` is executed.
-    Then: Persist report JSON with timestamped UID under exp_root/preflight.
+    Then: Persist report JSON with timestamped UID under
+        `exp_root/preflight`.
     '''
     exp_root = tmp_path / 'exp'
     cfg = configs.RootConfig()
@@ -879,7 +880,7 @@ def test_dir_writable_rejects_workspace_path():
     '''
     Given: A target path under Databricks /Workspace.
     When: Running dir_writable preflight check.
-    Then: Return a FAIL probe result noting checkpoint flush restrictions.
+    Then: Return a FAIL probe noting checkpoint flush restrictions.
     '''
     res = checks.filesystem.dir_writable(
         pathlib.Path('/Workspace/Users/researcher/landcover/results'),
@@ -910,7 +911,7 @@ def test_probe_feature_specs_skip_pass_and_fail(monkeypatch, tmp_path):
     '''
     Given: A RootConfig configured for data-ingest feature specs.
     When: `checks.contracts.feature_specs()` delegates to `geopipe`.
-    Then: Map skip, pass, and failure outcomes to matching ProbeStatus values.
+    Then: Map skip, pass, and failure outcomes to `ProbeStatus` values.
     '''
     cfg = configs.RootConfig()
     paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')
@@ -952,7 +953,7 @@ def test_probe_raster_alignment_skip_pass_and_fail(monkeypatch, tmp_path):
     '''
     Given: A RootConfig configured for data-ingest raster alignment.
     When: `checks.contracts.raster_alignment()` delegates to `geopipe`.
-    Then: Map skip, pass, and failure outcomes to matching ProbeStatus values.
+    Then: Map skip, pass, and failure outcomes to `ProbeStatus` values.
     '''
     cfg = configs.RootConfig()
     paths = artifacts.ArtifactPaths(root=tmp_path / 'exp')

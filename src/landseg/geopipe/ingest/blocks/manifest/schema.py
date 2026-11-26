@@ -30,7 +30,7 @@ history, and standardizes I/O conventions required for reproducible data
 preparation and downstream model consumption.
 
 Public APIs:
-    - build_schema: Creates or updates dataset-level data schema.
+    - `build_schema`: Creates or updates dataset-level data schema.
 '''
 
 # standard imports

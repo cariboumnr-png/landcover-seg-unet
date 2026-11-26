@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=c-extension-no-member
-
 '''
 World-grid tiling utilities.
 
@@ -30,12 +28,14 @@ structures and utilities for generating, indexing, and serializing grid
 layouts independent of any specific raster dataset.
 
 Public APIs:
-    - `RasterWindowDict`: Mapping of coordinates to raster windows.
-    - `GridPayload`: TypedDict for serialized grid payload.
-    - `GridMeta`: TypedDict for grid metadata.
-    - `GridSpec`: Dataclass specifying world grid parameters.
     - `GridLayout`: Raster-agnostic grid layout of tile windows.
+    - `GridMeta`: TypedDict for grid metadata.
+    - `GridPayload`: TypedDict for serialized grid payload.
+    - `GridSpec`: Dataclass specifying world grid parameters.
+    - `RasterWindowDict`: Mapping of coordinates to raster windows.
 '''
+
+# pylint: disable=c-extension-no-member
 
 # standard imports
 from __future__ import annotations
@@ -91,7 +91,13 @@ class GridSpec:
     grid_extent: tuple[float, float]              # H_y, W_x in in CRS units
 
     def as_dict(self):
-        '''Return dict repr.'''
+        '''
+        Return a dictionary representation of the grid specification.
+
+        Returns:
+            dict[str, typing.Any]:
+                Dictionary mapping field names to specification values.
+        '''
         return dataclasses.asdict(self)
 
 # ----- public classes
@@ -106,7 +112,6 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
     Schema:
         SCHEMA_ID = 'grid_layout_payload/v0.1.0'
     '''
-
     # current payload schema
     SCHEMA_ID: str = 'grid_layout_payload/v0.1.0'
 
@@ -129,6 +134,21 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
 
     # ----- container protocol
     def __getitem__(self, idx: tuple[int, int]) -> rasters.Window:
+        '''
+        Return the raster window at pixel coordinates `idx`.
+
+        Args:
+            idx:
+                Integer pixel coordinate tuple `(x, y)`.
+
+        Returns:
+            rasters.Window:
+                Offset-adjusted raster window for the requested tile.
+
+        Raises:
+            TypeError:
+                If `idx` is not a 2-tuple of integers.
+        '''
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
             or not all(isinstance(v, int) for v in idx)):
@@ -368,7 +388,7 @@ class GridLayout(collections.abc.Mapping[tuple[int, int], rasters.Window]):
 
     # ----- private method
     def _generate(self) -> None:
-        '''Derive spatial extent from inputs and divide it into a grid.'''
+        '''Derive spatial extent and divide it into a regular grid.'''
         spec = self._spec
         # get extent dimensions (in crs units)
         assert spec.grid_extent is not None

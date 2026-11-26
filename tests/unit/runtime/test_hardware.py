@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit test suite for device resolution and hardware queries (hardware.py).'''
+'''Unit tests for device resolution and hardware queries.'''
 
 # third-party imports
 import pytest

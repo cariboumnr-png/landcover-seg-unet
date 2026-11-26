@@ -25,6 +25,10 @@ Phase-level orchestration policy.
 This module defines orchestration logic for executing a training phase,
 which consists of multiple epochs. It manages model head configuration,
 metric tracking, checkpoint signaling, and optional early stopping.
+
+Public APIs:
+    - `PhasePolicy`: Orchestrate multi-epoch phase execution.
+    - `TrackingConfig`: Configuration for metric tracking and stopping.
 '''
 
 # standard imports
@@ -91,15 +95,16 @@ class PhasePolicy:
         track_config: TrackingConfig,
     ):
         '''
-        Initializes the phase policy.
+        Initialize the phase policy.
 
         Args:
-            epoch_runner: Engine responsible for executing individual
-                epochs.
-            phase_config: Configuration describing the phase, including
-                number of epochs and head settings.
-            track_config: Configuration for tracking metrics and early
-                stopping behavior.
+            epoch_runner:
+                Engine responsible for executing individual epochs.
+            phase_config:
+                Configuration describing the phase, including epoch
+                count and head settings.
+            track_config:
+                Configuration for metric tracking and early stopping.
         '''
         self.runner = epoch_runner
         self.config = phase_config
@@ -116,24 +121,18 @@ class PhasePolicy:
 
     def run(self) -> typing.Generator[events.Event, None, float]:
         '''
-        Runs the phase with event emission.
+        Run the phase with event emission.
 
-        This method:
-        - Configures model heads for the phase
-        - Iterates through epochs using `EpochPolicy`
-        - Tracks metrics and determines best epochs
-        - Emits checkpoint and early stopping events
+        Configures phase head state and optimization schedule, iterates
+        through epochs via `EpochPolicy`, tracks best metrics, emits
+        checkpoint and early-stopping events, and returns the best
+        tracked metric value upon generator completion.
 
         Yields:
-            Lifecycle events:
-                - `PhaseStart` and `PhaseEnd`
-                - Epoch-level events (delegated)
-                - `MetricsReport` after each epoch
-                - `CheckpointRequest` after each epoch
-                - `StopRun` if early stopping is triggered
-
-        Returns:
-            Best metric value observed during the phase.
+            events.Event:
+                Phase lifecycle events (`PhaseStart`, delegated epoch
+                events, `MetricsReport`, `CheckpointRequest`, optional
+                `StopRun`, and `PhaseEnd`).
         '''
         # set trainer head state per phase
         self.runner.set_head_state(
@@ -193,13 +192,14 @@ class PhasePolicy:
 
     def execute(self) -> list[core.SessionStepResults]:
         '''
-        Executes the phase without emitting events.
+        Execute the phase without emitting events.
 
-        This method execute all epochs sequentially and collects their
-        metrics without any orchestration events.
+        This method executes all epochs sequentially and collects their
+        metrics without emitting orchestration events.
 
         Returns:
-            List of metrics for each executed epoch.
+            list[core.SessionStepResults]:
+                Metrics collected for each executed epoch.
         '''
         epochs: list[core.SessionStepResults] = []
         for epoch in range(self.config.start_epoch, self.config.num_epochs + 1):

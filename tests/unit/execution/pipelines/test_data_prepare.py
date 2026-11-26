@@ -54,7 +54,7 @@ def test_data_prepare_validate_missing_catalog_or_schema(tmp_path):
 # ----- `DataPreparation` execution and lifecycle tests
 def test_data_prepare_pipeline_success(tmp_path, mocker):
     '''
-    Given: Upstream ingestion artifacts and mocked geopipe preparation stage.
+    Given: Upstream ingestion artifacts and mocked preparation stage.
     When: Calling `run` on `DataPreparation`.
     Then: Initialize folders/config and delegate execution to `geopipe`.
     '''
@@ -93,7 +93,7 @@ def test_data_prepare_pipeline_success(tmp_path, mocker):
 
 def test_data_prepare_pipeline_failure(tmp_path, mocker):
     '''
-    Given: Upstream ingestion artifacts and stage runner raising an error.
+    Given: Upstream ingestion artifacts and stage runner raising error.
     When: Calling `run` on `DataPreparation`.
     Then: Propagate error to caller cleanly.
     '''

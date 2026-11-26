@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Base class for artifact paths dataclasses for each pipeline.
-'''
+'''Base class for artifact paths dataclasses for each pipeline.'''
 
 # standard imports
 import dataclasses
@@ -150,11 +148,18 @@ class PipelineArtifactsPaths:
         return self.run_folder
 
     def init_pipeline_folders(self) -> typing.Self:
-        '''Initialize folder tree specified by the pipeline.'''
+        '''
+        Initialize folder tree specified by the pipeline.
+
+        Returns:
+            typing.Self:
+                Current paths instance for method chaining.
+        '''
         self._init_pipeline_folders()
         return self
 
     def _init_pipeline_folders(self) -> None:
+        '''Create root and effective run directories if missing.'''
         self.root.mkdir(parents=True, exist_ok=True)
         self.effective_run_folder.mkdir(parents=True, exist_ok=True)
 
@@ -163,11 +168,13 @@ class PipelineArtifactsPaths:
         Defensively validate that the artifact root directory exists.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:
-                If the root directory does not exist or is not a directory.
+                If the root directory does not exist or is not a
+                directory.
         '''
         if not self.root.exists() or not self.root.is_dir():
             raise controller.ArtifactError(

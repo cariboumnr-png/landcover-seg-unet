@@ -28,13 +28,13 @@ into a `ProbeResult`. Execution pre-flight never reconstructs internal
 `geopipe` contexts or stage schemas directly.
 
 Public APIs:
-    - `grid_specs`: Validate world grid definition inputs.
+    - `feature_specs`: Validate requested feature engineering specs.
     - `grid_artifact`: Validate a persisted world grid reference.
+    - `grid_specs`: Validate world grid definition inputs.
     - `manifest_contract`: Validate the input dataset manifest.
     - `pool_compatibility`: Validate pool grid compatibility.
-    - `raster_alignment`: Validate raster/grid alignment for ingestion.
-    - `feature_specs`: Validate requested feature engineering specs.
     - `prepare_semantics`: Validate feature and target resolution.
+    - `raster_alignment`: Validate raster/grid alignment for ingestion.
 '''
 
 # standard imports
@@ -55,7 +55,19 @@ def grid_specs(
     ctx: context.InspectionContext,
     pid: str = 'grid_inputs',
 ) -> schema.ProbeResult:
-    '''Validate world grid definition inputs through the domain handler.'''
+    '''
+    Validate world grid definition inputs via the domain handler.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome.
+    '''
     try:
         details = geopipe.validate_grid_specs(ctx.config.data.world_grid)
     except Exception as err:  # pylint: disable=broad-exception-caught
@@ -68,7 +80,19 @@ def grid_artifact(
     ctx: context.InspectionContext,
     pid: str = 'grid_reference',
 ) -> schema.ProbeResult:
-    '''Validate a persisted world grid reference artifact.'''
+    '''
+    Validate a persisted world grid reference artifact.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome.
+    '''
     report_fp = ctx.paths.world_grid.report
     try:
         info = geopipe.validate_grid_reference(report_fp)
@@ -96,7 +120,19 @@ def manifest_contract(
     ctx: context.InspectionContext,
     pid: str = 'manifest_contract',
 ) -> schema.ProbeResult:
-    '''Validate the configured input dataset manifest contract.'''
+    '''
+    Validate the configured input dataset manifest contract.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome.
+    '''
     manifest_fp = ctx.config.data.harmonization.dataset_manifest
     if not manifest_fp:
         return schema.ProbeResult(
@@ -130,7 +166,19 @@ def feature_specs(
     ctx: context.InspectionContext,
     pid: str = 'feature_specs',
 ) -> schema.ProbeResult:
-    '''Validate requested feature engineering specs against actual bands.'''
+    '''
+    Validate requested feature engineering specs against bands.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome, or SKIP if unneeded.
+    '''
     ing_cfg = ctx.config.data.ingestion
     datablocks = ing_cfg.datablocks
     try:
@@ -160,7 +208,19 @@ def pool_compatibility(
     ctx: context.InspectionContext,
     pid: str = 'pool_grid_compatibility',
 ) -> schema.ProbeResult:
-    '''Validate that the world grid is compatible with the ingested pool.'''
+    '''
+    Validate world grid compatibility with the ingested pool.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome.
+    '''
     schema_fp = ctx.paths.data_ingestion.data_blocks.schema
     try:
         report_fp: pathlib.Path | None = ctx.paths.world_grid.report
@@ -199,7 +259,19 @@ def raster_alignment(
     ctx: context.InspectionContext,
     pid: str = 'raster_alignment',
 ) -> schema.ProbeResult:
-    '''Validate harmonized rasters align with their world grid.'''
+    '''
+    Validate that harmonized rasters align with their world grid.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome, or SKIP if unneeded.
+    '''
     ing_cfg = ctx.config.data.ingestion
     try:
         res = geopipe.validate_raster_alignment(
@@ -227,7 +299,19 @@ def prepare_semantics(
     ctx: context.InspectionContext,
     pid: str = 'preparation_contract',
 ) -> schema.ProbeResult:
-    '''Validate feature channel and target head resolution.'''
+    '''
+    Validate feature channel and target head resolution.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Contract validation probe outcome.
+    '''
     schema_fp = ctx.paths.data_ingestion.data_blocks.schema
     if not schema_fp.exists():
         return schema.ProbeResult(

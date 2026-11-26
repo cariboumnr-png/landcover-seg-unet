@@ -69,7 +69,7 @@ class DatasetInfo: # pylint: disable=too-many-instance-attributes
 
     @property
     def band_map(self) -> dict[str, int]:
-        '''Return lower-case band-description to 0-based index mapping.'''
+        '''Return lowercase band-description to 0-based index map.'''
         names: list[str] = []
 
         for index, description in enumerate(self.descriptions):
@@ -87,7 +87,17 @@ class DatasetInfo: # pylint: disable=too-many-instance-attributes
 
 # ----- public functions
 def get_info(source: pathlib.Path | t.DatasetReader) -> DatasetInfo:
-    '''Retrive raster info from a path or a `DatasetReader`.'''
+    '''
+    Retrieve raster info from a path or a `DatasetReader`.
+
+    Args:
+        source:
+            Path to the raster file or an open `DatasetReader`.
+
+    Returns:
+        DatasetInfo:
+            Extracted structural metadata for the raster dataset.
+    '''
     if isinstance(source, t.DatasetReader):
         return _get_info(source)
     with read_raster(source) as reader:
@@ -106,8 +116,12 @@ def read_raster(
             Path to target raster.
 
     Yields:
-        RasterDataset:
-            Opened dataset.
+        t.DatasetReader:
+            Opened raster dataset reader.
+
+    Raises:
+        FileNotFoundError:
+            If `path` does not exist.
     '''
     if not pathlib.Path(path).exists():
         raise FileNotFoundError(f'Raster not found: {path}')
@@ -124,11 +138,15 @@ def read_rasters(
 
     Args:
         *paths:
-            Variable number of raster file paths or None values.
+            Variable number of raster file paths or `None` values.
 
     Yields:
-        tuple[alias.RasterReader | None, ...]:
-            Tuple of opened dataset readers or None.
+        tuple[t.DatasetReader | None, ...]:
+            Tuple of opened dataset readers or `None` placeholders.
+
+    Raises:
+        FileNotFoundError:
+            If any non-`None` path in `paths` does not exist.
     '''
     with contextlib.ExitStack() as stack:
         opened_rasters: list[t.DatasetReader | None] = []
@@ -156,10 +174,10 @@ def read_window(
     '''
     Read a raster band for a given window with optional padding.
 
-    The requested window is expanded by ``padding`` pixels on all sides,
-    clipped to the dataset extent, and read from the source raster. If the
-    padded window extends beyond the raster bounds, the missing pixels are
-    filled using ``numpy.pad(..., mode="reflect")``.
+    The requested window is expanded by `padding` pixels on all sides,
+    clipped to the dataset extent, and read from the source raster. If
+    the padded window extends beyond the raster bounds, missing pixels
+    are filled using `numpy.pad(..., mode='reflect')`.
 
     Args:
         dataset:
@@ -168,26 +186,25 @@ def read_window(
             Source window in pixel coordinates.
         indexes:
             Band index or indices to read using rasterio semantics.
-            ``None`` reads all bands.
+            `None` reads all bands.
         edge_mode:
-            Strategy used to handle reads that extend beyond the dataset
-            boundary.
-            - ``'boundless'``: use rasterio/GDAL boundless reads.
-            - ``'reflect'``: clip to valid pixels and reflect-pad any
-            out-of-bounds regions.
+            Strategy used to handle reads beyond dataset boundaries:
+            - `'boundless'`: Use rasterio/GDAL boundless reads.
+            - `'reflect'`: Clip to valid pixels and reflect-pad
+              out-of-bounds regions.
         padding:
-            Number of context pixels added to each side of the requested
-            window when ``edge_mode='reflect'``.
+            Number of context pixels added to each side of the
+            requested window when `edge_mode='reflect'`.
 
     Returns:
-        numpy.ndarray:
+        numpy.typing.NDArray:
             Raster data with any requested padding applied. Shape is
-            ``(rows, cols)`` when reading a single band and
-            ``(bands, rows, cols)`` when reading multiple bands.
+            `(rows, cols)` when reading a single band and
+            `(bands, rows, cols)` when reading multiple bands.
 
     Raises:
         ValueError:
-            If the computed padded window is invalid.
+            If the computed padded window or `edge_mode` is invalid.
     '''
     if edge_mode == 'boundless':
         is_outside = (
@@ -244,6 +261,7 @@ def read_window(
 
 # ----- private helpers
 def _get_info(reader: t.DatasetReader) -> DatasetInfo:
+    '''Extract `DatasetInfo` metadata from an open dataset reader.'''
     return DatasetInfo(
         crs=reader.crs,
         driver=reader.driver,

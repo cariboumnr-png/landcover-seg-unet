@@ -23,11 +23,11 @@
 Full experiment execution workflow.
 
 Orchestrates the entire geospatial machine learning lifecycle from
-world grid generation through harmonization, ingestion, data preparation,
+world grid generation through harmonization, ingestion, preparation,
 and model training.
 
 Public APIs:
-    - `execute_e2e_experiment`: run full experiment lifecycle.
+    - `execute_e2e_experiment`: Run full experiment lifecycle.
 '''
 
 # local imports

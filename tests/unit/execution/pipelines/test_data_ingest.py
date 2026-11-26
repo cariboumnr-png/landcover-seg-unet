@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for the data ingestion execution pipeline.'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import typing
@@ -59,9 +59,10 @@ def test_data_ingest_validate_missing_harmonization(tmp_path):
 # ----- `DataIngestion` execution and lifecycle tests
 def test_data_ingest_pipeline_success(tmp_path, mocker):
     '''
-    Given: Upstream harmonization runs and mocked geopipe ingestion stage.
+    Given: Upstream harmonization runs and mocked ingestion stage.
     When: Calling `run` on `DataIngestion`.
-    Then: Initialize folders/config and forward record/settings to `geopipe`.
+    Then: Initialize folders/config and forward record and settings to
+        `geopipe`.
     '''
     harm_dpath = tmp_path / 'harmonized'
     runs_fpath = harm_dpath / 'harmonization_runs.json'
@@ -98,7 +99,7 @@ def test_data_ingest_pipeline_success(tmp_path, mocker):
 
 def test_data_ingest_pipeline_failure(tmp_path, mocker):
     '''
-    Given: Upstream harmonization runs and stage runner raising an error.
+    Given: Upstream harmonization runs and stage runner raising error.
     When: Calling `run` on `DataIngestion`.
     Then: Propagate error to caller cleanly.
     '''

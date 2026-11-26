@@ -19,10 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=redefined-outer-name
-
 '''Fixtures for testing `landseg.session` module.'''
+
+# pylint: disable=redefined-outer-name
 
 # third-party imports
 import pytest
@@ -41,21 +40,25 @@ import landseg.session.instrumentation.callbacks as callbacks_mod
 
 @pytest.fixture
 def session_config():
+    '''Provide a default `SessionConfig` instance.'''
     return session_schema.SessionConfig()
 
 
 @pytest.fixture
 def mock_session_paths(tmp_path):
+    '''Provide `SessionPaths` rooted at a temporary directory.'''
     return artifacts.SessionPaths(tmp_path / 'temp_results')
 
 
 @pytest.fixture
 def mock_dataloaders(dataspecs, session_config):
+    '''Build `DataLoaders` from `dataspecs` and `session_config`.'''
     return data_loader.build_dataloaders(dataspecs, session_config.dataloader)
 
 
 @pytest.fixture
 def mock_runtime(dataspecs, mock_dataloaders, mock_model, session_config):
+    '''Build `EngineRuntime` with engine, optimizer, and tasks.'''
     batch_engine = batch_mod.build_batch_engine(
         dataspecs=dataspecs,
         dataloaders=mock_dataloaders,
@@ -80,11 +83,13 @@ def mock_runtime(dataspecs, mock_dataloaders, mock_model, session_config):
 
 @pytest.fixture
 def mock_dispatcher():
+    '''Provide an empty `CallbackDispatcher` instance.'''
     return callbacks_mod.CallbackDispatcher([])
 
 
 @pytest.fixture
 def mock_evaluator(mock_runtime, mock_dataloaders, mock_dispatcher):
+    '''Build `MultiHeadEvaluator` bound to mock runtime and loaders.'''
     return eval_mod.MultiHeadEvaluator(
         val_every=1,
         infer_every=1,
@@ -98,6 +103,7 @@ def mock_evaluator(mock_runtime, mock_dataloaders, mock_dispatcher):
 
 @pytest.fixture
 def mock_trainer(mock_runtime, mock_dataloaders, mock_dispatcher):
+    '''Build `MultiHeadTrainer` bound to mock runtime and loaders.'''
     return trainer.MultiHeadTrainer(
         update_every=1,
         engine_runtime=mock_runtime,

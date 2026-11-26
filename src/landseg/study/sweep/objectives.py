@@ -56,19 +56,24 @@ def make_objective(
     cfg: configs.RootConfig,
 ) -> typing.Callable[[optuna.Trial], float]:
     '''
-    Build an Optuna-compatible objective function from a base runner.
+    Build an Optuna-compatible objective function from a runner builder.
 
-    This function binds a project-specific execution callable
-    (`base_runner`) to an Optuna Trial by generating a trial-specific
-    configuration according to the configured study objective. The
-    resulting callable conforms to Optuna's `(Trial) -> float`
-    interface and returns a single scalar value used for optimization.
+    Binds a project-specific runner builder to an Optuna `Trial` by
+    generating a trial-specific configuration according to the active
+    sweep preset. The resulting callable conforms to Optuna's
+    `(Trial) -> float` contract and returns a single scalar objective.
 
-    Parameter selection logic is intentionally minimal and delegated to
-    objective-specific helpers to avoid coupling sweep orchestration
-    with runtime or analysis concerns.
+    Args:
+        runner_builder:
+            Callable accepting a `RootConfig` and returning a tuple of
+            step-results output path and step generator runner.
+        cfg:
+            Base root configuration deep-copied and mutated per trial.
+
+    Returns:
+        typing.Callable[[optuna.Trial], float]:
+            Objective callable evaluating a single Optuna trial.
     '''
-
     # Optuna objective invoked once per trial
     def objective(trial: optuna.Trial) -> float:
 

@@ -20,9 +20,9 @@
 # =========================================================================== #
 
 '''
-Factory utilities for constructing and validating multi-head UNet models.
+Factory for constructing and validating multi-head UNet models.
 
-This module provides a single entry point for building a fully configured
+Provides a single entry point for building a fully configured
 `MultiHeadUNet` from dataset specifications and explicit architectural
 configuration objects.
 
@@ -33,9 +33,9 @@ Key responsibilities:
     - Apply optional runtime overrides (e.g., logit adjust, clamping).
     - Perform strict build-time validation via a synthetic forward pass.
 
-The design is intentionally framework-agnostic with respect to experiment
-management systems (e.g., Hydra). All configuration inputs are treated as
-explicit structural contracts rather than global state.
+The design is intentionally framework-agnostic with respect to
+experiment management systems (e.g., Hydra). All configuration inputs
+are treated as explicit structural contracts rather than global state.
 '''
 
 # standard imports
@@ -61,40 +61,41 @@ def build_multihead_unet(
     Construct and validate a `MultiHeadUNet` model.
 
     This factory assembles a complete multi-head segmentation model by:
-        - Deriving structural constraints from dataset specifications.
-        - Instantiating a UNet/UNet++ backbone via `body_config`.
-        - Applying optional domain-conditioning (concat and/or FiLM).
-        - Injecting runtime safety features (e.g., logit adjustment,
-            clamping).
-        - Running a strict forward-pass validation to verify consistency.
+    - Deriving structural constraints from dataset specifications.
+    - Instantiating a UNet/UNet++/UNet3+ backbone via
+      `unet_backbone_config`.
+    - Applying optional domain conditioning (concat and/or FiLM).
+    - Injecting runtime safety features (e.g., logit adjust, clamping).
+    - Running a strict forward-pass validation for consistency.
 
     Parameters are keyword-only to enforce explicit configuration
     boundaries and avoid ambiguity in model construction.
 
     Args:
-        dataspecs: Dataset-derived specifications
-        body_config: Backbone configuration describing architecture
-            selection and convolutional structure parameters.
-        conditioning_config: Mapping of domain names to conditioning
-            strategies, defining how domain information is injected
-            (concatenation and/or FiLM).
+        patch_size:
+            Spatial patch size assuming square input patches.
+        dataspecs:
+            Dataset-derived specifications container.
+        unet_backbone_config:
+            Backbone configuration describing body architecture
+            selection, convolutional parameters, and bottleneck setup.
+        conditioning_config:
+            Mapping of domain target names to conditioning strategies
+            defining how domain information is injected.
         **kwargs:
-            Optional runtime overrides forwarded to the model constructor,
-            including:
-            - enable_clamp
-            - clamp_range
+            Optional runtime overrides forwarded to `MultiHeadUNet`,
+            including `device`, `enable_clamp`, and `clamp_range`.
 
     Returns:
-        frames.MultiHeadBaseModel: Fully initialized and validated
-            MultiHeadUNet instance.
+        frames.MultiHeadBaseModel:
+            Fully initialized and validated `MultiHeadUNet` instance.
 
     Raises:
-        ValueError: If the backbone configuration is invalid or
-            unsupported.
-        RuntimeError: If the model fails structural or forward-pass
-            validation.
+        ValueError:
+            If the backbone configuration is invalid or unsupported.
+        RuntimeError:
+            If the model fails structural or forward-pass validation.
     '''
-
     model = frames.MultiHeadUNet(
         input_patch_size=patch_size,
         dataspecs=dataspecs,
@@ -115,22 +116,21 @@ def _validate_model_build(
     '''
     Build-time structural and numerical validations.
 
-    The function constructs a synthetic batch using `build_dummy_batch()`
-    from the model and executes a forward pass in eval/no_grad mode.
+    Constructs a synthetic batch using `build_dummy_batch()` from the
+    model and executes a forward pass in eval/no_grad mode.
 
     Structural constraints:
-        - Model accepts generated input tensors (from the model).
-        - Output is a dict[str, Tensor].
-        - Output heads exactly match dataspecs.heads.class_counts keys.
-        - Each head output is a 4D tensor (B, C, H, W).
-        - Batch dimension matches requested batch_size.
+        - Model accepts generated input tensors from the model.
+        - Output is a `dict[str, Tensor]`.
+        - Output heads match `dataspecs.heads.class_counts` keys.
+        - Each head output is a 4D tensor `(B, C, H, W)`.
+        - Batch dimension matches requested `batch_size`.
         - Channel dimension matches number of classes per head.
-        - Spatial dimensions are not validated against input resolution.
+        - Spatial dimensions are not validated against input size.
 
     Numerical constraints:
         - All output tensors contain only finite values (no NaN/Inf).
     '''
-
     model.eval()
 
     # ----- forward pass

@@ -29,21 +29,21 @@ specification creation through structured pipelines and lazy resolution.
 Public APIs:
     - `DatasetManifestBuilder`: Fluent builder for dataset manifests.
     - `SensorPreset`: Standard sensor band definitions and presets.
-    - `build_dataspec`: Assembles runtime DataSpecs from artifacts.
-    - `build_overfit_dataspec`: Build single-block DataSpecs for overfit.
+    - `build_dataspec`: Assemble runtime `DataSpecs` from artifacts.
+    - `build_overfit_dataspec`: Build single-block overfit `DataSpecs`.
     - `build_vrt_mosaic`: Merge multiple raster tiles into a mosaic VRT.
-    - `resolve_pending_ingestion_batches`: Resolve pending ingest batches.
+    - `resolve_pending_ingestion_batches`: Resolve pending batches.
     - `run_data_harmonization_stage`: Execute data-harmonize stage.
     - `run_data_ingestion_stage`: Execute data-ingest stage.
     - `run_data_preparation_stage`: Execute data-prepare stage.
     - `run_world_grid_stage`: Execute world-grid generation stage.
     - `validate_feature_specs`: Validate requested feature specs.
-    - `validate_grid_reference`: Validate a persisted world grid reference.
+    - `validate_grid_reference`: Validate persisted grid reference.
     - `validate_grid_specs`: Validate world grid definition inputs.
-    - `validate_manifest_contract`: Validate input dataset manifest entries.
+    - `validate_manifest_contract`: Validate dataset manifest entries.
     - `validate_pool_compatibility`: Validate grid/pool compatibility.
-    - `validate_prepare_semantics`: Validate preparation feature & head specs.
-    - `validate_raster_alignment`: Validate raster/grid alignment for ingest.
+    - `validate_prepare_semantics`: Validate prepare feature/head specs.
+    - `validate_raster_alignment`: Validate raster and grid alignment.
 '''
 
 # standard imports

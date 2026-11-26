@@ -29,8 +29,7 @@ dependencies.
 Public APIs:
     - `generate_prediction_previews`: Render preview figures per head.
     - `plot_qualitative_predictions`: Render comparative preview panels.
-    - `render_prediction_preview`: Display saved preview PNGs in
-      notebooks.
+    - `render_prediction_preview`: Automated prediction preview display.
 '''
 
 # standard imports
@@ -176,8 +175,9 @@ def generate_prediction_previews(
 
     Args:
         infer_results:
-            Stitched session inference outputs containing `infer_inputs`,
-            `infer_preds`, and optional `infer_labels` / `infer_errors`.
+            Stitched session inference outputs with `infer_inputs`,
+            `infer_preds`, and optional `infer_labels` /
+            `infer_errors`.
         dataspecs:
             Data specification object supplying band mapping and palette
             metadata.
@@ -376,7 +376,7 @@ def _resolve_active_heads(
 
 
 def _to_numpy_image(arr: typing.Any) -> numpy.ndarray:
-    '''Convert input array or tensor to normalized HxWx3 RGB numpy array.'''
+    '''Convert input array or tensor to normalized HxWx3 RGB array.'''
     if hasattr(arr, 'detach'):
         arr = arr.detach().cpu().numpy()
     arr = numpy.asarray(arr, dtype=numpy.float32)

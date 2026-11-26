@@ -19,12 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Canonical filesystem paths for session experiment training and
-evaluation results.
-'''
+'''Canonical filesystem paths for training and evaluation sessions.'''
 
 # standard imports
 import dataclasses
@@ -39,42 +34,71 @@ import landseg.artifacts.paths.base as base
 @dataclasses.dataclass
 class SessionPaths(base.PipelineArtifactsPaths):
     '''Root entry of a training run.'''
-
     @property
     def checkpoints(self) -> pathlib.Path:
+        '''Return directory path for saved model checkpoints.'''
         return self.effective_run_folder / 'checkpoints'
 
     @property
     def logs(self) -> pathlib.Path:
+        '''Return directory path for training and runtime logs.'''
         return self.effective_run_folder / 'logs'
 
     @property
     def plots(self) -> pathlib.Path:
+        '''Return directory path for generated diagnostic plots.'''
         return self.effective_run_folder / 'plots'
 
     @property
     def previews(self) -> pathlib.Path:
+        '''Return directory path for rendered sample previews.'''
         return self.effective_run_folder / 'previews'
 
     @property
     def phase_status(self) -> pathlib.Path:
+        '''Return path to the training phase status JSON.'''
         return self.checkpoints / 'status.json'
 
     @property
     def evaluation(self) -> pathlib.Path:
+        '''Return path to the session evaluation results JSON.'''
         return self.effective_run_folder / 'evaluation.json'
 
     @property
     def step_results(self) -> pathlib.Path:
+        '''Return path to the step results JSON file.'''
         return self.effective_run_folder / 'step_results.json'
 
     def best_checkpoint(self, name: str) -> pathlib.Path:
+        '''
+        Return path to the best checkpoint file for a phase.
+
+        Args:
+            name:
+                Checkpoint prefix or phase identifier.
+
+        Returns:
+            pathlib.Path:
+                File path to `{name}_best.pt`.
+        '''
         return self.checkpoints / f'{name}_best.pt'
 
     def last_checkpoint(self, name: str) -> pathlib.Path:
+        '''
+        Return path to the latest checkpoint file for a phase.
+
+        Args:
+            name:
+                Checkpoint prefix or phase identifier.
+
+        Returns:
+            pathlib.Path:
+                File path to `{name}_last.pt`.
+        '''
         return self.checkpoints / f'{name}_last.pt'
 
     def _init_pipeline_folders(self):
+        '''Create session subdirectories under the run folder.'''
         super()._init_pipeline_folders()
         self.checkpoints.mkdir(parents=True, exist_ok=True)
         self.logs.mkdir(parents=True, exist_ok=True)
@@ -87,11 +111,13 @@ class SessionPaths(base.PipelineArtifactsPaths):
 
         Args:
             require_run:
-                If True, also validates that the effective run directory
-                and its subdirectories (checkpoints, logs, plots, previews) exist.
+                If True, also validates that the effective run
+                directory and its subdirectories (`checkpoints`,
+                `logs`, `plots`, `previews`) exist.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:

@@ -78,14 +78,13 @@ def attach(
             Relative submodule names exposed as attributes themselves.
 
     Returns:
-        tuple:
+        tuple[typing.Callable[[str], typing.Any], typing.Callable[[], list[str]]]:
             The `__getattr__` and `__dir__` hooks for the package.
 
     Raises:
         ValueError:
             If a symbol is mapped to more than one source module.
     '''
-
     def __getattr__(name: str) -> typing.Any:
         '''Resolve a lazy symbol or submodule on access.'''
         if name in owner:

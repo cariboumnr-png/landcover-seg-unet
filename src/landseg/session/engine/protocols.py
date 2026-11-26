@@ -19,12 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''Protocols defining shapes of external objects for `engine` module.'''
+
 # pylint: disable=missing-function-docstring
 # pylint: disable=too-few-public-methods
-
-'''
-Protocols defining shapes of external objects for `engine` module
-'''
 
 # standard imports
 from __future__ import annotations

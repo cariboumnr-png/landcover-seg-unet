@@ -21,6 +21,12 @@
 
 '''
 Composite preset objectives combining multiple parameter-group presets.
+
+Public APIs:
+    - `comp_candidate`: Compose all production candidate search presets.
+    - `comp_capacity`: Compose architecture and bottleneck presets.
+    - `comp_mtl_quality`: Compose loss and regularization presets.
+    - `comp_quick`: Compose optimizer and throughput presets.
 '''
 
 # third-party imports
@@ -33,8 +39,19 @@ def comp_quick(
     cfg: sweep.TrialMutator,
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
-    '''Composite quick preset: optimizer + throughput.'''
+    '''
+    Apply quick sweep presets combining optimizer and throughput.
 
+    Args:
+        cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     cfg = presets.obj_optimizer(cfg, trial)
     cfg = presets.obj_throughput(cfg, trial)
     return cfg
@@ -43,8 +60,19 @@ def comp_capacity(
     cfg: sweep.TrialMutator,
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
-    '''Composite capacity preset: architecture + bottleneck.'''
+    '''
+    Apply capacity sweep presets combining architecture and bottleneck.
 
+    Args:
+        cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     cfg = presets.obj_architecture(cfg, trial)
     cfg = presets.obj_bottleneck(cfg, trial)
     return cfg
@@ -53,8 +81,19 @@ def comp_mtl_quality(
     cfg: sweep.TrialMutator,
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
-    '''Composite mtl quality preset: loss balance + regularization'''
+    '''
+    Apply MTL quality presets combining loss balance and regularization.
 
+    Args:
+        cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     cfg = presets.obj_loss_balance(cfg, trial)
     cfg = presets.obj_loss_aux(cfg, trial)
     cfg = presets.obj_regularization(cfg, trial)
@@ -64,8 +103,19 @@ def comp_candidate(
     cfg: sweep.TrialMutator,
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
-    '''Composite production candidate: combines all presets.'''
+    '''
+    Apply full production candidate presets across all search domains.
 
+    Args:
+        cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     cfg = presets.obj_optimizer(cfg, trial)
     cfg = presets.obj_throughput(cfg, trial)
     cfg = presets.obj_data_geometry(cfg, trial)

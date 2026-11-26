@@ -25,9 +25,28 @@ Standalone validation primitives and composed validation helpers.
 The module has no dependencies outside the Python standard library.
 
 Exception conventions:
-    TypeError: an input has an invalid type.
-    ValueError: an input value or constraint is invalid.
-    ValidationError: an attribute/configuration validation failure.
+    - `TypeError`: Input has an invalid type.
+    - `ValueError`: Input value or constraint is invalid.
+    - `ValidationError`: Attribute or configuration validation failure.
+
+Public APIs:
+    - `NumericRange`: Inclusive numeric `(min, max)` bounds alias.
+    - `ValidationError`: Raised when configuration validation fails.
+    - `require_dir`: Require an existing or writable directory path.
+    - `require_file`: Require an existing regular file path.
+    - `require_finite`: Require a finite numeric value.
+    - `require_mapping`: Require a non-empty mapping as a dictionary.
+    - `require_mapping_str_v`: Require a mapping with string values.
+    - `require_numeric`: Require an integer or floating-point number.
+    - `require_numeric_max`: Require a number at or below maximum.
+    - `require_numeric_min`: Require a number at or above minimum.
+    - `require_numeric_range`: Require a number within closed bounds.
+    - `require_numeric_sequence`: Require a sequence of numeric values.
+    - `require_sequence`: Require a sequence of objects as a tuple.
+    - `require_string`: Require a non-empty string value.
+    - `require_string_sequence`: Require a sequence of strings.
+    - `require_types`: Require a value matching expected type(s).
+    - `require_value_from`: Require a typed value from allowed choices.
 '''
 
 # standard imports
@@ -56,7 +75,23 @@ def require_types(
     value: object,
     required_type: type[V] | tuple[type[V], ...]
 ) -> V:
-    '''Require a type or a tuple of types.'''
+    '''
+    Require a value matching a target type or tuple of types.
+
+    Args:
+        value:
+            Input object to validate.
+        required_type:
+            Expected type or tuple of allowed types.
+
+    Returns:
+        V:
+            Validated input object cast to the expected type.
+
+    Raises:
+        ValidationError:
+            If `value` is not an instance of `required_type`.
+    '''
     if not isinstance(value, required_type):
         if isinstance(required_type, tuple):
             required = ', '.join(t.__name__ for t in required_type)
@@ -95,7 +130,26 @@ def require_numeric(
     *,
     finite: bool = False,
 ) -> T | float | int:
-    '''Require an integer or a float.'''
+    '''
+    Require an integer or floating-point number.
+
+    Args:
+        value:
+            Input object to validate as numeric (excluding `bool`).
+        require_type:
+            Optional exact numeric type (`int` or `float`) to enforce.
+        finite:
+            Whether to reject non-finite values (`NaN` or `inf`).
+
+    Returns:
+        T | float | int:
+            Validated numeric value.
+
+    Raises:
+        ValidationError:
+            If `value` is a boolean, does not match the numeric type,
+            or is non-finite when `finite` is `True`.
+    '''
     if isinstance(value, bool):
         raise ValidationError('Expected a number: got bool')
     if require_type is float:
@@ -137,7 +191,23 @@ def require_finite(
     value: object,
     require_type: type[T] | None = None,
 ) -> T | float | int:
-    '''Require a finite number.'''
+    '''
+    Require a finite integer or floating-point number.
+
+    Args:
+        value:
+            Input object to validate as a finite number.
+        require_type:
+            Optional exact numeric type (`int` or `float`) to enforce.
+
+    Returns:
+        T | float | int:
+            Validated finite numeric value.
+
+    Raises:
+        ValidationError:
+            If `value` fails numeric type or finiteness checks.
+    '''
     return require_numeric(value, require_type, finite=True)
 
 
@@ -168,7 +238,28 @@ def require_numeric_min(
     *,
     finite: bool = False,
 ) -> T | float | int:
-    '''Require a number >= minimum.'''
+    '''
+    Require a numeric value greater than or equal to a minimum.
+
+    Args:
+        value:
+            Input object to validate.
+        value_min:
+            Inclusive lower bound.
+        require_type:
+            Optional exact numeric type (`int` or `float`) to enforce.
+        finite:
+            Whether to reject non-finite values.
+
+    Returns:
+        T | float | int:
+            Validated numeric value meeting the lower bound.
+
+    Raises:
+        ValidationError:
+            If `value` or `value_min` is invalid, or
+            `value < value_min`.
+    '''
     _value_min = require_numeric(value_min, finite=finite)
     _value = require_numeric(value, require_type, finite=finite)
     if _value < _value_min:
@@ -203,7 +294,28 @@ def require_numeric_max(
     *,
     finite: bool = False,
 ) -> T | float | int:
-    '''Require a number <= maximum.'''
+    '''
+    Require a numeric value less than or equal to a maximum.
+
+    Args:
+        value:
+            Input object to validate.
+        value_max:
+            Inclusive upper bound.
+        require_type:
+            Optional exact numeric type (`int` or `float`) to enforce.
+        finite:
+            Whether to reject non-finite values.
+
+    Returns:
+        T | float | int:
+            Validated numeric value meeting the upper bound.
+
+    Raises:
+        ValidationError:
+            If `value` or `value_max` is invalid, or
+            `value > value_max`.
+    '''
     _value_max = require_numeric(value_max, finite=finite)
     _value = require_numeric(value, require_type, finite=finite)
     if _value > _value_max:
@@ -238,7 +350,28 @@ def require_numeric_range(
     *,
     finite: bool = False,
 ) -> T | float | int:
-    '''Require a number within closed range (min <= x <= max).'''
+    '''
+    Require a number within an inclusive range (`min <= x <= max`).
+
+    Args:
+        value:
+            Input object to validate.
+        require_range:
+            Two-element `(min, max)` inclusive bounds tuple.
+        require_type:
+            Optional exact numeric type (`int` or `float`) to enforce.
+        finite:
+            Whether to reject non-finite values.
+
+    Returns:
+        T | float | int:
+            Validated numeric value within the closed interval.
+
+    Raises:
+        ValidationError:
+            If `value` or `require_range` is invalid, or `value` lies
+            outside the bounds.
+    '''
     _value = require_numeric(value, require_type, finite=finite)
     _require_range = require_numeric_sequence(require_range, k=2)
     mmin, mmax = _require_range
@@ -251,7 +384,23 @@ def require_numeric_range(
 def require_string(
     value: object,
 ) -> str:
-    '''Require a non-empty string; return as a str.'''
+    '''
+    Require a non-empty string value.
+
+    Args:
+        value:
+            Input object to validate as a non-empty string.
+
+    Returns:
+        str:
+            Validated non-empty string.
+
+    Raises:
+        TypeError:
+            If `value` is not a `str`.
+        ValueError:
+            If `value` is an empty string.
+    '''
     if not isinstance(value, str):
         raise TypeError(f'Expected a string, got {type(value).__name__}')
     if not value:
@@ -265,7 +414,26 @@ def require_value_from(
     require_from: typing.Sequence[V],
     require_type: type[V]
 ) -> V:
-    '''Require an object from a pool, e.g., allowed literals.'''
+    '''
+    Require a typed value belonging to an allowed sequence of choices.
+
+    Args:
+        value:
+            Input object to validate.
+        require_from:
+            Sequence of allowed values.
+        require_type:
+            Expected runtime type of `value`.
+
+    Returns:
+        V:
+            Validated value from `require_from`.
+
+    Raises:
+        ValidationError:
+            If `value` has the wrong type, `require_from` is not a
+            sequence, or `value` is not in `require_from`.
+    '''
     if not isinstance(value, require_type):
         actual_type = type(value).__name__
         raise ValidationError(
@@ -281,7 +449,23 @@ def require_value_from(
 def require_mapping(
     value: object,
 ) -> dict:
-    '''Require a non-empty mapping; return as a dict.'''
+    '''
+    Require a non-empty mapping and return a shallow dictionary copy.
+
+    Args:
+        value:
+            Input object to validate as a non-empty mapping.
+
+    Returns:
+        dict:
+            Shallow `dict` copy of the validated mapping.
+
+    Raises:
+        TypeError:
+            If `value` is not a `collections.abc.Mapping`.
+        ValueError:
+            If `value` is empty.
+    '''
     if not isinstance(value, collections.abc.Mapping):
         raise TypeError(f'Expected a mapping, got {type(value).__name__}')
     if not value:
@@ -292,7 +476,23 @@ def require_mapping(
 def require_mapping_str_v(
     value: object,
 ) -> dict[typing.Any, str]:
-    '''Require mapping with string values; return as a dict.'''
+    '''
+    Require a non-empty mapping whose values are non-empty strings.
+
+    Args:
+        value:
+            Input object to validate as a string-valued mapping.
+
+    Returns:
+        dict[typing.Any, str]:
+            Validated dictionary mapping keys to non-empty strings.
+
+    Raises:
+        TypeError:
+            If `value` is not a mapping or any value is not a `str`.
+        ValueError:
+            If `value` is empty or any string value is empty.
+    '''
     _value = require_mapping(value)
     _validated: dict[typing.Any, str] = {}
     for k, v in _value.items():
@@ -305,7 +505,25 @@ def require_sequence(
     value: object,
     k: int | None = None,
 ) -> tuple:
-    '''Require a sequence of objects; return as a tuple.'''
+    '''
+    Require a non-string sequence of objects and return as a tuple.
+
+    Args:
+        value:
+            Input object to validate (excluding `str`, `bytes`, and
+            `bytearray`).
+        k:
+            Optional exact length constraint.
+
+    Returns:
+        tuple:
+            Tuple containing the sequence elements.
+
+    Raises:
+        ValidationError:
+            If `value` is not a sequence or its length does not equal
+            `k`.
+    '''
     if not (
         isinstance(value, collections.abc.Sequence) and
         not isinstance(value, (str, bytes, bytearray))
@@ -337,7 +555,26 @@ def require_numeric_sequence(
     require_type: type[T] | None = None,
     k: int | None = None,
 ) -> tuple[T, ...] | tuple[int | float, ...]:
-    '''Require a sequence of numbers of optional specified length (k).'''
+    '''
+    Require a sequence of numbers with optional length constraint.
+
+    Args:
+        value:
+            Input object to validate as a sequence of numbers.
+        require_type:
+            Optional exact numeric type (`int` or `float`) for elements.
+        k:
+            Optional exact sequence length constraint.
+
+    Returns:
+        tuple[T, ...] | tuple[int | float, ...]:
+            Tuple of validated numeric elements.
+
+    Raises:
+        ValidationError:
+            If `value` is not a sequence of length `k`, or any element
+            fails numeric validation.
+    '''
     _value = require_sequence(value, k=k)
     for v in _value:
         require_numeric(v, require_type)
@@ -348,7 +585,27 @@ def require_string_sequence(
     value: object,
     k: int | None = None,
 ) -> tuple[str, ...]:
-    '''Require a sequence of strings of optional specified length (k).'''
+    '''
+    Require a sequence of non-empty strings with optional length.
+
+    Args:
+        value:
+            Input object to validate as a sequence of strings.
+        k:
+            Optional exact sequence length constraint.
+
+    Returns:
+        tuple[str, ...]:
+            Tuple of validated non-empty string elements.
+
+    Raises:
+        ValidationError:
+            If `value` is not a sequence or fails length constraint `k`.
+        TypeError:
+            If any element is not a `str`.
+        ValueError:
+            If any string element is empty.
+    '''
     _value = require_sequence(value, k=k)
     for v in _value:
         require_string(v)
@@ -385,7 +642,25 @@ def require_file(
     *,
     missing_ok: bool = False,
 ) -> pathlib.Path | None:
-    '''Require an existing regular file; return as a `Path` object.'''
+    '''
+    Require an existing regular file and return it as a `Path`.
+
+    Args:
+        path:
+            Candidate file path or `None`.
+        missing_ok:
+            Whether to return `None` when `path` is `None`.
+
+    Returns:
+        pathlib.Path | None:
+            Validated file path, or `None` when `path` is `None` and
+            `missing_ok` is `True`.
+
+    Raises:
+        ValidationError:
+            If `path` is `None` (when `missing_ok` is `False`), invalid,
+            or not an existing regular file.
+    '''
     if path is None:
         if missing_ok:
             return None
@@ -407,7 +682,25 @@ def require_dir(
     *,
     writable: bool = False,
 ) -> pathlib.Path:
-    '''Require an existing directory, optionally require writable.'''
+    '''
+    Require an existing directory, optionally probing writability.
+
+    Args:
+        path:
+            Candidate directory path or `None`.
+        writable:
+            If `True`, create the directory if needed and verify write
+            permissions via a sentinel probe file.
+
+    Returns:
+        pathlib.Path:
+            Validated directory path.
+
+    Raises:
+        ValidationError:
+            If `path` is `None`, invalid, not an existing directory, or
+            not writable when `writable` is `True`.
+    '''
     if path is None:
         raise ValidationError('Path not provided')
 

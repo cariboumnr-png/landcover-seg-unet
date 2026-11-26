@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Cross-head consistency regularization for multi-task segmentation.
 
@@ -40,9 +38,9 @@ predictions, so invalid states can be discouraged during backpropagation
 before they become discrete violation metrics.
 
 Public APIs:
-    - `ConsistencyRegConfigShape`: protocol for regularizer
+    - `ConsistencyRegConfigShape`: Protocol for regularizer
       configuration.
-    - `ConsistencyRegularizer`: differentiable regularizer for
+    - `ConsistencyRegularizer`: Differentiable regularizer for
       multi-task constraints.
 '''
 
@@ -59,12 +57,14 @@ import landseg.session.engine.tasks.constraints as constraints
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class ConsistencyRegConfigShape(typing.Protocol):
     '''Configuration shape for consistency regularization.'''
     @property
     def consistency_lambda(self) -> float: ...
     @property
     def consistency_reduction(self) -> str: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- private dataclasses
@@ -111,26 +111,23 @@ class ConsistencyRegularizer(torch.nn.Module):
         Initialize the consistency regularizer.
 
         Args:
-            constraints:
-                Pairwise constraints using 1-based class IDs. Empty or
-                None constraints make the regularizer return zero.
+            mtl_constraints:
+                Optional list of compiled 0-based multi-task
+                constraints. Empty or `None` causes the regularizer to
+                return zero.
+            configs:
+                Configuration protocol specifying `consistency_lambda`
+                and `consistency_reduction` (`'mean'`, `'sum'`, or
+                `'none'`).
             ignore_index:
-                Ground-truth label value to exclude from
-                regularization. A pixel is valid for a constraint only
-                when both involved heads are non-ignored at that pixel.
-            reduction:
-                Reduction mode:
-                    - 'mean': mean invalid probability over all valid
-                        constraint-pixel pairs.
-                    - 'sum': sum invalid probabilities over all valid
-                        constraint-pixel pairs.
-                    - 'none': one mean invalid probability per active
-                        constraint.
+                Ground-truth label value excluded from regularization. A
+                pixel is valid for a constraint only when both involved
+                heads are non-ignored at that pixel.
 
         Raises:
-            ValueError: If reduction is unsupported, if constraint names
-                are duplicated, or if a constraint contains invalid
-                class IDs.
+            ValueError:
+                If `configs.consistency_reduction` is unsupported or
+                constraint names are duplicated.
         '''
         super().__init__()
 
@@ -169,14 +166,11 @@ class ConsistencyRegularizer(torch.nn.Module):
                 [B, H, W]. Labels are used for ignore-index masking.
 
         Returns:
-            A tensor whose shape depends on the reduction:
-                - scalar for 'mean' and 'sum';
-                - [K] tensor for 'none', where K is the number of active
-                  constraints with at least one valid pixel.
-
-            If no constraints are active, or no valid pixels exist, a
-            zero scalar is returned for 'mean'/'sum' and an empty tensor
-            is returned for 'none'.
+            torch.Tensor:
+                Scalar tensor for `'mean'` and `'sum'`, or `[K]` tensor
+                for `'none'` where `K` is the number of active
+                constraints with valid pixels (zero scalar or empty
+                tensor if none are active).
         '''
         # get reference tensor for device/dtype
         ref = next(iter(logits.values()), None)
@@ -221,12 +215,14 @@ class ConsistencyRegularizer(torch.nn.Module):
         and skips inactive constraints.
 
         Args:
-            logits: Mapping from head name to logits [B, C, H, W].
+            logits:
+                Mapping from head name to logits `[B, C, H, W]`.
             targets_1b:
-                Mapping from head name to 1-based labels [B, H, W].
+                Mapping from head name to 1-based labels `[B, H, W]`.
 
         Returns:
-            Dictionary mapping constraint names to scalar tensors.
+            contracts.TensorDict:
+                Dictionary mapping constraint names to scalar tensors.
         '''
         return {
             value.name: value.mean

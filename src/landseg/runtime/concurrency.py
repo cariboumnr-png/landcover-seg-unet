@@ -29,6 +29,7 @@ Jobs are expressed as (function, args, kwargs) tuples and are executed
 concurrently with optional progress reporting via tqdm.
 
 Public APIs:
+    - `CORE_N`: Default worker count resolved from environment or CPU.
     - `ParallelExecutor`: Configurable process and thread task executor.
     - `get_default_worker_count`: Resolve default worker parallelism.
 '''
@@ -132,7 +133,7 @@ class ParallelExecutor:
                 Optional leading description for progress bar.
 
         Returns:
-            list:
+            list[typing.Any]:
                 Results from executing all jobs preserving input order.
         '''
         if self.use_threads:

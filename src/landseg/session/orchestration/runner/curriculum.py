@@ -22,12 +22,12 @@
 '''
 Curriculum-based training runner.
 
-This module defines a concrete BaseRunner implementation that executes
+This module defines a concrete `BaseRunner` implementation that executes
 a sequence of training phases (a curriculum) over a shared epoch engine.
 
-Each phase is executed sequentially via its PhasePolicy, and training
-progress is exposed exclusively as a stream of TrainingStep records,
-one per completed epoch.
+Each phase is executed sequentially via its `PhasePolicy`, and training
+progress is exposed exclusively as a stream of `SessionStepSummary`
+records, one per completed epoch.
 '''
 
 # standard imports
@@ -50,9 +50,9 @@ class CurriculumRunner(base.BaseRunner):
     configuration, and phases are executed to completion before the
     next phase begins.
 
-    The runner consumes event streams emitted by PhasePolicy instances
-    and translates epoch-completion events into immutable `TrainingStep`
-    records.
+    The runner consumes event streams emitted by `PhasePolicy` instances
+    and translates epoch-completion events into immutable
+    `SessionStepSummary` records.
 
     Characteristics:
         - Multi-phase (curriculum) execution
@@ -61,8 +61,8 @@ class CurriculumRunner(base.BaseRunner):
         - No early stopping (phases always complete fully)
 
     External consumers observe training progress by consuming the
-    `TrainingStep` stream and may abandon execution at any point by
-    stopping consumption.
+    `SessionStepSummary` stream and may abandon execution at any point
+    by stopping consumption.
     '''
 
     def __init__(
@@ -76,13 +76,11 @@ class CurriculumRunner(base.BaseRunner):
 
         Args:
             training_phases:
-                ordered sequence of Phase configurations defining the
-                curriculum. Phases are executed sequentially and each
-                phase runs to completion before the next begins.
+                Ordered sequence of `PhaseLike` configurations defining
+                the curriculum. Phases run sequentially to completion.
             **kwargs:
-                forwarded to BaseRunner initialization, including the
-                epoch execution engine, runner configuration, and
-                logger.
+                Forwarded to `BaseRunner.__init__` (`epoch_runner`,
+                `base_config`, and `dispatcher`).
         '''
         super().__init__(**kwargs)
         # parse arguments
@@ -93,27 +91,24 @@ class CurriculumRunner(base.BaseRunner):
 
     def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
-        Execute the curriculum as a stream of `TrainingStep` records.
+        Execute the curriculum as a `SessionStepSummary` stream.
 
-        Yields:
-            `TrainingStep`:
-                - One `TrainingStep` per completed epoch.
-                - Exactly one terminal `TrainingStep` with
-                is_run_end == True after all phases complete.
-
-        Behavior:
-            - Executes phases sequentially.
-            - Consumes internal event streams emitted by phase policies.
-            - Translates `EpochEnd` events into `TrainingStep` records.
-            - Emits phase boundary information via step metadata.
-            - Handles checkpointing and logging as side effects.
+        Executes phases sequentially, consumes internal event streams
+        emitted by phase policies, translates epoch completions into
+        step summaries with phase metadata, and handles checkpointing
+        and logging as side effects.
 
         Notes:
             - This runner does not support early stopping.
             - Resume and load behavior must be handled by higher-level
-                orchestration (e.g. CLI).
+              orchestration (e.g. CLI).
             - External consumers control execution by consuming or
-                abandoning the step stream.
+              abandoning the step stream.
+
+        Yields:
+            core.SessionStepSummary:
+                One summary per completed epoch across phases, ending
+                with a terminal summary where `is_run_end` is `True`.
         '''
         # iterate through provided phases
         try:

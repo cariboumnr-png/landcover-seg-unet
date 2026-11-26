@@ -39,6 +39,7 @@ class Domains(base.BaseConfigSection):
     target_variance: float = 0.9
 
     def validate(self) -> None:
+        '''Validate domain threshold and target variance bounds.'''
         self.val.require_numeric_range(self.valid_threshold, (0, 1))
         self.val.require_numeric_range(self.target_variance, (0, 1))
 
@@ -53,6 +54,7 @@ class DataBlocks(base.BaseConfigSection):
     add_spectral: list[str] | None = None
 
     def validate(self) -> None:
+        '''Validate block parameters and derived band names.'''
         self.val.require_numeric(self.ignore_index, int)
         self.val.require_numeric_min(self.image_dem_pad, 1, int)
         self.val.require_value_from(self.collision_policy, POLICY, str)
@@ -78,6 +80,7 @@ class DataIngestionConfig(base.BaseConfigSection):
     output_dpath: str | None = None
 
     def validate(self) -> None:
+        '''Validate ingestion sections and harmonization run setting.'''
         self.domains.validate()
         self.datablocks.validate()
 

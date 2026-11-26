@@ -19,7 +19,16 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Top-level namespace for `landseg`.'''
+'''
+Top-level namespace for `landseg`.
+
+Exposes package metadata constants for distribution and attribution.
+
+Public APIs:
+    - `__author__`: Maintainer organization name.
+    - `__license__`: Software license identifier.
+    - `__version__`: Semantic version string for the package.
+'''
 
 __all__ = [
     '__author__',

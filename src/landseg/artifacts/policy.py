@@ -28,13 +28,12 @@ class LifecyclePolicy(enum.Enum):
     '''
     Artifacts lifecycle policies.
 
-    - `LOAD_ONLY`:        Use existing artifact only; do not build.
-    - `LOAD_OR_FAIL`:     Load artifact if it exists, otherwise raise an error.
-    - `BUILD_IF_MISSING`: Build artifact only if it does not already exist.
-    - `REBUILD`:          Always rebuild artifact, ignoring any existing ones.
-    - `REBUILD_IF_STALE`: Rebuild artifact only if it is outdated or invalid.
+    - `LOAD_ONLY`: Use existing artifact only; do not build.
+    - `LOAD_OR_FAIL`: Load existing artifact or raise an error.
+    - `BUILD_IF_MISSING`: Build artifact only if not already present.
+    - `REBUILD`: Always rebuild artifact, ignoring existing ones.
+    - `REBUILD_IF_STALE`: Rebuild artifact if outdated or invalid.
     '''
-
     LOAD_ONLY = enum.auto()
     LOAD_OR_FAIL = enum.auto()
     BUILD_IF_MISSING = enum.auto()

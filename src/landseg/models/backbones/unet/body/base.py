@@ -19,12 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base classes for architecture backbones.
+'''
+Base classes for UNet backbone architectures.
 
-This module provides the base classes and common interface for UNet
-backbone implementations. It extends the abstract Backbone contract
-with encoder/decoder methods and bottleneck infrastructure specific
-to UNet-style feature extraction.
+Provides the base class and common interface for UNet backbone
+implementations, extending the abstract `Backbone` contract with
+encoder/decoder methods and bottleneck infrastructure specific to
+UNet-style feature extraction.
 '''
 
 # standard imports
@@ -38,9 +39,10 @@ import landseg.models.backbones.unet.components as components
 
 class UNetBackbone(backbones.Backbone):
     '''
-    Contract for any feature extractor used by MultiHeadModel.
+    Abstract base class for UNet-family feature extractor backbones.
+
     Implementations must produce a feature map with a known channel
-    width that matches the heads' expected input (e.g., base_ch).
+    width matching the prediction heads' expected input (`base_ch`).
     '''
 
     def __init__(
@@ -53,18 +55,19 @@ class UNetBackbone(backbones.Backbone):
 
         Constructs the initial convolution block and encoder pathway.
         The bottleneck is left uninitialized and must be set separately
-        via ``build_bottleneck()``. Subclasses are responsible for
+        via `build_bottleneck()`. Subclasses are responsible for
         instantiating the decoder pathway and implementing the abstract
         methods.
 
         Args:
-            in_ch: Number of input channels from the input image or
+            in_ch:
+                Number of input channels from the input image or
                 concatenated domain features.
-            config: UNetBodyConfig specifying base channel width,
+            config:
+                `UNetBodyConfig` specifying base channel width,
                 encoder convolution parameters, and other
                 architectural options.
         '''
-
         super().__init__()
         base_ch = config.base_ch
         enc_conv_params = config.encoder_conv_params
@@ -84,24 +87,40 @@ class UNetBackbone(backbones.Backbone):
     @abc.abstractmethod
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
         '''
+        Encode input tensor into multi-scale feature maps.
+
         Args:
-            x: [B, C_in, H, W]
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
         Returns:
-            y: [B, C_out, H, W] (or possibly downsampled; the framework
-                should document expectations, e.g., same spatial size if
-                heads are dense).
+            tuple[torch.Tensor, ...]:
+                Multi-scale encoder and bottleneck feature tensors from
+                finest to coarsest resolution.
+
+        Raises:
+            NotImplementedError:
+                If the subclass does not implement `encode`.
         '''
         raise NotImplementedError
 
     @abc.abstractmethod
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
         '''
+        Decode multi-scale encoder features into a feature map.
+
         Args:
-            x: [B, C_in, H, W]
+            xs:
+                Tuple of multi-scale feature tensors produced by
+                `encode`.
+
         Returns:
-            y: [B, C_out, H, W] (or possibly downsampled; the framework
-                should document expectations, e.g., same spatial size if
-                heads are dense).
+            torch.Tensor:
+                Decoded feature map of shape `(B, out_channels, H, W)`.
+
+        Raises:
+            NotImplementedError:
+                If the subclass does not implement `decode`.
         '''
         raise NotImplementedError
 
@@ -110,8 +129,21 @@ class UNetBackbone(backbones.Backbone):
         config: components.BottleneckConfig,
         spatial_size: int | None = None,
     ) -> None:
-        '''Build bottleneck layer'''
+        '''
+        Build and attach the configured bottleneck layer.
 
+        Args:
+            config:
+                `BottleneckConfig` specifying the bottleneck variant
+                and layer hyperparameters.
+            spatial_size:
+                Spatial dimension at bottleneck resolution, required
+                for transformer and hybrid bottleneck variants.
+
+        Raises:
+            ValueError:
+                If `config.variant` is not a supported bottleneck type.
+        '''
         match config.variant:
             case 'conv':
                 assert config.conv_params

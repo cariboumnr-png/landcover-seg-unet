@@ -40,7 +40,19 @@ def dir_writable(
     dir_path: pathlib.Path | None,
     pid: str,
 ) -> schema.ProbeResult:
-    '''Check that a destination directory chain is writable.'''
+    '''
+    Check that a destination directory chain is writable.
+
+    Args:
+        dir_path:
+            Target directory path to inspect, or None if unset.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Filesystem writability validation outcome.
+    '''
     if dir_path is None:
         return schema.ProbeResult(
             pid=pid,

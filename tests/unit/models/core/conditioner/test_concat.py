@@ -108,8 +108,7 @@ def test_concat_adapter_both():
     '''
     Given: Payload containing both ID embedding and vector projections.
     When: Running forward pass.
-    Then: Concatenate the element-wise sum of both payloads along channel
-        dim.
+    Then: Concatenate element-wise sum of both payloads along channels.
     '''
     adapter = concat.ConcatAdapter(concat_dim=8)
     x = torch.randn(2, 4, 16, 16)

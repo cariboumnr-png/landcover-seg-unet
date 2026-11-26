@@ -62,7 +62,7 @@ def test_find_run_collision_missing_manifest(tmp_path):
 def test_find_run_collision_status_filtering(tmp_path):
     '''
     Given: A runs manifest with SUCCESS, FAILED, and SKIPPED runs.
-    When: Checking for collisions with different fingerprints and status.
+    When: Checking collisions with varied fingerprints and statuses.
     Then: Return colliding UID only for SUCCESS runs by default.
     '''
     manifest_fp = tmp_path / 'runs_manifest.json'

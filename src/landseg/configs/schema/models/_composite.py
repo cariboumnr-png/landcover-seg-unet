@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Models configuration section'''
+'''Models configuration section.'''
 
 # standard imports
 import dataclasses
@@ -65,10 +65,17 @@ class ModelsConfig(base.BaseConfigSection):
         return {c: self.conditioner_registry[c] for c in self.conditioners}
 
     def set_base_channel(self, base_channel: int) -> None:
-        '''Set `base channel` to the current model body.'''
+        '''
+        Set base channel count on the active model body configuration.
+
+        Args:
+            base_channel:
+                Number of base feature channels for the model body.
+        '''
         self.model_body_registry[self.model_body].base_ch = base_channel
 
     def validate(self) -> None:
+        '''Validate model body, conditioners, and numeric safety.'''
         if not self.model_body in self.model_body_registry:
             raise ValueError(
                 f'Invalid model body: {self.model_body} ',

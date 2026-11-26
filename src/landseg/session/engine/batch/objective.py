@@ -25,6 +25,10 @@ Multi-head loss composition utilities.
 Provides helper functions for computing and aggregating losses across
 multiple model heads, including support for hierarchical supervision,
 per-head weighting, and auxiliary feature-aware losses.
+
+Public APIs:
+    - `TrainingObjectives`: Container holding head specs, losses, reg.
+    - `multihead_objective`: Compute weighted multi-head training loss.
 '''
 
 # standard imports
@@ -63,25 +67,30 @@ def multihead_objective(
     objectives: TrainingObjectives,
 ) -> _ObjectiveResults:
     '''
-    Compute weighted multi-head loss with optional hierarchical masking.
+    Compute weighted multi-head loss with optional masking.
 
     For each head:
-    - Align predictions and targets (convert targets to 0-based index)
-    - Optionally derive masks from parent targets for hierarchical heads
-    - Apply the configured composite loss (may use features)
-    - Weight and accumulate into a total loss
+        - Align predictions and targets (shift targets to 0-based).
+        - Optionally derive masks from parent targets and exclusions.
+        - Apply the configured composite loss (may use features).
+        - Weight and accumulate into a total loss.
 
     Args:
-        multihead_preds: Per-head prediction tensors (logits).
-        multihead_targets: Per-head target tensors in dataset encoding.
-        features: Shared feature tensor passed to feature-aware losses.
-        headspecs: Per-head specs (e.g., parent relation, weights).
-        headlosses: Per-head composite loss modules.
+        multihead_preds:
+            Per-head prediction tensors (logits).
+        multihead_targets:
+            Per-head target tensors in 1-based dataset encoding.
+        features:
+            Shared feature tensor passed to feature-aware losses.
+        objectives:
+            Training objectives container with per-head specs, loss
+            modules, and optional consistency regularizer.
 
     Returns:
-        tuple:
-        - total_loss: Weighted scalar loss across all heads.
-        - per_head: Dict of per-head loss values (detached floats).
+        _ObjectiveResults:
+            Container holding `total` scalar objective tensor,
+            `per_head_loss` float dictionary, and `regularization`
+            float dictionary.
 
     Raises:
         RuntimeError:
@@ -89,8 +98,8 @@ def multihead_objective(
 
     Notes:
         - Assumes all tensors are on the same device.
-        - Ignore index is preserved during base shift (e.g., 0 -> 1).
-        - Per-head losses are not weighted in the returned dictionary.
+        - Ignore index is preserved during base shift (e.g., 1 -> 0).
+        - Per-head losses store detached weighted float values.
     '''
     # prep outputs
     device = next(iter(multihead_preds.values())).device
@@ -205,9 +214,7 @@ def _shift_1_to_0(
     target_1: torch.Tensor,
     ignore_idx: int
 ) -> torch.Tensor:
-    '''
-    Convert labels from 1..K to 0..K-1 while preserving ignore_index.
-    '''
+    '''Convert labels from 1..K to 0..K-1 preserving `ignore_index`.'''
     t = target_1.clone()
     m = t != ignore_idx
     t[m] = t[m] - 1

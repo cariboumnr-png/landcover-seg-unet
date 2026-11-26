@@ -31,7 +31,7 @@ ingestion schema path and checksum it was materialized from, so training
 only needs the preparation directory.
 
 Public APIs:
-    - build_dataspec: Assembles runtime DataSpecs from artifacts.
+    - `build_dataspec`: Assemble runtime `DataSpecs` from artifacts.
 '''
 
 # standard imports
@@ -65,7 +65,7 @@ def build_dataspec(
 
     Args:
         preparation_paths:
-            canonical path manager for the prepared dataset.
+            Canonical path manager for the prepared dataset.
         mode:
             Execution mode governing dataset partition selection.
         ids_domain_name:
@@ -284,7 +284,7 @@ def __la_from_count(
     t: float = 1.0,
     e: float = 1e-6,
 ) -> list[float]:
-    '''Long-tailed recognition via logit adjustment (Menon et al 2021).'''
+    '''Long-tailed logit adjustment (Menon et al. 2021).'''
     if sum(ct) == 0:
         return [0] * len(ct)
     frequencies = [c / sum(ct) for c in ct]

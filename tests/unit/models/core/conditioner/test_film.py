@@ -19,10 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=protected-access
-
 '''Unit tests for FiLM domain conditioning adapter (film.py).'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest
@@ -152,6 +151,8 @@ def test_film_conditioner_forward_modulation():
     payload = domains.DomainTargetPayload(ids_embd=ids_embd, vec_proj=None)
 
     class _MockFilmSeq(torch.nn.Module):
+        '''Minimal FiLM sequence stub for forward testing.'''
+
         def forward(self, z):
             return torch.cat(
                 [

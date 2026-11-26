@@ -20,7 +20,16 @@
 # =========================================================================== #
 
 '''
-Dummy dataset generator for landseg integration testing and local execution.
+Dummy GeoTIFF generation helpers for integration tests and local runs.
+
+Provides a typed GeoTIFF configuration container and synthetic raster
+writers backed by `rasterio`.
+
+Public APIs:
+    - `TIFFConfig`: Configuration for dummy GeoTIFF generation.
+    - `create_dummy_geotiff`: Write a dummy GeoTIFF file from config.
+    - `gen_image_data`: Generate dummy image band or elevation data.
+    - `gen_label_data`: Generate dummy label data with ignore index.
 '''
 
 # standard imports
@@ -52,15 +61,17 @@ def create_dummy_geotiff(
     config: TIFFConfig,
     data_gen_func: typing.Callable[[tuple[int, int], int], numpy.ndarray],
 ) -> None:
-    '''Write a multi-band GeoTIFF with coordinate metadata.
+    '''
+    Write a multi-band GeoTIFF with coordinate metadata.
 
     Args:
         fpath:
             Output file path.
         config:
-            TIFFConfig with shape, bands, crs, transform, dtype, nodata.
+            `TIFFConfig` specifying shape, bands, CRS, transform, dtype,
+            and nodata value.
         data_gen_func:
-            Callback generating data per band.
+            Callback generating array data per band index.
     '''
     pathlib.Path(fpath).parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(
@@ -81,7 +92,19 @@ def create_dummy_geotiff(
 
 
 def gen_image_data(shape: tuple[int, int], band_idx: int) -> numpy.ndarray:
-    '''Generate dummy image band or terrain elevation data.'''
+    '''
+    Generate dummy image band or terrain elevation data.
+
+    Args:
+        shape:
+            Spatial `(height, width)` dimensions for the band array.
+        band_idx:
+            One-based raster band index.
+
+    Returns:
+        numpy.ndarray:
+            Synthetic 2D float32 ramp (band 1) or uint16 band array.
+    '''
     if band_idx == 1:
         x = numpy.linspace(100.0, 300.0, shape[1])
         return numpy.tile(x, (shape[0], 1)).astype(numpy.float32)
@@ -89,6 +112,18 @@ def gen_image_data(shape: tuple[int, int], band_idx: int) -> numpy.ndarray:
 
 
 def gen_label_data(shape: tuple[int, int], _: int) -> numpy.ndarray:
-    '''Generate dummy label data with ignore index.'''
+    '''
+    Generate dummy categorical label data with ignore index.
+
+    Args:
+        shape:
+            Spatial `(height, width)` dimensions for the label array.
+        _:
+            Unused band index matching callback signature.
+
+    Returns:
+        numpy.ndarray:
+            Synthetic 2D uint8 array containing class and ignore labels.
+    '''
     labels = numpy.random.choice([1, 2, 255], size=shape, p=[0.45, 0.45, 0.10])
     return labels.astype(numpy.uint8)

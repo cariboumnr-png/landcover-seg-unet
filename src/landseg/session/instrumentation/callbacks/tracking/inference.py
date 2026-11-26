@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Image callback'''
+'''Inference tracking callback for dashboard logging.'''
 
 # local imports
 import landseg.core as core
@@ -29,9 +29,16 @@ import landseg.visual as visual
 
 # ----- public classes
 class InferTrackingCallback(base.BaseCallback):
-    '''Image callback.'''
+    '''Callback logging inference images and metrics to trackers.'''
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
+        '''
+        Log colorized inference images and metrics to trackers.
+
+        Args:
+            results:
+                Summary of metrics and inference outputs for the step.
+        '''
         # early exit if inference was not run
         infer_results = results.raw_metrics.inference
         if not infer_results:
@@ -76,5 +83,6 @@ class InferTrackingCallback(base.BaseCallback):
             tracker.flush()
 
     def on_session_end(self) -> None:
+        '''Close all attached dashboard trackers.'''
         for tracker in self._trackers:
             tracker.close()

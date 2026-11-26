@@ -29,7 +29,7 @@ the archive in memory and write it to the target in one sequential
 pass, so the same call works on local, POSIX and Volume storage.
 
 Public APIs:
-    - `savez_compressed`: write arrays to a `.npz` file sequentially.
+    - `savez_compressed`: Write arrays to an `.npz` file sequentially.
 '''
 
 # standard imports

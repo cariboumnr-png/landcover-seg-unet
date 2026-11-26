@@ -22,12 +22,13 @@
 '''
 Diagnostic single-block `DataSpecs` builder for overfit testing.
 
-Selects or assembles a representative normalized `DataBlock` directly from
-the latest harmonized rasters and adapts it into a runtime `core.DataSpecs`
-contract without exposing `geopipe` or `knowledge` internals to workflows.
+Selects or assembles a representative normalized `DataBlock` directly
+from the latest harmonized rasters and adapts it into a runtime
+`core.DataSpecs` contract without exposing `geopipe` or `knowledge`
+internals to workflows.
 
 Public APIs:
-    - `build_overfit_dataspec`: Build single-block `DataSpecs` for overfit.
+    - `build_overfit_dataspec`: Build single-block overfit `DataSpecs`.
 '''
 
 # standard imports
@@ -59,7 +60,27 @@ def build_overfit_dataspec(
     logger: runtime.Logger | None = None,
 ) -> core.DataSpecs:
     '''
-    Load or construct one valid block and assemble `DataSpecs` for overfit.
+    Load or construct one valid block and assemble `DataSpecs`.
+
+    Args:
+        save_dpath:
+            Directory to search for or persist the diagnostic block.
+        harmonization_paths:
+            Path manager for upstream harmonization artifacts.
+        ingestion_paths:
+            Path manager for ingestion artifacts and window caches.
+        dem_pad_px:
+            Context padding in pixels around DEM windows.
+        active_heads:
+            Optional ordered sequence of active target head names.
+        knowledge_root:
+            Optional ecological knowledge root for similarity matrices.
+        logger:
+            Optional logger for diagnostic creation status messages.
+
+    Returns:
+        core.DataSpecs:
+            Runtime dataset specs for single-block overfit testing.
     '''
     block_fpath = _find_existing_block(save_dpath, logger)
     if block_fpath is None:
@@ -80,7 +101,7 @@ def _assemble_overfit_dataspec(
     block_fpath: pathlib.Path,
     knowledge_root: pathlib.Path | str | None,
 ) -> core.DataSpecs:
-    '''Load cached diagnostic block and build runtime `core.DataSpecs`.'''
+    '''Load cached diagnostic block and build `core.DataSpecs`.'''
     block = geo_core.DataBlock.load(block_fpath)
     manifest = block.manifest
     counts = manifest['label_count']
@@ -141,7 +162,7 @@ def _find_existing_block(
     save_dpath: pathlib.Path,
     logger: runtime.Logger | None,
 ) -> pathlib.Path | None:
-    '''Return an existing cached diagnostic block in `save_dpath` if found.'''
+    '''Return cached diagnostic block in `save_dpath` if present.'''
     if not save_dpath.exists():
         return None
     for entry in sorted(save_dpath.iterdir()):
@@ -161,7 +182,7 @@ def _create_diagnostic_block(
     active_heads: typing.Sequence[str] | None,
     logger: runtime.Logger | None,
 ) -> pathlib.Path:
-    '''Build one valid normalized block from the latest harmonization batch.'''
+    '''Build one normalized block from the latest harmonization run.'''
     pending = ingest.resolve_pending_ingestion_batches(
         harmonization_paths.runs_manifest,
         ingestion_paths.runs_manifest,
@@ -230,7 +251,7 @@ def _build_test_block(
     valid_px_per: float,
     need_all_classes: bool,
 ) -> pathlib.Path | None:
-    '''Build, normalize, and persist a single valid block for testing.'''
+    '''Build, normalize, and persist one valid block for testing.'''
     coords = list(mapped.image.keys())
     random.Random(42).shuffle(coords)
 

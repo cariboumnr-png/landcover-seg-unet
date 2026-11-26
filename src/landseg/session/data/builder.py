@@ -19,21 +19,24 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Utilities for constructing training/validation/test dataloaders.
 
 This module prepares:
-    - Block-based datasets backed by MultiBlockDataset,
-    - Mode-specific configurations for train/val/test/single-block use,
+    - Block-based datasets backed by `MultiBlockDataset`.
+    - Mode-specific configurations for train/val/test/single-block use.
     - Optional in-memory preload and caching decisions based on system
-      memory,
-    - A custom collate function supporting labeled and unlabeled splits,
+      memory.
+    - A custom collate function supporting labeled and unlabeled splits.
     - A small metadata bundle shipped with the dataloaders.
 
 The main entry point is `build_dataloaders`, returning a structured
-DataLoaders object containing train/val/test loaders and metadata.
+`DataLoaders` object containing train/val/test loaders and metadata.
+
+Public APIs:
+    - `DataLoaderConfig`: Protocol for dataloader batch and patch sizes.
+    - `DataLoaders`: Container for split dataloaders and metadata.
+    - `build_dataloaders`: Build dataloaders and metadata from specs.
 '''
 
 # standard imports
@@ -52,12 +55,14 @@ import landseg.session.logger as session_logger
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class DataLoaderConfig(typing.Protocol):
     '''Interface for data loader batch and patch size configuration.'''
     @property
     def batch_size(self) -> int: ...
     @property
     def patch_size(self) -> int: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -73,7 +78,7 @@ class DataLoaders:
 # ----- private dataclasses
 @dataclasses.dataclass
 class _DataLoadersMeta:
-    '''Metadata describing batch size, patch count, and preview context.'''
+    '''Metadata for batch size, patch count, and preview context.'''
     batch_size: int
     patch_size: int
     patch_count: _PatchCount
@@ -113,21 +118,26 @@ def build_dataloaders(
 
     Args:
         data_specs:
-            dataset specification describing data layout, splits,
+            Dataset specification describing data layout, splits,
             block structure, and global metadata.
         config:
-            data loading configuration (e.g., batch and patch size).
+            Data loading configuration (e.g., batch and patch size).
         logger:
-            optional logger used for reporting build progress.
+            Optional logger used for reporting build progress.
 
     Returns:
         DataLoaders:
-            container with train/val/test dataloaders and metadata.
+            Container with train/val/test dataloaders and metadata.
+
+    Raises:
+        ValueError:
+            If `data_specs.mode` is unsupported or block dimensions are
+            not divisible by `config.patch_size`.
 
     Notes:
         - Loader reuse may occur (e.g., single-block datasets).
-        - Memory-aware strategies (e.g. caching/preloading) are inferred
-          at runtime.
+        - Memory-aware strategies (e.g., caching/preloading) are
+          inferred at runtime.
         - Returned loaders are aligned with dataset structure and
           orchestration requirements.
     '''
@@ -229,7 +239,7 @@ def _get_loaders_meta(
     data_specs: core.DataSpecs,
     config: DataLoaderConfig
 ) -> _DataLoadersMeta:
-    '''Parse `_DatalodersMeta`.'''
+    '''Build `_DataLoadersMeta` from data specs and config.'''
     h_w = data_specs.meta.image_specs.height_width
     if h_w % config.patch_size != 0:
         raise ValueError(

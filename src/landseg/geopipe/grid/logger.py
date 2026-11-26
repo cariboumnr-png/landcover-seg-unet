@@ -26,7 +26,7 @@ This module provides a specialized `Logger` subclass that tracks world
 grid construction and persists a structured JSON run report at shutdown.
 
 Public APIs:
-    - `GridLogger`: Logger tracking world grid execution and report JSON.
+    - `GridLogger`: Logger tracking grid execution and report JSON.
 '''
 
 # standard imports
@@ -43,13 +43,18 @@ import landseg.runtime as runtime
 
 # ----- public classes
 class GridLogger(runtime.Logger):
-    '''
-    A specialized `Logger` wrapper that tracks world grid generation
-    and persists a structured JSON report at shutdown.
-    '''
+    '''Logger tracking world grid generation and JSON report output.'''
 
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
-        '''Initialize the GridLogger instance.'''
+        '''
+        Initialize the `GridLogger` instance.
+
+        Args:
+            *args:
+                Positional arguments forwarded to `runtime.Logger`.
+            **kwargs:
+                Keyword arguments forwarded to `runtime.Logger`.
+        '''
         super().__init__(*args, **kwargs)
         self.summary: contracts.GridReportSchema | None = None
 
@@ -59,7 +64,15 @@ class GridLogger(runtime.Logger):
         run_id: str = '',
         timestamp: str | None = None
     ) -> None:
-        '''Initialize the structured run report summary.'''
+        '''
+        Initialize the structured run report summary.
+
+        Args:
+            run_id:
+                Optional identifier for the pipeline run.
+            timestamp:
+                Optional ISO-8601 timestamp override.
+        '''
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
             'run_id': run_id,
@@ -81,7 +94,15 @@ class GridLogger(runtime.Logger):
         world_grid: geo_core.GridLayout,
         grid_filepath: pathlib.Path,
     ) -> None:
-        '''Record world grid summary report and tile count.'''
+        '''
+        Record world grid summary report and tile count.
+
+        Args:
+            world_grid:
+                Constructed or loaded `GridLayout` instance.
+            grid_filepath:
+                Path to the persisted world grid artifact.
+        '''
         grid_report: contracts.WorldGridReport = {
             'grid_fpath': self.abs_path(grid_filepath),
             'grid_id': world_grid.gid,
@@ -95,7 +116,13 @@ class GridLogger(runtime.Logger):
             self.summary['total_tiles'] = len(world_grid)
 
     def set_status(self, status: typing.Literal['SUCCESS', 'FAILED']) -> None:
-        '''Update the execution status of the pipeline run.'''
+        '''
+        Update the execution status of the pipeline run.
+
+        Args:
+            status:
+                Run completion status (`'SUCCESS'` or `'FAILED'`).
+        '''
         if self.summary is not None:
             self.summary['status'] = status
 

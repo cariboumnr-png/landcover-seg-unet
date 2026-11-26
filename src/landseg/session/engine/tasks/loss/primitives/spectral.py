@@ -89,14 +89,19 @@ class SpectralSmoothnessLoss(base.PrimitiveLoss):
         Args:
             alpha:
                 Controls the sharpness of the feature-similarity weight.
-                Lower alpha = stronger/higher penalty for predicting
+                Lower `alpha` produces a stronger penalty for predicting
                 different classes over similar pixels.
             neighbour:
                 Neighborhood connectivity, either 4 or 8.
             spectral_bands:
-                0-based indices mapping logits channels as spectral
+                Optional 0-based channel indices selecting spectral
+                bands from input features.
             ignore_index:
                 Label to exclude entirely from the loss.
+
+        Raises:
+            ValueError:
+                If `neighbour` is not `4` or `8`.
         '''
         super().__init__()
 
@@ -127,17 +132,23 @@ class SpectralSmoothnessLoss(base.PrimitiveLoss):
 
         Args:
             logits:
-                Tensor of shape (B, C, H, W), raw class logits.
+                Tensor of shape `(B, C, H, W)` with raw class logits.
             targets:
-                Tensor of shape (B, H, W), integer class labels.
+                Tensor of shape `(B, H, W)` with integer class labels.
             masks:
                 Optional mapping from scalar weights to boolean masks.
             features:
-                Tensor of shape (B, D, H, W), used to derive pairwise
+                Tensor of shape `(B, D, H, W)` used to derive pairwise
                 feature similarity weights.
 
         Returns:
-            A scalar loss tensor.
+            torch.Tensor:
+                Scalar loss tensor.
+
+        Raises:
+            ValueError:
+                If `features` is `None` or input tensor shapes are
+                incompatible.
         '''
         # validate input tensors where features are needed
         if features is None:

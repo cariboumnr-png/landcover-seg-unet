@@ -49,7 +49,8 @@ def test_builder_add_feature_and_compile(tmp_path: pathlib.Path) -> None:
     '''
     Given: A multi-band feature raster configuration.
     When: `add_feature()` and `compile()` are invoked.
-    Then: Compile canonical `ManifestEntry` with contiguous 1-based bands.
+    Then: Compile canonical `ManifestEntry` with contiguous 1-based
+        bands.
     '''
     tif_fp = tmp_path / 's2.tif'
     tif_fp.write_bytes(b'dummy')
@@ -81,7 +82,8 @@ def test_builder_add_domain_and_compile(tmp_path: pathlib.Path) -> None:
     '''
     Given: A discrete domain raster configuration.
     When: `add_domain()` and `compile()` are invoked.
-    Then: Compile canonical domain `ManifestEntry` with categorical specs.
+    Then: Compile canonical domain `ManifestEntry` with categorical
+        specs.
     '''
     tif_fp = tmp_path / 'geology.tif'
     tif_fp.write_bytes(b'dummy')
@@ -112,7 +114,8 @@ def test_builder_add_label_and_compile(tmp_path: pathlib.Path) -> None:
     '''
     Given: A categorical label raster configuration with reclass scheme.
     When: `add_label()` and `compile()` are invoked.
-    Then: Compile canonical label `ManifestEntry` with class names and scheme.
+    Then: Compile canonical label `ManifestEntry` with class names and
+        scheme.
     '''
     tif_fp = tmp_path / 'landcover.tif'
     tif_fp.write_bytes(b'dummy')
@@ -169,7 +172,8 @@ def test_builder_materialize_and_from_file_json(
 ) -> None:
     '''
     Given: Configured raster layers in builder.
-    When: `materialize()` is called and reloaded via `from_file()` with JSON.
+    When: `materialize()` is called and reloaded via `from_file()`
+        with JSON.
     Then: Successfully reload and compile matching manifest entries.
     '''
     tif_fp = tmp_path / 'feat.tif'
@@ -194,9 +198,11 @@ def test_builder_from_file_yaml_and_dict_spec(
     tmp_path: pathlib.Path,
 ) -> None:
     '''
-    Given: A single-document YAML manifest with relative path and 'rasters' key.
+    Given: A single-document YAML manifest with relative path and
+        `'rasters'` key.
     When: `DatasetManifestBuilder.from_file()` is called on YAML.
-    Then: Successfully parse, resolve relative paths, and compile entries.
+    Then: Successfully parse, resolve relative paths, and compile
+        entries.
     '''
     tif_fp = tmp_path / 'sample.tif'
     tif_fp.write_bytes(b'dummy')

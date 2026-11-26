@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Epoch runner construction utilities.
 
@@ -28,8 +26,9 @@ Constructs training and evaluation policies over an execution runtime
 and binds them into an `EpochRunner`.
 
 Public APIs:
-    - `ScheduleConfigShape`: protocol for schedule frequencies.
-    - `build_epoch_runner`: construct configured epoch runner.
+    - `EpochRunnerContext`: External context for building epoch runner.
+    - `ScheduleConfigShape`: Protocol for schedule frequencies.
+    - `build_epoch_runner`: Construct configured epoch runner.
 '''
 
 # standard imports
@@ -43,6 +42,7 @@ import landseg.session.engine.protocols as protocols
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class ScheduleConfigShape(typing.Protocol):
     '''Configuration interface for epoch execution frequencies.'''
     @property
@@ -51,6 +51,7 @@ class ScheduleConfigShape(typing.Protocol):
     def val_every_n_epoch(self) -> int: ...
     @property
     def infer_every_n_epoch(self) -> int: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -79,26 +80,22 @@ def build_epoch_runner(
     `EpochRunner` configured for the specified mode.
 
     Args:
-        engine_runtime:
-            Runtime container holding batch executor, optimizer, and
-            tasks.
-        dataloaders:
-            Dataset loaders providing training and evaluation batches.
-        dispatcher:
-            Event dispatcher for session lifecycle callbacks.
-        mode:
-            Execution mode ('train_eval', 'train_only', 'eval_only').
+        context:
+            Runtime context holding execution core, dataloaders, and
+            event dispatcher.
         schedule:
-            Optional schedule configuration specifying execution
-            frequencies.
-        device:
-            Target execution device. If omitted, defaults to the
-            device configured on the underlying batch engine.
+            Schedule configuration specifying execution frequencies.
+        mode:
+            Execution mode (`'train_eval'`, `'train_only'`, or
+            `'eval_only'`).
         eval_dataset:
-            Dataset split used for inference ('val' or 'test').
+            Dataset split used for evaluation (`'val'` or `'test'`).
+        device:
+            Target execution device. Defaults to the device configured
+            on the underlying batch engine when `None`.
 
     Returns:
-        runner_mod.EpochRunner:
+        runner.EpochRunner:
             Configured epoch runner ready for epoch-wise execution.
     '''
     target_device = (

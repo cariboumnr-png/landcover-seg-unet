@@ -30,7 +30,7 @@ import sys
 def test_importing_adapters_api_does_not_load_cli_or_hydra():
     '''
     Given: A fresh Python interpreter.
-    When: Importing `landseg.adapters.api` directly or via `adapters.api`.
+    When: Importing `landseg.adapters.api` directly or via `adapters`.
     Then: Neither `landseg.adapters.cli` nor `hydra` is imported.
     '''
     probe = (

@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Optimizer and scheduler construction utilities.
 
@@ -29,6 +27,10 @@ building optimizer and scheduler pairs from user-provided settings.
 
 This module translates lightweight configuration into fully initialized
 runtime optimization components used by the training engine.
+
+Public APIs:
+    - `OptimConfigShape`: Protocol for optimizer and scheduler config.
+    - `build_optimization`: Build `Optimization` from model and config.
 '''
 
 # standard imports
@@ -41,6 +43,7 @@ import landseg.session.engine.optim.optimization as optimization
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class OptimConfigShape(typing.Protocol):
     '''Configuration interface for building optimizer and scheduler.'''
     @property
@@ -55,6 +58,7 @@ class OptimConfigShape(typing.Protocol):
     def sched_args(self) -> dict[str, typing.Any]: ...
     @property
     def grad_clip_norm(self) -> float | None: ...
+# pylint: enable=missing-function-docstring
 
 # a callable that constructs an Optimizer (e.g., torch.optim.AdamW)
 P = typing.ParamSpec('P')
@@ -84,16 +88,18 @@ def build_optimization(
 
     Constructs a PyTorch optimizer and an optional learning rate
     scheduler based on the provided configuration, returning a unified
-    ``Optimization`` wrapper for runtime use.
+    `Optimization` wrapper for runtime use.
 
     Args:
-        model: Model exposing parameters to optimize.
-        config: Optimization configuration specifying optimizer type,
+        model:
+            Model exposing parameters to optimize.
+        config:
+            Optimization configuration specifying optimizer type,
             learning rate, weight decay, scheduler settings, and
             gradient clipping.
 
     Returns:
-        Optimization:
+        optimization.Optimization:
             Wrapper containing the optimizer and optional scheduler.
 
     Raises:

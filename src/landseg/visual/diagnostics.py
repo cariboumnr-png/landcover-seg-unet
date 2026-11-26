@@ -26,7 +26,7 @@ Provides publication-quality confusion matrix heatmaps and per-class
 metric bar charts for deep learning evaluation auditing.
 
 Public APIs:
-    - `plot_confusion_matrix`: Render annotated confusion matrix heatmap.
+    - `plot_confusion_matrix`: Render normalized confusion matrix.
     - `plot_per_class_metrics`: Render per-class performance bar chart.
 '''
 
@@ -188,7 +188,8 @@ def plot_per_class_metrics(
 
     Args:
         metrics:
-            Dictionary mapping class name/index to score, or array/tensor.
+            Dictionary mapping class name or index to score, or an
+            array/tensor of per-class values.
         metric_name:
             Display name of the metric (e.g. 'IoU', 'F1').
         class_names:
@@ -205,6 +206,11 @@ def plot_per_class_metrics(
     Returns:
         matplotlib.figure.Figure:
             Instantiated figure instance.
+
+    Raises:
+        TypeError:
+            If `metrics` is not a dictionary, NumPy array, or PyTorch
+            tensor.
     '''
     if isinstance(metrics, (torch.Tensor, numpy.ndarray)):
         arr = (

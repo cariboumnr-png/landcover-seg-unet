@@ -22,8 +22,13 @@
 '''
 Top-level namespace for `landseg.session.engine.epoch.policy`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `EngineRuntime`: Container holding engine, optimizer, and tasks.
+    - `MultiHeadEvaluator`: Validation and inference policy controller.
+    - `MultiHeadTrainer`: Epoch-level multi-head training policy.
 '''
 
 # standard imports

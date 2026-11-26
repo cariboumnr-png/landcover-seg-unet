@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Schema builders for prepared dataset artifacts.
 
@@ -28,7 +26,7 @@ Emits a dataset-wide JSON schema from materialized blocks, split
 partitions, image statistics, and label statistics.
 
 Public APIs:
-    - build_schema: generate and persist dataset preparation schema.
+    - `build_schema`: Generate and persist dataset preparation schema.
 '''
 
 # standard imports
@@ -46,7 +44,9 @@ import landseg.geopipe.prepare.dataset as prepare_dataset
 
 
 # ----- private types
+# pylint: disable=missing-function-docstring
 class _PipelinePaths(typing.Protocol):
+    '''Typed paths container for preparation schema generation.'''
     @property
     def root(self) -> pathlib.Path: ...
     @property
@@ -59,6 +59,7 @@ class _PipelinePaths(typing.Protocol):
     def label_stats(self) -> pathlib.Path: ...
     @property
     def image_stats(self) -> pathlib.Path: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public functions
@@ -80,15 +81,20 @@ def build_schema(
 
     Args:
         paths:
-            preparation paths container.
+            Preparation paths container.
         context:
-            dataset preparation view with target heads topology.
+            Dataset preparation view with target heads topology.
         ingestion_schema_fpath:
-            resolved ingestion schema artifact path.
+            Resolved ingestion schema artifact path.
         policy:
-            lifecycle policy guiding rebuild behavior.
+            Lifecycle policy guiding rebuild behavior.
         logger:
-            logger for progress and diagnostic output.
+            Logger for progress and diagnostic output.
+
+    Raises:
+        artifacts.ArtifactError:
+            If an existing prepared schema has an incompatible version
+            and `policy` is not `REBUILD`.
     '''
     start_time = time.perf_counter()
 

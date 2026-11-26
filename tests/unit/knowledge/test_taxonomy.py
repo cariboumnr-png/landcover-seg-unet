@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for taxonomy resolver and gatekeeper validation.'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import pathlib

@@ -39,6 +39,7 @@ class StudySweepConfig(base.BaseConfigSection):
     seed: int = 42
 
     def validate(self) -> None:
+        '''Validate sweep identity, direction, preset, and bounds.'''
         self.val.require_string(self.study_name)
         self.val.require_string(self.storage)
         self.val.require_value_from(self.preset_name, c.SWEEP_PRESETS, str)

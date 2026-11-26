@@ -19,11 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-branches
+'''Pipeline and workflow command execution dispatcher.'''
 
-'''
-Pipeline execution
-'''
+# pylint: disable=too-many-branches
 
 # standard imports
 import typing
@@ -37,7 +35,22 @@ import landseg.execution.workflows as workflows
 
 # ----- public functions
 def execute_command(root_config: configs.RootConfig) -> typing.Any:
-    '''Run the selected CLI command with resolved configuration.'''
+    '''
+    Run the selected CLI command with resolved configuration.
+
+    Args:
+        root_config:
+            Resolved root execution configuration.
+
+    Returns:
+        typing.Any:
+            Command output when applicable (e.g., pre-flight results or
+            study sweep summary), or None otherwise.
+
+    Raises:
+        KeyError:
+            If `root_config.command` is not a recognized command.
+    '''
     command = root_config.command
     results = None
 

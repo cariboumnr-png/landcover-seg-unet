@@ -29,7 +29,8 @@ never aborts the whole inspection.
 
 Public APIs:
     - `assert_target_ready`: Fail-fast gate for target execution.
-    - `inspect_target`: Execute a target suite, returning a PreflightResult.
+    - `inspect_target`: Run a target probe suite into `PreflightResult`.
+    - `run_preflight`: Dispatch pre-flight checks and emit reports.
 '''
 
 # standard imports
@@ -50,7 +51,21 @@ def assert_target_ready(
     *,
     artifact_paths: artifacts.ArtifactPaths | None = None,
 ) -> None:
-    '''Assert execution readiness for a target.'''
+    '''
+    Assert execution readiness for a target.
+
+    Args:
+        target:
+            Execution target identifier to validate.
+        config:
+            Resolved root execution configuration.
+        artifact_paths:
+            Optional pre-resolved artifact paths container.
+
+    Raises:
+        RuntimeError:
+            If any pre-flight probe fails for `target`.
+    '''
     ctx = context.InspectionContext.from_config(
         config,
         artifact_paths=artifact_paths,
@@ -78,13 +93,13 @@ def inspect_target(
 
     Args:
         target:
-            execution target identifier (e.g. `'data-ingest'`).
+            Execution target identifier (e.g., `'data-ingest'`).
         ctx:
-            pre-resolved inspection context (config + artifact paths).
+            Pre-resolved inspection context (config and artifact paths).
 
     Returns:
         schema.PreflightResult:
-            aggregated readiness evaluation and probe results.
+            Aggregated readiness evaluation and probe results.
     '''
     specs = catalog.suite_for(target)
     if not specs:
@@ -113,16 +128,22 @@ def run_preflight(
 
     Args:
         root_config:
-            hydra-composed root configuration.
+            Hydra-composed root configuration.
         target:
-            pipeline name, workflow name, or 'all'. If None, defaults
-            to `root_config.execution.preflight_target` or 'all'.
+            Pipeline name, workflow name, or `'all'`. If None, defaults
+            to `root_config.execution.preflight_target` or `'all'`.
         exp_root:
-            optional experiment root directory override.
+            Optional experiment root directory override.
 
     Returns:
         schema.PreflightResult | list[schema.PreflightResult]:
-            single result or list of results across all targets.
+            Single result or list of results across all targets.
+
+    Raises:
+        KeyError:
+            If the selected target is not supported for pre-flight.
+        RuntimeError:
+            If strict mode is enabled and any target is not ready.
     '''
     cxt = context.InspectionContext.from_config(root_config)
     selected_target = (
@@ -200,7 +221,7 @@ def _run_spec(
 
 
 def _blocked_unsupported(target: str) -> schema.PreflightResult:
-    '''Build a BLOCKED result for a target lacking a registered suite.'''
+    '''Build a BLOCKED result for an unsupported execution target.'''
     probe = schema.ProbeResult(
         pid='target_support',
         category=schema.ProbeCategory.EXECUTION,

@@ -184,7 +184,7 @@ def test_all_tracked_recipes_resolve_and_validate(cmd: str):
     '''
     Given: Each tracked command in sectional and end-to-end recipes.
     When: Calling `resolve_configs` for the command.
-    Then: The configuration resolves cleanly and validates without error.
+    Then: Configuration resolves cleanly and validates without error.
     '''
     ckpt_dir = pathlib.Path('./experiment/results/checkpoints')
     ckpt_file = ckpt_dir / 'best_model.pth'
@@ -208,8 +208,8 @@ def test_hydra_composed_commands_resolve_without_exp_root(cmd: str):
     '''
     Given: The packaged Hydra config tree and a command override.
     When: Resolving the fully composed configuration.
-    Then: Every command resolves with `execution.exp_root` unset, proving
-        stage paths are explicit and no interpolation requires a root.
+    Then: Every command resolves without `execution.exp_root`, proving
+        stage paths are explicit and require no root interpolation.
     '''
     hydra.core.global_hydra.GlobalHydra.instance().clear()
     with hydra.initialize(

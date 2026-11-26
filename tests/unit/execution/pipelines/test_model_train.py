@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for model training execution pipeline.'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import typing
@@ -233,9 +233,11 @@ def test_train_build_context(tmp_path, mocker):
 
 def test_train_generate_post_run_visuals(tmp_path, mocker):
     '''
-    Given: ModelTraining pipeline with finished run, step_results, and test split.
+    Given: `ModelTraining` pipeline with finished run, `step_results`,
+        and test split.
     When: Calling `_generate_post_run_visuals`.
-    Then: Delegate curves, session preview inference, and pure preview rendering.
+    Then: Delegate curve plotting, preview inference, and preview
+        rendering.
     '''
     exp_root = tmp_path / 'exp'
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -300,7 +302,7 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
 
 def test_train_generate_post_run_visuals_skips_when_infer_none(tmp_path, mocker):
     '''
-    Given: ModelTraining pipeline where `session.run_preview_inference` returns None.
+    Given: `ModelTraining` where preview inference returns `None`.
     When: Calling `_generate_post_run_visuals`.
     Then: Skip calling `visual.generate_prediction_previews`.
     '''

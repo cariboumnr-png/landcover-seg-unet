@@ -22,8 +22,16 @@
 '''
 Top-level namespace for `landseg.testing`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Provides synthetic GeoTIFF and geospatial dataset generators for
+integration tests and local development via lazy resolution.
+
+Public APIs:
+    - `PreHarmonizationDummyPaths`: Pre-harmonization dummy paths.
+    - `PreMosaickingDummyPaths`: Pre-mosaicking dummy paths.
+    - `TIFFConfig`: Configuration for dummy GeoTIFF generation.
+    - `create_dummy_geotiff`: Write a dummy GeoTIFF file from config.
+    - `generate_pre_harmonization_data`: Build pre-harmonization data.
+    - `generate_pre_mosaic_data`: Generate cross-UTM dummy mosaic data.
 '''
 
 # standard imports

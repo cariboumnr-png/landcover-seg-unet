@@ -54,9 +54,9 @@ def test_build_headlosses(mock_hspecs, session_config):
 
 def test_build_headlosses_with_per_head_taxonomy(mock_hspecs, session_config):
     '''
-    Given: `HeadSpecs` where head_1 has similarity_matrix and head_2 has None.
+    Given: `HeadSpecs` with similarity matrix only on `head_1`.
     When: `build_headlosses` is called with ecological weight > 0.
-    Then: `EcologicalSimilarityLoss` is attached only to head_1.
+    Then: `EcologicalSimilarityLoss` is attached only to `head_1`.
     '''
     mock_hspecs['head_1'].similarity_matrix = torch.eye(2)
     mock_hspecs['head_2'].similarity_matrix = None
@@ -91,9 +91,9 @@ def test_build_headlosses_with_explicit_matrix_override(
     mock_hspecs, session_config
 ):
     '''
-    Given: `HeadSpecs` with no similarity matrices and explicit matrix override.
-    When: `build_headlosses` is called with ecological_similarity_matrix.
-    Then: All heads receive `EcologicalSimilarityLoss` with the override matrix.
+    Given: `HeadSpecs` with no similarity matrices and override matrix.
+    When: `build_headlosses` is called with an explicit matrix override.
+    Then: All heads attach `EcologicalSimilarityLoss` with override.
     '''
     mock_hspecs['head_1'].similarity_matrix = None
     mock_hspecs['head_2'].similarity_matrix = None

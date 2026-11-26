@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for block materialization and normalization utilities.'''
+# pylint: disable=protected-access
 
 # third-party imports
 import numpy

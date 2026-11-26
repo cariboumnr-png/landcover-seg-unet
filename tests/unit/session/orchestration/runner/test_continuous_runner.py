@@ -103,7 +103,7 @@ def test_continuous_runner_execute(
     '''
     Given: ContinuousRunner configured for single phase execution.
     When: Calling `execute()`.
-    Then: Persist step results JSON and return final scalar target metric.
+    Then: Persist step results JSON and return final target metric.
     '''
     mocker.patch('landseg.artifacts.save_checkpoint', autospec=True)
     mocker.patch('landseg.artifacts.Controller.persist', autospec=True)

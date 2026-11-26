@@ -45,6 +45,13 @@ class DatasetManifestError(Exception):
     '''Base class for errors when compiling dataset manifest.'''
 
     def __init__(self, *args: object) -> None:
+        '''
+        Initialize `DatasetManifestError` with optional message args.
+
+        Args:
+            *args:
+                Positional arguments forwarded to `Exception`.
+        '''
         super().__init__(*args)
 
 
@@ -62,12 +69,11 @@ class DatasetManifestBuilder:
         entries: list[dict[str, typing.Any]] | None = None
     ) -> None:
         '''
-        Initialize manifest builder with an optional base directory.
+        Initialize manifest builder with optional raw raster entries.
 
         Args:
-            base_dir:
-                Root directory used to resolve relative raster paths.
-                Defaults to current working directory.
+            entries:
+                Optional list of raw raster entry dictionaries.
         '''
         self._entries: list[dict[str, typing.Any]] = entries or []
         self._compiled: list[schema.ManifestEntry] = []
@@ -82,9 +88,9 @@ class DatasetManifestBuilder:
         '''
         Construct builder from a manifest file (JSON or YAML).
 
-        Supports either a top-level list of raster entries or a top-level
-        mapping containing a "rasters" list. Resolves relative raster paths
-        against the manifest file location.
+        Supports either a top-level list of raster entries or a
+        top-level mapping containing a `'rasters'` list. Resolves
+        relative raster paths against the manifest file location.
 
         Args:
             fpath:
@@ -92,11 +98,11 @@ class DatasetManifestBuilder:
 
         Returns:
             typing.Self:
-                Populated DatasetManifestBuilder instance.
+                Populated `DatasetManifestBuilder` instance.
 
         Raises:
             DatasetManifestError:
-                If manifest parsing or schema structure validation fails.
+                If manifest parsing or schema validation fails.
         '''
         try:
             _fpath = val.require_file(fpath)
@@ -145,7 +151,8 @@ class DatasetManifestBuilder:
             path:
                 Path to the GeoTIFF raster file.
             bands:
-                Ordered sequence of band names mapped to 1-based indices.
+                Ordered sequence of band names mapped to 1-based
+                indices.
             schemes:
                 Optional dictionary of named band subsets.
 
@@ -188,7 +195,8 @@ class DatasetManifestBuilder:
             index_base:
                 Base class index (typically 0 or 1, defaults to 1).
             ignore_cls:
-                Sequence of class values to mask out (defaults to [255]).
+                Sequence of class values to mask out (defaults to
+                `[255]`).
 
         Returns:
             typing.Self:
@@ -237,18 +245,16 @@ class DatasetManifestBuilder:
             index_base:
                 Base class index (typically 0 or 1, defaults to 1).
             ignore_cls:
-                Sequence of class values to mask out (defaults to [255]).
+                Sequence of class values to mask out (defaults to `[]`).
             classes:
-                Optional mapping of class indices to human-readable names.
+                Optional mapping of class indices to readable names.
             color_map:
                 Optional mapping of class indices to RGB 3-tuples.
             taxonomy_profile:
                 Optional named taxonomy profile lookup key.
             schemes:
-                Optional reclassification schemes (canonical or shorthand).
-            auto_verify_raster:
-                If True, verifies that the physical raster exists on disk
-                and that it is a single-band raster.
+                Optional reclassification schemes (canonical or
+                shorthand).
 
         Returns:
             typing.Self:
@@ -275,7 +281,7 @@ class DatasetManifestBuilder:
 
     def compile(self) -> tuple[schema.ManifestEntry, ...]:
         '''
-        Validate all configured raster entries against normalizer schemas.
+        Validate all configured raster entries against schemas.
 
         Returns:
             tuple[schema.ManifestEntry, ...]:
@@ -320,13 +326,15 @@ class DatasetManifestBuilder:
         name: str = 'dataset_manifest',
     ) -> None:
         '''
-        Materialize manifest into single-document JSON and readable YAML.
+        Materialize manifest into single-document JSON and YAML files.
 
         Args:
             save_dir:
-                Directory where JSON and YAML manifest files will be written.
+                Directory where JSON and YAML manifest files are
+                written.
             name:
-                Base filename without suffix (defaults to 'dataset_manifest').
+                Base filename without suffix (defaults to
+                `'dataset_manifest'`).
         '''
         compiled = self._compiled or self.compile()
         target_dir = pathlib.Path(save_dir).resolve()

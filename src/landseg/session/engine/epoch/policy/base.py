@@ -19,17 +19,20 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
-
 '''
 Shared engine policy base class.
 
-This module defines an abstract policy layer shared by concrete session
+This module defines a base policy layer shared by concrete session
 engines (e.g., trainer and evaluator). It provides common orchestration,
 state interpretation, and callback wiring while delegating batch-level
 execution mechanics to a shared execution core.
+
+Public APIs:
+    - `EngineBase`: Base class for epoch-level execution policies.
+    - `EngineRuntime`: Container holding engine, optimizer, and tasks.
 '''
+
+# pylint: disable=too-few-public-methods
 
 # standard imports
 import copy
@@ -120,37 +123,37 @@ class EngineBase:
     # ----- access attributes as properties
     @property
     def engine(self):
-        '''Return the engine'''
+        '''Return the underlying batch execution engine.'''
         return self.runtime.engine
 
     @property
     def model(self):
-        '''Return the model'''
+        '''Return the multi-head segmentation model.'''
         return self.runtime.engine.model
 
     @property
     def state(self):
-        '''Return the engine state.'''
+        '''Return the shared engine runtime state.'''
         return self.runtime.engine.state
 
     @property
     def headspecs(self):
-        '''Access head specifications.'''
+        '''Return per-head specification objects.'''
         return self.runtime.engine_tasks.headspecs
 
     @property
     def headlosses(self):
-        '''Access head-specific loss modules.'''
+        '''Return per-head composite loss modules.'''
         return self.runtime.engine_tasks.headlosses
 
     @property
     def headmetrics(self):
-        '''Access head-specific metric modules.'''
+        '''Return per-head metric calculation modules.'''
         return self.runtime.engine_tasks.headmetrics
 
     @property
     def optimization(self):
-        '''Optim'''
+        '''Return the optimization wrapper.'''
         return self.runtime.engine_optim
 
     # ----- head configuration helpers
@@ -160,28 +163,24 @@ class EngineBase:
         frozen_heads: list[str] | None = None,
     ) -> None:
         '''
-        Configure active and frozen heads and apply class exclusions.
+        Configure active and frozen heads in model and runtime state.
 
-        This method updates both the model and runtime state to reflect
-        the current head configuration. Per-head specifications, loss
-        modules, and metrics are deep-copied into runtime state to
-        ensure isolation across phases.
-
-        Side effects:
-            - Updates model active and frozen heads.
-            - Installs active head specs, losses, and metrics into
-              RuntimeState.
-            - Applies per-head class exclusions where specified.
+        Updates both the model and runtime state to reflect the current
+        head configuration. Per-head specifications, loss modules, and
+        metrics are deep-copied into runtime state to ensure isolation
+        across phases.
 
         Args:
             active_heads:
                 Heads to activate. Defaults to all available heads when
-                set to None.
+                set to `None`.
             frozen_heads:
                 Heads to freeze at the model level.
-            excluded_cls:
-                Mapping of head name to class indices to exclude from
-                loss computation and validation metrics.
+
+        Notes:
+            - Updates model active and frozen heads.
+            - Installs active head specs, losses, metrics, and optional
+              multi-task modules into runtime state.
         '''
         # if no active heads provided, make all heads active
         if active_heads is None:

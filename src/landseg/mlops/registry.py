@@ -23,11 +23,12 @@
 MLflow and Databricks Unity Catalog Model Registry integration.
 
 Provides standardized registration of trained segmentation models to
-enterprise Unity Catalog (`models:/<catalog>.<schema>.<model_name>`) with
-governance metadata (manifest hashes, cluster ID, and git commit SHA).
+enterprise Unity Catalog (`models:/<catalog>.<schema>.<model_name>`)
+with governance metadata (manifest hashes, cluster ID, and git commit
+SHA).
 
 Public APIs:
-    - `register_unity_catalog_model`: Register checkpoint to Unity Catalog.
+    - `register_unity_catalog_model`: Register model to Unity Catalog.
 '''
 
 # standard imports
@@ -57,8 +58,8 @@ def register_unity_catalog_model(
     Register trained model checkpoint into Unity Catalog Model Registry.
 
     When running inside Databricks, sets registry URI to `databricks-uc`
-    and registers the model under `models:/<catalog>.<schema>.<model_name>`
-    alongside governance tags (manifest hash, cluster ID, git commit SHA).
+    and registers under `models:/<catalog>.<schema>.<model_name>` with
+    governance tags (manifest hash, cluster ID, and git commit SHA).
     When executed outside Databricks or in headless CI, safely logs an
     inspection summary and returns metadata without raising exceptions.
 
@@ -82,8 +83,8 @@ def register_unity_catalog_model(
 
     Returns:
         typing.Any:
-            `mlflow.entities.model_registry.ModelVersion` instance if registered
-            in Databricks, or a summary metadata dictionary if executed locally.
+            `mlflow.entities.model_registry.ModelVersion` in Databricks,
+            or a summary metadata dictionary if executed locally.
     '''
     target = session_dpath if session_dpath is not None else exp_root
     resolved_root = storage_mod.resolve_exp_root(target, dbutils=dbutils)
@@ -174,7 +175,7 @@ def _resolve_checkpoint(
     exp_root: pathlib.Path,
     explicit_path: str | pathlib.Path | None,
 ) -> pathlib.Path | None:
-    '''Locate model checkpoint binary in explicit path or experiment folders.'''
+    '''Locate model checkpoint binary from path or experiment dirs.'''
     if explicit_path is not None:
         p = pathlib.Path(explicit_path)
         if p.is_file():

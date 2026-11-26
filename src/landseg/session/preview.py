@@ -53,7 +53,7 @@ def select_representative_block(
     label_key: str = 'label',
 ) -> tuple[str, pathlib.Path]:
     '''
-    Deterministically select a representative block with class diversity.
+    Select a representative test block with non-trivial class diversity.
 
     Evaluates candidate blocks to find one containing a non-trivial
     mixture of classes, avoiding blank or homogeneous background blocks.
@@ -186,7 +186,7 @@ def run_preview_inference(
 
 # ----- private helpers
 def _score_block_diversity(path: pathlib.Path, label_key: str) -> int | None:
-    '''Compute deterministic class-diversity score for a `.npz` block.'''
+    '''Compute class-diversity score for a candidate `.npz` block.'''
     try:
         with numpy.load(path, allow_pickle=True) as loaded:
             if label_key not in loaded:

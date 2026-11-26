@@ -20,28 +20,22 @@
 # =========================================================================== #
 
 '''
-Transformer bottleneck module for UNet.
+Bottleneck modules for UNet encoder-decoder architectures.
 
-This module provides a drop-in replacement for the standard convolutional
-bottleneck in U-Net architectures. It uses Vision Transformer building
-blocks (multi-head self-attention, feed-forward networks) to capture
-long-range dependencies at the bottleneck, which can improve segmentation
-performance especially on large-scale spatial patterns.
+Provides the abstract bottleneck base contract alongside standard
+convolutional, Vision Transformer, and hybrid convolution-transformer
+bottleneck implementations.
 
-**Key Features**
-- Vision Transformer-based bottleneck preserving spatial structure
-- Learnable absolute positional embeddings for spatial context
-- Multi-head self-attention with residual connections
-- Feed-forward networks with gating (optional)
-- Layer normalization for stable training
-- Drop-in compatible with existing UNet implementations
+Design Points:
+    - Preserves input/output channel width (`in_ch == out_ch`).
+    - Preserves spatial dimensions without downsampling.
+    - Uses residual connections in transformer blocks for gradient flow.
 
-**Design Points**
-- Maintains input/output channel compatibility (in_ch == out_ch)
-- Preserves spatial dimensions (no downsampling in bottleneck)
-- Uses residual connections for gradient flow
-- Supports variable patch-based processing or global attention
-- Configurable number of transformer blocks and attention heads
+Public APIs:
+    - `BaseBottleneck`: Abstract base class for UNet bottlenecks.
+    - `HybridBottleneck`: Combined convolutional-transformer bottleneck.
+    - `TransformerBottleneck`: Vision Transformer bottleneck stack.
+    - `UNetBottleneck`: Standard convolutional UNet bottleneck block.
 '''
 
 # standard imports
@@ -56,17 +50,20 @@ class BaseBottleneck(torch.nn.Module):
     '''
     Base class for UNet bottlenecks.
 
-    Defines the interface and common functionality for bottleneck modules
-    used in UNet architectures. Subclasses must implement the forward
-    method to process the input feature map and produce an output of
+    Defines the interface and common functionality for bottleneck
+    modules used in UNet architectures. Subclasses must implement
+    `forward` to process the input feature map and produce an output of
     identical shape.
-
-    This class is not intended to be instantiated directly. It serves as
-    a template for specific bottleneck implementations (e.g., pure
-    transformer, hybrid conv-transformer).
     '''
 
     def __init__(self, in_ch: int):
+        '''
+        Initialize base bottleneck state.
+
+        Args:
+            in_ch:
+                Number of input and output feature channels.
+        '''
         super().__init__()
         self.in_ch = in_ch
 
@@ -76,16 +73,16 @@ class BaseBottleneck(torch.nn.Module):
         Process input feature map through the bottleneck.
 
         Args:
-            x: Input tensor of shape (B, C, H, W)
+            x:
+                Input tensor of shape `(B, C, H, W)`.
 
         Returns:
-            Output tensor of shape (B, C, H, W)
+            torch.Tensor:
+                Output tensor of shape `(B, C, H, W)`.
 
-        Notes:
-        - Subclasses must implement this method to define the bottleneck
-          processing logic.
-        - The output must have the same shape as the input to maintain
-          compatibility with the UNet architecture.
+        Raises:
+            NotImplementedError:
+                If the subclass does not implement `forward`.
         '''
         raise NotImplementedError
 
@@ -93,14 +90,8 @@ class UNetBottleneck(BaseBottleneck):
     '''
     Standard convolutional bottleneck for UNet.
 
-    Implements the traditional double convolutional block used at the
-    bottleneck of U-Net architectures. This serves as a baseline and can
-    be replaced with more complex modules (e.g., transformer-based) if
-    desired.
-
-    Architecture:
-    - DoubleConv with in_ch == out_ch, no downsampling.
-    - Optional normalization and dropout based on provided kwargs.
+    Implements a `DoubleConv` block at the UNet bottleneck with
+    `in_ch == out_ch` and no spatial downsampling.
     '''
 
     def __init__(
@@ -108,10 +99,31 @@ class UNetBottleneck(BaseBottleneck):
         in_ch: int,
         params: components.ConvolutionParameters
     ):
+        '''
+        Initialize convolutional bottleneck block.
+
+        Args:
+            in_ch:
+                Number of input and output feature channels.
+            params:
+                `ConvolutionParameters` configuring normalization and
+                dropout.
+        '''
         super().__init__(in_ch)
         self.double_conv = components.DoubleConv(in_ch, in_ch, params)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        '''
+        Apply double-convolution bottleneck transformation.
+
+        Args:
+            x:
+                Input tensor of shape `(B, C, H, W)`.
+
+        Returns:
+            torch.Tensor:
+                Output tensor of shape `(B, C, H, W)`.
+        '''
         return self.double_conv(x)
 
 class TransformerBottleneck(BaseBottleneck):
@@ -120,31 +132,7 @@ class TransformerBottleneck(BaseBottleneck):
 
     Replaces the standard convolutional bottleneck with a stack of
     transformer blocks, enabling long-range dependency modeling while
-    preserving spatial structure.
-
-    This module is designed as a drop-in replacement for the bottleneck
-    layer in UNet architectures. It accepts a single input tensor and
-    produces output of identical shape.
-
-    Args:
-        in_channels: Number of input channels.
-        num_blocks: Number of transformer blocks to stack.
-        num_heads: Number of attention heads per block.
-        mlp_ratio: Feed-forward network expansion ratio.
-        dropout: Dropout probability.
-        attn_dropout: Attention-specific dropout probability.
-
-    Example:
-        Replace a UNet bottleneck:
-
-        # Original
-        bottleneck = DoubleConv(ch*16, ch*16)
-
-        # With transformer
-        bottleneck = TransformerBottleneck(ch*16, num_blocks=4)
-
-        # Usage remains identical
-        x_bottleneck = bottleneck(x)
+    preserving spatial structure and tensor shape.
     '''
 
     def __init__(
@@ -153,6 +141,18 @@ class TransformerBottleneck(BaseBottleneck):
         spatial_size: int,
         config: components.BottleneckConfig,
     ):
+        '''
+        Initialize transformer bottleneck layers.
+
+        Args:
+            in_channels:
+                Number of input and output channels.
+            spatial_size:
+                Expected spatial height/width at the bottleneck.
+            config:
+                `BottleneckConfig` providing transformer block count and
+                hyperparameters.
+        '''
         super().__init__(in_channels)
 
         assert config.num_transformer_blocks
@@ -179,12 +179,13 @@ class TransformerBottleneck(BaseBottleneck):
         Apply transformer bottleneck.
 
         Args:
-            x: Tensor of shape (B, C, H, W)
+            x:
+                Input tensor of shape `(B, C, H, W)`.
 
         Returns:
-            Tensor of shape (B, C, H, W)
+            torch.Tensor:
+                Output tensor of shape `(B, C, H, W)`.
         '''
-
         x = self.pos_embed(x)
 
         for block in self.blocks:
@@ -199,30 +200,11 @@ class TransformerBottleneck(BaseBottleneck):
 
 class HybridBottleneck(BaseBottleneck):
     '''
-    Hybrid bottleneck combining convolution and transformer.
+    Hybrid bottleneck combining convolution and transformer blocks.
 
     Provides a middle ground between purely convolutional and purely
-    transformer-based bottlenecks. Useful for computational efficiency
-    and can sometimes provide better inductive bias than pure transformers.
-
-    Args:
-        in_channels: Number of input/output channels.
-        num_conv_blocks: Number of convolutional blocks at start.
-        num_transformer_blocks: Number of transformer blocks.
-        num_heads: Number of attention heads.
-        mlp_ratio: Feed-forward expansion ratio.
-        dropout: Dropout probability.
-        attn_dropout: Attention-specific dropout probability.
-        **conv_params: Additional arguments passed to convolutional blocks.
-
-    Example:
-        # Use hybrid for efficiency
-        bottleneck = HybridBottleneck(
-            ch*16,
-            num_conv_blocks=1,
-            num_transformer_blocks=2,
-            num_heads=4
-        )
+    transformer bottlenecks, combining local inductive bias with
+    long-range self-attention.
     '''
 
     def __init__(
@@ -231,6 +213,18 @@ class HybridBottleneck(BaseBottleneck):
         spatial_size: int,
         config: components.BottleneckConfig,
     ):
+        '''
+        Initialize hybrid convolution-transformer bottleneck.
+
+        Args:
+            in_channels:
+                Number of input and output channels.
+            spatial_size:
+                Expected spatial height/width at the bottleneck.
+            config:
+                `BottleneckConfig` providing convolution and transformer
+                counts and hyperparameters.
+        '''
         super().__init__(in_channels)
         self.in_ch = in_channels
 
@@ -264,10 +258,12 @@ class HybridBottleneck(BaseBottleneck):
         Apply hybrid bottleneck (conv + transformer).
 
         Args:
-            x: Tensor of shape (B, C, H, W)
+            x:
+                Input tensor of shape `(B, C, H, W)`.
 
         Returns:
-            Tensor of shape (B, C, H, W)
+            torch.Tensor:
+                Output tensor of shape `(B, C, H, W)`.
         '''
         for conv_block in self.conv_blocks:
             x = conv_block(x)
@@ -294,6 +290,15 @@ class _PositionalEmbedding(torch.nn.Module):
     '''
 
     def __init__(self, channels: int, spatial_size: int):
+        '''
+        Initialize learnable 2D positional embedding parameter.
+
+        Args:
+            channels:
+                Number of feature channels.
+            spatial_size:
+                Nominal spatial height and width for initialization.
+        '''
         super().__init__()
         self.channels = channels
         self.register_parameter(
@@ -308,12 +313,14 @@ class _PositionalEmbedding(torch.nn.Module):
         Add positional embeddings to input.
 
         Args:
-            x: Tensor of shape (B, C, H, W)
+            x:
+                Input tensor of shape `(B, C, H, W)`.
 
         Returns:
-            Tensor with positional embeddings added, shape (B, C, H, W)
+            torch.Tensor:
+                Tensor with positional embeddings added, shape
+                `(B, C, H, W)`.
         '''
-
         _, _, h, w = x.shape
         assert isinstance(self.pos_embed, torch.nn.Parameter),\
             "pos_embed must be a learnable parameter"
@@ -333,19 +340,8 @@ class _TransformerBlock(torch.nn.Module):
     '''
     Single transformer block with multi-head self-attention and MLP.
 
-    Implements a standard Vision Transformer block with:
-    - Layer normalization before attention and MLP (pre-norm)
-    - Multi-head self-attention with residual connection
-    - Position-wise feed-forward network with residual connection
-    - Optional dropout for regularization
-
-    Args:
-        channels: Number of input/output channels.
-        num_heads: Number of attention heads.
-        mlp_ratio: Expansion ratio for hidden dimension in MLP
-            (hidden_dim = channels * mlp_ratio).
-        dropout: Dropout probability.
-        attn_dropout: Attention dropout probability.
+    Implements a pre-norm Vision Transformer block with residual
+    multi-head self-attention and feed-forward layers.
     '''
 
     def __init__(
@@ -357,6 +353,21 @@ class _TransformerBlock(torch.nn.Module):
         dropout: float = 0.0,
         attn_dropout: float = 0.0,
     ):
+        '''
+        Initialize transformer block layers.
+
+        Args:
+            channels:
+                Number of input and output channels.
+            num_heads:
+                Number of attention heads.
+            mlp_ratio:
+                Expansion ratio for hidden dimension in the MLP.
+            dropout:
+                Dropout probability applied in the MLP.
+            attn_dropout:
+                Attention dropout probability.
+        '''
         super().__init__()
         self.channels = channels
         self.num_heads = num_heads
@@ -384,10 +395,12 @@ class _TransformerBlock(torch.nn.Module):
         Apply transformer block.
 
         Args:
-            x: Tensor of shape (B, C, H, W)
+            x:
+                Input tensor of shape `(B, C, H, W)`.
 
         Returns:
-            Tensor of shape (B, C, H, W)
+            torch.Tensor:
+                Output tensor of shape `(B, C, H, W)`.
         '''
         b, c, h, w = x.shape
 

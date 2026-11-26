@@ -42,6 +42,7 @@ class DatasetViewConfig(base.BaseConfigSection):
     targets: dict[str, typing.Any] = field(default_factory=dict)
 
     def validate(self) -> None:
+        '''Validate valid pixel thresholds, features, and targets.'''
         for k, v in self.valid_pxs.items():
             self.val.require_string(k)
             self.val.require_numeric_range(v, (0, 1))
@@ -67,6 +68,7 @@ class Partition(base.BaseConfigSection):
     aoi_min_overlap: float = 0.5
 
     def validate(self) -> None:
+        '''Validate split ratios, buffer step, and AOI overlap.'''
         self.val.require_numeric_range(self.val_ratio, (0, 1))
         self.val.require_numeric_range(self.test_ratio, (0, 1))
         self.val.require_numeric_range(self.val_ratio + self.test_ratio, (0, 1))
@@ -85,6 +87,7 @@ class Scoring(base.BaseConfigSection):
     beta: float = 0.0
 
     def validate(self) -> None:
+        '''Validate non-negative scoring weights `alpha` and `beta`.'''
         self.val.require_numeric_min(self.alpha, 0.0)
         self.val.require_numeric_min(self.beta, 0.0)
 
@@ -95,6 +98,7 @@ class Hydration(base.BaseConfigSection):
     max_skew_rate: float = 10.0
 
     def validate(self) -> None:
+        '''Validate non-negative maximum skew rate.'''
         self.val.require_numeric_min(self.max_skew_rate, 0.0)
 
 
@@ -109,6 +113,7 @@ class DataPreparationConfig(base.BaseConfigSection):
     output_dpath: str | None = None
 
     def validate(self) -> None:
+        '''Validate all nested data preparation subsections.'''
         self.datasetview.validate()
         self.partition.validate()
         self.scoring.validate()

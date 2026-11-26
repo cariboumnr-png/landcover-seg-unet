@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Unit tests for session engine builder (session/engine/builder.py).'''
 
 # third-party imports
@@ -39,7 +37,7 @@ def test_build_engine_patch_size_divisibility_error(
     mock_dataloaders,
 ):
     '''
-    Given: Dataloader patch_size (128) indivisible by spatial_divisor (18).
+    Given: Patch size 128 indivisible by `spatial_divisor` 18.
     When: Calling `build_engine`.
     Then: Raise `ValueError` matching patch dimension divisibility.
     '''

@@ -64,14 +64,15 @@ class FocalLoss(base.PrimitiveLoss):
 
         Args:
             alpha:
-                optional per-class weights. If None, all classes equal.
+                Optional per-class weights. If `None`, all classes are
+                weighted equally.
             gamma:
-                focal exponent controlling down-weighting of easy
+                Focal exponent controlling down-weighting of easy
                 samples.
             reduction:
-                reduction method in {'mean', 'sum', 'none'}.
+                Reduction method in `{'mean', 'sum', 'none'}`.
             ignore_index:
-                label to exclude entirely from loss compute.
+                Label to exclude entirely from loss computation.
         '''
         super().__init__()
         self.alpha = alpha
@@ -91,13 +92,24 @@ class FocalLoss(base.PrimitiveLoss):
         Compute focal loss over valid pixels.
 
         Args:
-            logits: Tensor of shape [B, C, H, W], raw class logits.
-            targets: Tensor of shape [B, H, W], integer class labels.
-            masks: Optional dict mapping weights (floats in [0,1]) to
-                bool/float masks selecting which pixels to down-weight.
+            logits:
+                Raw class logits tensor of shape `[B, C, H, W]`.
+            targets:
+                Integer class labels tensor of shape `[B, H, W]`.
+            masks:
+                Optional dict mapping weights in `[0, 1]` to boolean or
+                float masks selecting pixels to down-weight.
+            features:
+                Optional feature tensor validated for shape alignment
+                if provided (unused in focal computation).
 
         Returns:
-            A scalar loss tensor (after reduction).
+            torch.Tensor:
+                Reduced loss tensor (or per-pixel values if `'none'`).
+
+        Raises:
+            IndexError:
+                If any valid target label exceeds the channel count `C`.
         '''
         self._validate_inputs(logits, targets, features)
 

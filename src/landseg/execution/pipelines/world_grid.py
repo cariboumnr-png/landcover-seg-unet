@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-World grid pipeline command implementation.
-'''
+'''World grid pipeline command implementation.'''
 
 # local imports
 import landseg.artifacts as artifacts
@@ -32,7 +30,6 @@ import landseg.geopipe as geopipe
 # ----- public classes
 class WorldGridGeneration(base.GeoPipeline):
     '''World grid generation pipeline.'''
-
     pipeline_name: str = 'world-grid'
     pipeline_paths: artifacts.WorldGridPaths
 

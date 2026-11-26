@@ -34,6 +34,7 @@ class NumericSafety(base.BaseConfigSection):
     clamp_range: tuple[float, float] = (1e-4, 1e4)
 
     def validate(self):
+        '''Validate clamp range length, non-negativity, and order.'''
         self.val.require_sequence(self.clamp_range, 2)
         lo, hi = self.clamp_range
         self.val.require_numeric_min(lo, 0.0, float)

@@ -42,7 +42,17 @@ import landseg.runtime as runtime
 
 # ----- public functions
 def hardware_info(ctx: context.InspectionContext) -> list[schema.ProbeResult]:
-    '''Inspect accelerator availability and estimate batch VRAM headroom.'''
+    '''
+    Inspect accelerator availability and estimate batch VRAM headroom.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+
+    Returns:
+        list[schema.ProbeResult]:
+            Hardware availability, AMP, and VRAM headroom probe results.
+    '''
     results: list[schema.ProbeResult] = []
 
     if not torch.cuda.is_available():

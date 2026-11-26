@@ -22,8 +22,14 @@
 '''
 Top-level namespace for `landseg.session.orchestration`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes selected public symbols via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `ContinuousRunner`: Runner executing a single continuous phase.
+    - `CurriculumRunner`: Runner executing sequential curriculum phases.
+    - `OrchestrationConfigShape`: Protocol for orchestration configs.
+    - `build_runner`: Construct a concrete orchestration runner.
 '''
 
 # standard imports

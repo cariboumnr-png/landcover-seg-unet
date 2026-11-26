@@ -33,6 +33,7 @@ import landseg.session.instrumentation.callbacks.dispatcher as disp_mod
 # ----- mock callback helper
 class MockCallback(cb_base.BaseCallback):
     '''Mock callback tracking event invocations.'''
+
     def __init__(self):
         super().__init__()
         self.calls: list[str] = []

@@ -19,16 +19,23 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
+'''
+Protocol definitions for UNet component configurations.
 
-'''Backbone components configurations.'''
+Public APIs:
+    - `BottleneckConfig`: Protocol for bottleneck configuration.
+    - `ConvolutionParameters`: Protocol for convolution block options.
+    - `TransformerParameters`: Protocol for transformer block options.
+'''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 import typing
 
 
 class ConvolutionParameters(typing.Protocol):
+    '''Protocol for convolution block normalization and dropout.'''
     @property
     def norm(self) -> str | None: ...
     @property
@@ -38,6 +45,7 @@ class ConvolutionParameters(typing.Protocol):
 
 
 class TransformerParameters(typing.Protocol):
+    '''Protocol for transformer bottleneck block parameters.'''
     @property
     def num_heads(self) -> int: ...
     @property
@@ -49,6 +57,7 @@ class TransformerParameters(typing.Protocol):
 
 
 class BottleneckConfig(typing.Protocol):
+    '''Protocol for UNet bottleneck architecture configuration.'''
     @property
     def variant(self) -> str: ...
     @property

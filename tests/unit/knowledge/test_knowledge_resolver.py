@@ -112,8 +112,8 @@ def test_resolve_profile_metadata_none_root():
 # ----- `resolve_head_knowledge` tests
 def test_resolve_head_knowledge(tmp_path, monkeypatch):
     '''
-    Given: Per-head counts, taxonomy specs, class names, and knowledge root.
-    When: Calling `resolve_head_knowledge` with missing or populated root.
+    Given: Per-head counts, taxonomy specs, class names, and root.
+    When: Calling `resolve_head_knowledge` with missing or valid root.
     Then: Bypass missing roots and resolve validated taxonomy + tensors.
     '''
     counts = {'leadspc': [10, 20]}

@@ -22,8 +22,11 @@
 '''
 Top-level namespace for `landseg.study.analysis`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes post-hoc Optuna study analysis utilities via lazy resolution to
+keep import order simple and circular-free.
+
+Public APIs:
+    - `rank_trials`: Load and rank completed trials from a study.
 '''
 
 # standard imports

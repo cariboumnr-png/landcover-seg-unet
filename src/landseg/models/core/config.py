@@ -19,16 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
-Multihead model typed configuration.
+Multi-head model typed configuration contracts.
 
-This module defines Protocol and TypedDict interfaces for domain
-conditioning configuration. Types enable static type checking of
-model configuration objects without runtime dependency on
-specific implementations or frameworks like Hydra.
+Defines `Protocol` and `TypedDict` interfaces for domain conditioning
+configuration, enabling static type checking without runtime dependency
+on configuration frameworks such as Hydra.
+
+Public APIs:
+    - `DomainConditionerAdapterConfig`: TypedDict for adapter options.
+    - `DomainProjectionConfig`: TypedDict for vector projection options.
+    - `DomainTargetConfig`: Protocol for domain target configuration.
 '''
 
 # standard imports
@@ -36,6 +37,7 @@ import typing
 
 
 class DomainProjectionConfig(typing.TypedDict):
+    '''Typed dictionary for domain vector projection configuration.'''
     use_mlp: typing.NotRequired[bool]
     hidden_dim: typing.NotRequired[int | None]
     num_hidden_layers: typing.NotRequired[int]
@@ -44,10 +46,13 @@ class DomainProjectionConfig(typing.TypedDict):
 
 
 class DomainConditionerAdapterConfig(typing.TypedDict):
+    '''Typed dictionary for domain conditioner adapter options.'''
     hidden_dim: typing.NotRequired[int] # currently for FiLM
 
 
+# pylint: disable=missing-function-docstring
 class DomainTargetConfig(typing.Protocol):
+    '''Protocol for domain target conditioning configuration.'''
     @property
     def name(self) -> str: ...
     @property
@@ -62,3 +67,4 @@ class DomainTargetConfig(typing.Protocol):
     def vec_proj_config(self) -> DomainProjectionConfig: ...
     @property
     def conditioner_config(self) -> DomainConditionerAdapterConfig: ...
+# pylint: enable=missing-function-docstring

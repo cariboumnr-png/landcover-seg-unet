@@ -19,10 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Generate Sentence Transformer embeddings for tree species ecological
-profiles.
-'''
+'''Build species Sentence Transformer embeddings.'''
 
 # standard imports
 import argparse

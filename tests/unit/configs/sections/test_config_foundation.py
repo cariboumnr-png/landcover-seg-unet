@@ -122,9 +122,9 @@ def test_domains_management():
 # ----- `DataBlocks` & `DataIngestionConfig` tests
 def test_datablocks_and_data_validation():
     '''
-    Given: Valid `DataBlocks` instance.
-    When: `DataBlocks.validate()` and `DataIngestionConfig.validate()` run.
-    Then: Validate data config.
+    Given: Valid `DataBlocks` and `DataIngestionConfig` instances.
+    When: Calling `.validate()` on both config objects.
+    Then: Validate data config without error.
     '''
     blocks = ing_sec.DataBlocks()
     blocks.validate()

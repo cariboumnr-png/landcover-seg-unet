@@ -20,10 +20,15 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.optim`.
+Top-level namespace for `landseg.session.engine.optim`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `OptimConfigShape`: Protocol for optimizer and scheduler config.
+    - `Optimization`: Runtime wrapper around optimizer and scheduler.
+    - `build_optimization`: Build `Optimization` from model and config.
 '''
 
 # standard imports

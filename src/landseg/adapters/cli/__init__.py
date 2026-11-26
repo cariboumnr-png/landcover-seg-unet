@@ -24,6 +24,10 @@ Top-level namespace for `landseg.adapters.cli`.
 
 Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `main`: Run the selected CLI pipeline with resolved configuration.
+    - `resolve_configs`: Resolve hierarchical configuration objects.
 '''
 
 # standard imports

@@ -45,12 +45,22 @@ import landseg.runtime as runtime
 # ----- public classes
 class IngestionLogger(runtime.Logger):
     '''
-    A specialized Logger wrapper that collects execution metrics and
-    persists a structured JSON run report at shutdown.
+    Specialized logger that records structured ingestion reports.
+
+    Collects domain map and data block metrics and persists a summary
+    JSON artifact at shutdown.
     '''
 
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
-        '''Initialize the IngestionLogger instance.'''
+        '''
+        Initialize the `IngestionLogger` instance.
+
+        Args:
+            *args:
+                Positional arguments forwarded to `runtime.Logger`.
+            **kwargs:
+                Keyword arguments forwarded to `runtime.Logger`.
+        '''
         super().__init__(*args, **kwargs)
         self.summary: contracts.IngestReportSchema | None = None
 
@@ -63,7 +73,21 @@ class IngestionLogger(runtime.Logger):
         harmonization_run_id: str = '',
         timestamp: str | None = None
     ) -> None:
-        '''Initialize the structured run report summary dictionary.'''
+        '''
+        Initialize the structured run report summary dictionary.
+
+        Args:
+            run_id:
+                Human-readable ingestion run identifier.
+            run_uid:
+                Optional unique run ID; generated if omitted.
+            harmonization_run_uid:
+                Unique ID of the upstream harmonization run.
+            harmonization_run_id:
+                Human-readable ID of the upstream harmonization run.
+            timestamp:
+                Optional ISO-8601 timestamp string; defaults to now.
+        '''
         uid = run_uid or f'ingest_{uuid.uuid4().hex[:16]}'
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
@@ -93,7 +117,13 @@ class IngestionLogger(runtime.Logger):
         return ''
 
     def set_identity(self, fingerprint: str) -> None:
-        '''Record fingerprint of the inputs and configs of this run.'''
+        '''
+        Record fingerprint of the inputs and configs of this run.
+
+        Args:
+            fingerprint:
+                Deterministic run identity hash string.
+        '''
         if self.summary is not None:
             self.summary['fingerprint'] = fingerprint
 
@@ -103,23 +133,49 @@ class IngestionLogger(runtime.Logger):
         run_uid: str,
         run_id: str
     ) -> None:
-        '''Set upstream harmonization run reference in summary.'''
+        '''
+        Set upstream harmonization run reference in summary.
+
+        Args:
+            run_uid:
+                Unique ID of the upstream harmonization run.
+            run_id:
+                Human-readable ID of the upstream harmonization run.
+        '''
         if self.summary is not None:
             self.summary['harmonization_run_uid'] = run_uid
             self.summary['harmonization_run_id'] = run_id
 
     def add_domain(self, report: contracts.DomainMapReport) -> None:
-        '''Append a domain layer map report to summary.'''
+        '''
+        Append a domain layer map report to summary.
+
+        Args:
+            report:
+                Domain map construction report payload.
+        '''
         if self.summary is not None:
             self.summary['domain_maps'].append(report)
 
     def set_data_blocks(self, report: contracts.DataBlocksReport) -> None:
-        '''Record the data blocks report to summary.'''
+        '''
+        Record the data blocks report to summary.
+
+        Args:
+            report:
+                Data blocks construction report payload.
+        '''
         if self.summary is not None:
             self.summary['data_blocks'] = report
 
     def set_status(self, status: contracts.StatusLiteral) -> None:
-        '''Update the overall run summary status.'''
+        '''
+        Update the overall run summary status.
+
+        Args:
+            status:
+                Terminal run status literal.
+        '''
         if self.summary is not None:
             self.summary['status'] = status
 
@@ -128,7 +184,19 @@ class IngestionLogger(runtime.Logger):
         manifest_fpath: pathlib.Path,
         run_folder: pathlib.Path,
     ) -> None:
-        '''Record or update current run in the ingestion runs manifest.'''
+        '''
+        Record or update current run in the ingestion runs manifest.
+
+        Args:
+            manifest_fpath:
+                File path to the ingestion runs manifest JSON.
+            run_folder:
+                Directory path of the current ingestion run.
+
+        Raises:
+            ValueError:
+                If reading the existing runs manifest fails.
+        '''
         if self.summary is None:
             return
         uid = self.summary.get('run_uid', '')

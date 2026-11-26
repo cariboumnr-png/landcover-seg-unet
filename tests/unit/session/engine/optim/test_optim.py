@@ -91,7 +91,7 @@ def test_reconfigure_disable_scheduler(mock_model):
     '''
     Given: `Optimization` wrapper with active scheduler.
     When: Calling `reconfigure(disable_scheduler=True)`.
-    Then: Scheduler instance and stored configuration metadata are cleared.
+    Then: Scheduler instance and stored metadata are cleared.
     '''
     optimizer = _get_mock_optimizer(mock_model)
     sched_factory = torch.optim.lr_scheduler.CosineAnnealingLR
@@ -163,7 +163,7 @@ def test_reconfigure_scheduler_rebuild(mock_model):
 def test_build_optimization_from_session_config(mock_model, session_config):
     '''
     Given: Default `SessionConfig` from `session_config` fixture.
-    When: Calling `build_optimization` with `session_config.engine_optim`.
+    When: Calling `build_optimization` with engine optim config.
     Then: Successfully construct `Optimization` wrapper.
     '''
     opt_wrap = optim.build_optimization(
@@ -179,7 +179,7 @@ def test_build_optimization_adamw_no_scheduler(mock_model, session_config):
     '''
     Given: `_OptimConfig` specifying AdamW with no scheduler.
     When: Calling `build_optimization`.
-    Then: Construct `Optimization` with AdamW and specified `grad_clip_norm`.
+    Then: Build `Optimization` with AdamW and set `grad_clip_norm`.
     '''
     config = dataclasses.replace(
         session_config.engine_optim,

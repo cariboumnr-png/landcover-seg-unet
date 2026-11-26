@@ -20,7 +20,15 @@
 # =========================================================================== #
 
 '''
-Resolution helper for knowledge base assets and profiles.
+Resolution helpers for knowledge base assets and profiles.
+
+Loads precomputed species similarity matrices, profile metadata, and
+validated head taxonomy mappings from persisted knowledge artifacts.
+
+Public APIs:
+    - `resolve_head_knowledge`: Resolve head taxonomies and matrices.
+    - `resolve_profile_metadata`: Load profile embeddings metadata.
+    - `resolve_similarity_matrix`: Load species similarity matrix.
 '''
 
 # standard imports
@@ -38,19 +46,24 @@ def resolve_similarity_matrix(
     knowledge_root: pathlib.Path | str | None = None,
 ) -> torch.Tensor:
     '''
-    Resolve and load precomputed species similarity matrix for a profile.
+    Resolve and load precomputed species similarity matrix.
 
     Args:
-        profile: Canonical species profile name.
-        knowledge_root: Root directory path for knowledge base artifacts.
+        profile:
+            Canonical species profile name.
+        knowledge_root:
+            Root directory path for knowledge base artifacts.
 
     Returns:
-        PyTorch tensor [N, N] containing pairwise cosine similarities.
+        torch.Tensor:
+            PyTorch tensor `[N, N]` containing pairwise cosine
+            similarities.
 
     Raises:
-        FileNotFoundError: If knowledge_root is None or artifact missing.
-        artifacts.ArtifactError: If hash validation fails or the file
-            is corrupted.
+        FileNotFoundError:
+            If `knowledge_root` is `None` or the artifact is missing.
+        artifacts.ArtifactError:
+            If hash validation fails or the file is corrupted.
     '''
     if knowledge_root is None:
         raise FileNotFoundError(
@@ -71,16 +84,21 @@ def resolve_profile_metadata(
     Resolve and load species embeddings metadata for a profile.
 
     Args:
-        profile: Canonical species profile name.
-        knowledge_root: Root directory path for knowledge base artifacts.
+        profile:
+            Canonical species profile name.
+        knowledge_root:
+            Root directory path for knowledge base artifacts.
 
     Returns:
-        Metadata dictionary including class codes, names, and dimensions.
+        knowledge.SpeciesEmbeddingsMetadata:
+            Metadata dictionary including class codes, names, and
+            dimensions.
 
     Raises:
-        FileNotFoundError: If knowledge_root is None or artifact missing.
-        artifacts.ArtifactError: If hash validation fails or the file
-            is corrupted.
+        FileNotFoundError:
+            If `knowledge_root` is `None` or the artifact is missing.
+        artifacts.ArtifactError:
+            If hash validation fails or the file is corrupted.
     '''
     if knowledge_root is None:
         raise FileNotFoundError(
@@ -99,7 +117,23 @@ def resolve_head_knowledge(
     class_names: typing.Mapping[str, typing.Sequence[str]],
     knowledge_root: pathlib.Path | str | None = None,
 ) -> tuple[dict[str, dict[str, typing.Any]], dict[str, torch.Tensor]]:
-    '''Resolve validated head taxonomies and similarity matrices.'''
+    '''
+    Resolve validated head taxonomies and similarity matrices.
+
+    Args:
+        counts:
+            Per-head class pixel or support count sequences.
+        raw_taxonomy:
+            Raw head-to-taxonomy configuration mapping.
+        class_names:
+            Per-head class code or label name sequences.
+        knowledge_root:
+            Optional root directory path for knowledge base artifacts.
+
+    Returns:
+        tuple[dict[str, dict[str, typing.Any]], dict[str, torch.Tensor]]:
+            Resolved per-head taxonomy mappings and similarity matrices.
+    '''
     taxonomy: dict[str, dict[str, typing.Any]] = {
         k: dict(v) for k, v in raw_taxonomy.items()
     }

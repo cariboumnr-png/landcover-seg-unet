@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for `DataSpec` core contract (data_specs.py)'''
+'''Unit tests for `DataSpec` core contract (`data_specs.py`).'''
 
 # local imports
 import landseg.core as core
@@ -145,6 +145,7 @@ def test_domain_accept_expected_structure():
 
 # ----- builders
 def _make_image_meta(*, band_map: dict[str, int], **overrides):
+    '''Construct a minimal `Meta.Image` instance for testing.'''
     return core.Meta.Image(
         height_width=overrides.get('height_width', 256),
         array_key='image',

@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 TypedDict definitions for world grid execution summaries and contracts.
 
@@ -28,10 +26,12 @@ This module provides schemas for serializing world grid metadata and
 pipeline run reports.
 
 Public APIs:
+    - `GridReportSchema`: TypedDict for overall grid pipeline report.
     - `WorldGridPrepConfig`: Protocol for pipeline configs.
     - `WorldGridReport`: TypedDict for world grid summary report.
-    - `GridReportSchema`: TypedDict for overall grid pipeline report.
 '''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 from __future__ import annotations
@@ -56,6 +56,7 @@ class WorldGridPrepConfig(typing.Protocol):
 
 
 class _GridSpecs(typing.Protocol):
+    '''Shape of manual world grid specification configuration.'''
     @property
     def crs_string(self) -> str: ...
     @property

@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for executor module (executor.py and __init__.py).'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import contextlib
@@ -39,7 +39,7 @@ def test_batch_engine_init(mock_model, session_config):
     '''
     Given: Multihead model, state, config, and context.
     When: Instantiating `BatchEngine`.
-    Then: Model is configured with logit adjustment alpha and assigned device.
+    Then: Model gets logit adjustment alpha and assigned device.
     '''
     state = state_mod.initialize_state(
         all_heads=['head_1'],
@@ -67,7 +67,7 @@ def test_batch_engine_parse_batch_labeled(mock_model, session_config):
     '''
     Given: Batch engine with a labeled training batch (x, y, domain).
     When: Executing `_parse_batch`.
-    Then: `batch_cxt` receives parsed tensors `x`, `y_dict`, and `domain`.
+    Then: `batch_cxt` stores parsed `x`, `y_dict`, and `domain`.
     '''
     state = state_mod.initialize_state(
         all_heads=['head_1'],
@@ -209,7 +209,7 @@ def test_run_infer_batch_spatial_aggregation(
     '''
     Given: Inference batch with patch spatial layout details.
     When: Invoking `run_infer_batch`.
-    Then: Aggregate predictions into spatial grid coordinates in `infer_out`.
+    Then: Aggregate predictions by grid coordinates in `infer_out`.
     '''
     state = state_mod.initialize_state(
         all_heads=['head_1'],
@@ -350,6 +350,7 @@ def test_autocast_ctx_cpu_bf16_supported(
 
 # ----- private helpers
 def _get_context():
+    '''Build a default `BatchExecContext` for unit tests.'''
     return engine_mod.BatchExecContext(
         parent_map={},
         patch_per_blk=4,

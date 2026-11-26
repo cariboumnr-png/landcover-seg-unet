@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Configurator base class
-'''
+'''Base configurator class for command execution.'''
 
 # standard imports
 import pathlib
@@ -47,14 +45,26 @@ class BaseConfigurator:
         Initialize the configurator.
 
         Supports both:
-        1. Canonical decoupled mode: Explicitly passing destination output and
-           upstream input directories. No experiment root is inferred or
-           required, so stages may live on unrelated storage volumes.
-        2. Auxiliary unified mode: Passing an optional `experiment_root` that
-           auto-populates all stage inputs and outputs under
-           `<exp_root>/artifacts/...` and `<exp_root>/results`.
-           TMP: here if experiment_root is provided its populated I/O takes
-           precedence (override-like).
+        1. Canonical decoupled mode: Explicitly passing destination
+           output and upstream input directories. No experiment root
+           is inferred or required, so stages may live on unrelated
+           storage volumes.
+        2. Auxiliary unified mode: Passing an optional
+           `experiment_root` that auto-populates all stage inputs and
+           outputs under `<exp_root>/artifacts/...` and
+           `<exp_root>/results`. Explicit `upstream_dpath` or
+           `output_dpath` overrides the derived paths.
+
+        Args:
+            command:
+                Target execution command name.
+            upstream_dpath:
+                Optional directory path for direct upstream inputs.
+            output_dpath:
+                Optional destination directory path for command outputs.
+            experiment_root:
+                Optional experiment root directory used to populate all
+                canonical stage directories.
         '''
         # init a default RootConfig instance
         self.cfg = configs.RootConfig()
@@ -88,11 +98,21 @@ class BaseConfigurator:
 
         Convenience factory populating canonical stage subdirectories
         under `<exp_root>/artifacts/...` and `<exp_root>/results`.
+
+        Args:
+            experiment_root:
+                Root experiment directory path.
+            **kwargs:
+                Additional keyword arguments forwarded to `__init__`.
+
+        Returns:
+            typing.Self:
+                Configured instance initialized with experiment root.
         '''
         return cls(experiment_root=experiment_root, **kwargs)
 
     def set_output(self, output_dpath: str | pathlib.Path) -> typing.Self:
-        '''Set destination output directory path for the active command.'''
+        '''Set destination output directory for the active command.'''
         dpath_str = str(output_dpath)
         match self.cfg.command:
             case 'world-grid':
@@ -120,7 +140,7 @@ class BaseConfigurator:
         return self
 
     def set_upstream(self, upstream_dpath: str | pathlib.Path) -> typing.Self:
-        '''Set direct upstream input directory path for the active command.'''
+        '''Set upstream input directory path for the active command.'''
         dpath_str = str(upstream_dpath)
         match self.cfg.command:
             case 'world-grid':
@@ -142,7 +162,7 @@ class BaseConfigurator:
 
     @property
     def running_root_config(self) -> configs.RootConfig:
-        '''Validate respective section of the `RootConfig` and return.'''
+        '''Return validated `RootConfig` for the active command.'''
         match self.cfg.command:
             case 'world-grid':
                 self.cfg.data.world_grid.validate()
@@ -169,7 +189,17 @@ class BaseConfigurator:
         return self.cfg
 
     def preflight(self, strict: bool = False) -> typing.Any:
-        '''Run pre-flight diagnostic validation for configured command.'''
+        '''
+        Run pre-flight diagnostic validation for configured command.
+
+        Args:
+            strict:
+                Whether to enforce strict pre-flight validation mode.
+
+        Returns:
+            typing.Any:
+                Pre-flight validation report or list of reports.
+        '''
         return api.run_preflight(self.cfg, self.cfg.command, strict=strict)
 
     # ----- shared methods for configuring runtime sessions
@@ -178,7 +208,19 @@ class BaseConfigurator:
         batch_size: int,
         patch_size: int
     ) -> typing.Self:
-        '''Set data sizes.'''
+        '''
+        Set dataloader batch and patch sizes.
+
+        Args:
+            batch_size:
+                Number of samples per training or evaluation batch.
+            patch_size:
+                Spatial side length in pixels for extracted patches.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.session.dataloader.batch_size = batch_size
         self.cfg.session.dataloader.patch_size = patch_size
         return self
@@ -188,7 +230,19 @@ class BaseConfigurator:
         category_domain: str | None,
         continuous_domain: str | None,
     ) -> typing.Self:
-        '''Set data source'''
+        '''
+        Set categorical and continuous domain source identifiers.
+
+        Args:
+            category_domain:
+                Name of the categorical domain ID field, or None.
+            continuous_domain:
+                Name of the continuous domain vector field, or None.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.data.specification.domain_ids_name = category_domain
         self.cfg.data.specification.domain_vec_name = continuous_domain
         return self
@@ -200,7 +254,26 @@ class BaseConfigurator:
         loss_weights: dict[str, float],
         head_weights: dict[str, float] | None = None,
     ) -> typing.Self:
-        '''Set engine tasks.'''
+        '''
+        Set engine task targets, exclusions, and loss weights.
+
+        Args:
+            logit_adjust_alpha:
+                Temperature factor for prior logit adjustment.
+            exclude_classes:
+                Optional mapping from task head name to excluded class
+                IDs.
+            loss_weights:
+                Mapping of loss component names (e.g., `'focal'`,
+                `'dice'`, `'spectral'`, `'total_var'`, `'ecological'`)
+                to scalar weights.
+            head_weights:
+                Optional mapping from task head name to loss weight.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.session.engine_exec.logit_adjust_alpha = logit_adjust_alpha
         self.cfg.session.engine_tasks.excluded_cls = exclude_classes
         self.cfg.session.engine_tasks.head_weights = head_weights
@@ -219,7 +292,24 @@ class BaseConfigurator:
         patience_epoch: int | None,
         track_heads: dict[str, float] | None,
     ) -> typing.Self:
-        '''Set training runtime behaviour.'''
+        '''
+        Set training runtime curriculum and monitoring behaviour.
+
+        Args:
+            max_epochs:
+                Maximum number of epochs for the curriculum phase.
+            active_heads:
+                Optional list of head names active during the phase.
+            patience_epoch:
+                Optional early-stopping patience in epochs.
+            track_heads:
+                Optional mapping of tracked head names to monitoring
+                weights.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         orchestration = self.cfg.session.orchestration
         orchestration.curriculum.single.phases[0].num_epochs = max_epochs
         orchestration.curriculum.single.phases[0].active_heads = active_heads

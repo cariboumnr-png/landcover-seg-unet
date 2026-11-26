@@ -20,10 +20,10 @@
 # =========================================================================== #
 
 '''
-Training entrypoint.
+Model training pipeline.
 
-Builds data specifications from produced artifacts, constructs the
-model, and runs the multi-phase training runner.
+Builds data specifications from prepared artifacts, assembles the
+model and session runner, and executes training and post-run visuals.
 '''
 
 # standard imports
@@ -44,7 +44,6 @@ import landseg.visual as visual
 # ----- public classes
 class ModelTraining(base.SessionPipeline):
     '''Model train pipeline runner class.'''
-
     pipeline_name: str = 'model-train'
 
     @property
@@ -53,7 +52,13 @@ class ModelTraining(base.SessionPipeline):
         return self.artifact_paths.data_preparation
 
     def run(self) -> None:
-        '''Initialize a pipeline runner and run training end-to-end.'''
+        '''
+        Initialize a pipeline runner and run training end-to-end.
+
+        Raises:
+            Exception:
+                If an error occurs during model training.
+        '''
         self._initialize_run()
 
         try:
@@ -82,6 +87,7 @@ class ModelTraining(base.SessionPipeline):
             self.logger.close()
 
     def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the training session logger.'''
         logger = session.SessionLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -95,6 +101,7 @@ class ModelTraining(base.SessionPipeline):
         return logger
 
     def _build_context(self) -> core.DataSpecs:
+        '''Build runtime data specifications from prepared artifacts.'''
         return geopipe.build_dataspec(
             self.artifact_paths.data_preparation,
             mode='default',
@@ -104,6 +111,7 @@ class ModelTraining(base.SessionPipeline):
         )
 
     def _summarize_results(self, final: float) -> dict[str, typing.Any]:
+        '''Summarize training score, stage timings, and peak memory.'''
         process = psutil.Process()
         peak_cpu_mb = process.memory_info().rss / (1024 * 1024)
         peak_gpu_mb = 0.0
@@ -129,7 +137,7 @@ class ModelTraining(base.SessionPipeline):
         }
 
     def _generate_post_run_visuals(self) -> None:
-        '''Generate post-training curves plot and test prediction previews.'''
+        '''Plot training curves and test prediction previews.'''
         # 1. Training curves plot
         if self.pipeline_paths.step_results.is_file():
             try:

@@ -34,7 +34,11 @@ import landseg.artifacts.storage.npzio as npzio
 # ----- `savez_compressed` round trip
 @pytest.mark.parametrize('as_str', [False, True])
 def test_savez_compressed_round_trips_arrays(tmp_path, as_str):
-    '''Given keyword arrays, numpy.load restores identical arrays.'''
+    '''
+    Given: Keyword arrays and an archive path or string target.
+    When: Calling `savez_compressed`.
+    Then: `numpy.load` restores identical arrays and metadata.
+    '''
     fpath = tmp_path / 'block.npz'
     image = numpy.arange(24, dtype=numpy.float32).reshape(2, 3, 4)
     label = numpy.ones((3, 4), dtype=numpy.uint8)
@@ -52,7 +56,11 @@ def test_savez_compressed_round_trips_arrays(tmp_path, as_str):
 
 
 def test_savez_compressed_overwrites_existing_file(tmp_path):
-    '''Given an existing archive, replace its contents entirely.'''
+    '''
+    Given: An existing `.npz` archive on disk.
+    When: Calling `savez_compressed` with the same target path.
+    Then: Replace the existing archive contents entirely.
+    '''
     fpath = tmp_path / 'block.npz'
     npzio.savez_compressed(fpath, old=numpy.zeros(100_000))
     npzio.savez_compressed(fpath, new=numpy.arange(3))
@@ -64,7 +72,11 @@ def test_savez_compressed_overwrites_existing_file(tmp_path):
 # ----- `savez_compressed` path validation
 @pytest.mark.parametrize('name', ['block', 'block.npy', 'block.npz.tmp'])
 def test_savez_compressed_rejects_non_npz_suffix(tmp_path, name):
-    '''Given a path not ending with .npz, raise and write nothing.'''
+    '''
+    Given: A file path not ending with `.npz`.
+    When: Calling `savez_compressed`.
+    Then: Raise `ValueError` and write nothing to disk.
+    '''
     fpath = tmp_path / name
     with pytest.raises(ValueError, match='must end with .npz'):
         npzio.savez_compressed(fpath, x=numpy.zeros(2))
@@ -73,7 +85,11 @@ def test_savez_compressed_rejects_non_npz_suffix(tmp_path, name):
 
 # ----- `savez_compressed` sequential write contract
 def test_savez_compressed_never_seeks_target(tmp_path, monkeypatch):
-    '''Given a target that rejects seek, write a valid archive.'''
+    '''
+    Given: A sequential write target that rejects seek jumps.
+    When: Calling `savez_compressed`.
+    Then: Write a valid readable `.npz` archive without seeking.
+    '''
     fpath = tmp_path / 'block.npz'
     monkeypatch.setattr(npzio, 'open', _open_sequential_only, raising=False)
     npzio.savez_compressed(fpath, x=numpy.arange(10))
@@ -82,7 +98,11 @@ def test_savez_compressed_never_seeks_target(tmp_path, monkeypatch):
 
 
 def test_numpy_savez_compressed_fails_on_sequential_target(tmp_path):
-    '''Given a target that rejects seek, numpy itself raises OSError.'''
+    '''
+    Given: A sequential write target that rejects seek jumps.
+    When: Calling `numpy.savez_compressed` directly.
+    Then: Raise `OSError` due to seek incompatibility.
+    '''
     with _open_sequential_only(tmp_path / 'block.npz', 'wb') as dst:
         with pytest.raises(OSError):
             numpy.savez_compressed(dst, x=numpy.arange(10))

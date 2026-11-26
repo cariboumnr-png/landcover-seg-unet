@@ -27,12 +27,12 @@ inline overrides) against ingested catalog schemas to resolve active
 input feature channels and multi-head target hierarchies.
 
 Public APIs:
-    - FeatureSelection: selected band names and 0-based channel indices.
-    - TargetHeadsContext: multi-head hierarchy and reclass specs.
-    - resolve_feature_channels: resolve active feature bands.
-    - resolve_target_heads: resolve multi-head target hierarchy.
-    - resolve_focal_head: resolve focal target head for partitioning.
-    - derive_head_class_counts: derive counts across all target heads.
+    - `FeatureSelection`: Selected band names and 0-based indices.
+    - `TargetHeadsContext`: Multi-head hierarchy and reclass specs.
+    - `derive_head_class_counts`: Derive counts across all target heads.
+    - `resolve_feature_channels`: Resolve active feature bands.
+    - `resolve_focal_head`: Resolve focal target head for partitioning.
+    - `resolve_target_heads`: Resolve multi-head target hierarchy.
 '''
 
 # standard imports
@@ -84,7 +84,17 @@ class _ResolvedReclass:
 
     @classmethod
     def from_scheme(cls, scheme: geo_core.LabelScheme) -> _ResolvedReclass:
-        '''Build canonical 0-based reclassification from user scheme.'''
+        '''
+        Build canonical 0-based reclassification from a user scheme.
+
+        Args:
+            scheme:
+                User label reclassification scheme mapping.
+
+        Returns:
+            _ResolvedReclass:
+                Canonical zero-based reclassification mapping.
+        '''
         reclass = scheme['reclass']
         names = scheme.get('reclass_name', {})
         return cls(
@@ -100,6 +110,17 @@ class _ResolvedReclass:
             yield group_id, source_classes, self.names.get(group_id, '')
 
     def __getitem__(self, index: int) -> tuple[tuple[int, ...], str]:
+        '''
+        Return source classes and group name for a group index.
+
+        Args:
+            index:
+                Zero-based target group index.
+
+        Returns:
+            tuple[tuple[int, ...], str]:
+                Tuple of `(source_classes, group_name)`.
+        '''
         return self.groups[index], self.names[index]
 
 
@@ -117,7 +138,17 @@ class _TargetTopology:
         self,
         resolved_reclass: dict[str, _ResolvedReclass | None],
     ) -> TargetHeadsContext:
-        '''Convert accumulated topology into TargetHeadsContext.'''
+        '''
+        Convert accumulated topology into a `TargetHeadsContext`.
+
+        Args:
+            resolved_reclass:
+                Mapping of base label names to resolved reclass specs.
+
+        Returns:
+            TargetHeadsContext:
+                Immutable multi-head target hierarchy context.
+        '''
         return TargetHeadsContext(
             head_names=self.head_names,
             head_parent=self.head_parent,
@@ -142,14 +173,20 @@ def resolve_feature_channels(
 
     Args:
         data_schema:
-            catalog data schema containing band mapping and schemes.
+            Catalog data schema containing band mapping and schemes.
         user_features_cfg:
-            user selection by scheme name, band list, or None to enable
+            User selection by scheme name, band list, or None to enable
             all available bands.
 
     Returns:
         FeatureSelection:
-            selected feature band names and 0-based channel indices.
+            Selected feature band names and 0-based channel indices.
+
+    Raises:
+        KeyError:
+            If a requested feature source, scheme, or band is missing.
+        ValueError:
+            If named schemes are requested when `image_schemes` is None.
     '''
     # fetch from data schema
     band_map = data_schema['io_conventions']['image_band_map']
@@ -211,13 +248,13 @@ def resolve_target_heads(
 
     Args:
         data_schema:
-            ingested dataset schema container.
+            Ingested dataset schema container.
         user_targets_cfg:
-            user target configuration per label layer.
+            User target configuration per label layer.
 
     Returns:
         TargetHeadsContext:
-            resolved multi-head hierarchy context.
+            Resolved multi-head hierarchy context.
     '''
     user_cfg = dict(user_targets_cfg or {})
     label_name_map = data_schema['io_conventions']['label_band_map']
@@ -270,13 +307,19 @@ def resolve_focal_head(
 
     Args:
         target_heads:
-            resolved multi-head hierarchy context.
+            Resolved multi-head hierarchy context.
         focal_target:
-            optional requested focal head or class name.
+            Optional requested focal head or class name.
 
     Returns:
         str:
-            the resolved focal head name string.
+            Resolved focal head name string.
+
+    Raises:
+        KeyError:
+            If `focal_target` does not match any head or class name.
+        ValueError:
+            If `target_heads.head_names` is empty.
     '''
     if not target_heads.head_names:
         raise ValueError('No target heads available in context')
@@ -320,13 +363,13 @@ def derive_head_class_counts(
 
     Args:
         target_heads:
-            resolved multi-head hierarchy and reclass schemes.
+            Resolved multi-head hierarchy and reclass schemes.
         raw_class_counts:
-            mapping of base label name to raw per-block class counts.
+            Mapping of base label name to raw per-block class counts.
 
     Returns:
         dict[str, list[int]]:
-            mapping of head name to derived per-class pixel counts list.
+            Mapping of head name to derived per-class pixel counts.
     '''
     derived: dict[str, list[int]] = {}
 

@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Programmatic API entry
-'''
+'''Training session configurator.'''
 
 # standard imports
 import pathlib
@@ -39,6 +37,18 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         output_dpath: str | pathlib.Path | None = None,
         experiment_root: str | pathlib.Path | None = None,
     ):
+        '''
+        Initialize the training session configurator.
+
+        Args:
+            upstream_dpath:
+                Optional directory path for upstream preparation
+                outputs.
+            output_dpath:
+                Optional destination directory for training outputs.
+            experiment_root:
+                Optional experiment root directory for unified mode.
+        '''
         super().__init__(
             'model-train',
             upstream_dpath=upstream_dpath,
@@ -52,7 +62,21 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         bottleneck: str,
         base_channel: int
     ) -> typing.Self:
-        '''Set model body.'''
+        '''
+        Set model architecture backbone, bottleneck, and base width.
+
+        Args:
+            body:
+                Model backbone architecture identifier.
+            bottleneck:
+                Bottleneck module identifier.
+            base_channel:
+                Base channel count for the first encoder stage.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.models.model_body = body
         self.cfg.models.bottleneck = bottleneck
         self.cfg.models.set_base_channel(base_channel)
@@ -65,7 +89,23 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         weight_decay: float,
         scheduler: typing.Literal['CosAnneal']
     ) -> typing.Self:
-        '''Set model optimization.'''
+        '''
+        Set optimizer and learning-rate scheduler configuration.
+
+        Args:
+            optimizer:
+                Optimizer class identifier (`'AdamW'`).
+            learning_rate:
+                Initial learning rate for the optimizer.
+            weight_decay:
+                Weight decay regularization coefficient.
+            scheduler:
+                Learning-rate scheduler identifier (`'CosAnneal'`).
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         engine_optim = self.cfg.session.engine_optim
         engine_optim.opt_cls = optimizer
         engine_optim.lr = learning_rate
@@ -83,7 +123,19 @@ class TrainingSessionConfigurator(configurators.BaseConfigurator):
         trackers: list[typing.Literal['tb', 'mlflow']],
         tracking_uri: str | pathlib.Path | None = None,
     ) -> typing.Self:
-        '''Set experiment tracking backends.'''
+        '''
+        Set experiment tracking backends and optional tracking URI.
+
+        Args:
+            trackers:
+                Tracker backend identifiers (`'tb'` or `'mlflow'`).
+            tracking_uri:
+                Optional remote or local tracking server URI.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.session.trackers = list(trackers)
         self.cfg.session.tracking_uri = str(tracking_uri) if tracking_uri else None
         return self

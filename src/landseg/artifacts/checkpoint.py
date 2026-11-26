@@ -22,8 +22,14 @@
 '''
 Basic model checkpointing utilities.
 
-Provides simple save/load helpers for storing and restoring model,
-optimizer, and scheduler state along with lightweight training metadata.
+Provides save and load helpers for storing and restoring model,
+optimizer, and scheduler state along with lightweight training
+metadata.
+
+Public APIs:
+    - `CheckpointMeta`: Typed metadata stored with checkpoint state.
+    - `load_checkpoint`: Restore model, optimizer, and scheduler state.
+    - `save_checkpoint`: Persist model, optimizer, and scheduler state.
 '''
 
 # standard imports
@@ -55,13 +61,24 @@ def save_checkpoint(
     Save model, optimizer, scheduler (if present), and metadata to file.
 
     Args:
-        model: Model exposing `state_dict()`.
-        ckpt_meta: Dict containing metric, epoch, and step information.
-        optimizer: Optimizer whose state should be checkpointed.
-        scheduler: Optional LR scheduler to save.
-        fpath: Destination file path.
-    '''
+        model:
+            Model exposing `state_dict()`.
+        fpath:
+            Destination file path.
+        ckpt_meta:
+            Dict containing `metric`, `epoch`, and `step` information.
+        optimizer:
+            Optimizer whose state should be checkpointed.
+        scheduler:
+            Optional learning-rate scheduler to save.
 
+    Raises:
+        PermissionError:
+            If writing or replacing the checkpoint file fails after
+            retries.
+        RuntimeError:
+            If PyTorch serialization fails after retries.
+    '''
     # save states to file
     state = {
         'model': model.state_dict(),
@@ -101,16 +118,25 @@ def load_checkpoint(
     Load model, optimizer, and scheduler state dicts from file.
 
     Args:
-        model: Model instance to load parameters into.
-        fpath: Checkpoint file path.
-        device: Device mapping for loading ('cpu', 'cuda', etc.).
-        optimizer: Optional optimizer instance. Not needed for evaluation.
-        scheduler: Optional scheduler instance. Not needed for evaluation.
+        model:
+            Model instance to load parameters into.
+        fpath:
+            Checkpoint file path.
+        map_device:
+            Target device mapping for loading (e.g., `'cpu'`,
+            `'cuda'`).
+        optimizer:
+            Optional optimizer instance to restore. Not needed for
+            evaluation.
+        scheduler:
+            Optional scheduler instance to restore. Not needed for
+            evaluation.
 
     Returns:
-        A metadata dict containing metric, epoch, and step fields.
+        CheckpointMeta:
+            Metadata dictionary containing `metric`, `epoch`, and
+            `step` fields.
     '''
-
     # load states dict from file
     checkpoint = torch.load(fpath, map_location=map_device)
 

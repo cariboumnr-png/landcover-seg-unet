@@ -173,7 +173,8 @@ def test_gridlayout_identity_properties():
     '''
     Given: Two GridLayouts with identical or differing parameters.
     When: Evaluating affine_identity and block_identity properties.
-    Then: Invariant to extent/stride, sensitive to origin/crs/pixel/tile.
+    Then: Invariant to extent and stride, sensitive to origin, CRS,
+        pixel size, and tile size.
     '''
     spec1 = grid_layout.GridSpec(
         crs='EPSG:32617',

@@ -22,9 +22,9 @@
 '''
 Data blocks normalizer utilities for dataset preparation.
 
-Provides helpers to load and filter canonical blocks catalogs and schemas,
-extracting class counts and spatial coordinates needed for downstream
-sampling, partitioning, and analysis.
+Provides helpers to load and filter canonical blocks catalogs and
+schemas, extracting class counts and spatial coordinates needed for
+downstream sampling, partitioning, and analysis.
 
 Public APIs:
     - `DataBlocksManifestInputs`: Bundled datablocks manifest inputs.
@@ -81,17 +81,17 @@ def read_dataset_manifest(
 
     Args:
         inputs:
-            bundled manifest inputs with schema and catalog mappings.
+            Bundled manifest inputs with schema and catalog mappings.
         head_pxs_thres:
-            optional mapping of target head to valid pixel threshold.
+            Optional mapping of target head to valid pixel threshold.
         focal_head:
-            optional target head name for partition stratification.
+            Optional target head name for partition stratification.
         non_overlapping_test_grid:
-            whether to restrict external test blocks to non-overlapping.
+            Whether to restrict external test blocks to non-overlapping.
 
     Returns:
         NormalizedDataBlocksView:
-            filtered metadata and block mappings for partitioning.
+            Filtered metadata and block mappings for partitioning.
     '''
     # valid blocks filtered by pixel thresholds
     valid_blocks = _filter_blocks(inputs.catalog, head_pxs_thres)

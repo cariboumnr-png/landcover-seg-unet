@@ -36,7 +36,7 @@ import landseg.execution.workflows.diagnose_overfit as diagnose_overfit
 
 # ----- helpers
 class _DummyEpochResults:  # pylint: disable=too-few-public-methods
-    '''Minimal stub matching `EpochResults` contract used by overfit loop.'''
+    '''Minimal stub matching `EpochResults` used by overfit loop.'''
 
     def __init__(self, loss: float, iou: float):
         self.training = types.SimpleNamespace(total_objective=loss)
@@ -49,7 +49,7 @@ class _DummyEpochResults:  # pylint: disable=too-few-public-methods
 
 
 class _FakeRunner:
-    '''Minimal session runner stub returning scripted per-epoch outcomes.'''
+    '''Minimal session runner stub returning scripted epoch outcomes.'''
 
     def __init__(self, epochs: list[_DummyEpochResults]):
         self._epochs = epochs
@@ -67,6 +67,7 @@ class _FakeRunner:
 
 
 def _build_config(exp_root: pathlib.Path) -> configs.RootConfig:
+    '''Build minimal `RootConfig` for diagnose-overfit testing.'''
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(exp_root)
     cfg.execution.verbosity = 'silent'
@@ -77,6 +78,7 @@ def _patch_overfit_runtime(
     monkeypatch: pytest.MonkeyPatch,
     runner: _FakeRunner | None = None,
 ) -> None:
+    '''Patch external runtime builders for diagnose-overfit tests.'''
     dummy_specs = types.SimpleNamespace(
         heads=types.SimpleNamespace(class_counts={'landcover': [1, 1]})
     )
@@ -105,10 +107,10 @@ def test_execute_diagnose_overfit_stops_on_target_iou(
     monkeypatch: pytest.MonkeyPatch,
 ):
     '''
-    Given: A valid `RootConfig` and mock session runner reaching IoU >= 0.99
+    Given: A valid `RootConfig` and mock runner reaching IoU >= 0.99
         on epoch 2.
     When: Running `execute_diagnose_overfit`.
-    Then: Stop early at epoch 2 and record `SUCCESS` status in summary JSON.
+    Then: Stop at epoch 2 and record `SUCCESS` status in summary JSON.
     '''
     cfg = _build_config(tmp_path)
     runner = _FakeRunner(
@@ -140,7 +142,7 @@ def test_execute_diagnose_overfit_max_epochs_and_failure(
     Given: A session failing to hit IoU >= 0.99 within max epochs, and a
         separate dataspec failure.
     When: Running `execute_diagnose_overfit`.
-    Then: Log `FAILED` on threshold miss and propagate builder exceptions.
+    Then: Log `FAILED` on threshold miss and propagate builder errors.
     '''
     cfg = _build_config(tmp_path)
     monkeypatch.setattr(c, 'OVERFIT_MAX_EPOCH', 3)

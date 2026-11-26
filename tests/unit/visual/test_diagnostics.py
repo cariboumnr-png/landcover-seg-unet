@@ -36,7 +36,11 @@ matplotlib.use('Agg')
 
 # ----- Confusion Matrix Tests
 def test_plot_confusion_matrix_tensor(tmp_path: pathlib.Path):
-    '''Test plotting normalized confusion matrix from a PyTorch tensor.'''
+    '''
+    Given: A 2D PyTorch confusion matrix tensor.
+    When: Calling `plot_confusion_matrix` with `normalize=True`.
+    Then: Return a figure and save the PNG to disk.
+    '''
     cm_tensor = torch.tensor(
         [[50, 10], [5, 35]],
         dtype=torch.int64,
@@ -53,7 +57,11 @@ def test_plot_confusion_matrix_tensor(tmp_path: pathlib.Path):
 
 
 def test_plot_confusion_matrix_numpy_with_labels(tmp_path: pathlib.Path):
-    '''Test plotting unnormalized confusion matrix with custom class names.'''
+    '''
+    Given: A NumPy confusion matrix array and custom class names.
+    When: Calling `plot_confusion_matrix` with `normalize=False`.
+    Then: Return a figure and save the labeled PNG to disk.
+    '''
     cm_arr = numpy.array(
         [[100, 20, 5], [10, 80, 10], [2, 8, 90]],
         dtype=numpy.int32,
@@ -71,7 +79,11 @@ def test_plot_confusion_matrix_numpy_with_labels(tmp_path: pathlib.Path):
 
 
 def test_plot_confusion_matrix_invalid_shape():
-    '''Test that non-square matrix raises ValueError.'''
+    '''
+    Given: A non-square confusion matrix array.
+    When: Calling `plot_confusion_matrix`.
+    Then: Raise `ValueError`.
+    '''
     cm_invalid = numpy.zeros((3, 4))
     with pytest.raises(ValueError, match='square'):
         visual.plot_confusion_matrix(cm_invalid)
@@ -79,7 +91,11 @@ def test_plot_confusion_matrix_invalid_shape():
 
 # ----- Per-Class Metrics Tests
 def test_plot_per_class_metrics_dict(tmp_path: pathlib.Path):
-    '''Test plotting per-class metric scores from dictionary.'''
+    '''
+    Given: A dictionary mapping class names to metric scores.
+    When: Calling `plot_per_class_metrics`.
+    Then: Return a figure and save the PNG to disk.
+    '''
     metrics = {
         'Water': 0.88,
         'Forest': 0.76,
@@ -98,7 +114,11 @@ def test_plot_per_class_metrics_dict(tmp_path: pathlib.Path):
 
 
 def test_plot_per_class_metrics_tensor():
-    '''Test plotting per-class scores from a 1D tensor.'''
+    '''
+    Given: A 1D PyTorch tensor of per-class metric scores.
+    When: Calling `plot_per_class_metrics` with class names.
+    Then: Return a rendered matplotlib figure.
+    '''
     tensor_scores = torch.tensor([0.9, 0.75, 0.82], dtype=torch.float32)
     fig = visual.plot_per_class_metrics(
         tensor_scores,
@@ -109,6 +129,10 @@ def test_plot_per_class_metrics_tensor():
 
 
 def test_plot_per_class_metrics_invalid_type():
-    '''Test that unsupported metrics payload raises TypeError.'''
+    '''
+    Given: An unsupported string metrics payload.
+    When: Calling `plot_per_class_metrics`.
+    Then: Raise `TypeError`.
+    '''
     with pytest.raises(TypeError, match='Unsupported'):
         visual.plot_per_class_metrics('invalid_string_payload')

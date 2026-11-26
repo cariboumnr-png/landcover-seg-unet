@@ -20,7 +20,18 @@
 # =========================================================================== #
 
 '''
-Session step
+Session step result containers and summary contracts.
+
+Provides immutable and mutable dataclasses capturing per-epoch training,
+validation, and inference metrics emitted across runner boundaries.
+
+Public APIs:
+    - `AccumulatedMetrics`: Container for IoU metrics and active views.
+    - `InferStepResults`: Container for epoch inference step results.
+    - `SessionStepResults`: Immutable container for epoch step metrics.
+    - `SessionStepSummary`: Immutable training progress snapshot.
+    - `TrainStepResults`: Container for training step loss metrics.
+    - `ValStepResults`: Container for aggregated validation metrics.
 '''
 
 # standard imports
@@ -40,17 +51,17 @@ class SessionStepSummary: # pylint: disable=too-many-instance-attributes
     '''
     Immutable training progress snapshot exposed by runners.
 
-    A TrainingStep represents the externally observable state of training
+    A `SessionStepSummary` represents the observable state of training
     after a completed epoch. It is the sole unit of progress emitted by
     runner generators and forms the public execution contract consumed
     by CLI pipelines, sweep logic, and monitoring tools.
 
     Invariants:
-        - Exactly one TrainingStep is yielded per completed epoch.
-        - Exactly one terminal TrainingStep is yielded per run
-          (is_run_end == True).
-        - metrics reflect the most recently completed epoch.
-        - No TrainingStep represents partial or in-progress execution.
+        - Exactly one summary is yielded per completed epoch.
+        - Exactly one terminal summary is yielded per run
+          (`is_run_end == True`).
+        - Metrics reflect the most recently completed epoch.
+        - No summary represents partial or in-progress execution.
     '''
     # identity / location
     phase_name: str
@@ -91,12 +102,16 @@ class SessionStepResults:
     Immutable container for metrics produced during a single epoch.
 
     Attributes:
-        training: Results returned by the trainer for the epoch, or None
-            if no training step was executed.
-        validation: Results returned by the evaluator, or None if no
+        training:
+            Results returned by the trainer for the epoch, or `None` if
+            no training step was executed.
+        validation:
+            Results returned by the evaluator, or `None` if no
             evaluation step was executed.
+        inference:
+            Results returned by inference evaluation, or `None` if no
+            inference step was executed.
     '''
-
     training: TrainStepResults | None = None
     validation: ValStepResults | None = None
     inference: InferStepResults | None = None
@@ -105,7 +120,7 @@ class SessionStepResults:
 
     @property
     def target_objective(self) -> str:
-        '''Return the targert objective from the validation results.'''
+        '''Return the target objective from the validation results.'''
         assert self.validation
         name = self._metric_name
         if name == 'iou':
@@ -165,8 +180,15 @@ class SessionStepResults:
         metric_name: str,
         track_heads: dict[str, float] | None
     ):
-        '''Tracking configuration'''
+        '''
+        Configure target validation tracking objective and head weights.
 
+        Args:
+            metric_name:
+                Tracking metric identifier (e.g., `'iou'` or `'gem'`).
+            track_heads:
+                Optional mapping of head names to tracking weights.
+        '''
         # force IoU mode if there is only one active head (mtl metrics invalid)
         if self.validation and len(self.validation.head_metrics) == 1:
             metric_name = 'iou'
@@ -175,7 +197,7 @@ class SessionStepResults:
 
 @dataclasses.dataclass
 class TrainStepResults:
-    '''Results that update regularly during training flush at the end.'''
+    '''Results updated during training and flushed at epoch end.'''
     epoch_step: int = 1
     global_step: int = 1
     metrics_updated: bool = False
@@ -186,7 +208,6 @@ class TrainStepResults:
 
     def clear(self) -> None:
         '''Reset all loss values to `0.0`.'''
-
         self.total_objective = 0.0
         for h in self.head_losses:
             self.head_losses[h] = 0.0
@@ -241,6 +262,19 @@ class AccumulatedMetrics:
     _locked: bool = field(default=False, init=False, repr=False)
 
     def __setattr__(self, key, value) -> None:
+        '''
+        Set attribute unless the metrics instance has been locked.
+
+        Args:
+            key:
+                Attribute name to assign.
+            value:
+                Attribute value to assign.
+
+        Raises:
+            AttributeError:
+                If the instance has already been locked via `lock()`.
+        '''
         if getattr(self, "_locked", False):
             raise AttributeError("Object is immutable after compute()")
         super().__setattr__(key, value)
@@ -254,7 +288,7 @@ class AccumulatedMetrics:
 
     @property
     def as_str_list(self) -> list[str]:
-        '''Human-readable summary for mean/class IoUs (all/active).'''
+        '''Return summary lines for mean and class IoU metrics.'''
         str_list: list[str] = []
         # all classes
         m = f'{self.mean:.4f}'
@@ -271,7 +305,7 @@ class AccumulatedMetrics:
         return str_list
 
     def lock(self) -> None:
-        '''Lock object via __setattr__ blocking.'''
+        '''Lock instance to prevent further attribute mutations.'''
         self._locked = True
 
 # ------------------------------private  function------------------------------
@@ -283,7 +317,6 @@ def _track_metrics(
     mtl_metrics: dict[str, float] | None = None
 ) -> float:
     '''Track metrics as per configuration.'''
-
     if track_heads is not None:
 
         if not isinstance(track_heads, dict):
@@ -317,7 +350,6 @@ def _get_mean_iou(
     head_weights: dict[str, float] | None
 ) -> float:
     '''Mean IoU calculation helper.'''
-
     mean = 0.0
     ws = []
     # accumulate from all monitor heads

@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''Model architecture schema. Field validation pending'''
+'''Model backbone and bottleneck configuration schemas.'''
 
 # standard imports
 import dataclasses
@@ -37,6 +35,7 @@ field = dataclasses.field
 # ----- shared double convolution
 @dataclasses.dataclass
 class ConvParams(base.BaseConfigSection):
+    '''Shared double-convolution block configuration.'''
     norm: str | None = 'gn'
     gn_groups: int | None = 8
     p_drop: float = 0.0
@@ -45,6 +44,7 @@ class ConvParams(base.BaseConfigSection):
 # ----- UNet bodies
 @dataclasses.dataclass
 class UNetBodyConfig(base.BaseConfigSection):
+    '''Base configuration for UNet-family encoder-decoder bodies.'''
     body: str
     base_ch: int
     encoder_conv_params: ConvParams
@@ -54,6 +54,7 @@ class UNetBodyConfig(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class UNet(UNetBodyConfig):
+    '''Standard UNet architecture body configuration.'''
     body: str = 'unet'
     base_ch: int = 32
     encoder_conv_params: ConvParams = field(default_factory=ConvParams)
@@ -63,6 +64,7 @@ class UNet(UNetBodyConfig):
 
 @dataclasses.dataclass
 class UNetPP(UNetBodyConfig):
+    '''UNet++ nested architecture body configuration.'''
     body: str = 'unetpp'
     base_ch: int = 32
     encoder_conv_params: ConvParams = field(default_factory=ConvParams)
@@ -72,6 +74,7 @@ class UNetPP(UNetBodyConfig):
 
 @dataclasses.dataclass
 class UNetPPP(UNetBodyConfig):
+    '''UNet 3+ full-scale skip architecture body configuration.'''
     body: str = 'unetppp'
     base_ch: int = 32
     encoder_conv_params: ConvParams = field(default_factory=ConvParams)
@@ -82,6 +85,7 @@ class UNetPPP(UNetBodyConfig):
 # ----- UNet bottlenecks
 @dataclasses.dataclass
 class Transformer:
+    '''Transformer block hyperparameters for bottleneck modules.'''
     num_heads: int = 8
     mlp_ratio: float = 2.0
     dropout: float = 0.05
@@ -89,6 +93,7 @@ class Transformer:
 
 @dataclasses.dataclass
 class BottleneckConfig:
+    '''Base configuration for UNet bottleneck blocks.'''
     variant: str
     num_conv_blocks: int | None
     conv_params: ConvParams | None
@@ -97,6 +102,7 @@ class BottleneckConfig:
 
 @dataclasses.dataclass
 class UNetBottleneckConfig(BottleneckConfig):
+    '''Convolutional UNet bottleneck configuration.'''
     variant: str = 'conv'
     num_conv_blocks: int | None = None
     conv_params: ConvParams | None = field(default_factory=ConvParams)
@@ -105,6 +111,7 @@ class UNetBottleneckConfig(BottleneckConfig):
 
 @dataclasses.dataclass
 class TransformerBottleneckConfig(BottleneckConfig):
+    '''Transformer-based UNet bottleneck configuration.'''
     variant: str = 'transformer'
     num_conv_blocks: int | None = None
     conv_params: ConvParams | None = None
@@ -113,6 +120,7 @@ class TransformerBottleneckConfig(BottleneckConfig):
 
 @dataclasses.dataclass
 class HybridBottleneckConfig(BottleneckConfig):
+    '''Hybrid convolution and transformer bottleneck configuration.'''
     variant: str = 'hybrid'
     num_conv_blocks: int | None = 2
     conv_params: ConvParams | None = field(default_factory=ConvParams)
@@ -122,12 +130,19 @@ class HybridBottleneckConfig(BottleneckConfig):
 
 @dataclasses.dataclass
 class UNetBackboneConfig:
+    '''Composite UNet body and bottleneck configuration.'''
     body: UNetBodyConfig
     bottleneck: BottleneckConfig
 
 
 def default_bodies() -> dict[str, typing.Any]:
-    '''Return default UNet body registry.'''
+    '''
+    Build default UNet body configuration registry.
+
+    Returns:
+        dict[str, typing.Any]:
+            Mapping from body variant names to default configs.
+    '''
     return {
         'unet': UNet(),
         'unetpp': UNetPP(),
@@ -136,7 +151,13 @@ def default_bodies() -> dict[str, typing.Any]:
 
 
 def default_bottlenecks() -> dict[str, typing.Any]:
-    '''Return default UNet bottleneck registry.'''
+    '''
+    Build default UNet bottleneck configuration registry.
+
+    Returns:
+        dict[str, typing.Any]:
+            Mapping from bottleneck variant names to default configs.
+    '''
     return {
         'conv': UNetBottleneckConfig(),
         'transformer': TransformerBottleneckConfig(),

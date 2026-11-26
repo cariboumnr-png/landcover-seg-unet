@@ -19,22 +19,25 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
-
 '''
 Composite loss manager for combining multiple primitive loss functions.
 
 This module provides a flexible interface for constructing weighted
 combinations of primitive loss types (e.g., focal, dice) based on a user
-configuration. Each component loss must implement the PrimitiveLoss
-interface and is instantiated from a small registry of supported types.
+configuration. Each component loss inherits from `PrimitiveLoss` and is
+instantiated from enabled configuration blocks.
 
 The main entry point is `CompositeLoss`, which handles:
-    - Instantiating individual loss modules,
-    - Managing their per-component weights,
-    - Computing a weighted sum of all enabled losses
+    - Instantiating individual loss modules.
+    - Managing their per-component weights.
+    - Computing a weighted sum of all enabled losses.
+
+Public APIs:
+    - `CompositeLoss`: Weighted combination of enabled primitive losses.
+    - `CompositeLossConfig`: Protocol for composite loss configuration.
 '''
+
+# pylint: disable=too-few-public-methods
 
 # standard imports
 from __future__ import annotations
@@ -47,6 +50,7 @@ import landseg.session.engine.tasks.loss.primitives as primitives
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class CompositeLossConfig(typing.Protocol):
     '''Interface for composite loss component configuration.'''
     @property
@@ -102,6 +106,7 @@ class _EcologicalLoss(typing.Protocol):
     def weight(self) -> float: ...
     @property
     def profile(self) -> str | None: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public classes
@@ -109,35 +114,13 @@ class CompositeLoss(torch.nn.Module):
     '''
     Combine multiple loss components into a weighted composite loss.
 
-    Supported loss types are defined in the class-level `registry`.
-    Configuration is provided as a dictionary describing which loss
-    components to enable and the parameters for each.
+    Configuration specifies which primitive loss components to enable
+    and the parameters for each. When used via `build_headlosses`,
+    per-head alpha values for focal loss are injected dynamically from
+    head specifications.
 
-    Example:
-        Base configuration enabling focal + dice losses:
-
-            sample_config = {
-                "focal": {
-                    "weight": 0.7,
-                    "alpha": None,
-                    "gamma": 2.0,
-                    "reduction": "mean",
-                },
-                "dice": {
-                    "weight": 0.3,
-                    "smooth": 1.0,
-                }
-            }
-
-        Create a composite loss manually:
-        >>> from landseg.training import loss
-        >>> sample_class = loss.CompositeLoss(sample_config, 255)
-
-        When used via `build_headlosses`, per-head a values for
-        focal loss are injected dynamically from head specifications.
-
-    Each enabled component is instantiated, stored in a ModuleList, and
-    evaluated during the forward pass.
+    Each enabled component is instantiated, stored in a `ModuleList`,
+    and evaluated during the forward pass.
     '''
 
     def __init__(
@@ -150,24 +133,23 @@ class CompositeLoss(torch.nn.Module):
         ecological_similarity_matrix: torch.Tensor | None = None
     ):
         '''
-        Initialize the composite loss from a configuration dictionary.
+        Initialize the composite loss from configuration.
 
         Creates:
-            - self.losses: a ModuleList of instantiated loss functions.
-            - self.weights: parallel list of scalar weights for each
-              component loss.
+            - `self.losses`: `ModuleList` of instantiated loss modules.
+            - `self.weights`: Parallel list of scalar component weights.
 
         Args:
             config:
-                structure mapping loss-type names to parameter blocks.
+                Configuration protocol specifying component settings.
             ignore_index:
-                label index to ignore in all component losses.
+                Label index to ignore in all component losses.
             focal_alpha:
-                optional per-class alpha weights for Focal Loss.
+                Optional per-class alpha weights for Focal Loss.
             spectral_band_indices:
-                optional list of spectral band indices.
+                Optional list of spectral band indices.
             ecological_similarity_matrix:
-                optional pre-resolved species similarity matrix.
+                Optional pre-resolved species similarity matrix.
         '''
         super().__init__()
 
@@ -236,15 +218,17 @@ class CompositeLoss(torch.nn.Module):
         Compute the weighted sum of all enabled loss components.
 
         Args:
-            p: Model logits or predictions.
-            t: Target labels with a shape compatible with `p`.
-            masks: Optional dictionary of masks passed to each loss
-                component (keyword-only argument).
+            p:
+                Model logits or predictions.
+            t:
+                Target labels with a shape compatible with `p`.
+            **kwargs:
+                Optional keyword arguments forwarded to primitive loss
+                modules (e.g., `masks` and `features`).
 
         Returns:
-            A scalar tensor representing the total loss across all
-            components. NaN/Inf propagation is controlled by relying on
-            each primitive loss implementation.
+            torch.Tensor:
+                Scalar tensor for the weighted sum of enabled losses.
         '''
         # get mask
         masks = kwargs.get('masks', None)

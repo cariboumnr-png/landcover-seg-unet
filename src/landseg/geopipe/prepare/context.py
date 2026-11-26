@@ -26,8 +26,8 @@ Provides containers and loaders to resolve upstream ingested data
 catalog, schema, and canvas spatial reference metadata.
 
 Public APIs:
-    - `PreparationContext`: container holding resolved ingestion inputs.
-    - `build_preparation_context`: load preparation context from files.
+    - `PreparationContext`: Container holding resolved ingestion inputs.
+    - `build_preparation_context`: Load preparation context from files.
 '''
 
 # standard imports
@@ -43,7 +43,7 @@ import landseg.geopipe.rasters as rasters
 # ----- public dataclasses
 @dataclasses.dataclass(frozen=True)
 class PreparationContext:
-    '''Resolved upstream ingestion references for dataset preparation.'''
+    '''Resolved upstream ingestion references for data preparation.'''
     catalog: dict[str, geo_core.DataCatalogEntry]
     test_catalog: dict[str, geo_core.DataCatalogEntry] | None
     ingested_blocks_schema: geo_core.DataSchema
@@ -64,22 +64,30 @@ def build_preparation_context(
     config: contracts.PreparationPipelineConfig,
 ) -> PreparationContext:
     '''
-    Build preparation context from upstream ingestion catalog and schema.
+    Build preparation context from upstream catalog and schema.
 
     Loads the canonical dataset schema, validates the catalog path,
     and extracts the canvas CRS and Affine transform from the image
     raster source.
 
     Args:
-        catalog_fpath:
-            path to canonical blocks catalog JSON.
-        schema_fpath:
-            path to dataset schema JSON.
+        windows_fp:
+            Path to mapped raster windows JSON artifact.
+        catalog_fp:
+            Path to canonical blocks catalog JSON.
+        schema_fp:
+            Path to dataset schema JSON.
+        config:
+            Preparation pipeline configuration parameters.
 
     Returns:
         PreparationContext:
-            resolved execution context containing schema and canvas
+            Resolved execution context containing schema and canvas
             metadata.
+
+    Raises:
+        ValueError:
+            If the block windows artifact has invalid tile metadata.
     '''
     # load artifacts
     Ctrl = artifacts.Controller[contracts.MappedRasterWindowsPayload]

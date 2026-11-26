@@ -22,17 +22,18 @@
 '''
 MLOps storage, experiment path, and cloud volume resolution utilities.
 
-Provides precedence-based resolution of experiment root workspaces across
-cloud volumes (e.g. Unity Catalog Volumes `/Volumes/...`), local POSIX paths,
-and environment variables. Also manages environment-safe Optuna storage
-connection strings and synchronization between driver scratch and persistent volumes.
+Provides precedence-based resolution of experiment root workspaces
+across cloud volumes (e.g., Unity Catalog Volumes `/Volumes/...`),
+local POSIX paths, and environment variables. Also manages safe
+Optuna storage connection strings and synchronization between driver
+scratch and persistent volumes.
 
 Public APIs:
-    - `load_study_trials`: Load persisted sweep trials dataframe or summary.
+    - `load_study_trials`: Load persisted sweep trials or summary.
     - `resolve_exp_root`: Resolve experiment root path across contexts.
     - `resolve_optuna_storage`: Resolve environment-safe Optuna URI.
-    - `sync_optuna_study`: Persist Optuna study trials to volume storage.
-    - `validate_output_root`: Validate user-designated session output root.
+    - `sync_optuna_study`: Persist Optuna study trials to storage.
+    - `validate_output_root`: Validate user-designated output root.
 '''
 
 # standard imports
@@ -63,9 +64,10 @@ def resolve_exp_root(
 
     Evaluation precedence:
     1. Explicit `exp_root` argument if provided and non-empty.
-    2. Databricks widget or dbutils parameter if available (`output_root` or `exp_root`).
-    3. Dedicated environment variable (default: `LANDSEG_OUTPUT_ROOT`, `LANDSEG_EXP_ROOT`,
-       fallback: `EXP_ROOT`).
+    2. Databricks widget or `dbutils` parameter if available
+       (`output_root` or `exp_root`).
+    3. Dedicated environment variable (`LANDSEG_OUTPUT_ROOT`,
+       `LANDSEG_EXP_ROOT`, or fallback `EXP_ROOT`).
     4. Fallback default (`./experiment`).
 
     Args:
@@ -76,9 +78,9 @@ def resolve_exp_root(
         env_var:
             Environment variable name to check.
         create_if_missing:
-            If True, automatically create the directory hierarchy.
+            If `True`, automatically create the directory hierarchy.
         dbutils:
-            Optional explicit dbutils handle.
+            Optional explicit `dbutils` handle.
 
     Returns:
         pathlib.Path:
@@ -129,21 +131,21 @@ def validate_output_root(
 
     Enforces cloud filesystem safety policies:
     1. Rejects empty or missing output paths (with actionable guidance).
-    2. Explicitly blocks Databricks `/Workspace/...` paths because workspace files
-       cannot store binary model checkpoints (.pt) due to Databricks flush limits.
-    3. On Databricks clusters, enforces Unity Catalog Volume paths (`/Volumes/...`)
-       or cluster scratch (`/local_disk0`).
-    4. Probes directory writability (via test probe file creation and removal)
-       before heavy computation is committed.
+    2. Blocks Databricks `/Workspace/...` paths because workspace files
+       cannot store binary checkpoints (`.pt`) due to flush limits.
+    3. On Databricks clusters, enforces Unity Catalog Volume paths
+       (`/Volumes/...`) or cluster scratch (`/local_disk0`).
+    4. Probes directory writability (via probe file creation and
+       removal) before heavy computation is committed.
 
     Args:
         path:
-            Output directory string or pathlib.Path.
+            Output directory string or `pathlib.Path`.
         probe_write:
-            If True, verifies filesystem writability by writing and deleting
-            a sentinel probe file.
+            If `True`, verifies filesystem writability by writing and
+            deleting a sentinel probe file.
         dbutils:
-            Optional explicit dbutils handle.
+            Optional explicit `dbutils` handle.
 
     Returns:
         pathlib.Path:
@@ -151,7 +153,8 @@ def validate_output_root(
 
     Raises:
         ValueError:
-            If path is empty, invalid format, or points to disallowed storage.
+            If path is empty, has an invalid format, or points to
+            disallowed storage.
         PermissionError:
             If target directory is not writable.
     '''
@@ -231,7 +234,7 @@ def resolve_optuna_storage(
     SQLite on shared cloud storage (DBFS or Unity Catalog Volumes)
     lacks robust POSIX file locking and can corrupt trial databases.
     When running on Databricks without an explicit remote RDBMS URI,
-    this helper automatically routes SQLite to driver storage (/tmp/optuna.db).
+    this helper routes SQLite to driver storage (`/tmp/optuna.db`).
 
     Args:
         storage:
@@ -283,12 +286,12 @@ def sync_optuna_study(
     dbutils: typing.Any = None,
 ) -> dict[str, typing.Any]:
     '''
-    Synchronize Optuna sweep study summaries and checkpoints to persistent storage.
+    Synchronize Optuna sweep study artifacts to persistent storage.
 
     When running on Databricks, Optuna SQLite trial databases reside on
-    driver-local scratch storage (/tmp/optuna.db) to avoid distributed FUSE
-    POSIX locking failures on UC Volumes. This utility persists the final study
-    trials dataframe, summary metrics, and Pareto-optimal trial checkpoints
+    driver-local scratch storage (`/tmp/optuna.db`) to avoid FUSE POSIX
+    locking failures on UC Volumes. This utility persists the final
+    study trials dataframe, summary metrics, and best trial checkpoints
     to the persistent experiment root volume tier.
 
     Args:
@@ -303,11 +306,12 @@ def sync_optuna_study(
         top_k:
             Number of top trials to rank in summary.
         dbutils:
-            Optional explicit dbutils handle.
+            Optional explicit `dbutils` handle.
 
     Returns:
         dict[str, typing.Any]:
-            Summary dictionary recording persisted artifact paths and metrics.
+            Summary dictionary recording persisted artifact paths and
+            metrics.
     '''
     if output_dpath is not None:
         target_dest = pathlib.Path(output_dpath)
@@ -409,7 +413,7 @@ def load_study_trials(
     dbutils: typing.Any = None,
 ) -> typing.Any:
     '''
-    Load persisted study trials dataframe or summary from experiment volume.
+    Load persisted study trials dataframe or summary from volume.
 
     Args:
         exp_root:
@@ -417,11 +421,16 @@ def load_study_trials(
         study_name:
             Identifier of the study to load.
         dbutils:
-            Optional explicit dbutils handle.
+            Optional explicit `dbutils` handle.
 
     Returns:
-        pandas.DataFrame | dict[str, typing.Any]:
-            Loaded trials table or parsed summary dictionary.
+        typing.Any:
+            Loaded `pandas.DataFrame` trials table or parsed summary
+            dictionary.
+
+    Raises:
+        FileNotFoundError:
+            If neither study trials CSV nor summary JSON exists.
     '''
     resolved_root = resolve_exp_root(exp_root, dbutils=dbutils)
     sweeps_dir = resolved_root / 'artifacts' / 'sweeps' / study_name

@@ -26,7 +26,7 @@ Coordinates raw raster harmonization followed immediately by batch
 ingestion into the canonical block pool.
 
 Public APIs:
-    - `execute_e2e_intake`: run data intake sequence.
+    - `execute_e2e_intake`: Run data intake sequence.
 '''
 
 # local imports

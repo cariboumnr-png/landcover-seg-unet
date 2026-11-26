@@ -25,6 +25,15 @@ Pre-flight diagnostic check functions.
 Each submodule groups checks by `ProbeCategory`. All checks accept an
 `InspectionContext` (plus explicit paths where relevant) and return a
 `ProbeResult`; none mutate pipeline state.
+
+Public APIs:
+    - `contracts`: Stage contract checks backed by `geopipe`.
+    - `filesystem`: Output directory access and writability checks.
+    - `hardware`: Accelerator availability and VRAM headroom checks.
+    - `ledger`: Block pool and prepared-state ledger checks.
+    - `lineage`: Upstream report, manifest, and artifact checks.
+    - `model`: Model architecture, checkpoint, and split checks.
+    - `policy`: Execution collision-handling policy checks.
 '''
 
 # standard imports

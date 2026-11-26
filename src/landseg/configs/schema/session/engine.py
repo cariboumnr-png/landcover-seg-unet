@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
 '''Session engine configuration.'''
 
 # standard imports
@@ -35,15 +33,18 @@ field = dataclasses.field
 
 @dataclasses.dataclass
 class EngineExec(base.BaseConfigSection):
+    '''Runtime execution settings for the training engine.'''
     use_amp: bool = True
     logit_adjust_alpha: float = 1.0
 
     def validate(self):
+        '''Validate non-negative logit adjustment alpha.'''
         self.val.require_numeric_min(self.logit_adjust_alpha, 0.0)
 
 
 @dataclasses.dataclass
 class EngineOptim(base.BaseConfigSection):
+    '''Optimizer, scheduler, and gradient clipping configuration.'''
     opt_cls: str = 'AdamW'
     lr: float = 1e-4
     weight_decay: float = 1e-3
@@ -52,6 +53,7 @@ class EngineOptim(base.BaseConfigSection):
     grad_clip_norm: float | None = 1.0
 
     def validate(self):
+        '''Validate optimizer, gradient clip, and scheduler settings.'''
         self.val.require_numeric_min(self.lr, 0.0)
         self.val.require_numeric_min(self.weight_decay, 0.0)
         if self.grad_clip_norm is not None:
@@ -63,44 +65,52 @@ class EngineOptim(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class EngineSchedule(base.BaseConfigSection):
+    '''Periodic epoch and batch intervals for engine hooks.'''
     val_every_n_epoch: int = 1
     infer_every_n_epoch: int = 1
     ckpt_every_n_epoch: int = 5
     update_loss_every_n_batch: int = 50
 
     def validate(self):
+        '''Validate all schedule intervals are at least one.'''
         for f in dataclasses.fields(self):
             self.val.require_numeric_min(getattr(self, f.name), 1, int)
 
 
 @dataclasses.dataclass
 class FocalLoss(base.BaseConfigSection):
+    '''Focal loss component hyperparameters.'''
     weight: float = 0.5
     gamma: float = 2.0
     reduction: str = 'mean'
 
     def validate(self) -> None:
+        '''Validate non-negative focal loss weight and gamma.'''
         self.val.require_numeric_min(self.weight, 0.0)
         self.val.require_numeric_min(self.gamma, 0.0)
 
 
 @dataclasses.dataclass
 class DiceLoss(base.BaseConfigSection):
+    '''Dice loss component hyperparameters.'''
     weight: float = 0.5
     smooth: float = 1.0
 
     def validate(self) -> None:
+        '''Validate non-negative dice loss weight and smoothing.'''
         self.val.require_numeric_min(self.weight, 0.0)
         self.val.require_numeric_min(self.smooth, 0.0)
 
 
 @dataclasses.dataclass
 class SpectralLoss(base.BaseConfigSection):
+    '''Spectral consistency loss component hyperparameters.'''
     weight: float = 1e-3
     alpha: float = 1.0
     neighbour: int = 4
 
     def validate(self) -> None:
+        '''Validate spectral weight, alpha, and neighborhood size.'''
         self.val.require_numeric_min(self.weight, 0.0)
         self.val.require_numeric_min(self.alpha, 0.0)
         self.val.require_value_from(self.neighbour, [4, 8], int)
@@ -109,23 +119,28 @@ class SpectralLoss(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class TVLoss(base.BaseConfigSection):
+    '''Total variation loss component hyperparameters.'''
     weight: float = 1e-4
 
     def validate(self) -> None:
+        '''Validate non-negative total variation loss weight.'''
         self.val.require_numeric_min(self.weight, 0.0)
 
 
 @dataclasses.dataclass
 class EcologicalLoss(base.BaseConfigSection):
+    '''Ecological loss component hyperparameters.'''
     weight: float = 0.0
     profile: str | None = None
 
     def validate(self) -> None:
+        '''Validate non-negative ecological loss weight.'''
         self.val.require_numeric_min(self. weight, 0.0)
 
 
 @dataclasses.dataclass
 class LossConfigs(base.BaseConfigSection):
+    '''Composite container for all engine loss configurations.'''
     focal: FocalLoss = field(default_factory=FocalLoss)
     dice: DiceLoss = field(default_factory=DiceLoss)
     spectral: SpectralLoss = field(default_factory=SpectralLoss)
@@ -133,6 +148,7 @@ class LossConfigs(base.BaseConfigSection):
     ecological: EcologicalLoss = field(default_factory=EcologicalLoss)
 
     def validate(self) -> None:
+        '''Validate all nested loss component configurations.'''
         self.focal.validate()
         self.dice.validate()
         self.spectral.validate()
@@ -142,6 +158,7 @@ class LossConfigs(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class MTLConstraints(base.BaseConfigSection):
+    '''Multi-task hard constraint rule between head predictions.'''
     name: str = ''
     source_head: str = ''
     trigger_val: int = 0
@@ -151,12 +168,14 @@ class MTLConstraints(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class MTLRegularization(base.BaseConfigSection):
+    '''Multi-task consistency regularization hyperparameters.'''
     consistency_lambda: float = 0.05
     consistency_reduction: str = 'mean'
 
 
 @dataclasses.dataclass
 class EngineTask(base.BaseConfigSection):
+    '''Task weighting, loss, and multi-task configuration.'''
     alpha_fn: str = 'effective_n'
     en_beta: float = 0.999
     excluded_cls: dict[str, list[int]] | None = None
@@ -166,6 +185,7 @@ class EngineTask(base.BaseConfigSection):
     mtl_reg_configs: MTLRegularization = field(default_factory=MTLRegularization)
 
     def validate(self):
+        '''Validate class-weighting mode, beta, and head weights.'''
         match self.alpha_fn:
             case 'effective_n':
                 self.val.require_numeric_range(self.en_beta, (0.0, 1.0))
@@ -181,12 +201,14 @@ class EngineTask(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class EngineConfig(base.BaseConfigSection):
+    '''Composite configuration for training engine components.'''
     engine_exec: EngineExec = field(default_factory=EngineExec)
     engine_optim: EngineOptim = field(default_factory=EngineOptim)
     engine_schedule: EngineSchedule = field(default_factory=EngineSchedule)
     engine_tasks: EngineTask = field(default_factory=EngineTask)
 
     def validate(self):
+        '''Validate execution, optimizer, schedule, and task configs.'''
         self.engine_exec.validate()
         self.engine_optim.validate()
         self.engine_schedule.validate()

@@ -29,8 +29,8 @@ harmonization artifacts.
 Public APIs:
     - `HarmonizationRecords`: Mapping of run UIDs to run records.
     - `IngestionContext`: Container holding resolved grid and rasters.
-    - `resolve_pending_ingestion_batches`: Determine batches to ingest.
     - `build_ingestion_context`: Load ingestion context from report.
+    - `resolve_pending_ingestion_batches`: Determine batches to ingest.
     - `verify_pool_grid_compatibility`: Validate grid alignment.
 '''
 

@@ -35,7 +35,7 @@ def test_build_epoch_runner_train_eval(
     '''
     Given: Runtime, dataloaders, and dispatcher.
     When: Calling `build_epoch_runner` in 'train_eval' mode.
-    Then: Return `EpochRunner` with both trainer and evaluator populated.
+    Then: Return `EpochRunner` with trainer and evaluator populated.
     '''
     context = epoch_mod.EpochRunnerContext(
         runtime=mock_runtime,
@@ -63,7 +63,7 @@ def test_build_epoch_runner_train_only(
     '''
     Given: Runtime, dataloaders, and dispatcher.
     When: Calling `build_epoch_runner` in 'train_only' mode.
-    Then: Return `EpochRunner` with trainer populated and evaluator as None.
+    Then: Return `EpochRunner` with trainer set and evaluator None.
     '''
     context = epoch_mod.EpochRunnerContext(
         runtime=mock_runtime,
@@ -91,7 +91,7 @@ def test_build_epoch_runner_eval_only(
     '''
     Given: Runtime, dataloaders, and dispatcher.
     When: Calling `build_epoch_runner` in 'eval_only' mode.
-    Then: Return `EpochRunner` with evaluator populated and trainer as None.
+    Then: Return `EpochRunner` with evaluator set and trainer None.
     '''
     context = epoch_mod.EpochRunnerContext(
         runtime=mock_runtime,

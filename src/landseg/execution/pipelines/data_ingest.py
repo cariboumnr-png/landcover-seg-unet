@@ -22,8 +22,8 @@
 '''
 Data ingestion pipeline.
 
-Prepares the world grid, materializes domain knowledge, and builds
-the immutable raw block catalogue for later experiments.
+Ingests harmonized raster batches into the canonical raw data block
+pool and updates ingestion run metadata.
 '''
 
 # standard imports
@@ -37,20 +37,26 @@ import landseg.geopipe as geopipe
 # ----- public classes
 class DataIngestion(base.GeoPipeline):
     '''Data ingestion pipeline.'''
-
     pipeline_name: str = 'data-ingest'
     pipeline_paths: artifacts.IngestionPaths
 
     @property
     def upstream_paths(self) -> artifacts.HarmonizationPaths:
-        '''Return upstream <data-harmonize> artifact paths.'''
+        '''Return upstream `data-harmonize` artifact paths.'''
         return self.artifact_paths.data_harmonization
 
     def run(
         self,
         harmonization_record: typing.Mapping[str, typing.Any] | None = None,
     ) -> None:
-        '''Run data ingestion from specified harmonization run.'''
+        '''
+        Run data ingestion from a specified harmonization run.
+
+        Args:
+            harmonization_record:
+                Optional harmonization run metadata record to ingest.
+                If None, resolves target run from configuration.
+        '''
         self._initialize_run()
         ing_cfg = self.config.data.ingestion
         geopipe.run_data_ingestion_stage(

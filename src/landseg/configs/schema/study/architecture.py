@@ -83,6 +83,7 @@ class ArchitectureSearchConfig(base.BaseConfigSection):
     conditioning: Conditioning = field(default_factory=Conditioning)
 
     def validate(self) -> None:
+        '''Validate all nested architecture search space sections.'''
         self.data_geometry.validate()
         self.context_window.validate()
         self.architecture.validate()

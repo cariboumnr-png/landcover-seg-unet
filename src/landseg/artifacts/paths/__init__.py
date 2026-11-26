@@ -23,6 +23,16 @@
 Top-level namespace for `landseg.artifacts.paths`.
 
 Exposes artifact and session path dataclasses for all pipelines.
+
+Public APIs:
+    - `ArtifactPaths`: Aggregation facade over stage path namespaces.
+    - `HarmonizationPaths`: Paths for harmonization ETL artifacts.
+    - `IngestionPaths`: Paths for data ingestion artifacts.
+    - `KnowledgePaths`: Paths for knowledge base embeddings/profiles.
+    - `PipelineArtifactsPaths`: Base paths dataclass for pipeline runs.
+    - `PreparationPaths`: Paths for prepared datasets and split runs.
+    - `SessionPaths`: Paths for training and evaluation session runs.
+    - `WorldGridPaths`: Paths for canonical world grid artifacts.
 '''
 
 # standard imports

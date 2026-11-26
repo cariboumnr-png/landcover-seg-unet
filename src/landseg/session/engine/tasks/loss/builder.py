@@ -23,16 +23,14 @@
 Utilities for constructing per-head composite loss functions.
 
 This module builds loss components for each prediction head defined in a
-multi-task model. It provides:
-
-    - HeadLosses: a typed wrapper around a mapping of head names to
-      CompositeLoss instances.
-    - build_headlosses: factory that instantiates and configures
-      CompositeLoss objects per head, including per-head a parameters
-      for focal loss.
+multi-task model, configuring per-head alpha parameters for focal loss.
 
 Used by the trainer to supply consistent, per-head loss computation
 objects.
+
+Public APIs:
+    - `HeadLosses`: Typed mapping container for per-head loss modules.
+    - `build_headlosses`: Construct per-head `CompositeLoss` modules.
 '''
 
 # third-party imports
@@ -48,25 +46,50 @@ class HeadLosses:
     Typed wrapper around a mapping of heads to `CompositeLoss` objects.
 
     This class provides:
-    - key-based access to individual `CompositeLoss` instances.
-    - a stable, strongly-typed container for passing head specs through
-    the codebase.
+        - Key-based access to individual `CompositeLoss` instances.
+        - A stable, strongly-typed container for passing head loss
+          modules through the codebase.
 
     It is *not* a full `dict` replacement. To work with the underlying
-    mapping directly, use method: `as_dict()`.
+    mapping directly, use `as_dict()`.
     '''
 
     def __init__(self, hloss: dict[str, composite.CompositeLoss]):
+        '''
+        Initialize the container from a per-head loss mapping.
+
+        Args:
+            hloss:
+                Mapping of head name to `CompositeLoss` instance.
+        '''
         self._hloss = hloss
 
     def __getitem__(self, key: str) -> composite.CompositeLoss:
+        '''
+        Retrieve the composite loss module for a given head name.
+
+        Args:
+            key:
+                Head name key.
+
+        Returns:
+            composite.CompositeLoss:
+                Loss module registered for `key`.
+        '''
         return self._hloss[key]
 
     def __len__(self) -> int:
         return len(self._hloss)
 
     def as_dict(self) -> dict[str, composite.CompositeLoss]:
-        '''Return a shallow copy of the mapping as `dict[str, Loss]`.'''
+        '''
+        Return a shallow copy of the per-head loss mapping.
+
+        Returns:
+            dict[str, composite.CompositeLoss]:
+                Shallow copy mapping head names to `CompositeLoss`
+                modules.
+        '''
         return dict(self._hloss)
 
 
@@ -80,24 +103,23 @@ def build_headlosses(
     ecological_similarity_matrix: torch.Tensor | None = None
 ) -> HeadLosses:
     '''
-    Construct a mapping of head names to configured `CompositeLoss`
-    instances.
+    Build a mapping of head names to `CompositeLoss` instances.
 
     Args:
         headspecs:
-            structure describing the model prediction heads.
+            Structure describing the model prediction heads.
         config:
-            base loss configuration shared across heads.
+            Base loss configuration shared across heads.
         ignore_index:
-            label index to exclude from all loss computations.
+            Label index to exclude from all loss computations.
         spectral_band_indices:
-            optional list of spectral band indices.
+            Optional list of spectral band indices.
         ecological_similarity_matrix:
-            optional explicit similarity tensor override.
+            Optional explicit similarity tensor override.
 
     Returns:
         HeadLosses:
-            typed container of concrete CompositeLoss objects per head.
+            Typed container mapping heads to `CompositeLoss` modules.
     '''
     loss_dict: dict[str, composite.CompositeLoss] = {}
     for name, headspec in headspecs.as_dict().items():

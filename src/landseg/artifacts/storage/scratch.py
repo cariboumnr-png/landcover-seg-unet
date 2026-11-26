@@ -30,10 +30,10 @@ build files locally first and publish sequentially to remote filesystems
 I/O patterns.
 
 Public APIs:
+    - `cleanup_scratch`: Remove obsolete temporary files from scratch.
     - `get_scratch_dir`: Resolve and validate active scratch directory.
     - `scratch_file`: Context-managed temporary file in scratch storage.
-    - `stage_to_scratch`: Context manager staging writes before publishing.
-    - `cleanup_scratch`: Remove obsolete temporary files from scratch.
+    - `stage_to_scratch`: Stage writes before publishing to target.
 '''
 
 # standard imports
@@ -57,7 +57,8 @@ def get_scratch_dir(
     Evaluates configured overrides in the following precedence order:
         1. Explicit `scratch_dir` argument.
         2. `LANDSEG_SCRATCH_DIR` environment variable.
-        3. System temp directory (`tempfile.gettempdir() / 'landseg_scratch'`).
+        3. System temporary directory (`'landseg_scratch'` under
+           `tempfile.gettempdir()`).
 
     Args:
         scratch_dir:
@@ -101,7 +102,7 @@ def scratch_file(
     '''
     Provide a temporary file path inside scratch storage.
 
-    Guarantees cleanup upon context exit regardless of execution outcome.
+    Guarantees cleanup on context exit regardless of execution outcome.
 
     Args:
         prefix:
@@ -183,7 +184,8 @@ def cleanup_scratch(
         scratch_dir:
             Optional explicit scratch directory override.
         max_age_seconds:
-            If specified, only files older than this threshold are removed.
+            If specified, only files older than this threshold are
+            removed.
 
     Returns:
         int:

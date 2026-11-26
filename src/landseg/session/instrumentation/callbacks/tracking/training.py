@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Scallar tracking callback'''
+'''Training scalar tracking callback for dashboard logging.'''
 
 # local imports
 import landseg.core as core
@@ -28,9 +28,18 @@ import landseg.session.instrumentation.callbacks.base as base
 
 # ----- public classes
 class TrainTrackingCallback(base.BaseCallback):
-    '''Scallar tracking callback'''
+    '''Callback logging training batch scalar metrics to trackers.'''
 
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults):
+        '''
+        Log training loss and learning rate scalars after a batch.
+
+        Args:
+            bidx:
+                Zero-based index of the completed training batch.
+            results:
+                Training step results for the completed batch.
+        '''
         if not results.metrics_updated:
             return
         step = results.global_step
@@ -40,5 +49,6 @@ class TrainTrackingCallback(base.BaseCallback):
             tracker.flush()
 
     def on_session_end(self) -> None:
+        '''Close all attached dashboard trackers.'''
         for tracker in self._trackers:
             tracker.close()

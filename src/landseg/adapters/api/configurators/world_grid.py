@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-World grid canonical lifecycle configurator.
-'''
+'''World grid canonical lifecycle configurator.'''
 
 # standard imports
 import pathlib
@@ -40,6 +38,18 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
         output_dpath: str | pathlib.Path | None = None,
         experiment_root: str | pathlib.Path | None = None,
     ):
+        '''
+        Initialize the world grid configurator.
+
+        Args:
+            upstream_dpath:
+                Optional upstream directory path (unused for world
+                grid).
+            output_dpath:
+                Optional destination directory for grid artifacts.
+            experiment_root:
+                Optional experiment root directory for unified mode.
+        '''
         super().__init__(
             'world-grid',
             upstream_dpath=upstream_dpath,
@@ -55,7 +65,27 @@ class WorldGridConfigurator(configurators.BaseConfigurator):
         mode: str = 'ref',
         reference_raster: str | pathlib.Path | None = None,
     ) -> typing.Self:
-        '''Set study extent and grid specs.'''
+        '''
+        Set study extent and world grid tiling specifications.
+
+        Args:
+            tile_size:
+                Square tile side length in pixels.
+            tile_stride:
+                Stride between adjacent tiles in pixels.
+            crs:
+                Target coordinate reference system string for manual
+                grid mode.
+            mode:
+                Grid derivation mode (e.g., `'ref'` or `'manual'`).
+            reference_raster:
+                Optional reference raster path used when `mode` is
+                `'ref'`.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.data.world_grid.mode = mode
         self.cfg.data.world_grid.manual_specs.crs_string = crs
         self.cfg.data.world_grid.tile_size = (tile_size, tile_size)

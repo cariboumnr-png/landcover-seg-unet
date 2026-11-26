@@ -20,10 +20,16 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks.metrics`.
+Top-level namespace for `landseg.session.engine.tasks.metrics`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `ConfusionMatrix`: Incremental per-head confusion matrix with IoU.
+    - `HeadMetrics`: Typed mapping for head confusion matrices.
+    - `MTLMetricsAggregator`: Cross-head GEM and violation aggregator.
+    - `build_headmetrics`: Construct per-head confusion matrices.
 '''
 
 # standard imports

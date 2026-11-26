@@ -57,9 +57,9 @@ class DiceLoss(base.PrimitiveLoss):
 
         Args:
             smooth:
-                small constant added to numerator and denominator.
+                Small constant added to numerator and denominator.
             ignore_index:
-                label to exclude completely from Dice compute.
+                Label to exclude completely from Dice computation.
         '''
         super().__init__()
         self.smooth = smooth
@@ -77,13 +77,20 @@ class DiceLoss(base.PrimitiveLoss):
         Compute soft Dice loss across classes.
 
         Args:
-            logits: Tensor [B, C, H, W], class logits.
-            targets: Tensor [B, H, W], ground-truth labels.
-            masks: Optional pixel-weight masks combined into a single
+            logits:
+                Class logits tensor of shape `[B, C, H, W]`.
+            targets:
+                Ground-truth label tensor of shape `[B, H, W]`.
+            masks:
+                Optional pixel-weight masks combined into a single
                 per-pixel weight map.
+            features:
+                Optional feature tensor validated for shape alignment
+                if provided (unused in Dice computation).
 
         Returns:
-            A scalar tensor containing the Dice loss (1 - mean Dice).
+            torch.Tensor:
+                Scalar tensor containing the Dice loss (`1 - mean`).
         '''
         self._validate_inputs(logits, targets, features)
 

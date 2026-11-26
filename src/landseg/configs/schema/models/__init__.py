@@ -20,10 +20,13 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.configs.schema.data`.
+Top-level namespace for `landseg.configs.schema.models`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes the composite model architecture configuration schema via lazy
+resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `ModelsConfig`: Composite configuration for model architectures.
 '''
 
 # standard imports

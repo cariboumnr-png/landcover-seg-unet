@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Session construction and wiring utilities.
 
@@ -33,18 +31,18 @@ This module defines factory entry points for building session variants
 from shared configuration and runtime context.
 
 Configuration is split into:
-
-- ``config`` (static):
-    Defines *what* to build (components, runtime behavior, scheduling).
-
-- ``context`` (dynamic):
-    Defines *how* the session is executed (device, logging, paths).
+    - `config` (static): Defines what to build (components, runtime
+      behavior, scheduling).
+    - `context` (dynamic): Defines how the session is executed (device,
+      logging, paths).
 
 This separation enables reuse of configuration across execution modes
 while keeping invocation-specific concerns explicit.
 
-All public builder functions act as intent-specific entry points that
-compose and return the appropriate executable objects.
+Public APIs:
+    - `SessionBuildContext`: Runtime context for session construction.
+    - `SessionConfigShape`: Protocol for session assembly config.
+    - `build_session_runner`: Build a configured session runner.
 '''
 
 # standard imports
@@ -71,6 +69,7 @@ SessionType = typing.Literal[
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class SessionConfigShape(typing.Protocol):
     '''Interface for session construction configuration.'''
     @property
@@ -79,6 +78,7 @@ class SessionConfigShape(typing.Protocol):
     def engine(self) -> engine_mod.EngineConfigShape: ...
     @property
     def orchestration(self) -> orchestration_mod.OrchestrationConfigShape: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -140,7 +140,30 @@ def build_session_runner(
     orchestration_mod.ContinuousRunner |
     orchestration_mod.CurriculumRunner
 ):
-    '''Build a configured session variant.'''
+    '''
+    Build a configured session runner for the requested workflow type.
+
+    Args:
+        dataspecs:
+            Dataset specifications providing splits, head counts, and
+            label color map metadata.
+        model:
+            Multi-head segmentation model instance.
+        config:
+            Session configuration supplying dataloader, engine, and
+            orchestration settings.
+        context:
+            Runtime build context containing device, paths, logger,
+            and experiment tracker configuration.
+        session_type:
+            Target session mode (`'overfit'`, `'evaluate'`,
+            `'continuous'`, or `'curriculum'`).
+
+    Returns:
+        engine_mod.EpochRunner | orchestration_mod.ContinuousRunner | orchestration_mod.CurriculumRunner:
+            Configured epoch or orchestration runner matching
+            `session_type`.
+    '''
     logger = context.logger
 
     if session_type in ['overfit', 'evaluate']:

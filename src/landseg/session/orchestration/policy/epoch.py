@@ -41,9 +41,9 @@ class EpochPolicy:
     '''
     Orchestrates the execution of a single training epoch.
 
-    This class wraps a `TrainingEpochRunner` and is responsible for:
+    This class wraps an `EpochEngineLike` runner and is responsible for:
     - Emitting lifecycle events (start and end of an epoch)
-    - Delegating execution to the underlying training engine
+    - Delegating execution to the underlying epoch runner
     - Returning computed epoch metrics
 
     It supports both generator-based execution (for event streaming) and
@@ -59,15 +59,18 @@ class EpochPolicy:
         active_heads: list[str] | None = None
     ):
         '''
-        Initializes the epoch policy.
+        Initialize the epoch policy.
 
         Args:
-            training_engine: Engine responsible for executing the epoch
-                logic.
-            phase_name: Name of the phase (e.g., 'train', 'validation').
-            epoch_index: Index of the epoch to run.
-            active_heads: Subset of model heads to activate during this
-                epoch. Defaults to None.
+            epoch_runner:
+                Engine responsible for executing the epoch logic.
+            phase_name:
+                Name of the phase (e.g., `'train'`, `'validation'`).
+            epoch_index:
+                One-based index of the epoch to run.
+            active_heads:
+                Optional subset of model heads to activate during this
+                epoch.
         '''
         self.epoch = epoch_index
         self.phase = phase_name
@@ -78,20 +81,16 @@ class EpochPolicy:
         self,
     ) -> typing.Generator[events.Event, None, core.SessionStepResults]:
         '''
-        Runs the epoch with event emission.
+        Run the epoch with event emission.
 
-        This method emits structured events before and after delegating
-        execution to the underlying training engine. It is designed to
-        be used in event-driven pipelines via ``yield from``.
+        Emits `EpochStart` and `EpochEnd` events around delegating
+        execution to the epoch runner, and returns `SessionStepResults`
+        upon generator completion for downstream `yield from` callers.
 
         Yields:
-            Lifecycle events:
-                - ``EpochStart`` before execution
-                - ``EpochEnd`` after execution, including metrics
-
-        Returns:
-            core.SessionStepResults:
-                metrics produced by the training engine for this epoch.
+            events.Event:
+                `EpochStart` before execution and `EpochEnd` after
+                execution.
         '''
         # epoch starts
         yield events.EpochStart(self.epoch, self.phase)
@@ -107,14 +106,13 @@ class EpochPolicy:
 
     def execute(self) -> core.SessionStepResults:
         '''
-        Executes the epoch without emitting events.
+        Execute the epoch without emitting events.
 
         This is a simplified execution path that directly calls the
-        underlying training engine without producing any orchestration
-        events.
+        underlying epoch runner without producing orchestration events.
 
         Returns:
             core.SessionStepResults:
-                metrics produced by the training engine.
+                Metrics produced by the epoch execution engine.
         '''
         return self.runner.run_epoch(self.epoch)

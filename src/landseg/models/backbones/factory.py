@@ -19,16 +19,17 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 '''
 Factory for backbone architectures.
 
-This module provides a single factory function for instantiating
-UNet-based backbone implementations. The factory validates input
-spatial constraints and composes encoder, bottleneck, and decoder
-components into a complete feature extractor.
+Provides a single factory function for instantiating UNet-based
+backbone implementations. The factory validates input spatial
+constraints and composes encoder, bottleneck, and decoder components
+into a complete feature extractor.
+
+Public APIs:
+    - `UNetBackboneConfig`: Protocol for UNet backbone configuration.
+    - `build_unet_backbone`: Instantiate a configured UNet backbone.
 '''
 
 # standard imports
@@ -37,11 +38,14 @@ import typing
 import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
+# pylint: disable=missing-function-docstring
 class UNetBackboneConfig(typing.Protocol):
+    '''Protocol for UNet backbone configuration.'''
     @property
     def body(self) -> body.UNetBodyConfig: ...
     @property
     def bottleneck(self) -> components.BottleneckConfig: ...
+# pylint: enable=missing-function-docstring
 
 def build_unet_backbone(
     in_ch: int,
@@ -52,25 +56,30 @@ def build_unet_backbone(
     Instantiate a UNet backbone with configured body and bottleneck.
 
     This factory constructs a complete UNet-based feature extractor by:
-    1. Selecting a backbone body variant (UNet, UNet++, or UNet+++).
+    1. Selecting a backbone body variant (`UNet`, `UNetPP`, or
+       `UNetPPP`).
     2. Validating input spatial size against backbone divisibility.
     3. Instantiating and configuring the bottleneck module.
 
     Args:
-        in_ch: Number of input channels.
-        input_size: Spatial dimension (assumes square inputs).
-        config: UNetBackboneConfig specifying body and bottleneck
+        in_ch:
+            Number of input channels.
+        input_size:
+            Spatial dimension assuming square inputs.
+        config:
+            `UNetBackboneConfig` specifying body and bottleneck
             configuration.
 
     Returns:
-        Fully constructed UNetBackbone instance ready for encoding
-        and decoding operations.
+        body.UNetBackbone:
+            Fully constructed `UNetBackbone` instance ready for encoding
+            and decoding operations.
 
     Raises:
-        ValueError: If input size is not divisible by backbone's
-            spatial divisor.
+        ValueError:
+            If the backbone body variant is invalid or `input_size` is
+            not divisible by the backbone's spatial divisor.
     '''
-
     # aliases
     unetbody_cfg = config.body
     bottleneck_cfg = config.bottleneck

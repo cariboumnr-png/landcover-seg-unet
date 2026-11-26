@@ -73,7 +73,8 @@ def test_build_dataset_view_success():
     '''
     Given: DataBlocksManifestInputs and configuration parameters.
     When: Calling `build_dataset_view`.
-    Then: Construct integrated DatasetView with resolved features/targets.
+    Then: Construct integrated `DatasetView` with resolved features
+        and targets.
     '''
     inputs = normalizer.DataBlocksManifestInputs(
         schema=_make_dummy_schema(),

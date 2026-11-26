@@ -38,7 +38,8 @@ def test_normalize_features_entry_basic(tmp_path):
     '''
     Given: A valid features manifest entry dictionary.
     When: `normalize_manifest_entry` is evaluated.
-    Then: Return canonical entry with None categorical specs and schemes.
+    Then: Return canonical entry with None categorical specs and
+        schemes.
     '''
     sample_file = _create_sample_file(tmp_path)
     raw_entry = {

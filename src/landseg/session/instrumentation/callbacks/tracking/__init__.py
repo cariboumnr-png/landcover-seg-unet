@@ -20,11 +20,16 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for
-`landseg.session.instrumentation.callbacks.tracking`.
+Tracking callbacks subpackage namespace.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public callback classes for
+`landseg.session.instrumentation.callbacks.tracking` via lazy resolution
+to keep import order simple and circular-free.
+
+Public APIs:
+    - `InferTrackingCallback`: Log inference metrics and visualizations.
+    - `TrainTrackingCallback`: Log training batch scalar metrics.
+    - `ValTrackingCallback`: Log validation epoch target metrics.
 '''
 
 # standard imports

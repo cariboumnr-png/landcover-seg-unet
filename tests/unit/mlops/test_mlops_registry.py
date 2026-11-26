@@ -38,7 +38,7 @@ def test_register_model_local_bypass(
     '''
     Given: Local non-Databricks execution environment.
     When: Calling register_unity_catalog_model.
-    Then: Safely bypasses remote registration and returns metadata dictionary.
+    Then: Bypass remote registration and return metadata dictionary.
     '''
     monkeypatch.delenv('DATABRICKS_RUNTIME_VERSION', raising=False)
     monkeypatch.delenv('DB_CLUSTER_ID', raising=False)
@@ -58,7 +58,7 @@ def test_register_model_resolves_checkpoint_and_manifest(
     tmp_path: pathlib.Path,
 ):
     '''
-    Given: Checkpoint and manifest files present in the experiment hierarchy.
+    Given: Checkpoint and manifest files in the experiment hierarchy.
     When: Invoking register_unity_catalog_model.
     Then: Automatically locates checkpoint and computes manifest SHA256.
     '''
@@ -86,7 +86,8 @@ def test_register_model_databricks_simulation(
     '''
     Given: Databricks runtime environment simulated.
     When: Registering model to Unity Catalog.
-    Then: Sets databricks-uc registry URI and delegates to mlflow.register_model.
+    Then: Set `databricks-uc` registry URI and delegate to
+        `mlflow.register_model`.
     '''
     monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '15.4')
     monkeypatch.setenv('DB_CLUSTER_ID', 'cluster-gpu-99')
@@ -98,12 +99,15 @@ def test_register_model_databricks_simulation(
         called_registry_uri.append(uri)
 
     class FakeRunInfo:
+        '''Fake MLflow run info stub.'''
         run_id = 'test_run_12345'
 
     class FakeRun:
+        '''Fake MLflow run stub.'''
         info = FakeRunInfo()
 
     class FakeModelVersion:
+        '''Fake MLflow model version stub.'''
         version = '3'
 
     def fake_register_model(model_uri: str, name: str, tags: dict = None):

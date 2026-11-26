@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''Fixtures for testing `landseg.core` module.'''
 
 # standard imports
@@ -136,7 +134,7 @@ def in_memory_dataspecs():
 
 @pytest.fixture
 def dataspecs(_shared_block_files):
-    '''Provide fresh `DataSpecs` mapped to pre-built session data blocks.'''
+    '''Provide fresh `DataSpecs` backed by session data blocks.'''
     return core.DataSpecs(
         name="test_dataset",
         mode="default",
@@ -192,11 +190,13 @@ def dataspecs(_shared_block_files):
 
 @pytest.fixture
 def mock_model():
+    '''Provide a mock multihead model for unit tests.'''
     return _MockMultiheadModel()
 
 
 class _MockMultiheadModel(torch.nn.Module):
     '''Mock multihead model for engine epoch tests.'''
+
     def __init__(self, spatial_divisor: int = 16):
         super().__init__()
         self.conv = torch.nn.Conv2d(4, 2, kernel_size=1)

@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Canonical filesystem paths for world grid artifacts.
-'''
+'''Canonical filesystem paths for world grid artifacts.'''
 
 # standard imports
 import dataclasses
@@ -38,17 +34,18 @@ import landseg.artifacts.paths.base as base
 @dataclasses.dataclass
 class WorldGridPaths(base.PipelineArtifactsPaths):
     '''Paths for world grid artifacts.'''
-
     @property
     def effective_run_folder(self) -> pathlib.Path:
+        '''Return root directory as the effective run folder.'''
         return self.root
 
     def validate(self) -> typing.Self:
         '''
-        Defensively validate that the world grid directory and report exist.
+        Validate that the world grid directory and report exist.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:

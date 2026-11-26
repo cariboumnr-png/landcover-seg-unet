@@ -126,7 +126,7 @@ def test_resolve_optuna_storage_databricks_default(
     '''
     Given: Databricks runtime detected.
     When: Resolving Optuna storage without explicit URI.
-    Then: Directs SQLite to local driver scratch storage (/tmp/optuna.db).
+    Then: Direct SQLite to driver scratch storage (`/tmp/optuna.db`).
     '''
     monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '15.4')
     result = mlops.resolve_optuna_storage()
@@ -266,7 +266,8 @@ def test_validate_output_root_databricks_enforcement(
 ):
     '''
     Given: Simulated Databricks environment.
-    When: Calling validate_output_root with non-volume path vs volume path.
+    When: Calling `validate_output_root` with non-volume and volume
+        paths.
     Then: Disallows non-volume paths and validates volume paths.
     '''
     monkeypatch.setenv('DATABRICKS_RUNTIME_VERSION', '14.3')

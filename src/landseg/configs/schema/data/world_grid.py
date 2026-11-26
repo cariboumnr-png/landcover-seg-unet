@@ -36,6 +36,7 @@ class GridSpecs(base.BaseConfigSection):
     extent_in_crs_units: tuple[float, float] = (0.0, 0.0)
 
     def validate(self):
+        '''Validate CRS string, origin, square pixels, and extent.'''
         self.val.require_string(self.crs_string)
         ox, oy = self.val.require_sequence(self.origin, 2)
         self.val.require_numeric(ox)
@@ -63,6 +64,7 @@ class WorldGridConfig(base.BaseConfigSection):
     output_dpath: str | None = None
 
     def validate(self) -> None:
+        '''Validate tile dimensions, stride, and grid mode.'''
         tx, ty = self.val.require_sequence(self.tile_size, 2)
         tx = self.val.require_numeric_min(tx, 1, int)
         ty = self.val.require_numeric_min(ty, 1, int)

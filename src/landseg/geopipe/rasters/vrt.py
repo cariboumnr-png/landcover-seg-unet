@@ -27,12 +27,13 @@ XML definitions, attaching bands and sources, mapping data types, and
 materializing virtual warped raster definitions.
 
 Public APIs:
-    - `add_band_description_to_vrt`: Add band descriptions to a VRT file.
+    - `add_band_description_to_vrt`: Add band labels to a VRT file.
     - `add_tag_to_vrt`: Attach metadata tags to a VRT raster file.
     - `add_vrt_band`: Append a VRTRasterBand element to VRT dataset.
     - `add_vrt_source`: Attach a SimpleSource or ComplexSource element.
     - `create_vrt_root`: Create root XML element for a VRT dataset.
-    - `gdal_dtype_name`: Map Python/rasterio dtype to canonical GDAL name.
+    - `gdal_dtype_name`: Map Python/rasterio dtype to GDAL name.
+    - `parse_vrt_tag`: Decode serialized JSON or literal VRT tag value.
     - `write_vrt`: Serialize and write indented VRT XML to disk.
 '''
 
@@ -195,7 +196,8 @@ def add_vrt_source( # pylint: disable=too-many-arguments,too-many-locals
         dtype:
             Data type of the band.
         dst_rect:
-            Optional (xOff, yOff, xSize, ySize) tuple in destination pixels.
+            Optional `(xOff, yOff, xSize, ySize)` tuple in destination
+            pixels.
         src_rect:
             Optional (xOff, yOff, xSize, ySize) tuple in source pixels.
         nodata:
@@ -203,7 +205,8 @@ def add_vrt_source( # pylint: disable=too-many-arguments,too-many-locals
         relative_paths:
             If True, writes relative path relative to output_dir.
         output_dir:
-            Parent directory of destination VRT, required if relative_paths.
+            Parent directory of destination VRT, required when
+            `relative_paths` is `True`.
 
     Returns:
         xml.etree.ElementTree.Element:
@@ -307,6 +310,10 @@ def add_band_description_to_vrt(
             File path to the VRT dataset.
         band_mapping:
             Mapping from 1-based band index to band description string.
+
+    Raises:
+        ValueError:
+            If `band_mapping` length does not match raster band count.
     '''
     with rasterio.open(vrt_fpath, 'r+') as vrt:
         if len(band_mapping) != vrt.count:
@@ -339,7 +346,17 @@ def add_tag_to_vrt(
 
 
 def parse_vrt_tag(value: str) -> typing.Any:
-    '''Decode GDAL metadata serialized as JSON or a Python literal.'''
+    '''
+    Decode GDAL metadata serialized as JSON or a Python literal.
+
+    Args:
+        value:
+            Raw metadata tag string read from GDAL/VRT.
+
+    Returns:
+        typing.Any:
+            Decoded Python value, or original string if unparsable.
+    '''
     try:
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):

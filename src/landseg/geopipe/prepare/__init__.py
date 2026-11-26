@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=import-outside-toplevel
-
 '''
 Top-level namespace for `landseg.geopipe.prepare`.
 
@@ -31,9 +29,11 @@ Public APIs:
     - `PreparationContext`: Resolved execution context for prepare.
     - `PreparationLogger`: Specialized logger for preparation runs.
     - `build_preparation_context`: Build context from catalog & schema.
-    - `run_data_preparation`: pipeline runner.
+    - `run_data_preparation`: Pipeline runner.
     - `validators`: Preflight validation namespace.
 '''
+
+# pylint: disable=import-outside-toplevel
 
 # standard imports
 from __future__ import annotations
@@ -43,6 +43,7 @@ import landseg._lazy as _lazy
 
 
 class _Validators: # pylint: disable=R0903
+    '''Validation namespace for preparation preflight checks.'''
 
     @staticmethod
     def dataset_semantics(
@@ -58,20 +59,29 @@ class _Validators: # pylint: disable=R0903
 
         Args:
             schema:
-                ingested catalog data schema mapping bands and targets.
+                Ingested catalog data schema mapping bands and targets.
             config:
-                optional dataset view config protocol instance.
+                Optional dataset view config protocol instance.
             features:
-                optional feature selection by band list or scheme.
+                Optional feature selection by band list or scheme.
             targets:
-                optional target hierarchy selection or label scheme.
+                Optional target hierarchy selection or label scheme.
             focal_target:
-                optional focal target head or class name.
+                Optional focal target head or class name.
 
         Returns:
-            tuple[FeatureSelection, TargetHeadsContext, str]:
-                resolved features, resolved target heads context, and focal
-                head name.
+            tuple[semantics.FeatureSelection, semantics.TargetHeadsContext, str]:
+                Resolved features, target heads context, and focal head
+                name.
+
+        Raises:
+            KeyError:
+                If a requested feature, scheme, or focal target is
+                unrecognized.
+            TypeError:
+                If a target configuration has an unexpected type.
+            ValueError:
+                If schemes or target heads are missing or malformed.
         '''
         import landseg.geopipe.prepare.dataset.semantics as semantics
 

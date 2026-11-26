@@ -58,7 +58,7 @@ def test_npz_dict_persist_and_fetch(tmp_path):
     '''
     Given: Target NPZ file path and array dictionary with tuple keys.
     When: `_npz_write_dict` and `_npz_read_dict` are invoked.
-    Then: Save to compressed NPZ and reconstruct arrays with original keys.
+    Then: Save to compressed NPZ and reconstruct arrays with keys.
     '''
     npz_path = str(tmp_path / 'tiles.npz')
     ctrl = ctrl_mod.Controller[dict](npz_path)
@@ -161,10 +161,10 @@ def test_pt_persist_fetch_and_hash(tmp_path):
 # ----- `Controller` lifecycle policies tests
 def test_lifecycle_policies_fetch(tmp_path):
     '''
-    Given: Artifact controllers configured with `LOAD_OR_FAIL`,
-    `BUILD_IF_MISSING`, or `REBUILD`.
-    When: Executing `get()` under non-existent or fresh state conditions.
-    Then: Enforce policy rules (raise error, return None, or bypass).
+    Given: Controllers using `LOAD_OR_FAIL`, `BUILD_IF_MISSING`, or
+        `REBUILD`.
+    When: Executing `fetch()` under missing or existing file conditions.
+    Then: Enforce policy rules (raise error, return `None`, or bypass).
     '''
     json_path = str(tmp_path / 'policy_test.json')
 
@@ -210,7 +210,8 @@ def test_controller_hash_mismatch_and_corruption(tmp_path):
     '''
     Given: An artifact file modified or corrupted on disk.
     When: Controller loads the artifact.
-    Then: Detect hash mismatch or decode failure and raise `ArtifactError`.
+    Then: Detect hash mismatch or decode failure and raise
+        `ArtifactError`.
     '''
     json_path = str(tmp_path / 'tampered.json')
     ctrl = ctrl_mod.Controller[dict](json_path)
@@ -235,7 +236,7 @@ def test_controller_hash_mismatch_and_corruption(tmp_path):
 # ----- `Controller` schema validation tests
 def test_controller_schema_validation(tmp_path):
     '''
-    Given: An artifact with a schema_id bound at controller initialization.
+    Given: An artifact with `schema_id` bound at controller init.
     When: Loading and persisting payloads via fetch and persist.
     Then: Enforce schema matching on both read and write.
     '''

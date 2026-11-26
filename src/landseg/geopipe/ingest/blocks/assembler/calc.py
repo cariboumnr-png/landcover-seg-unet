@@ -20,7 +20,7 @@
 # =========================================================================== #
 
 '''
-Numeric utilities for geospatial feature engineering and raster analysis.
+Numeric utilities for geospatial feature engineering and analysis.
 
 Provides shared masking, validity checking, normalized-difference
 calculations, and topographic metric computations used throughout
@@ -30,14 +30,14 @@ numerically unstable operations across spectral and terrain-derived
 features.
 
 Public APIs:
-    - mask: create masked-array views of raster bands.
-    - entropy: compute Shannon entropy from class counts.
-    - ndvi: compute Normalized Difference Vegetation Index.
-    - ndmi: compute Normalized Difference Moisture Index.
-    - nbr: compute Normalized Burn Ratio.
-    - get_px_group: extract neighbourhood pixel windows.
-    - slope_n_aspect: derive slope and aspect metrics from a DEM.
-    - tpi: derive Topographic Position Index from a DEM.
+    - `entropy`: Compute Shannon entropy from class counts.
+    - `get_px_group`: Extract neighbourhood pixel windows.
+    - `mask`: Create masked-array views of raster bands.
+    - `nbr`: Compute Normalized Burn Ratio.
+    - `ndmi`: Compute Normalized Difference Moisture Index.
+    - `ndvi`: Compute Normalized Difference Vegetation Index.
+    - `slope_n_aspect`: Derive slope and aspect metrics from a DEM.
+    - `tpi`: Derive Topographic Position Index from a DEM.
 '''
 
 # standard imports
@@ -55,7 +55,19 @@ def mask(
     band: numpy.ndarray,
     nodata: float | None,
 ) -> numpy.ma.MaskedArray:
-    '''Return a masked floating-point view of a band.'''
+    '''
+    Return a masked floating-point view of a raster band.
+
+    Args:
+        band:
+            Input two-dimensional raster band array.
+        nodata:
+            Optional sentinel value representing invalid pixels.
+
+    Returns:
+        numpy.ma.MaskedArray:
+            Floating-point masked array with invalid pixels masked.
+    '''
     band_f64 = band.astype(numpy.float64)
     return numpy.ma.array(
         band_f64,
@@ -64,7 +76,17 @@ def mask(
 
 
 def entropy(counts: numpy.ndarray | list[int]) -> float:
-    '''Return Shannon entropy.'''
+    '''
+    Compute Shannon entropy from class pixel counts.
+
+    Args:
+        counts:
+            Sequence or array of non-negative per-class counts.
+
+    Returns:
+        float:
+            Base-2 Shannon entropy in bits, or `0.0` if total is zero.
+    '''
     ss = sum(counts)
     if ss <= 0:
         return 0.0
@@ -81,7 +103,21 @@ def ndvi(
     red: numpy.ma.MaskedArray,
     nodata: float | None,
 ) -> numpy.ndarray:
-    '''Return Normalized Difference Vegetation Index.'''
+    '''
+    Compute Normalized Difference Vegetation Index (NDVI).
+
+    Args:
+        nir:
+            Masked near-infrared band array.
+        red:
+            Masked red band array.
+        nodata:
+            Optional fill value for invalid output pixels.
+
+    Returns:
+        numpy.ndarray:
+            Clipped NDVI array in `[-1.0, 1.0]` with invalid fills.
+    '''
     return _normalized_difference(nir, red, nodata)
 
 
@@ -90,7 +126,21 @@ def ndmi(
     swir1: numpy.ma.MaskedArray,
     nodata: float | None,
 ) -> numpy.ndarray:
-    '''Return Normalized Difference Moisture Index.'''
+    '''
+    Compute Normalized Difference Moisture Index (NDMI).
+
+    Args:
+        nir:
+            Masked near-infrared band array.
+        swir1:
+            Masked short-wave infrared 1 band array.
+        nodata:
+            Optional fill value for invalid output pixels.
+
+    Returns:
+        numpy.ndarray:
+            Clipped NDMI array in `[-1.0, 1.0]` with invalid fills.
+    '''
     return _normalized_difference(nir, swir1, nodata)
 
 
@@ -99,7 +149,21 @@ def nbr(
     swir2: numpy.ma.MaskedArray,
     nodata: float | None,
 ) -> numpy.ndarray:
-    '''Return Normalized Burn Ratio.'''
+    '''
+    Compute Normalized Burn Ratio (NBR).
+
+    Args:
+        nir:
+            Masked near-infrared band array.
+        swir2:
+            Masked short-wave infrared 2 band array.
+        nodata:
+            Optional fill value for invalid output pixels.
+
+    Returns:
+        numpy.ndarray:
+            Clipped NBR array in `[-1.0, 1.0]` with invalid fills.
+    '''
     return _normalized_difference(nir, swir2, nodata)
 
 
@@ -109,7 +173,23 @@ def get_px_group(
     y: int,
     rr: int,
 ) -> numpy.ndarray:
-    '''Get neighbouring pixels as an array.'''
+    '''
+    Extract a square pixel neighborhood centered at `(x, y)`.
+
+    Args:
+        arr:
+            Two-dimensional input raster array.
+        x:
+            Column index of the window center.
+        y:
+            Row index of the window center.
+        rr:
+            Half-window radius in pixels.
+
+    Returns:
+        numpy.ndarray:
+            Sliced array view of shape `(2 * rr + 1, 2 * rr + 1)`.
+    '''
     return arr[slice(y - rr, y + rr + 1), slice(x - rr, x + rr + 1)]
 
 
@@ -117,7 +197,20 @@ def slope_n_aspect(
     arr: numpy.ndarray,
     nodata: float | None,
 ) -> tuple[float, float, float]:
-    '''Return slope and aspect (in radians) from DEM.'''
+    '''
+    Compute slope and aspect trigonometry from a 3x3 DEM window.
+
+    Args:
+        arr:
+            Three-by-three elevation array centered at target pixel.
+        nodata:
+            Optional sentinel value indicating invalid pixels.
+
+    Returns:
+        tuple[float, float, float]:
+            Tuple of `(slope, cos_aspect, sin_aspect)`, or repeated
+            invalid fill values if any input pixel is invalid.
+    '''
     if _invalid_mask(arr, nodata).any():
         invalid = numpy.nan if nodata is None else nodata
         return invalid, invalid, invalid
@@ -153,7 +246,20 @@ def tpi(
     arr: numpy.ndarray,
     nodata: float | None,
 ) -> float | None:
-    '''Return Topographical Position Index (TPI) from a DEM.'''
+    '''
+    Compute Topographic Position Index (TPI) for a DEM window.
+
+    Args:
+        arr:
+            Two-dimensional elevation window around the center pixel.
+        nodata:
+            Optional sentinel value indicating invalid pixels.
+
+    Returns:
+        float | None:
+            Center elevation minus neighborhood mean, or `nodata` when
+            center or all neighbors are invalid.
+    '''
     h, w = arr.shape
     c_row, c_col = h // 2, w // 2
 
@@ -181,10 +287,7 @@ def _invalid_mask(
     '''
     Return True where values should be considered invalid.
 
-    Invalid values include:
-        - NaN
-        - +/- Inf
-        - Explicit nodata values
+    Invalid values include NaN, +/- Inf, and explicit nodata values.
     '''
     _mask = ~numpy.isfinite(arr)
     if nodata is not None:
@@ -199,14 +302,10 @@ def _normalized_difference(
     nodata: float | None,
 ) -> numpy.ndarray:
     '''
-    Compute a normalized difference index.
+    Compute a normalized difference index `(a - b) / (a + b)`.
 
-        (a - b) / (a + b)
-
-    Pixels are marked invalid when:
-        - either input is masked
-        - denominator is non-finite
-        - denominator magnitude is below _ND_EPS
+    Pixels are marked invalid when either input is masked, the
+    denominator is non-finite, or its magnitude is below `ND_EPS`.
     '''
     numer = a - b
     denom = a + b

@@ -19,10 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
-Dummy dataset generator for landseg integration testing and local execution.
+Dummy dataset generator for integration testing and local execution.
+
+Generates synthetic multi-source GeoTIFF rasters, test AOIs, domain
+maps, and dataset manifests for end-to-end harmonization tests.
+
+Public APIs:
+    - `PreHarmonizationDummyPaths`: Pre-harmonization dummy paths.
+    - `generate_pre_harmonization_data`: Build pre-harmonization data.
 '''
 
 # standard imports
@@ -47,42 +52,52 @@ class PreHarmonizationDummyPaths:
 
     @property
     def extent(self) -> pathlib.Path:
+        '''Return path to the reference extent GeoTIFF.'''
         return pathlib.Path(self.root) / 'reference_raster' / 'sample_extent.tif'
 
     @property
     def test_aoi(self) -> pathlib.Path:
+        '''Return path to the reference test AOI GeoTIFF.'''
         return pathlib.Path(self.root) / 'reference_raster' / 'sample_test_aoi.tif'
 
     @property
     def domain_1(self) -> pathlib.Path:
+        '''Return path to the first synthetic domain GeoTIFF.'''
         return pathlib.Path(self.root) / 'raw_data' / 'sample_domain_1.tif'
 
     @property
     def domain_2(self) -> pathlib.Path:
+        '''Return path to the second synthetic domain GeoTIFF.'''
         return pathlib.Path(self.root) / 'raw_data' / 'sample_domain_2.tif'
 
     @property
     def sentinel2(self) -> pathlib.Path:
+        '''Return path to the synthetic Sentinel-2 GeoTIFF.'''
         return pathlib.Path(self.root) / 'raw_data' / 'sample_sentinel2.tif'
 
     @property
     def dem(self) -> pathlib.Path:
+        '''Return path to the synthetic DEM GeoTIFF.'''
         return pathlib.Path(self.root) / 'raw_data' / 'sample_dem.tif'
 
     @property
     def landcover(self) -> pathlib.Path:
+        '''Return path to the synthetic landcover label GeoTIFF.'''
         return pathlib.Path(self.root) / 'raw_data' / 'sample_landcover.tif'
 
     @property
     def leadspc(self) -> pathlib.Path:
+        '''Return path to synthetic leading species label GeoTIFF.'''
         return pathlib.Path(self.root) / 'raw_data' / 'sample_leadspc.tif'
 
     @property
     def manifest(self) -> pathlib.Path:
+        '''Return path to the generated dataset manifest JSON file.'''
         return pathlib.Path(self.root) / 'raw_data' / 'manifest.json'
 
     @property
     def all_paths_exist(self) -> bool:
+        '''Return whether all expected dummy dataset files exist.'''
         return all(
             p.exists() for p in [
                 self.extent,
@@ -100,7 +115,8 @@ class PreHarmonizationDummyPaths:
 
 # ----- public function
 def generate_pre_harmonization_data(input_root: str | pathlib.Path) -> None:
-    '''Generate the full dummy dataset under input root.
+    '''
+    Generate the full dummy dataset under `input_root`.
 
     Args:
         input_root:

@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Multi-task preset objectives.'''
+'''
+Multi-task preset objectives.
+
+Public APIs:
+    - `obj_head_weights`: Sample logit adjustment alpha weight.
+    - `obj_hierarchy`: Sample hierarchy lambda and reduction mode.
+    - `obj_mtl_joint`: Sample consistency lambda and logit adjust alpha.
+'''
 
 # third-party imports
 import optuna
@@ -31,10 +38,18 @@ def obj_head_weights(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Head weights preset mutations:
-      - logit adjust alpha weight (`float`)
-    '''
+    Sample logit adjustment alpha parameter for an Optuna trial.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.objectives.head_weights
 
     trial_cfg.set_runtime_logit_adjust_alpha(
@@ -52,11 +67,18 @@ def obj_mtl_joint(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    MTL joint preset mutations:
-      - consistency lambda (`float`)
-      - logit adjust alpha (`float`)
-    '''
+    Sample multi-task consistency lambda and logit adjustment alpha.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.objectives.mtl_joint
 
     trial_cfg.set_mtl_consistency_lambda(
@@ -82,11 +104,18 @@ def obj_hierarchy(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Hierarchy preset mutations:
-      - consistency lambda (`float`)
-      - consistency reduction (`str`)
-    '''
+    Sample hierarchical consistency lambda and reduction strategy.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.objectives.hierarchy
 
     trial_cfg.set_mtl_consistency_lambda(

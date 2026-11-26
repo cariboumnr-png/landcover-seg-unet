@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Path manager for repository knowledge base artifacts.
-'''
+'''Path manager for repository knowledge base artifacts.'''
 
 # standard imports
 import dataclasses
@@ -36,31 +32,85 @@ import landseg.artifacts.controller as controller
 # ----- `KnowledgePaths` definition
 @dataclasses.dataclass
 class KnowledgePaths:
-    '''Path manager for repository knowledge base embeddings and profiles.'''
+    '''Path manager for knowledge base embeddings and profiles.'''
     root: pathlib.Path = pathlib.Path('knowledge')
 
     def __post_init__(self):
         self.root = pathlib.Path(self.root)
 
     def profile_dpath(self, profile: str) -> pathlib.Path:
+        '''
+        Return directory path for a knowledge base profile.
+
+        Args:
+            profile:
+                Knowledge profile identifier.
+
+        Returns:
+            pathlib.Path:
+                Profile embeddings directory path.
+        '''
         return self.root / 'embeddings' / profile
 
     def similarity_matrix_fpath(self, profile: str) -> pathlib.Path:
+        '''
+        Return path to the species similarity matrix tensor.
+
+        Args:
+            profile:
+                Knowledge profile identifier.
+
+        Returns:
+            pathlib.Path:
+                File path to `species_similarity_matrix.pt`.
+        '''
         return self.profile_dpath(profile) / 'species_similarity_matrix.pt'
 
     def embeddings_fpath(self, profile: str) -> pathlib.Path:
+        '''
+        Return path to the species embeddings tensor file.
+
+        Args:
+            profile:
+                Knowledge profile identifier.
+
+        Returns:
+            pathlib.Path:
+                File path to `species_embeddings.pt`.
+        '''
         return self.profile_dpath(profile) / 'species_embeddings.pt'
 
     def metadata_fpath(self, profile: str) -> pathlib.Path:
+        '''
+        Return path to the species metadata JSON file.
+
+        Args:
+            profile:
+                Knowledge profile identifier.
+
+        Returns:
+            pathlib.Path:
+                File path to `species_metadata.json`.
+        '''
         return self.profile_dpath(profile) / 'species_metadata.json'
 
     def similarity_csv_fpath(self, profile: str) -> pathlib.Path:
+        '''
+        Return path to the species similarity matrix CSV export.
+
+        Args:
+            profile:
+                Knowledge profile identifier.
+
+        Returns:
+            pathlib.Path:
+                File path to `species_similarity_matrix.csv`.
+        '''
         return self.profile_dpath(profile) / 'species_similarity_matrix.csv'
 
     def validate(self, profile: str | None = None) -> typing.Self:
         '''
-        Validate that knowledge root directory exists, and optionally
-        profile files.
+        Validate knowledge root directory and optional profile files.
 
         Args:
             profile:
@@ -68,7 +118,8 @@ class KnowledgePaths:
                 files for.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:

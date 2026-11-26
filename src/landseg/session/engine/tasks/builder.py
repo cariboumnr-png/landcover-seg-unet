@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Engine task construction utilities.
 
@@ -32,9 +30,9 @@ This module serves as the entry point for assembling all per-head
 training and evaluation artifacts used by the execution engine.
 
 Public APIs:
-    - `TaskConfigShape`: protocol for task configuration options.
-    - `EngineTasks`: container for session-level task components.
-    - `build_engine_tasks`: construct per-head specifications,
+    - `EngineTasks`: Container for session-level task components.
+    - `TaskConfigShape`: Protocol for task configuration options.
+    - `build_engine_tasks`: Construct per-head specifications,
       losses, and metrics.
 '''
 
@@ -51,6 +49,7 @@ import landseg.session.engine.tasks.regularization as regularization
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class TaskConfigShape(typing.Protocol):
     '''Interface for engine task component configuration.'''
     @property
@@ -69,6 +68,7 @@ class TaskConfigShape(typing.Protocol):
     ) -> typing.Sequence[constraints.MTLConstraint] | None: ...
     @property
     def mtl_reg_configs(self) -> regularization.ConsistencyRegConfigShape: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -95,9 +95,11 @@ def build_engine_tasks(
     composition modules, and metric accumulators.
 
     Args:
-        data_specs: Dataset specification containing class statistics,
+        data_specs:
+            Dataset specification containing class statistics,
             hierarchy, and metadata.
-        config: Task configuration controlling loss weighting, alpha
+        config:
+            Task configuration controlling loss weighting, alpha
             computation, and enabled loss types.
 
     Returns:

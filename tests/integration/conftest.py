@@ -36,7 +36,7 @@ ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent
 @pytest.fixture(scope='session', autouse=True)
 def ensure_canonical_dummy_data():
     '''
-    Ensure canonical on-disk dummy dataset exists before integration suite.
+    Ensure canonical on-disk dummy dataset exists before test suite.
 
     Equivalent to running `python scripts/generate_dummy_data.py --yes`.
     '''

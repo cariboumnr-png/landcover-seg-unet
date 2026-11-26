@@ -20,10 +20,13 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.configs.schema.data`.
+Top-level namespace for `landseg.configs.schema.session`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes the composite session configuration schema via lazy resolution
+to keep import order simple and circular-free.
+
+Public APIs:
+    - `SessionConfig`: Composite settings for training and evaluation.
 '''
 
 # standard imports

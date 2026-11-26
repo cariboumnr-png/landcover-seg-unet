@@ -19,7 +19,13 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Optimizer preset objectives.'''
+'''
+Optimizer preset objectives.
+
+Public APIs:
+    - `obj_optimizer`: Sample optimizer learning rate and weight decay.
+    - `obj_throughput`: Sample batch size and mixed-precision flag.
+'''
 
 # third-party imports
 import optuna
@@ -31,11 +37,18 @@ def obj_optimizer(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Optimizer preset mutations:
-      - Learning rate (`float`)
-      - weight decay (`float`)
-    '''
+    Sample optimizer learning rate and weight decay for an Optuna trial.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.optimization.optimizer
 
     trial_cfg.set_optimizer_lr(
@@ -63,11 +76,18 @@ def obj_throughput(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Throughput preset mutations:
-      - Batch size (`int`)
-      - AMP usage (`bool`)
-    '''
+    Sample batch size and automatic mixed-precision toggle.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.optimization.throughput
 
     trial_cfg.set_data_batch_size(

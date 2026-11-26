@@ -28,10 +28,10 @@ execution, and run-ledger updates for each geospatial ETL stage so
 context builders directly.
 
 Public APIs:
-    - `run_world_grid_stage`: Execute world-grid generation stage.
     - `run_data_harmonization_stage`: Execute data-harmonize stage.
     - `run_data_ingestion_stage`: Execute data-ingest stage.
     - `run_data_preparation_stage`: Execute data-prepare stage.
+    - `run_world_grid_stage`: Execute world-grid generation stage.
 '''
 
 # standard imports
@@ -51,7 +51,15 @@ def run_world_grid_stage(
     config: contracts.WorldGridPrepConfig,
     grid_paths: artifacts.WorldGridPaths,
 ) -> None:
-    '''Execute world grid generation, logging, and report persistence.'''
+    '''
+    Execute world grid generation, logging, and report persistence.
+
+    Args:
+        config:
+            World grid preparation configuration object.
+        grid_paths:
+            Path manager for world grid artifacts and reports.
+    '''
     logger = grid_mod.GridLogger(
         name='world-grid',
         log_file=grid_paths.report,
@@ -88,7 +96,17 @@ def run_data_harmonization_stage(
     harm_paths: artifacts.HarmonizationPaths,
     grid_report_fpath: pathlib.Path,
 ) -> None:
-    '''Execute raster harmonization, logging, and ledger update.'''
+    '''
+    Execute raster harmonization, logging, and ledger update.
+
+    Args:
+        config:
+            Harmonization pipeline configuration object.
+        harm_paths:
+            Path manager for harmonization outputs and manifests.
+        grid_report_fpath:
+            Path to the upstream world grid report JSON.
+    '''
     logger = harmonize_mod.HarmonizationLogger(
         name='data-harmonize',
         log_file=harm_paths.report,
@@ -136,7 +154,23 @@ def run_data_ingestion_stage(
     rebuild: bool = False,
     harmonization_record: typing.Mapping[str, typing.Any] | None = None,
 ) -> None:
-    '''Execute block/domain ingestion, logging, and ledger update.'''
+    '''
+    Execute block/domain ingestion, logging, and ledger update.
+
+    Args:
+        config:
+            Ingestion pipeline configuration object.
+        harm_paths:
+            Path manager for upstream harmonization artifacts.
+        ingest_paths:
+            Path manager for ingestion outputs and manifests.
+        harmonization_run:
+            Optional target harmonization run identifier or index.
+        rebuild:
+            Whether to force rebuilding existing ingestion outputs.
+        harmonization_record:
+            Optional pre-resolved harmonization run record override.
+    '''
     logger = ingest_mod.IngestionLogger(
         name='data-ingest',
         log_file=ingest_paths.report,
@@ -199,7 +233,17 @@ def run_data_preparation_stage(
     ingest_paths: artifacts.IngestionPaths,
     prep_paths: artifacts.PreparationPaths,
 ) -> None:
-    '''Execute dataset partitioning, normalization, and schema emission.'''
+    '''
+    Execute dataset partitioning, normalization, and schema emission.
+
+    Args:
+        config:
+            Preparation pipeline configuration object.
+        ingest_paths:
+            Path manager for upstream ingestion artifacts.
+        prep_paths:
+            Path manager for dataset preparation outputs.
+    '''
     logger = prepare_mod.PreparationLogger(
         name='data-prepare',
         log_file=prep_paths.report,

@@ -87,8 +87,10 @@ def test_parallel_executor_captures_exceptions():
 
 
 def _square(x):
+    '''Return the square of `x`.'''
     return x * x
 
 
 def _failing_func(x):
+    '''Raise a `ValueError` for testing exception capture.'''
     raise ValueError(f'Failed with input {x}')

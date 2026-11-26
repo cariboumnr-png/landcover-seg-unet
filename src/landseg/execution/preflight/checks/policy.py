@@ -43,7 +43,19 @@ def collision_policy(
     ctx: context.InspectionContext,
     pid: str = 'collision_policy',
 ) -> schema.ProbeResult:
-    '''Inspect block collision resolution policy.'''
+    '''
+    Inspect block collision resolution policy.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Policy validation outcome for block collision handling.
+    '''
     policy = ctx.config.data.ingestion.datablocks.collision_policy.lower()
 
     if policy == 'overwrite':

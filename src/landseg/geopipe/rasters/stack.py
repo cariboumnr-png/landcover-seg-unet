@@ -26,7 +26,7 @@ This module provides functionality to combine multiple feature and label
 rasters into unified multi-band GDAL Virtual Raster (VRT) composites.
 
 Public APIs:
-    - `stack_rasters`: Stack feature and label rasters into composite VRTs.
+    - `stack_rasters`: Stack aligned rasters into a composite VRT.
 '''
 
 # standard imports
@@ -50,28 +50,29 @@ def stack_rasters(
     '''
     Stack bands from spatially aligned rasters into a VRT.
 
-    Source order determines output band order. For each source, its bands
-    are appended in their native order.
+    Source order determines output band order. For each source, its
+    bands are appended in their native order.
 
     Args:
         source_paths:
             Ordered source raster paths.
         output_path:
             Destination VRT path.
+        band_tags:
+            Optional metadata for each output band. Its length must
+            match the total number of source bands. A `None` entry
+            leaves the corresponding output band untagged.
         dataset_tags:
             Optional metadata attached to the output dataset.
-        band_tags:
-            Optional metadata for each output band. Its length must match
-            the total number of source bands. A `None` entry leaves the
-            corresponding output band untagged.
 
     Returns:
-        Resolved path to the created VRT.
+        pathlib.Path:
+            Resolved path to the created VRT.
 
     Raises:
         ValueError:
-            If no sources are provided, sources are not spatially aligned,
-            or the number of band metadata entries is incorrect.
+            If no sources are provided, sources are not spatially
+            aligned, or the band metadata entry count is incorrect.
         FileNotFoundError:
             If a source raster does not exist.
     '''
@@ -142,7 +143,7 @@ def _validate_band_tags(
     source_paths: list[pathlib.Path],
     band_tags: list[dict[str, str]] | None,
 ) -> list[dict[str, str]]:
-    '''Return the total number of bands across all sources.'''
+    '''Validate and normalize per-band metadata tag dictionaries.'''
     total = sum(io.get_info(source_path).count for source_path in source_paths)
 
     if band_tags is None:
@@ -162,7 +163,7 @@ def _validate_source(
     path: pathlib.Path,
     ref: io.DatasetInfo,
 ) -> None:
-    '''Validate that source raster matches reference dimensions and CRS.'''
+    '''Validate source raster matches reference grid and CRS.'''
     if src.width != ref.width or src.height != ref.height:
         raise ValueError(
             f'Source raster has different dimensions: {path} '

@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=not-callable
-
 '''
 UNet3+ backbone implementing full-scale dense skip aggregation.
 
@@ -55,6 +53,8 @@ levels at each decoder stage using explicit spatial alignment.
 - Output channel width equals `base_ch`
 '''
 
+# pylint: disable=not-callable
+
 # third-party imports
 import torch
 import torch.nn as nn
@@ -71,7 +71,7 @@ class UNetPPP(body.UNetBackbone):
     - full-scale skip aggregation across encoder levels
     - unified projection width for all encoder features
     - dense multi-resolution decoder connectivity
-    - explicit resizing between all feature scales (upsampling + optional
+    - explicit resizing across feature scales (upsampling + optional
         pooled downsampling)
     - encoder defines base spatial hierarchy; decoder operates on
         interpolated feature grids
@@ -89,9 +89,15 @@ class UNetPPP(body.UNetBackbone):
         config: body.UNetBodyConfig
     ) -> None:
         '''
-        Initialize backbone.
-        '''
+        Construct the UNet3+ full-scale skip aggregation backbone.
 
+        Args:
+            in_ch:
+                Number of input channels.
+            config:
+                `UNetBodyConfig` specifying base channel width,
+                encoder parameters, and `nodes_conv_params`.
+        '''
         super().__init__(in_ch, config)
         self._out_channels = ch = config.base_ch
 
@@ -133,12 +139,12 @@ class UNetPPP(body.UNetBackbone):
 
     @property
     def out_channels(self) -> int:
-        '''Number of output channels.'''
+        '''Return number of output channels.'''
         return self._out_channels
 
     @property
     def spatial_divisor(self) -> int:
-        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        '''Return minimum spatial divisor induced by the encoder.'''
         return 2 ** len(self.downs)
 
     def _resize(
@@ -153,7 +159,6 @@ class UNetPPP(body.UNetBackbone):
         - avg pool for exact integer downsampling
         - antialiased bilinear fallback otherwise
         '''
-
         h_in, w_in = x.shape[-2:]
         h_out, w_out = size
 
@@ -188,8 +193,18 @@ class UNetPPP(body.UNetBackbone):
         )
 
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        '''Run encoder path and return multi-scale feature hierarchy.'''
+        '''
+        Run encoder path and bottleneck to extract multi-scale features.
 
+        Args:
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
+        Returns:
+            tuple[torch.Tensor, ...]:
+                Five multi-scale feature tensors `(x1, x2, x3, x4, xb)`
+                ordered from finest to bottleneck resolution.
+        '''
         # unpack the 5 levels
         x1, x2, x3, x4, x5 = self.downs(x)
         # apply bottleneck to the deepest encoder feature
@@ -197,8 +212,19 @@ class UNetPPP(body.UNetBackbone):
         return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
-        '''UNet3+ full-scale feature aggregation decoder.'''
+        '''
+        Decode multi-scale features via UNet3+ full-scale aggregation.
 
+        Args:
+            xs:
+                Five-element tuple `(x1, x2, x3, x4, xb)` produced by
+                `encode`.
+
+        Returns:
+            torch.Tensor:
+                Final decoded feature map `d1` of shape
+                `(B, out_channels, H, W)`.
+        '''
         x1, x2, x3, x4, x5 = xs
 
         # ------------------------------------------------------------------ #
@@ -227,9 +253,7 @@ class UNetPPP(body.UNetBackbone):
         cache: dict[tuple[int, int], torch.Tensor] = {}
 
         def get(i: int, j: int) -> torch.Tensor:
-            '''
-            Resize projected feature i to decoder scale j.
-            '''
+            '''Resize projected feature `i` to decoder scale `j`.'''
             key = (i, j)
             if key not in cache:
                 cache[key] = self._resize(projs[i], sizes[j])
@@ -286,7 +310,16 @@ class UNetPPP(body.UNetBackbone):
         return d1
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        '''Compute UNet3+ feature map.'''
+        '''
+        Compute the UNet3+ feature map at input spatial resolution.
 
+        Args:
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
+        Returns:
+            torch.Tensor:
+                Output feature map of shape `(B, out_channels, H, W)`.
+        '''
         xs = self.encode(x)
         return self.decode(xs)

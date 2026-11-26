@@ -93,16 +93,16 @@ class MultiHeadTrainer(base.EngineBase):
             update_every:
                 Number of batches between metric aggregation and logging
                 updates (i.e., controls how frequently averaged losses
-                and learning rate are refreshed in ``results``).
+                and learning rate are refreshed in `results`).
             **kwargs:
-                Forwarded to ``EngineBase`` for runtime, dataloaders,
+                Forwarded to `EngineBase` for runtime, dataloaders,
                 dispatcher, and device configuration.
 
         Notes:
             - Initializes epoch-level result aggregation containers.
             - Loss tracking is maintained per-epoch and per-head.
-            - Batch execution remains delegated to the runtime; this \
-            class only controls result aggregation cadence.
+            - Batch execution remains delegated to the runtime; this
+              class only controls result aggregation cadence.
         '''
         super().__init__(**kwargs)
         self.update_every = update_every
@@ -122,23 +122,27 @@ class MultiHeadTrainer(base.EngineBase):
         This method defines the training policy for a single epoch,
         including:
 
-        - Model mode and logit-adjustment configuration
-        - Optimizer and gradient-scaling behavior
-        - Gradient clipping and optimizer stepping
-        - Delegation of batch execution to BatchExecutionEngine
+        - Model mode and optimizer gradient reset
+        - Gradient scaling, clipping, and optimizer/scheduler stepping
+        - Delegation of batch execution to `BatchEngine`
         - Aggregation and formatting of epoch-level loss statistics
-
-        Batch-level execution (forward pass, loss computation, metric
-        accumulation) is performed by the batch execution engine and
-        reflected in shared RuntimeState.
 
         Lifecycle callback hooks are emitted as semantic markers for
         observation and side effects, but do not invoke or control
         execution logic.
 
+        Args:
+            epoch:
+                Current epoch index recorded in runtime progress state.
+
         Returns:
             core.TrainStepResults:
-                averaged epoch-level training metrics and head losses.
+                Averaged epoch-level training metrics and head losses.
+
+        Raises:
+            RuntimeError:
+                If five consecutive AMP optimizer steps are skipped due
+                to non-finite gradients.
         '''
         # training phase begin
         self.dispatcher.on_train_policy_begin()

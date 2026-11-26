@@ -40,8 +40,17 @@ class NumericSafety:
         clamp_range: tuple[float, float],
         device: str
     ):
-        '''Configure clamping behavior and bounds.'''
+        '''
+        Configure numerical safety behavior and clamping bounds.
 
+        Args:
+            enable_clamp:
+                Whether tensor clamping is enabled.
+            clamp_range:
+                Lower and upper clamp bounds `(min_val, max_val)`.
+            device:
+                Target device type string for `torch.autocast`.
+        '''
         self.enable_clamp = enable_clamp
         self.clamp_range = clamp_range
         self.device = device
@@ -51,13 +60,33 @@ class NumericSafety:
         enable: bool = True,
         dtype: torch.dtype = torch.float16
     ) -> torch.autocast:
-        '''Create an AMP autocast context for the current device.'''
+        '''
+        Create an AMP autocast context for the configured device.
 
+        Args:
+            enable:
+                Whether mixed-precision autocast is active.
+            dtype:
+                Floating-point dtype used inside the autocast region.
+
+        Returns:
+            torch.autocast:
+                Configured PyTorch autocast context manager.
+        '''
         return torch.autocast(self.device, dtype, enable)
 
     def clamp(self, x: torch.Tensor) -> torch.Tensor:
-        '''Clamp tensor values to a safe numeric range.'''
+        '''
+        Clamp tensor values to the configured numeric range.
 
+        Args:
+            x:
+                Input tensor to clamp when clamping is enabled.
+
+        Returns:
+            torch.Tensor:
+                Clamped tensor, or `x` unchanged if clamping is off.
+        '''
         if not self.enable_clamp:
             return x
         mmin, mmax = self.clamp_range

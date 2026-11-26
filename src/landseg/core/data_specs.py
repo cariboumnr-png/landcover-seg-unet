@@ -22,21 +22,26 @@
 '''
 Data specifications interface.
 
-This module defines the `DataSpecs` dataclass, a canonical, structured
-representation of dataset configuration and statistics used across the
-project.
+Defines `DataSpecs` and its nested metadata dataclasses as the
+canonical representation of dataset configuration and statistics.
 
 `DataSpecs` objects are:
-    - **Produced** by data preparation pipelines in the `geopipe` module,
-      where raw data is processed into model-ready artifacts.
+    - **Produced** by data preparation pipelines in `geopipe`, where raw
+      data is processed into model-ready artifacts.
     - **Consumed** during model construction, providing required shape,
       label topology, and domain information.
-    - **Used at runtime** by trainers and evaluators to ensure consistent
-      interpretation of inputs, outputs, and dataset splits.
+    - **Used at runtime** by trainers and evaluators to interpret
+      inputs, outputs, and dataset splits consistently.
 
-As part of the `./core/` package, this interface serves as a stable
-contract between data pipelines and downstream training/inference
-components.
+As part of `landseg.core`, this interface serves as a stable contract
+between data pipelines and downstream training or inference components.
+
+Public APIs:
+    - `DataSpecs`: Canonical dataset specs for trainers and models.
+    - `Domains`: Discrete and continuous domain metadata container.
+    - `Heads`: Head-wise label statistics and topology container.
+    - `Meta`: General dataset metadata for image and label specs.
+    - `Splits`: Train, validation, and test block file mappings.
 '''
 
 # standard imports
@@ -61,7 +66,7 @@ field = dataclasses.field
 # ------------------------------Public  Dataclass------------------------------
 @dataclasses.dataclass
 class DataSpecs:
-    '''Container for dataset specs used by trainers and models'''
+    '''Container for dataset specs used by trainers and models.'''
     name: str
     mode: typing.Literal['default', 'single', 'val_only', 'test_only']
     meta: Meta         # general dataset metadata
@@ -83,7 +88,6 @@ class DataSpecs:
     @property
     def summary(self) -> list[str]:
         '''Return a list of summarizing strings for the instance.'''
-
         def _h_str(items: list[str], max_items: int = 3) -> str:
             if len(items) <= max_items:
                 return ', '.join(map(str, items))
@@ -106,7 +110,14 @@ class DataSpecs:
 
 
     def to_dict(self) -> dict[str, typing.Any]:
-        '''Serialize the specifications into a lean, schematic dictionary.'''
+        '''
+        Serialize specifications into a lean, schematic dictionary.
+
+        Returns:
+            dict[str, typing.Any]:
+                Dictionary summarizing metadata, heads, splits, and
+                domains.
+        '''
         return {
             'name': self.name,
             'mode': self.mode,
@@ -137,10 +148,9 @@ class DataSpecs:
 @dataclasses.dataclass
 class Meta:
     '''General dataset metadata.'''
-
     @dataclasses.dataclass
     class Image:
-        '''Image related.'''
+        '''Image channel and spatial metadata.'''
         height_width: int
         array_key: str
         band_map: dict[str, int]
@@ -162,7 +172,7 @@ class Meta:
 
     @dataclasses.dataclass
     class Label:
-        '''Label related.'''
+        '''Label array key and ignore-index metadata.'''
         ignore_index: int
         array_key: str
 

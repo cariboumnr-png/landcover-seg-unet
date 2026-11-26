@@ -54,7 +54,7 @@ def validate_specs(
     knowledge_root: pathlib.Path | str | None = None,
 ) -> TaxonomySpec:
     '''
-    Validate a label layer taxonomy specification against knowledge base.
+    Validate a label layer taxonomy spec against the knowledge base.
 
     Args:
         profile:
@@ -69,6 +69,11 @@ def validate_specs(
     Returns:
         TaxonomySpec:
             Resolved taxonomy specification dictionary.
+
+    Raises:
+        ValueError:
+            If `knowledge_root` is `None`, class counts mismatch, or
+            the profile or class code is unknown.
     '''
     if knowledge_root is None:
         raise ValueError(

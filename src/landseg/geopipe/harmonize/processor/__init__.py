@@ -22,10 +22,10 @@
 '''
 Top-level namespace for `landseg.geopipe.harmonize.processor`.
 
-Exposes raster harmonization orchestration onto the canonical world grid.
+Exposes raster harmonization onto the canonical world grid.
 
 Public APIs:
-    - `HarmonizedRasters`: Container for processed raster paths dictionaries.
+    - `HarmonizedRasters`: Container for processed raster path dicts.
     - `harmonizer`: Harmonize compiled raster sources onto grid.
 '''
 

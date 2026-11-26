@@ -20,10 +20,32 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.study.sweep.objective_presets`.
+Top-level namespace for `landseg.study.sweep.presets`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes objective preset mutators, composite presets, and the preset
+resolver via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `comp_candidate`: Compose all production candidate search presets.
+    - `comp_capacity`: Compose architecture and bottleneck presets.
+    - `comp_mtl_quality`: Compose loss and regularization presets.
+    - `comp_quick`: Compose optimizer and throughput presets.
+    - `obj_architecture`: Sample model body, base channels, bottleneck.
+    - `obj_base`: Sample baseline learning rate and batch size.
+    - `obj_bottleneck`: Sample bottleneck block counts and transformer.
+    - `obj_conditioning`: Sample active feature conditioner sets.
+    - `obj_context_window`: Sample spatial context patch size.
+    - `obj_data_geometry`: Sample spatial patch size and batch size.
+    - `obj_head_weights`: Sample logit adjustment alpha weight.
+    - `obj_hierarchy`: Sample hierarchy lambda and reduction mode.
+    - `obj_loss_aux`: Sample auxiliary spectral and TV loss weights.
+    - `obj_loss_balance`: Sample focal and dice loss component weights.
+    - `obj_mtl_joint`: Sample consistency lambda and logit adjust alpha.
+    - `obj_optimizer`: Sample optimizer learning rate and weight decay.
+    - `obj_regularization`: Sample multi-task consistency lambda.
+    - `obj_throughput`: Sample batch size and mixed-precision flag.
+    - `resolve`: Resolve a sweep objective preset function by name.
 '''
 
 # standard imports

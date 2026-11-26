@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for block image and label statistics aggregation.'''
+# pylint: disable=protected-access
 
 # standard imports
 import pathlib

@@ -27,11 +27,11 @@ checks, and candidate block hydration to produce train, validation,
 and testing splits without data leakage.
 
 Public APIs:
-    - AOIConfig: configuration for AOI spatial boundaries.
-    - HydrationConfig: configuration for candidate hydration.
-    - PartitionConfig: configuration for data block partitioning.
-    - PartitionResults: container for partitioned splits and hydration.
-    - create_blocks_partition: split blocks safely without leakage.
+    - `AOIConfig`: Configuration for AOI spatial boundaries.
+    - `HydrationConfig`: Configuration for candidate hydration.
+    - `PartitionConfig`: Configuration for data block partitioning.
+    - `PartitionResults`: Container for splits and hydration results.
+    - `create_blocks_partition`: Split blocks safely without leakage.
 '''
 
 # standard imports
@@ -116,21 +116,21 @@ def create_blocks_partition(
 
     Args:
         base_class_counts:
-            mapping of base block coordinates to focal head counts.
+            Mapping of base block coordinates to focal head counts.
         valid_class_counts:
-            mapping of all valid block coordinates to focal head counts.
+            Mapping of all valid block coordinates to focal head counts.
         valid_blocks:
-            mapping of valid block coordinates to artifact file paths.
-        config:
-            partitioning parameters and buffer configuration.
+            Mapping of valid block coordinates to artifact file paths.
         ext_test_blks:
-            optional external holdout test block file paths.
+            Optional external holdout test block file paths.
+        config:
+            Partitioning parameters and buffer configuration.
         logger:
-            optional logger for progress and diagnostic messages.
+            Optional logger for progress and diagnostic messages.
 
     Returns:
         PartitionResults:
-            split block paths, raw split coordinates, and hydration
+            Split block paths, raw split coordinates, and hydration
             diagnostics.
     '''
     if config.has_aoi:

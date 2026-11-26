@@ -23,13 +23,13 @@
 Spatial and geospatial stage-zero visualization utilities.
 
 Provides diagnostic plotting for world grid tiling layouts, geographic
-AOI partition splits, dataset class pixel frequency audits, and multi-band
-spectral composites.
+AOI partition splits, dataset class pixel frequency audits, and
+multi-band spectral composites.
 
 Public APIs:
-    - `plot_class_frequencies`: Render class pixel count and imbalance chart.
-    - `plot_grid_layout`: Render spatial grid tiling and partition splits.
-    - `plot_spectral_composite`: Render stretched RGB/false-color composite.
+    - `plot_class_frequencies`: Render class pixel count chart.
+    - `plot_grid_layout`: Render spatial grid tiling and splits.
+    - `plot_spectral_composite`: Render stretched spectral composite.
 '''
 
 # standard imports
@@ -65,8 +65,9 @@ def plot_grid_layout(
         grid_layout:
             `GridLayout` instance or dictionary with grid dimensions.
         aoi_splits:
-            Optional dictionary mapping split name ('train', 'val', 'test')
-            to assigned tile coordinate sets or bounding boxes.
+            Optional dictionary mapping split name (`'train'`, `'val'`,
+            `'test'`) to assigned tile coordinate sets or bounding
+            boxes.
         title:
             Super-title for the figure.
         save_path:
@@ -182,12 +183,12 @@ def plot_class_frequencies(
     show: bool = True,
 ) -> matplotlib.figure.Figure:
     '''
-    Render class pixel frequency histogram with imbalance threshold alerts.
+    Render class pixel frequency chart with imbalance alerts.
 
     Args:
         dataspecs:
-            `DataSpecs` instance, or dictionary mapping class identifiers
-            to integer pixel counts.
+            `DataSpecs` instance, or dictionary mapping class
+            identifiers to integer pixel counts.
         class_names:
             Optional human-readable names for classes.
         title:
@@ -298,6 +299,12 @@ def plot_spectral_composite(
     Returns:
         matplotlib.figure.Figure:
             Instantiated figure instance.
+
+    Raises:
+        ValueError:
+            If `raster_array` is not a 3D array.
+        IndexError:
+            If any requested index in `bands` is out of channel bounds.
     '''
     if isinstance(raster_array, torch.Tensor):
         arr = raster_array.detach().cpu().to(torch.float32).numpy()

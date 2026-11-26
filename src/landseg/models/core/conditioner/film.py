@@ -66,12 +66,16 @@ class FilmConditioner(torch.nn.Module):
         hidden_dim: int | None = None,
     ) -> None:
         '''
-        Initialize FiLM generator.
+        Initialize FiLM generator MLP.
 
         Args:
-            embed_dim: Expected domain embedding dimension (D).
-            bottleneck_ch: Number of feature channels to modulate.
-            hidden: Hidden width of FiLM MLP (defaults to embed_dim).
+            embed_dim:
+                Expected domain embedding dimension.
+            bottleneck_ch:
+                Number of bottleneck feature channels to modulate.
+            hidden_dim:
+                Hidden width of the FiLM MLP, defaulting to
+                `embed_dim` when `None` or zero.
         '''
         super().__init__()
 
@@ -98,15 +102,7 @@ class FilmConditioner(torch.nn.Module):
         self,
         payload: model_core.DomainTargetPayload | None,
     ) -> torch.Tensor | None:
-        '''
-        Construct combined domain embedding z.
-
-        Args:
-            payload: Routed domain payload.
-
-        Returns:
-            Tensor [B, D] or None.
-        '''
+        '''Build normalized domain embedding from routed payload.'''
         if payload is None or self.embed_dim <= 0:
             return None
 
@@ -139,14 +135,18 @@ class FilmConditioner(torch.nn.Module):
         payload: model_core.DomainTargetPayload | None,
     ) -> torch.Tensor:
         '''
-        Apply FiLM modulation using routed domain payload.
+        Apply FiLM affine modulation using routed domain payload.
 
         Args:
-            xb: Feature map [B, C, H, W]
-            payload: Routed domain conditioning
+            xb:
+                Bottleneck feature map of shape `(B, C, H, W)`.
+            payload:
+                Routed domain conditioning payload, or `None` to bypass
+                modulation.
 
         Returns:
-            Modulated tensor (same shape as xb)
+            torch.Tensor:
+                Modulated feature tensor with the same shape as `xb`.
         '''
         if self.embed_dim <= 0 or self.film is None:
             return xb

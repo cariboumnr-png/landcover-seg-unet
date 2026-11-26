@@ -29,12 +29,12 @@ ETL run ledgers for pending batches and run history.
 Every check returns a `ProbeResult` and performs no side effects.
 
 Public APIs:
-    - `upstream_report`: Verify an upstream target report succeeded.
-    - `upstream_manifest`: Verify an upstream runs manifest has runs.
-    - `required_artifacts`: Verify required artifact files exist.
-    - `run_history`: Summarize a run manifest's status counts.
     - `pending_harmonization`: Detect already-harmonized input dataset.
     - `pending_ingestion`: Detect harmonization batches awaiting ingest.
+    - `required_artifacts`: Verify required artifact files exist.
+    - `run_history`: Summarize a run manifest's status counts.
+    - `upstream_manifest`: Verify an upstream runs manifest has runs.
+    - `upstream_report`: Verify an upstream target report succeeded.
 '''
 
 # standard imports
@@ -57,7 +57,23 @@ def upstream_report(
     *,
     expected_status: str = 'SUCCESS',
 ) -> schema.ProbeResult:
-    '''Verify an upstream pipeline report exists with expected status.'''
+    '''
+    Verify an upstream pipeline report exists with expected status.
+
+    Args:
+        report_fpath:
+            Path to the upstream pipeline report JSON file.
+        upstream_target:
+            Identifier of the required upstream pipeline stage.
+        pid:
+            Probe identifier for the returned result.
+        expected_status:
+            Required status string in the upstream report.
+
+    Returns:
+        schema.ProbeResult:
+            Lineage validation outcome for the upstream report.
+    '''
     if not report_fpath.is_file():
         return schema.ProbeResult(
             pid=pid,
@@ -131,7 +147,23 @@ def upstream_manifest(
     *,
     min_success_runs: int = 1,
 ) -> schema.ProbeResult:
-    '''Verify an upstream runs manifest has enough successful runs.'''
+    '''
+    Verify an upstream runs manifest has enough successful runs.
+
+    Args:
+        manifest_fpath:
+            Path to the upstream runs manifest JSON file.
+        upstream_target:
+            Identifier of the required upstream pipeline stage.
+        pid:
+            Probe identifier for the returned result.
+        min_success_runs:
+            Minimum number of successful runs required to pass.
+
+    Returns:
+        schema.ProbeResult:
+            Lineage validation outcome for the upstream manifest.
+    '''
     if not manifest_fpath.is_file():
         return schema.ProbeResult(
             pid=pid,
@@ -205,7 +237,21 @@ def required_artifacts(
     upstream_target: str,
     pid: str = 'required_artifacts',
 ) -> schema.ProbeResult:
-    '''Verify that required upstream artifact files exist on disk.'''
+    '''
+    Verify that required upstream artifact files exist on disk.
+
+    Args:
+        file_paths:
+            Artifact file paths required from the upstream stage.
+        upstream_target:
+            Identifier of the upstream stage producing the files.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Lineage validation outcome for artifact existence.
+    '''
     missing = [str(fp) for fp in file_paths if not fp.exists()]
     if missing:
         return schema.ProbeResult(
@@ -238,7 +284,19 @@ def run_history(
     manifest_fp: pathlib.Path,
     pid: str,
 ) -> schema.ProbeResult:
-    '''Summarize status counts recorded in a run history manifest.'''
+    '''
+    Summarize status counts recorded in a run history manifest.
+
+    Args:
+        manifest_fp:
+            Path to the run history manifest JSON file.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Lineage summary probe containing run status counts.
+    '''
     mfst_str = str(manifest_fp.resolve())
     try:
         mfst = artifacts.Controller[dict](manifest_fp).fetch(missing_ok=True)
@@ -286,7 +344,19 @@ def pending_harmonization(
     ctx: context.InspectionContext,
     pid: str = 'harmonized_dataset',
 ) -> schema.ProbeResult:
-    '''Detect whether the configured dataset is already harmonized.'''
+    '''
+    Detect whether the configured dataset is already harmonized.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Lineage probe warning if dataset was already harmonized.
+    '''
     paths = ctx.paths
     harmonize_mfst = paths.data_harmonization.runs_manifest
     try:
@@ -334,7 +404,21 @@ def pending_ingestion(
     *,
     desire_pending: bool = True,
 ) -> schema.ProbeResult:
-    '''Detect harmonization batches awaiting ingestion.'''
+    '''
+    Detect harmonization batches awaiting ingestion.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+        desire_pending:
+            Whether pending batches are expected (pass vs warn).
+
+    Returns:
+        schema.ProbeResult:
+            Lineage probe reporting pending harmonization batches.
+    '''
     paths = ctx.paths
     harmonize_mfst = paths.data_harmonization.runs_manifest
     ingest_mfst = paths.data_ingestion.runs_manifest

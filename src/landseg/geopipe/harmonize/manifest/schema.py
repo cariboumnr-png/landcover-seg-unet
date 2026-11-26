@@ -22,8 +22,8 @@
 '''
 Schemas and type contracts for dataset manifests.
 
-Defines canonical TypedDict specifications, category aliases, and standard
-sensor preset enumerations for raw raster registration.
+Defines canonical TypedDict specifications, category aliases, and
+standard sensor preset enumerations for raw raster registration.
 
 Public APIs:
     - `AllowedCategory`: Type alias for valid raster categories.
@@ -64,7 +64,6 @@ class ManifestEntry(typing.TypedDict):
 # ----- public classes
 class SensorPreset(enum.Enum):
     '''Standard remote sensing and geospatial raster band presets.'''
-
     # Sentinel-2 MSI L2A (10 surface reflectance bands)
     SENTINEL_2 = (
         'blue',

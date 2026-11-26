@@ -26,8 +26,8 @@ Provides ASCII dashboard rendering for console output and flat JSON
 artifact persistence under the experiment preflight directory.
 
 Public APIs:
-    - `format_preflight_report`: Render formatted terminal dashboard.
     - `export_preflight_report`: Persist pre-flight JSON artifact.
+    - `format_preflight_report`: Render formatted terminal dashboard.
 '''
 
 # standard imports
@@ -52,15 +52,16 @@ def format_preflight_report(
     results: schema.PreflightResult | list[schema.PreflightResult],
 ) -> str:
     '''
-    Format pre-flight inspection results into a terminal status dashboard.
+    Format pre-flight inspection results into a terminal dashboard.
 
     Args:
         results:
-            single PreflightResult or list of PreflightResult instances.
+            Single `PreflightResult` or list of `PreflightResult`
+            instances.
 
     Returns:
         str:
-            formatted terminal dashboard text.
+            Formatted terminal dashboard text.
     '''
     result_list = results if isinstance(results, list) else [results]
     lns: list[str] = []
@@ -113,17 +114,18 @@ def export_preflight_report(
 
     Args:
         results:
-            single PreflightResult or list of PreflightResult instances.
+            Single `PreflightResult` or list of `PreflightResult`
+            instances.
         root_config:
-            hydra-composed root configuration.
+            Hydra-composed root configuration.
         target:
-            selected target pipeline identifier.
+            Selected target pipeline identifier.
         exp_root:
-            optional experiment root directory override.
+            Optional experiment root directory override.
 
     Returns:
         tuple[pathlib.Path, str]:
-            persisted report file path and generated timestamped UID.
+            Persisted report file path and generated timestamped UID.
     '''
     result_list = results if isinstance(results, list) else [results]
 

@@ -22,8 +22,11 @@
 '''
 Top-level namespace for `landseg.configs.schema.study`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes the composite hyperparameter study configuration schema via lazy
+resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `StudyConfig`: Composite configuration for hyperparameter sweeps.
 '''
 
 # standard imports

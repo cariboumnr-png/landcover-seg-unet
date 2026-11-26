@@ -30,7 +30,7 @@ Public APIs:
     - `MissingRequiredInputError`: Raised on missing widget input.
     - `NotebookWidgets`: Multi-environment widget configuration bridge.
     - `require_widget`: Retrieve and validate required widget values.
-    - `safe_training_session`: Interruption-safe training context manager.
+    - `safe_training_session`: Interruption-safe training context.
 '''
 
 # standard imports
@@ -51,7 +51,7 @@ _SESSION_VALUES: dict[str, typing.Any] = {}
 
 # ----- public exceptions
 class MissingRequiredInputError(ValueError):
-    '''Raised when a required notebook widget input is missing or invalid.'''
+    '''Raised when a required notebook widget input is missing.'''
 
 
 # ----- public classes
@@ -65,18 +65,25 @@ class NotebookWidgets:
     '''
 
     def __init__(self, dbutils: typing.Any = None):
-        '''Initialize widget bridge with optional explicit dbutils.'''
+        '''
+        Initialize widget bridge with optional explicit `dbutils`.
+
+        Args:
+            dbutils:
+                Optional explicit Databricks `dbutils` handle.
+        '''
         self._dbutils = platform.get_dbutils(dbutils)
         self._values: dict[str, typing.Any] = {}
 
     def _set_val(self, name: str, val: typing.Any) -> typing.Any:
+        '''Store widget value in instance and session caches.'''
         self._values[name] = val
         _SESSION_VALUES[name] = val
         return val
 
     @property
     def has_dbutils(self) -> bool:
-        '''Return whether active dbutils widget subsystem is available.'''
+        '''Return whether active `dbutils` widget support exists.'''
         return self._dbutils is not None and hasattr(self._dbutils, 'widgets')
 
     def text(
@@ -425,7 +432,7 @@ class NotebookWidgets:
                 pass
 
     def remove_all(self) -> None:
-        '''Remove all registered widgets from active notebook session.'''
+        '''Remove all registered widgets from active session.'''
         self._values.clear()
         _SESSION_VALUES.clear()
         if self.has_dbutils:
@@ -558,6 +565,10 @@ def safe_training_session(
         dict[str, typing.Any]:
             Mutable session state with `interrupted` (bool) and
             `start_time` (epoch seconds).
+
+    Raises:
+        KeyboardInterrupt:
+            If execution is interrupted and `reraise` is `True`.
     '''
     _ = target_dpath, kwargs
     session_state: dict[str, typing.Any] = {

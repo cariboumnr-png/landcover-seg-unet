@@ -26,8 +26,8 @@ Defines core type aliases for data pipeline exchange objects between
 data loaders, batch engines, and task regularizers.
 
 Public APIs:
-    - `DatasetItem`: sample or batch tuple (x, y, domain).
-    - `TensorDict`: mapping of string names to PyTorch tensors.
+    - `DatasetItem`: Sample or batch tuple `(x, y, domain)`.
+    - `TensorDict`: Mapping of string names to PyTorch tensors.
 '''
 
 # standard imports

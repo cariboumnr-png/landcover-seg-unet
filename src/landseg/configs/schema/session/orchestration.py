@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''Session orchestration configuration'''
+'''Session orchestration configuration.'''
 
 # standard imports
 import dataclasses
@@ -35,6 +33,7 @@ field = dataclasses.field
 # ----- orchestration
 @dataclasses.dataclass
 class MonitorConfig(base.BaseConfigSection):
+    '''Training metric monitor and early-stopping configuration.'''
     metric_name: str = 'iou'
     track_heads: dict[str, float] | None = None
     track_mode: str = 'max'
@@ -43,6 +42,7 @@ class MonitorConfig(base.BaseConfigSection):
     min_delta: float | None = 0.0005
 
     def validate(self):
+        '''Validate non-negative patience and delta bounds.'''
         if self.patience is not None:
             self.val.require_numeric_min(self.patience, 0)
         if self.min_delta is None:
@@ -51,6 +51,7 @@ class MonitorConfig(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class PhaseConfig(base.BaseConfigSection):
+    '''Configuration for a single training curriculum phase.'''
     name: str = 'phase_0'
     num_epochs: int = 0
     start_epoch: int = 1 # 1-based
@@ -59,6 +60,7 @@ class PhaseConfig(base.BaseConfigSection):
     frozen_heads: list[str] | None = None
 
     def validate(self):
+        '''Validate epoch counts, start epoch, and LR scale.'''
         self.val.require_numeric_min(self.num_epochs, 1, int)
         self.val.require_numeric_range(self.start_epoch, (1, self.num_epochs))
         if self.lr_scale is not None:
@@ -67,24 +69,28 @@ class PhaseConfig(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class SinglePhase(base.BaseConfigSection):
+    '''Single-phase curriculum container.'''
     name: str = 'single'
     phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
 
 @dataclasses.dataclass
 class BaselinePhases(base.BaseConfigSection):
+    '''Baseline multi-phase curriculum container.'''
     name: str = 'baseline'
     phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
 
 @dataclasses.dataclass
 class CustomPhases(base.BaseConfigSection):
+    '''Custom multi-phase curriculum container.'''
     name: str = 'custom'
     phases: list[PhaseConfig] = field(default_factory=lambda: [PhaseConfig()])
 
 
 @dataclasses.dataclass
 class Curriculum(base.BaseConfigSection):
+    '''Training curriculum schema and phase collections.'''
     schema: str = 'single'
     single: SinglePhase = field(default_factory=SinglePhase)
     baseline: BaselinePhases = field(default_factory=BaselinePhases)
@@ -93,18 +99,19 @@ class Curriculum(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class OrchestrationConfig(base.BaseConfigSection):
+    '''Composite training orchestration and curriculum settings.'''
     monitor: MonitorConfig = field(default_factory=MonitorConfig)
     curriculum: Curriculum = field(default_factory=Curriculum)
     resume_from_last: bool = False
 
     @property
     def single_phase(self) -> PhaseConfig:
-        '''Single phase from runtime configs.'''
+        '''Return single phase from runtime configuration.'''
         return self.curriculum.single.phases[0]
 
     @property
     def multi_phases(self) -> list[PhaseConfig]:
-        '''List of phases by configs.'''
+        '''Return phase list for the active curriculum schema.'''
         # currently supported pre-configured phases
         schema = self.curriculum.schema
         match schema:
@@ -118,6 +125,7 @@ class OrchestrationConfig(base.BaseConfigSection):
                 )
 
     def validate(self):
+        '''Validate monitor settings and active curriculum phases.'''
         self.monitor.validate()
         if self.curriculum.schema == 'single':
             self.single_phase.validate()

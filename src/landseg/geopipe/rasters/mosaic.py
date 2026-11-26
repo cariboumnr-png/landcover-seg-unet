@@ -102,7 +102,7 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
     warped_cache_dir: pathlib.Path | str | None = None,
 ) -> pathlib.Path:
     '''
-    Build a unified GDAL Virtual Raster (.vrt) mosaic from input rasters.
+    Build a unified GDAL Virtual Raster (`.vrt`) mosaic from rasters.
 
     This function harmonizes multiple raster sources (such as management
     units in differing UTM projections) into a single virtual mosaic
@@ -138,6 +138,12 @@ def build_vrt_mosaic( # pylint: disable=too-many-arguments,too-many-locals
     Returns:
         pathlib.Path:
             Absolute path to the generated master mosaic VRT file.
+
+    Raises:
+        FileNotFoundError:
+            If any input raster path does not exist.
+        ValueError:
+            If `input_paths` is empty or sources are incompatible.
     '''
     if not input_paths:
         raise ValueError('input_paths cannot be empty.')
@@ -283,7 +289,7 @@ def _prepare_source_tiles(
     inputs: list[pathlib.Path],
     ctx: _WarpContext,
 ) -> list[_TileGeometry]:
-    '''Reproject and snap all source tiles to a uniform coordinate grid.'''
+    '''Reproject and snap source tiles to a uniform coordinate grid.'''
     return [_prepare_single_tile(idx, p, ctx) for idx, p in enumerate(inputs)]
 
 

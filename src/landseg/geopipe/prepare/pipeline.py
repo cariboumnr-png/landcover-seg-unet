@@ -45,7 +45,25 @@ def run_data_preparation(
     policy: artifacts.LifecyclePolicy,
     logger: prepare_logger.PreparationLogger,
 ) -> None:
-    '''Run the preparation pipeline for an experiment.'''
+    '''
+    Run the data preparation pipeline for an experiment.
+
+    Builds the in-memory dataset view, partitions raw blocks into
+    train/val/test splits, aggregates training-split statistics,
+    normalizes all split blocks, and emits the prepared schema.
+
+    Args:
+        context:
+            Preparation context with catalog, schema, and AOI refs.
+        prep_paths:
+            Artifact path manager for preparation outputs.
+        config:
+            Preparation pipeline configuration parameters.
+        policy:
+            Artifact lifecycle policy governing rebuild behavior.
+        logger:
+            Structured logger recording preparation progress and report.
+    '''
     # build dataset view
     dataset_view_inputs = prepare_dataset.DataBlocksManifestInputs(
         schema=context.ingested_blocks_schema,

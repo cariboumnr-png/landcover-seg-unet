@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for top-level model factory and validation.'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest

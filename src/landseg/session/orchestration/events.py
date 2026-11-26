@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
 '''
 Event definitions for the training orchestration system.
 
@@ -63,14 +61,14 @@ evolves toward a generator model and additional phase schemas
 are introduced.
 
 Public APIs:
+    - `CheckpointRequest`: Command event requesting checkpoint save.
+    - `EpochEnd`: Event emitted at the end of an epoch.
+    - `EpochStart`: Event emitted at the start of an epoch.
     - `Event`: Base class for all orchestration events.
-    - `PhaseStart`: Event emitted at start of a training phase.
-    - `PhaseEnd`: Event emitted at end of a training phase.
-    - `EpochStart`: Event emitted at start of an epoch.
-    - `EpochEnd`: Event emitted at end of an epoch.
-    - `MetricsReport`: Snapshot of validation and test metrics.
+    - `MetricsReport`: Snapshot of epoch tracking and step metrics.
+    - `PhaseEnd`: Event emitted at the end of a training phase.
+    - `PhaseStart`: Event emitted at the start of a training phase.
     - `StopRun`: Command event requesting training termination.
-    - `CheckpointRequest`: Command event requesting checkpoint.
 '''
 
 # standard imports
@@ -92,7 +90,6 @@ class Event:
     Events are immutable facts emitted by orchestration or engine code.
     They do not perform actions or trigger behavior by themselves.
     '''
-
     name: str
     payload: dict[str, typing.Any] | None = None
 
@@ -100,9 +97,17 @@ class Event:
 # ----- phase-level events
 @dataclasses.dataclass(frozen=True)
 class PhaseStart(Event):
+    '''Event emitted at the start of a training phase.'''
     phase_name: str = ''
 
     def __init__(self, phase_name: str) -> None:
+        '''
+        Initialize a phase-start event.
+
+        Args:
+            phase_name:
+                Name of the phase entering execution.
+        '''
         super().__init__(
             name='phase_start',
             payload={'phase_name': phase_name},
@@ -112,9 +117,17 @@ class PhaseStart(Event):
 
 @dataclasses.dataclass(frozen=True)
 class PhaseEnd(Event):
+    '''Event emitted at the end of a training phase.'''
     phase_name: str = ''
 
     def __init__(self, phase_name: str) -> None:
+        '''
+        Initialize a phase-end event.
+
+        Args:
+            phase_name:
+                Name of the completed phase.
+        '''
         super().__init__(
             name='phase_end',
             payload={'phase_name': phase_name},
@@ -125,10 +138,20 @@ class PhaseEnd(Event):
 # ----- epoch-level events
 @dataclasses.dataclass(frozen=True)
 class EpochStart(Event):
+    '''Event emitted at the start of a training epoch.'''
     epoch_index: int = 1
     phase_name: str = ''
 
     def __init__(self, epoch_index: int, phase_name: str) -> None:
+        '''
+        Initialize an epoch-start event.
+
+        Args:
+            epoch_index:
+                One-based index of the starting epoch.
+            phase_name:
+                Name of the enclosing phase.
+        '''
         super().__init__(
             name='epoch_start',
             payload={
@@ -142,6 +165,7 @@ class EpochStart(Event):
 
 @dataclasses.dataclass(frozen=True)
 class EpochEnd(Event):
+    '''Event emitted at the end of a training epoch.'''
     epoch_index: int = 1
     phase_name: str = ''
 
@@ -150,6 +174,15 @@ class EpochEnd(Event):
         epoch_index: int,
         phase_name: str,
     ) -> None:
+        '''
+        Initialize an epoch-end event.
+
+        Args:
+            epoch_index:
+                One-based index of the completed epoch.
+            phase_name:
+                Name of the enclosing phase.
+        '''
         super().__init__(
             name='epoch_end',
             payload={
@@ -164,6 +197,7 @@ class EpochEnd(Event):
 # ----- report events
 @dataclasses.dataclass(frozen=True)
 class MetricsReport(Event):
+    '''Event carrying epoch tracking state and evaluation metrics.'''
     best_so_far: float = 0.0
     best_epoch: int = -1
     is_best_epoch: bool = False
@@ -178,6 +212,19 @@ class MetricsReport(Event):
         is_best_epoch: bool,
         raw_metrics: core.SessionStepResults,
     ) -> None:
+        '''
+        Initialize a metrics report event.
+
+        Args:
+            best_so_far:
+                Best tracked target metric value observed so far.
+            best_epoch:
+                Epoch index achieving `best_so_far`.
+            is_best_epoch:
+                Whether the current epoch achieved a new best metric.
+            raw_metrics:
+                Aggregated step results for the completed epoch.
+        '''
         super().__init__(
             name='tracking_report',
             payload={
@@ -196,9 +243,17 @@ class MetricsReport(Event):
 # ----- control events
 @dataclasses.dataclass(frozen=True)
 class StopRun(Event):
+    '''Command event requesting termination of the active run.'''
     reason: str = ''
 
     def __init__(self, reason: str) -> None:
+        '''
+        Initialize a stop-run control event.
+
+        Args:
+            reason:
+                Human-readable explanation for stopping the run.
+        '''
         super().__init__(
             name='stop_run',
             payload={'reason': reason},
@@ -208,9 +263,17 @@ class StopRun(Event):
 
 @dataclasses.dataclass(frozen=True)
 class CheckpointRequest(Event):
+    '''Command event requesting model checkpoint persistence.'''
     tag: str = ''
 
     def __init__(self, tag: str) -> None:
+        '''
+        Initialize a checkpoint request event.
+
+        Args:
+            tag:
+                Checkpoint tag such as `'best'` or `'last'`.
+        '''
         super().__init__(
             name='checkpoint_request',
             payload={'tag': tag},

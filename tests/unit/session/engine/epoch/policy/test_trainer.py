@@ -19,11 +19,11 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''Unit tests for trainer policy module (policy/trainer.py).'''
+
 # pylint: disable=duplicate-code
 # pylint: disable=protected-access
 # pylint: disable=redefined-outer-name
-
-'''Unit tests for trainer policy module (policy/trainer.py).'''
 
 # standard imports
 import dataclasses

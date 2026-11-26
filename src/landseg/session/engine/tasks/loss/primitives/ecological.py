@@ -44,7 +44,6 @@ class EcologicalSimilarityLoss(base.PrimitiveLoss):
     dissimilarity matrix (1 - S), where S is the species similarity
     matrix.
     '''
-
     similarity_matrix: torch.Tensor
 
     def __init__(
@@ -59,11 +58,11 @@ class EcologicalSimilarityLoss(base.PrimitiveLoss):
 
         Args:
             similarity_matrix:
-                precomputed N x N species cosine similarity tensor.
+                Precomputed `N x N` species cosine similarity tensor.
             ignore_index:
-                target label value to ignore in loss computation.
+                Target label value to ignore in loss computation.
             reduction:
-                reduction method ('mean', 'sum', 'none').
+                Reduction method (`'mean'`, `'sum'`, or `'none'`).
         '''
         super().__init__()
         self.ignore_index = ignore_index
@@ -82,13 +81,19 @@ class EcologicalSimilarityLoss(base.PrimitiveLoss):
         Compute ecological dissimilarity regularization loss.
 
         Args:
-            logits: Model predictions tensor of shape (B, C, H, W).
-            targets: Target label indices tensor of shape (B, H, W).
-            masks: Optional dictionary of per-pixel weight masks.
-            features: Optional bottleneck features (unused).
+            logits:
+                Model predictions tensor of shape `(B, C, H, W)`.
+            targets:
+                Target label indices tensor of shape `(B, H, W)`.
+            masks:
+                Optional dictionary of per-pixel weight masks.
+            features:
+                Optional bottleneck features (unused).
 
         Returns:
-            Scalar loss tensor.
+            torch.Tensor:
+                Scalar loss tensor (or per-pixel tensor when
+                `reduction='none'`).
         '''
         # compute softmax probabilities along channel dimension
         probs = torch.nn.functional.softmax(logits, dim=1)

@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for head specs module (heads.py).'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest
@@ -147,7 +147,7 @@ def test_count_to_inv_weights():
 
 def test_count_to_effective_num():
     '''
-    Given: Class counts,
+    Given: Class counts.
     When: Converting to effective number weights.
     Then: Weights are computed correctly.
     '''

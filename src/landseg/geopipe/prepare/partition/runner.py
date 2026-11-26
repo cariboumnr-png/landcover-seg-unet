@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Dataset partitioning pipeline.
 
@@ -30,7 +28,7 @@ buffering, and class-balance heuristics. Outputs split manifests and
 label statistics for downstream normalization and schema generation.
 
 Public APIs:
-    - run_datablocks_partition: partition blocks into train/val/test.
+    - `run_datablocks_partition`: Partition blocks into train/val/test.
 '''
 
 # standard imports
@@ -47,11 +45,14 @@ import landseg.geopipe.prepare.partition.orchestration as orchestration
 
 
 # ----- private types
+# pylint: disable=missing-function-docstring
 class _PipelinePaths(typing.Protocol):
+    '''Typed paths container for dataset partitioning.'''
     @property
     def splits_source_blocks(self) -> pathlib.Path: ...
     @property
     def splits_summary(self) -> pathlib.Path: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public functions
@@ -73,15 +74,15 @@ def run_datablocks_partition(
 
     Args:
         context:
-            DatasetView with loaded catalog and resolved semantics.
+            `DatasetView` with loaded catalog and resolved semantics.
         paths:
-            pipeline artifact output paths container.
+            Pipeline artifact output paths container.
         partition_config:
-            parameters dict guiding split and hydration behavior.
+            Parameters guiding split and hydration behavior.
         policy:
-            artifact lifecycle policy guiding rebuild behavior.
+            Artifact lifecycle policy guiding rebuild behavior.
         logger:
-            logger for progress and diagnostic output.
+            Logger for progress and diagnostic output.
     '''
     start_time = time.perf_counter()
 

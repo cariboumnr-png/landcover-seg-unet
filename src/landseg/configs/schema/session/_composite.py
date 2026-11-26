@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''Session configuration section'''
+'''Session configuration section.'''
 
 # standard imports
 import dataclasses
@@ -49,6 +47,7 @@ TrainingMode = typing.Literal['train', 'evaluate']
 # ----- public dataclasses
 @dataclasses.dataclass
 class SessionConfig(base.BaseConfigSection):
+    '''Composite configuration section for training and evaluation.'''
     dataloader: DataLoader = field(default_factory=DataLoader)
     engine: Engine = field(default_factory=Engine)
     orchestration: Orchestration = field(default_factory=Orchestration)
@@ -90,6 +89,18 @@ class SessionConfig(base.BaseConfigSection):
         return typing.cast(SessionMode, self.mode)
 
     def validate(self, mode: TrainingMode = 'train') -> None:
+        '''
+        Validate session sub-configurations for the active mode.
+
+        Args:
+            mode:
+                Session validation mode (`'train'` or `'evaluate'`).
+
+        Raises:
+            ValueError:
+                If `self.mode` conflicts with curriculum schema or is
+                neither `'continuous'` nor `'curriculum'`.
+        '''
         self.dataloader.validate()
         self.engine.validate()
 

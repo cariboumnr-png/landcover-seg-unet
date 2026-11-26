@@ -38,7 +38,7 @@ def test_select_representative_block_prefers_class_diversity(
     tmp_path: pathlib.Path,
 ):
     '''
-    Given: Multiple blocks where the first block has highest class diversity.
+    Given: Blocks where the first block has highest class diversity.
     When: Calling `session.select_representative_block`.
     Then: Deterministically select the most diverse block (not middle).
     '''
@@ -70,7 +70,7 @@ def test_select_representative_block_single_and_empty(
     '''
     Given: Empty block dict or single-entry block dict.
     When: Calling `session.select_representative_block`.
-    Then: Raise ValueError when empty, return sole entry for single block.
+    Then: Raise `ValueError` if empty; return sole entry if single.
     '''
     with pytest.raises(ValueError, match='No test blocks'):
         session.select_representative_block({})
@@ -170,9 +170,9 @@ def test_run_preview_inference_non_contiguous_fallback_and_gating(
     session_config,
 ):
     '''
-    Given: Non-contiguous split (`test_blks_grid=(0, 0)`) and parent gating.
+    Given: Non-contiguous split `(0, 0)` and parent head gating.
     When: Calling `session.run_preview_inference`.
-    Then: Select representative block and gate inactive child predictions.
+    Then: Pick representative block and gate inactive child outputs.
     '''
     b0 = tmp_path / 'b0.npz'
     img0 = numpy.zeros((4, 256, 256), dtype=numpy.float32)
@@ -233,7 +233,7 @@ def test_run_preview_inference_unlabeled_block(
     '''
     Given: Unlabeled test block with placeholder label array.
     When: Calling `session.run_preview_inference`.
-    Then: Return stitched `infer_inputs` and `infer_preds` with empty labels.
+    Then: Return stitched inputs and preds with empty labels dict.
     '''
     blk = tmp_path / 'unlabeled.npz'
     numpy.savez(
@@ -273,7 +273,7 @@ def _save_model_checkpoint(
     fpath: pathlib.Path,
     model: torch.nn.Module,
 ) -> pathlib.Path:
-    '''Save minimal state_dict checkpoint matching `load_checkpoint` format.'''
+    '''Save minimal checkpoint matching `load_checkpoint` format.'''
     torch.save(
         {'model': model.state_dict(), 'metric': 0.5, 'epoch': 1, 'step': 1},
         fpath,
@@ -282,7 +282,7 @@ def _save_model_checkpoint(
 
 
 class _FixedHeadPredictionModel(torch.nn.Module):
-    '''Deterministic model predicting class 1 on head_1 and class 2 on head_2.'''
+    '''Deterministic model emitting fixed class logits per head.'''
 
     def __init__(self) -> None:
         super().__init__()
@@ -308,7 +308,7 @@ class _FixedHeadPredictionModel(torch.nn.Module):
         self.logit_adjust_alpha = alpha
 
     def forward(self, x, ids_domain=None, vec_domain=None):
-        '''Emit fixed class logits for head_1 (cls 1) and head_2 (cls 2).'''
+        '''Emit fixed logits for `head_1` and `head_2`.'''
         _ = ids_domain, vec_domain
         bsz, _, h, w = x.shape
         h1 = torch.zeros((bsz, 2, h, w), dtype=torch.float32)

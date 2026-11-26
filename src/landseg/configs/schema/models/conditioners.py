@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Model architecture schema
-'''
+'''Model feature conditioner configuration schemas.'''
 
 # standard imports
 import dataclasses
@@ -37,6 +33,7 @@ field = dataclasses.field
 
 # ----- public types
 class ProjectionConfig(typing.TypedDict):
+    '''MLP projection configuration for conditioner vectors.'''
     use_mlp: typing.NotRequired[bool]
     hidden_dim: typing.NotRequired[int | None]
     num_hidden_layers: typing.NotRequired[int]
@@ -45,10 +42,12 @@ class ProjectionConfig(typing.TypedDict):
 
 
 class ConditionerAdapter(typing.TypedDict):
+    '''Adapter hyperparameters for feature conditioners.'''
     hidden_dim: typing.NotRequired[int] # currently for FiLM
 
 
 class DomainTargetConfig(base.BaseConfigSection):
+    '''Base configuration for domain target feature conditioners.'''
     name: str
     use_ids: bool
     use_vec: bool
@@ -64,20 +63,24 @@ class DomainTargetConfig(base.BaseConfigSection):
             raise ValueError(...)
 
     def validate(self) -> None:
+        '''Validate positive embedding and projection dimensions.'''
         self.val.require_numeric_min(self.ids_embd_dims, 1, int)
         self.val.require_numeric_min(self.vec_proj_dims, 1, int)
 
 
 def _concat_proj() -> ProjectionConfig:
+    '''Return default projection config for `Concat` conditioner.'''
     return {'use_mlp': False}
 
 
 def _concat_cond() -> ConditionerAdapter:
+    '''Return default adapter config for `Concat` conditioner.'''
     return {}
 
 
 @dataclasses.dataclass
 class Concat(DomainTargetConfig):
+    '''Concatenation feature conditioner configuration.'''
     name: str = 'concat'
     use_ids: bool = True
     use_vec: bool = True
@@ -88,6 +91,7 @@ class Concat(DomainTargetConfig):
 
 
 def _film_proj() -> ProjectionConfig:
+    '''Return default projection config for `FiLM` conditioner.'''
     return {
         'use_mlp': True,
         'hidden_dim': 128,
@@ -98,11 +102,12 @@ def _film_proj() -> ProjectionConfig:
 
 
 def _film_cond() -> ConditionerAdapter:
+    '''Return default adapter config for `FiLM` conditioner.'''
     return {'hidden_dim': 128}
 
 @dataclasses.dataclass
 class FiLM(DomainTargetConfig):
-
+    '''FiLM modulation feature conditioner configuration.'''
     name: str = 'film'
     use_ids: bool = True
     use_vec: bool = True
@@ -113,7 +118,13 @@ class FiLM(DomainTargetConfig):
 
 
 def default_conditioners() -> dict[str, typing.Any]:
-    '''Return default conditioner registry.'''
+    '''
+    Build default feature conditioner configuration registry.
+
+    Returns:
+        dict[str, typing.Any]:
+            Mapping from conditioner names to default configs.
+    '''
     return {
         'concat': Concat(),
         'film': FiLM()

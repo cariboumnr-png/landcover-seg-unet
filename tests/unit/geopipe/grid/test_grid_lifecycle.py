@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=duplicate-code
-
 '''Unit tests for world grid lifecycle management (lifecycle.py).'''
+# pylint: disable=duplicate-code
 
 # standard imports
 import dataclasses
@@ -31,6 +30,7 @@ import landseg.geopipe.grid.lifecycle as grid_lifecycle
 
 @dataclasses.dataclass
 class _Specs:
+    '''Minimal manual grid specification stub.'''
     crs_string: str
     origin: tuple[float, float]
     pixel_size: tuple[float, float]
@@ -39,6 +39,7 @@ class _Specs:
 
 @dataclasses.dataclass
 class _WorldGridConfig:
+    '''Minimal world grid configuration stub.'''
     tile_size: tuple[int, int]
     tile_stride: tuple[int, int]
     mode: str
@@ -87,6 +88,7 @@ def test_prepare_world_grid_load(tmp_path):
 
 # ----- private helpers
 def _get_config(tmp_path):
+    '''Create a minimal world grid configuration for lifecycle tests.'''
     specs = _Specs(
         crs_string='EPSG:32617',
         origin=(0.0, 0.0),

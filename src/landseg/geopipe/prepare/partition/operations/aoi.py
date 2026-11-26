@@ -28,9 +28,9 @@ reprojection, resolving multi-split overlap conflicts under a strict
 priority order (test > val > train).
 
 Public APIs:
-    - AoiSplitsResult: container for AOI-partitioned block coordinates.
-    - intersect_aoi_raster: find candidate blocks intersecting an AOI.
-    - resolve_aoi_partitions: resolve splits with priority logic.
+    - `AoiSplitsResult`: Container for AOI-partitioned coordinates.
+    - `intersect_aoi_raster`: Find candidate blocks intersecting an AOI.
+    - `resolve_aoi_partitions`: Resolve splits with priority logic.
 '''
 
 # standard imports
@@ -66,21 +66,21 @@ def intersect_aoi_raster(
 
     Args:
         aoi_path:
-            file path to the AOI GeoTIFF raster.
+            File path to the AOI GeoTIFF raster.
         candidate_blocks:
-            list of candidate top-left (row, col) pixel coordinates.
+            List of candidate top-left (row, col) pixel coordinates.
         block_size:
-            block spatial dimensions (size_row, size_col).
+            Block spatial dimensions (size_row, size_col).
         canvas_crs:
-            coordinate reference system of canonical grid canvas.
+            Coordinate reference system of canonical grid canvas.
         canvas_transform:
-            affine transform of canonical grid canvas.
+            Affine transform of canonical grid canvas.
         min_overlap:
-            minimum overlap ratio required to select a block.
+            Minimum overlap ratio required to select a block.
 
     Returns:
         list[tuple[int, int]]:
-            block coordinates matching the AOI footprint.
+            Block coordinates matching the AOI footprint.
     '''
     aoi_bounds = _load_aoi_bounds(aoi_path, canvas_crs)
 
@@ -114,27 +114,27 @@ def resolve_aoi_partitions(
 
     Args:
         candidate_blocks:
-            all valid candidate top-left (row, col) block tuples.
+            All valid candidate top-left (row, col) block tuples.
         train_aoi:
-            optional file path to training AOI GeoTIFF.
+            Optional file path to training AOI GeoTIFF.
         val_aoi:
-            optional file path to validation AOI GeoTIFF.
+            Optional file path to validation AOI GeoTIFF.
         test_aoi:
-            optional file path to test AOI GeoTIFF.
+            Optional file path to test AOI GeoTIFF.
         block_size:
-            block spatial dimensions (size_row, size_col).
-        canvas_crs:
-            coordinate reference system of canvas.
-        canvas_transform:
-            affine transform of canvas.
+            Block spatial dimensions (size_row, size_col).
+        crs:
+            Coordinate reference system of canvas.
+        transform:
+            Affine transform of canvas.
         min_overlap:
-            minimum overlap ratio required for selection.
+            Minimum overlap ratio required for selection.
         logger:
-            optional logger for emitting conflict warnings.
+            Optional logger for emitting conflict warnings.
 
     Returns:
         AoiSplitsResult:
-            resolved test, val, train, and unassigned block coordinates.
+            Resolved test, val, train, and unassigned block coordinates.
     '''
     test_raw = (
         intersect_aoi_raster(

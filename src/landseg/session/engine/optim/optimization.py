@@ -68,15 +68,18 @@ class Optimization:
         Initialize the optimization wrapper.
 
         Args:
-            optimizer: A `PyTorch` optimizer instance.
-            scheduler: Optional learning rate scheduler instance.
-            grad_clip_norm: Optional gradient clipping norm applied
-                externally.
-            sched_cls: Identifier for the scheduler type (for tracking
-                only).
-            sched_factory: Factory callable used to reconstruct the
-                scheduler.
-            sched_args: Arguments used to initialize the scheduler.
+            optimizer:
+                A PyTorch optimizer instance.
+            scheduler:
+                Optional learning rate scheduler instance.
+            grad_clip_norm:
+                Optional gradient clipping norm applied externally.
+            sched_cls:
+                Identifier for the scheduler type (for tracking only).
+            sched_factory:
+                Factory callable used to reconstruct the scheduler.
+            sched_args:
+                Arguments used to initialize the scheduler.
         '''
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -95,7 +98,14 @@ class Optimization:
         self.optimizer.step()
 
     def zero_grad(self, set_to_none: bool = True) -> None:
-        '''Reset gradients on all optimized parameters.'''
+        '''
+        Reset gradients on all optimized parameters.
+
+        Args:
+            set_to_none:
+                Whether to set parameter gradients to `None` instead of
+                zeroing tensors in place.
+        '''
         self.optimizer.zero_grad(set_to_none=set_to_none)
 
     def step_scheduler(self) -> None:
@@ -113,7 +123,6 @@ class Optimization:
         disable_scheduler: bool = False,
     ) -> None:
         '''
-        Reconfigure optimizer and/or scheduler.
         Update optimizer learning rate and/or scheduler configuration.
 
         Args:
@@ -127,6 +136,11 @@ class Optimization:
                 Scheduler init arguments (merged with existing).
             disable_scheduler:
                 If True, removes the scheduler entirely.
+
+        Raises:
+            ValueError:
+                If scheduler reconfiguration is requested without both
+                a resolved scheduler class name and factory callable.
 
         Notes:
             - Scheduler updates rebuild the scheduler instance using the

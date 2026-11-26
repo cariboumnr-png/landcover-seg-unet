@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Tools for preparing and building world grid layouts.
 
@@ -29,7 +27,8 @@ deriving geometry from a reference raster or through manual extent
 parameters.
 
 Public APIs:
-    - `build_grid`: Construct a GridLayout from config or raster reference.
+    - `build_grid`: Construct a `GridLayout` from config or raster.
+    - `compile_inputs`: Compile and validate grid specs from config.
 '''
 
 # standard imports
@@ -44,12 +43,9 @@ import landseg.runtime.validator as val
 # ----- public functions
 def build_grid(config: contracts.WorldGridPrepConfig) -> geo_core.GridLayout:
     '''
-    Build a world grid layout from reference raster or manual parameters.
+    Build a world grid layout from raster or manual parameters.
 
     Args:
-        mode:
-            Grid derivation mode ('ref' for reference raster or 'manual'
-            for explicit spatial parameters).
         config:
             Grid building configurations.
 
@@ -62,7 +58,21 @@ def build_grid(config: contracts.WorldGridPrepConfig) -> geo_core.GridLayout:
 
 
 def compile_inputs(config: contracts.WorldGridPrepConfig) -> geo_core.GridSpec:
-    '''Validate world grid generation configuration.'''
+    '''
+    Compile and validate world grid generation parameters.
+
+    Args:
+        config:
+            World grid preparation configuration object.
+
+    Returns:
+        geo_core.GridSpec:
+            Validated grid specification ready for grid generation.
+
+    Raises:
+        val.ValidationError:
+            If manual CRS string does not match `EPSG:<digits>`.
+    '''
     if config.mode == 'ref':
         ref_fpath = val.require_file(config.ref_fpath)
         raster_info = rasters.get_info(ref_fpath)

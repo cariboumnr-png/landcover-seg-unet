@@ -61,13 +61,13 @@ class ConfusionMatrix:
 
         Args:
             num_classes:
-                total number of classes for the prediction head.
+                Total number of classes for the prediction head.
             ignore_index:
-                index to ignore in ground truth labels.
+                Index to ignore in ground-truth labels.
             parent_class_1b:
-                optional parent class label (1-based) for gating.
+                Optional parent class label (1-based) for gating.
             exclude_class_1b:
-                optional tuple of class labels (1-based) to exclude.
+                Optional tuple of class labels (1-based) to exclude.
         '''
         self.n_cls = num_classes
         self.ignore_index = ignore_index
@@ -92,15 +92,14 @@ class ConfusionMatrix:
 
         Args:
             preds:
-                model outputs of shape [B, C, H, W].
+                Model outputs of shape `[B, C, H, W]`.
             targets:
-                child labels of shape [B, H, W] (1-based).
-            parent_raw_1b (kwarg):
-                optional parent labels (1-based) for hierarchical
+                Child labels of shape `[B, H, W]` (1-based).
+            **kwargs:
+                Optional keyword arguments `parent_raw_1b` (1-based
+                ground-truth parent labels) and `parent_pred_1b`
+                (1-based predicted parent labels) for hierarchical
                 gating.
-            parent_pred_1b (kwarg):
-                optional parent predicted labels (1-based) for
-                end-to-end hierarchical evaluation.
         '''
         valid = targets != self.ignore_index
 
@@ -165,7 +164,20 @@ class ConfusionMatrix:
         self.cm += binc.view(self.n_cls, self.n_cls)
 
     def compute(self) -> core.AccumulatedMetrics:
-        '''Compute IoUs and return an accumulated metrics container.'''
+        '''
+        Compute per-class and mean IoU from the confusion matrix.
+
+        Returns:
+            core.AccumulatedMetrics:
+                Locked container holding the confusion matrix, per-class
+                IoUs, active-class IoUs, and mean scores.
+
+        Raises:
+            ValueError:
+                If the confusion matrix is not a square 2D tensor.
+            IndexError:
+                If any excluded class ID is outside `[1, num_classes]`.
+        '''
         metrics = core.AccumulatedMetrics()
         metrics.cmatrix = self.cm.tolist()
 
@@ -204,7 +216,13 @@ class ConfusionMatrix:
         return metrics
 
     def reset(self, device: str) -> None:
-        '''Zero the confusion matrix and move to specified device.'''
+        '''
+        Zero the confusion matrix and move buffers to `device`.
+
+        Args:
+            device:
+                Target device identifier for metric state tensors.
+        '''
         self.cm = self.cm.zero_().to(device)
         self.extra_fp = self.extra_fp.zero_().to(device)
         self.extra_fn = self.extra_fn.zero_().to(device)
@@ -215,21 +233,45 @@ class HeadMetrics:
     Typed wrapper mapping head names to `ConfusionMatrix` objects.
 
     Provides key-based access to individual `ConfusionMatrix` instances
-    and a typed container for passing head specs through the engine.
+    and a typed container for passing head metrics through the engine.
     '''
 
     def __init__(self, hmetrics: dict[str, ConfusionMatrix]):
-        '''Initialize wrapper with head name mapping.'''
+        '''
+        Initialize the container from a per-head metric mapping.
+
+        Args:
+            hmetrics:
+                Mapping of head name to `ConfusionMatrix` instance.
+        '''
         self._hmetrics = hmetrics
 
     def __getitem__(self, key: str) -> ConfusionMatrix:
+        '''
+        Retrieve the confusion matrix for a given head name.
+
+        Args:
+            key:
+                Head name key.
+
+        Returns:
+            ConfusionMatrix:
+                Confusion matrix tracker registered for `key`.
+        '''
         return self._hmetrics[key]
 
     def __len__(self) -> int:
         return len(self._hmetrics)
 
     def as_dict(self) -> dict[str, ConfusionMatrix]:
-        '''Return a shallow copy of the mapping as `dict[str, CM]`.'''
+        '''
+        Return a shallow copy of the head-to-metrics mapping.
+
+        Returns:
+            dict[str, ConfusionMatrix]:
+                Shallow copy mapping head names to `ConfusionMatrix`
+                instances.
+        '''
         return dict(self._hmetrics)
 
 
@@ -244,13 +286,13 @@ def build_headmetrics(
 
     Args:
         headspecs:
-            structure describing each head's class count and gating.
+            Structure describing each head's class count and gating.
         ignore_index:
-            label index to ignore during metric updates.
+            Label index to ignore during metric updates.
 
     Returns:
         HeadMetrics:
-            container mapping head names to initialized confusion
+            Container mapping head names to initialized confusion
             matrices.
     '''
     out: dict[str, ConfusionMatrix] = {}

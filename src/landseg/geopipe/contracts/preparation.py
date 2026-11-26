@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 TypedDict definitions for dataset preparation reports and artifacts.
 
@@ -32,8 +30,8 @@ Public APIs:
     - `DataPartitionReport`: Report for dataset splitting.
     - `ImageBandStats`: TypedDict for image band statistics.
     - `NormalizationReport`: Report for block materialization.
-    - `PartitionSummary`: Summary of raw splits and hydration.
     - `PREPARED_SCHEMA_ID`: Constant string for prepared schema ID.
+    - `PartitionSummary`: Summary of raw splits and hydration.
     - `PreparationDatasetViewConfig`: Protocol for dataset view configs.
     - `PreparationPipelineConfig`: Protocol for pipeline configs.
     - `PreparationReportSchema`: Root summary schema for prepare runs.
@@ -41,6 +39,8 @@ Public APIs:
     - `SchemaReport`: Report for dataset schema generation.
     - `TargetHeadsSchema`: TypedDict for target heads hierarchy.
 '''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 from __future__ import annotations
@@ -90,6 +90,7 @@ class PreparationDatasetViewConfig(typing.Protocol):
 
 
 class _PartitionConfig(typing.Protocol):
+    '''Shape of dataset partitioning configuration.'''
     @property
     def val_ratio(self) -> float: ...
     @property
@@ -107,6 +108,7 @@ class _PartitionConfig(typing.Protocol):
 
 
 class _ScoringConfig(typing.Protocol):
+    '''Shape of split scoring configuration.'''
     @property
     def reward(self) -> dict[int, float]: ...
     @property
@@ -116,6 +118,7 @@ class _ScoringConfig(typing.Protocol):
 
 
 class _HydrationConfig(typing.Protocol):
+    '''Shape of class hydration configuration.'''
     @property
     def max_skew_rate(self) -> float: ...
 

@@ -27,9 +27,9 @@ channel selection, and target head hierarchy resolution into a single
 self-contained in-memory dataset view.
 
 Public APIs:
-    - `DatasetView`: unified immutable dataset preparation view.
-    - `DatasetViewConfig`: configuration parameters for dataset view.
-    - `build_dataset_view`: construct full preparation view.
+    - `DatasetView`: Unified immutable dataset preparation view.
+    - `DatasetViewConfig`: Configuration parameters for dataset view.
+    - `build_dataset_view`: Construct full preparation view.
 '''
 
 # standard imports
@@ -67,7 +67,7 @@ def build_dataset_view(
     config: DatasetViewConfig,
 ) -> DatasetView:
     '''
-    Build complete dataset view from catalog, schema, and parameters.
+    Build a complete dataset view from manifest inputs and config.
 
     Orchestrates catalog parsing, feature channel resolution, and
     multi-head target hierarchy construction into a unified view.
@@ -75,22 +75,16 @@ def build_dataset_view(
     without reading block files or raster data from disk.
 
     Args:
-        catalog_fpath:
-            path to canonical blocks catalog JSON.
-        schema:
-            ingested dataset schema dictionary.
-        parameters:
-            optional configuration parameters for filtering, features,
-            and targets.
-        canvas_crs:
-            optional pre-resolved CRS string of the dataset canvas.
-        canvas_transform:
-            optional pre-resolved Affine transform of the canvas.
+        inputs:
+            Bundled manifest inputs with schema and catalogs.
+        config:
+            Configuration parameters for filtering, features, and
+            targets.
 
     Returns:
         DatasetView:
-            unified preparation view combining catalog, features,
-            and targets.
+            Unified preparation view combining catalog, features, and
+            targets.
     '''
     config = config or DatasetViewConfig()
 

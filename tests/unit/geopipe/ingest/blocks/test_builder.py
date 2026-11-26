@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for RasterReadOutput and build_data_block.'''
+# pylint: disable=protected-access
 
 # standard imports
 import dataclasses
@@ -102,7 +101,8 @@ def test_build_data_block_with_label_no_added_features():
     '''
     Given: Input block containing both image and label arrays.
     When: Building a DataBlock.
-    Then: Return a block containing the parsed multi-channel label stack.
+    Then: Return a block containing the parsed multi-channel label
+        stack.
     '''
     raster_data = _make_raster_data(
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
@@ -381,6 +381,7 @@ def test_get_image_invalid_mask_detects_nan_and_inf():
 
 # ----- private helpers
 def _make_raster_data(**overrides):
+    '''Create a `RasterReadOutput` instance with optional overrides.'''
     base = io.RasterReadOutput(
         image_array=numpy.ones((7, 256, 256), dtype=numpy.float32),
         image_nodata=numpy.nan,
@@ -406,6 +407,7 @@ def _make_context(
     label_specs: dict[str, geo_core.CategoricalSpec] | None = None,
     label_fpath: pathlib.Path | None = None,
 ) -> io.RasterReadContext:
+    '''Create a `RasterReadContext` instance for testing.'''
     return io.RasterReadContext(
         image_fpath=pathlib.Path('img.tif'),
         label_fpath=label_fpath,
@@ -415,6 +417,7 @@ def _make_context(
 
 
 def _is_invalid(arr, nodata):
+    '''Return boolean mask identifying invalid or nodata pixels.'''
     if isinstance(nodata, float) and numpy.isnan(nodata):
         return numpy.isnan(arr)
     return arr == nodata

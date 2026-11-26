@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Trial analysis.
-'''
+'''Trial analysis and ranking utilities.'''
 
 # standard imports
 import typing
@@ -37,19 +35,23 @@ def rank_trials(
     ascending: bool = True
 ) -> list[dict[str, typing.Any]]:
     '''
-    Load a study, rank completed trials, and return results as list.
+    Load a study, rank completed trials, and return serialized records.
 
     Args:
-        study_name: Name of the study.
-        storage: Optuna storage URL (e.g., 'sqlite:///example.db').
-        top_k: If set, limit to top_k trials.
-        ascending: True for minimization (lower is better), False for
-            maximization.
+        study_name:
+            Name of the Optuna study to load.
+        storage:
+            Optuna storage URL (for example, `'sqlite:///example.db'`).
+        top_k:
+            Optional maximum number of top trials to return.
+        ascending:
+            If `True`, sort ascending for minimization; otherwise sort
+            descending for maximization.
 
     Returns:
-        List of dicts ready for JSON serialization.
+        list[dict[str, typing.Any]]:
+            Ranked trial metadata dictionaries ready for JSON output.
     '''
-
     def trial_value(t) -> float:
         assert t.value is not None
         return t.value

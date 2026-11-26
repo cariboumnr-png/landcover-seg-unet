@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Namespace for project environmental constants.
-'''
+'''Namespace for project environmental constants.'''
 
 # standard imports
 import pathlib

@@ -22,8 +22,13 @@
 '''
 Top-level namespace for `landseg.session.orchestration.runner`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public classes via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `BaseRunnerConfig`: Configuration shared across runner classes.
+    - `ContinuousRunner`: Runner executing a single continuous phase.
+    - `CurriculumRunner`: Runner executing sequential curriculum phases.
 '''
 
 # standard imports

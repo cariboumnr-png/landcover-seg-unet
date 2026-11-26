@@ -35,7 +35,8 @@ import landseg.geopipe.rasters.warp as warp
 def test_resolve_resampling_algorithm():
     '''
     Given: Categorical flags and algorithm names.
-    When: Resolving algorithm enum through `resolve_resampling_algorithm`.
+    When: Resolving algorithm enum through
+        `resolve_resampling_algorithm`.
     Then: Maps categorical to nearest and resolves named algorithms.
     '''
     # categorical always forces nearest
@@ -60,7 +61,8 @@ def test_resolve_resampling_algorithm():
 def test_write_warped_vrt_multiband(dummy_geotiff_factory, tmp_path):
     '''
     Given: A 10-band Sentinel-2 composite in UTM Zone 17N (EPSG:32617).
-    When: Warping to EPSG:3161 at 20m resolution using `write_warped_vrt`.
+    When: Warping to EPSG:3161 at 20m resolution using
+        `write_warped_vrt`.
     Then: Output VRT has 10 bands in EPSG:3161 with exact dimensions.
     '''
     s2_path = dummy_geotiff_factory(
@@ -152,7 +154,8 @@ def test_write_warped_vrt_categorical_preserves_integers(
 def test_write_warped_vrt_nodata_and_dtype(dummy_geotiff_factory, tmp_path):
     '''
     Given: A GeoTIFF source raster.
-    When: Specifying explicit nodata and dtype parameters to write_warped_vrt.
+    When: Specifying explicit nodata and dtype parameters to
+        `write_warped_vrt`.
     Then: Output VRT reflects the custom nodata value and data type.
     '''
     src_path = dummy_geotiff_factory(
@@ -189,7 +192,8 @@ def test_write_warped_vrt_nodata_and_dtype(dummy_geotiff_factory, tmp_path):
 def test_write_warped_vrt_from_path(dummy_geotiff_factory, tmp_path):
     '''
     Given: A path to a source GeoTIFF.
-    When: Calling `write_warped_vrt` with a Path instead of DatasetReader.
+    When: Calling `write_warped_vrt` with a `Path` instead of
+        `DatasetReader`.
     Then: Automatically open, warp, and produce valid warped VRT.
     '''
     src_path = dummy_geotiff_factory(

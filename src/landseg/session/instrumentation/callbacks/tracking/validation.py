@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Scallar tracking callback'''
+'''Validation scalar tracking callback for dashboard logging.'''
 
 # local imports
 import landseg.core as core
@@ -28,9 +28,16 @@ import landseg.session.instrumentation.callbacks.base as base
 
 # ----- public classes
 class ValTrackingCallback(base.BaseCallback):
-    '''Scallar tracking callback'''
+    '''Callback logging validation step metrics to trackers.'''
 
     def on_session_step_end(self, results: core.SessionStepSummary):
+        '''
+        Log phase target validation metrics at step completion.
+
+        Args:
+            results:
+                Summary of metrics and status for the completed step.
+        '''
         metrics = results.raw_metrics
         phase = results.phase_name
         step = results.epoch_in_phase
@@ -39,5 +46,6 @@ class ValTrackingCallback(base.BaseCallback):
             tracker.flush()
 
     def on_session_end(self) -> None:
+        '''Close all attached dashboard trackers.'''
         for tracker in self._trackers:
             tracker.close()

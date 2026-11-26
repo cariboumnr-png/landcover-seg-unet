@@ -98,7 +98,7 @@ def test_curriculum_runner_execute(
     '''
     Given: CurriculumRunner with curriculum phases.
     When: Calling `execute()`.
-    Then: Persist step results JSON and return final target metric scalar.
+    Then: Persist step results JSON and return final target metric.
     '''
     mocker.patch('landseg.artifacts.save_checkpoint', autospec=True)
     mocker.patch('landseg.artifacts.Controller.persist', autospec=True)

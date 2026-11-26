@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 TypedDict definitions for data harmonization execution summaries.
 
@@ -28,12 +26,14 @@ This module provides schemas for serializing execution reports, source
 provenance, and raster metadata for data harmonization runs.
 
 Public APIs:
-    - `StatusLiteral`: Harmonization run status literal.
     - `HarmonizationPipelineConfig`: Protocol for pipeline configs.
-    - `HarmonizationRunRecord`: TypedDict for harmonization run entry.
     - `HarmonizationReportSchema`: TypedDict for pipeline run report.
+    - `HarmonizationRunRecord`: TypedDict for harmonization run entry.
     - `ProvenanceRecord`: TypedDict for raw raster file provenance.
+    - `StatusLiteral`: Harmonization run status literal.
 '''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 from __future__ import annotations
@@ -65,7 +65,7 @@ class HarmonizationRunRecord(typing.TypedDict):
 
 
 class HarmonizationReportSchema(typing.TypedDict):
-    '''Root report mapping the entire data harmonization pipeline run.'''
+    '''Root report mapping a data harmonization pipeline run.'''
     run_uid: str
     run_id: str
     timestamp: str

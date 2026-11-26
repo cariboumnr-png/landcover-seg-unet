@@ -86,12 +86,6 @@ def run_preflight(
         strict:
             If specified, overrides
             `config.execution.preflight_strict_mode`.
-        export_report:
-            Deprecated override for report export.
-        report_path:
-            Deprecated override for report path.
-        check_gpu:
-            Deprecated override for GPU probe.
         exp_root:
             Optional experiment root directory override.
 
@@ -142,7 +136,10 @@ def run_intake(config: configs.RootConfig | None = None) -> typing.Any:
 
 def run_experiment(config: configs.RootConfig | None = None) -> typing.Any:
     '''
-    Run full lifecycle experiment (grid, harmonize, ingest, prepare, train).
+    Run full lifecycle experiment across all pipeline stages.
+
+    Executes world grid, harmonization, ingestion, preparation, and
+    training stages sequentially.
 
     Args:
         config:

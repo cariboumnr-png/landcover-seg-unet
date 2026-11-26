@@ -40,5 +40,6 @@ class DataHarmonizationConfig(base.BaseConfigSection):
     output_dpath: str | None = None
 
     def validate(self) -> None:
+        '''Validate continuous and categorical resampling methods.'''
         self.val.require_value_from(self.resampling_continuous, CONT, str)
         self.val.require_value_from(self.resampling_categorical, CATE, str)

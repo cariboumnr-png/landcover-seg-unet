@@ -22,9 +22,13 @@
 '''
 Artifact lifecycle controller.
 
-This module provides a generic controller for managing persisted
-artifacts with lifecycle policies, integrity validation via SHA256,
-and support for JSON, NumPy, CSV, and PyTorch storage formats.
+Provides a generic controller for managing persisted artifacts with
+lifecycle policies, integrity validation via SHA-256, and support for
+JSON, NumPy, CSV, YAML, and PyTorch storage formats.
+
+Public APIs:
+    - `ArtifactError`: Base exception for artifact-related errors.
+    - `Controller`: Generic controller for disk-based artifacts.
 '''
 
 # standard imports
@@ -78,6 +82,12 @@ class Controller(typing.Generic[T]):
                 Defaults to `LOAD_OR_FAIL`.
             schema_id:
                 Optional expected schema identifier for data integrity.
+
+        Raises:
+            _ArtifactMissing:
+                If `file_path` is empty.
+            ArtifactError:
+                If the artifact file suffix is unsupported.
         '''
         if not bool(file_path):
             raise _ArtifactMissing
@@ -106,7 +116,7 @@ class Controller(typing.Generic[T]):
 
     @property
     def creation_time(self) -> str:
-        '''Return a formatted artifact file creation times string.'''
+        '''Return formatted artifact file creation timestamp string.'''
         t = pathlib.Path(self.fp).stat().st_ctime
         return datetime.datetime.fromtimestamp(t).strftime(c.TF_ISO8601)
 
@@ -138,17 +148,21 @@ class Controller(typing.Generic[T]):
 
         Args:
             missing_ok:
-                If True, suppresses missing artifact error when policy is
-                `LOAD_OR_FAIL` and returns None.
+                If True, suppresses missing-artifact errors when policy
+                is `LOAD_OR_FAIL` and returns None.
 
         Returns:
-            The loaded artifact if valid and permitted by the policy,
-            otherwise None to signal that reconstruction is required.
+            T | None:
+                Loaded artifact if valid and permitted by policy, or
+                None to signal that reconstruction is required.
 
         Raises:
-            ArtifactError: If the artifact exists but is corrupted, fails
-                integrity validation, schema_id does not match, or is
-                missing when missing_ok is False and policy is LOAD_OR_FAIL.
+            ArtifactError:
+                If the artifact is corrupted, fails integrity or
+                `schema_id` validation, or is missing when `missing_ok`
+                is False and policy is `LOAD_OR_FAIL`.
+            NotImplementedError:
+                If `self.policy` is not a supported lifecycle policy.
         '''
         data: T | None
         try:
@@ -202,11 +216,14 @@ class Controller(typing.Generic[T]):
         Persist an artifact to disk and update its hash record.
 
         Args:
-            src: Serializable artifact object to be written.
+            src:
+                Serializable artifact object to be written.
 
         Raises:
-            ArtifactError: If the input data has a mismatched schema_id.
-            ValueError: If the input data is invalid for the chosen
+            ArtifactError:
+                If the input data has a mismatched `schema_id`.
+            ValueError:
+                If the input data is invalid for the chosen
                 serialization format.
         '''
         if self.schema_id is not None and isinstance(src, dict):
@@ -236,8 +253,14 @@ class Controller(typing.Generic[T]):
         self.hash()
 
     def hash(self, overwrite: bool = True):
-        '''Create or add hash record.'''
+        '''
+        Create or update the hash record for the artifact.
 
+        Args:
+            overwrite:
+                Whether to overwrite an existing hash entry for this
+                artifact file.
+        '''
         # create a new _hash.json if non exists
         try:
             records = self._json_read(self.hash_fpath)
@@ -253,7 +276,17 @@ class Controller(typing.Generic[T]):
 
     @staticmethod
     def get_sha256(fp):
-        '''Compute SHA256 checksum of a file.'''
+        '''
+        Compute SHA-256 checksum of a file.
+
+        Args:
+            fp:
+                Path to the target file to hash.
+
+        Returns:
+            str:
+                Hexadecimal SHA-256 digest string.
+        '''
         with open(fp, 'rb') as file:
             sha256 = hashlib.sha256()
             for chunk in iter(lambda: file.read(8192), b''):
@@ -263,7 +296,6 @@ class Controller(typing.Generic[T]):
     # ----- private method
     def _load(self) -> typing.Any:
         '''Load an artifact and verify its integrity.'''
-
         try:
             match self.type:
                 case 'json': loaded = self._json_read(self.fp)
@@ -292,7 +324,6 @@ class Controller(typing.Generic[T]):
 
     def _check_sha256(self) -> bool:
         '''Check artifact hash against the recorded value.'''
-
         try:
             sha256_record = self._json_read(self.hash_fpath).get(self.fname)
             return self.sha256 == sha256_record
@@ -405,7 +436,7 @@ class Controller(typing.Generic[T]):
     def _yaml_write(fp: pathlib.Path, src: typing.Any) -> None:
         '''Write data to disk.'''
         class _Dumper(yaml.SafeDumper):
-            pass
+            '''YAML dumper supporting `PurePath` serialization.'''
 
         _Dumper.add_multi_representer(
             pathlib.PurePath,
@@ -419,20 +450,55 @@ class Controller(typing.Generic[T]):
 
 class ArtifactError(Exception):
     '''Base class for artifact-related errors.'''
+
     def __init__(self, message='Error loading artifact'):
+        '''
+        Initialize `ArtifactError` with an error message.
+
+        Args:
+            message:
+                Human-readable error description.
+        '''
         super().__init__(message)
 
 
 class _ArtifactCorrupted(ArtifactError):
+    '''Error raised when an artifact file is corrupted.'''
+
     def __init__(self, message='Artifact file probably corrupted'):
+        '''
+        Initialize `_ArtifactCorrupted` with an error message.
+
+        Args:
+            message:
+                Human-readable error description.
+        '''
         super().__init__(message)
 
 
 class _ArtifactHashMismatch(ArtifactError):
+    '''Error raised when an artifact hash check fails.'''
+
     def __init__(self, message='Artifact file hash value mismatch'):
+        '''
+        Initialize `_ArtifactHashMismatch` with an error message.
+
+        Args:
+            message:
+                Human-readable error description.
+        '''
         super().__init__(message)
 
 
 class _ArtifactMissing(ArtifactError):
+    '''Error raised when a required artifact file is missing.'''
+
     def __init__(self, message='Artifact file not found on disk'):
+        '''
+        Initialize `_ArtifactMissing` with an error message.
+
+        Args:
+            message:
+                Human-readable error description.
+        '''
         super().__init__(message)

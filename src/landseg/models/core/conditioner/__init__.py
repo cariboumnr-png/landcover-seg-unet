@@ -22,8 +22,12 @@
 '''
 Top-level namespace for `landseg.models.core.conditioner`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes domain-conditioning adapters via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `ConcatAdapter`: Channel concatenation domain conditioner.
+    - `FilmConditioner`: FiLM affine modulation domain conditioner.
 '''
 
 # standard imports

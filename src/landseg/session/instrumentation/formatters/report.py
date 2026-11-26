@@ -20,8 +20,7 @@
 # =========================================================================== #
 
 '''
-Utilities for generating Markdown evaluation reports from confusion
-matrices.
+Markdown evaluation report formatters for confusion matrices.
 
 This module provides:
 - Markdown rendering of confusion matrices.
@@ -52,37 +51,28 @@ def report_iou(
     class_idx_base: int = 1,
 ) -> str:
     '''
-    Generate a Markdown report containing:
-    - a confusion matrix table,
-    - per-class IoU values,
-    - mean IoU (mIoU).
+    Generate a Markdown evaluation report from a confusion matrix.
+
+    Includes a formatted confusion matrix table, per-class IoU values,
+    and mean IoU (mIoU) across evaluated classes.
 
     Args:
         confusion_matrix:
-            Dense confusion matrix with shape (C, C), where rows are
-            ground-truth classes and columns are predicted classes.
-            May be provided as either:
-            - a PyTorch tensor, or
-            - a nested Python list.
-
+            Dense confusion matrix with shape `(C, C)`, where rows are
+            ground-truth classes and columns are predicted classes. May
+            be provided as a PyTorch tensor or nested Python list.
         class_names:
             Display names for classes in confusion matrix order.
-
         exclude_cls:
-            Class IDs to exclude from IoU aggregation and reporting.
-            Typically used for background or ignored classes.
-
+            Class IDs to exclude from IoU aggregation and reporting,
+            typically used for background or ignored classes.
         class_idx_base:
-            Base value used to map confusion matrix row indices to
-            external class IDs.
-
-            Example:
-                class_idx_base=1 maps:
-                    row 0 -> class ID 1
-                    row 1 -> class ID 2
+            Base value mapping confusion matrix row indices to external
+            class IDs (for example, `1` maps row `0` to ID `1`).
 
     Returns:
-        Markdown-formatted evaluation report.
+        str:
+            Markdown-formatted evaluation report.
     '''
     if isinstance(confusion_matrix, list):
         cm = torch.tensor(confusion_matrix)

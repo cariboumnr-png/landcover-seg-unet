@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=import-outside-toplevel
-
 '''
 Top-level namespace for `landseg.geopipe.ingest`.
 
@@ -38,6 +36,8 @@ Public APIs:
     - `validators`: Preflight validation namespace.
 '''
 
+# pylint: disable=import-outside-toplevel
+
 # standard imports
 from __future__ import annotations
 import pathlib
@@ -47,6 +47,7 @@ import landseg._lazy as _lazy
 
 
 class _Validators:
+    '''Validation namespace for ingestion preflight checks.'''
 
     @staticmethod
     def feature_specs(
@@ -56,7 +57,24 @@ class _Validators:
         add_spectral: list[str] | None = None,
         add_topo: list[str] | None = None,
     ) -> None:
-        '''Validate feature engineering specs.'''
+        '''
+        Validate feature engineering specs against input rasters.
+
+        Args:
+            image_fpath:
+                Path to the source image raster.
+            label_fpath:
+                Optional path to the source label raster.
+            add_spectral:
+                Optional list of spectral indices to derive.
+            add_topo:
+                Optional list of topographic features to derive.
+
+        Raises:
+            ValueError:
+                If requested features are unsupported or required bands
+                are missing.
+        '''
         import landseg.geopipe.ingest.blocks.assembler.io as io
         ctx = io.RasterReadContext.from_rasters(image_fpath, label_fpath)
         ctx.validate_feature_specs(add_spectral, add_topo)
@@ -66,7 +84,20 @@ class _Validators:
         schema_fpath: pathlib.Path,
         grid_fpath: pathlib.Path | geo_core.GridLayout,
     ) -> None:
-        '''Validate pool grid alignment.'''
+        '''
+        Validate compatibility between a pool schema and grid layout.
+
+        Args:
+            schema_fpath:
+                Path to the existing pool dataset schema JSON.
+            grid_fpath:
+                Path to the grid layout file or `GridLayout` instance.
+
+        Raises:
+            artifacts.ArtifactError:
+                If the existing pool schema has an incompatible grid or
+                block identity.
+        '''
         import landseg.geopipe.ingest.context as context
         context.verify_pool_grid_compatibility(schema_fpath, grid_fpath)
 
@@ -76,7 +107,22 @@ class _Validators:
         grid_fpath: pathlib.Path | geo_core.GridLayout,
         label_fpath: pathlib.Path | None = None,
     ) -> None:
-        '''Validate raster CRS, resolution, and grid alignment.'''
+        '''
+        Validate raster CRS, resolution, and grid alignment.
+
+        Args:
+            image_fpath:
+                Path to the source image raster.
+            grid_fpath:
+                Path to the grid layout file or `GridLayout` instance.
+            label_fpath:
+                Optional path to the source label raster.
+
+        Raises:
+            ValueError:
+                If rasters are invalid, CRSs or resolutions mismatch,
+                extents do not overlap, or CRS disagrees with grid.
+        '''
         import landseg.geopipe.core as geo_core
         import landseg.geopipe.ingest.blocks.mapper as mapper
         import landseg.geopipe.rasters as rasters

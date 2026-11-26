@@ -22,8 +22,13 @@
 '''
 Top-level namespace for `landseg.models.frames`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes multi-head segmentation model base classes and concrete UNet
+model frames via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `MultiHeadBaseModel`: Abstract base class for multi-head models.
+    - `MultiHeadUNet`: Multi-head UNet with optional conditioning.
 '''
 
 # standard imports

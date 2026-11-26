@@ -23,12 +23,12 @@
 Domain-tile mapping for categorical rasters to a world-grid layout.
 
 Standardizes how spatial label distributions are summarized, filtered,
-and encoded into per-tile domain features and low-dimensional PCA vectors
-for downstream modeling.
+and encoded into per-tile domain features and low-dimensional PCA
+vectors for downstream modeling.
 
 Public APIs:
-    - `DomainPayload`: Serializable artifact schema for `DomainTileMap`.
     - `DomainMeta`: Metadata describing a `DomainTileMap` artifact.
+    - `DomainPayload`: Serializable artifact schema for `DomainTileMap`.
     - `DomainTile`: Per-tile domain features and descriptors.
     - `DomainTileMap`: Mapping from grid tile coordinates to domain
       features.
@@ -66,12 +66,12 @@ class DomainPayload(typing.TypedDict):
     - **schema_id**:
         Versioned identifier describing the serialization contract.
     - **artifact_meta**:
-        Lightweight derived metadata summarizing dataset-level statistics
-        and transformation results (e.g., PCA configuration and class
-        frequency summaries).
+        Lightweight derived metadata summarizing dataset-level
+        statistics and transformation results (e.g., PCA configuration
+        and class frequency summaries).
     - **data**:
-        Mapping of string-encoded tile coordinates ('x,y') to `DomainTile`
-        feature descriptors.
+        Mapping of string-encoded tile coordinates (`'x,y'`) to
+        `DomainTile` feature descriptors.
     '''
     schema_id: str
     artifact_meta: DomainMeta
@@ -109,7 +109,7 @@ class DomainTile(typing.TypedDict):
 
     - **pca_feature**:
         Low-dimensional feature vector derived from PCA on the tile's
-        normalized class-frequency distribution, or None if not computed.
+        normalized class-frequency distribution, or `None` if omitted.
     '''
     majority: int | None
     major_freq: float | None
@@ -119,7 +119,7 @@ class DomainTile(typing.TypedDict):
 # ----- public classes
 class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
     '''
-    Mapping from world-grid tile coordinates to per-tile domain features.
+    Mapping from grid tile coordinates to per-tile domain features.
 
     A `DomainTileMap` represents a spatially indexed collection of
     domain descriptors derived from a categorical raster. Each tile is
@@ -139,12 +139,11 @@ class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
 
     **Schema**: `SCHEMA_ID` = `'domain_tile_map_payload/v0.1.0'`
     '''
-
     # current payload schema
     SCHEMA_ID: str = 'domain_tile_map_payload/v0.1.0'
 
     def __init__(self) -> None:
-        '''Initialize an empty DomainTileMap with default metadata.'''
+        '''Initialize an empty `DomainTileMap` with default metadata.'''
         # init attrs
         self.meta: DomainMeta = {
             'world_grid_ids': [],
@@ -160,6 +159,21 @@ class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
 
     # ----- container protocol
     def __getitem__(self, idx: Coord) -> DomainTile:
+        '''
+        Return the domain tile descriptor at pixel coordinates `idx`.
+
+        Args:
+            idx:
+                Integer pixel coordinate tuple `(x, y)`.
+
+        Returns:
+            DomainTile:
+                Domain descriptor corresponding to `idx`.
+
+        Raises:
+            TypeError:
+                If `idx` is not a 2-tuple of integers.
+        '''
         # fail fast on idx type check
         if (not isinstance(idx, tuple) or len(idx) != 2
             or not all(isinstance(v, int) for v in idx)):
@@ -200,15 +214,15 @@ class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
     @classmethod
     def from_payload(cls, payload: DomainPayload) -> DomainTileMap:
         '''
-        Reconstruct a DomainTileMap from a JSON payload.
+        Reconstruct a `DomainTileMap` from a JSON payload.
 
         Args:
             payload:
-                dictionary containing serialized metadata and tile data.
+                Dictionary containing serialized metadata and tile data.
 
         Returns:
             DomainTileMap:
-                populated DomainTileMap instance.
+                Populated `DomainTileMap` instance.
         '''
         def _xy_tuple(inputs: str) -> Coord:
             '''Parse coordinate tuple from coordinate string.'''
@@ -227,15 +241,16 @@ class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
     @classmethod
     def from_dict(cls, tiles: dict[Coord, DomainTile]) -> DomainTileMap:
         '''
-        Construct a DomainTileMap from an in-memory dictionary.
+        Construct a `DomainTileMap` from an in-memory dictionary.
 
         Args:
             tiles:
-                dictionary mapping coordinate tuples to DomainTile entries.
+                Dictionary mapping coordinate tuples to `DomainTile`
+                entries.
 
         Returns:
             DomainTileMap:
-                DomainTileMap instance containing the provided tiles.
+                `DomainTileMap` instance containing the provided tiles.
         '''
         # create empty DomainTile instance
         self = cls() # don't skip __init__() - need an empty meta dict
@@ -251,7 +266,7 @@ class DomainTileMap(collections.abc.Mapping[Coord, DomainTile]):
 
         Returns:
             DomainPayload:
-                payload dictionary suitable for JSON serialization.
+                Payload dictionary suitable for JSON serialization.
         '''
         # sanity checks and return payload
         assert self.meta['major_freq_mean'] > 0.0

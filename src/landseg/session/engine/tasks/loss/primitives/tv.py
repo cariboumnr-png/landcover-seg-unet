@@ -50,6 +50,14 @@ class TotalVariationLoss(base.PrimitiveLoss):
     '''
 
     def __init__(self, ignore_index: int | None = None):
+        '''
+        Initialize the total variation loss module.
+
+        Args:
+            ignore_index:
+                Optional label value to exclude from spatial variation
+                averaging.
+        '''
         super().__init__()
         self.ignore_index = ignore_index
 
@@ -65,13 +73,19 @@ class TotalVariationLoss(base.PrimitiveLoss):
         Compute TV loss over spatial dimensions.
 
         Args:
-            logits: (B, C, H, W)
-            targets: (B, H, W)
-            masks: optional weighting masks
-            features: unused
+            logits:
+                Class logits tensor of shape `(B, C, H, W)`.
+            targets:
+                Target label tensor of shape `(B, H, W)`.
+            masks:
+                Optional per-pixel down-weighting masks.
+            features:
+                Optional feature tensor validated for shape alignment
+                when provided (unused in TV computation).
 
         Returns:
-            Scalar TV loss
+            torch.Tensor:
+                Scalar TV loss tensor.
         '''
         self._validate_inputs(logits, targets, features)
 

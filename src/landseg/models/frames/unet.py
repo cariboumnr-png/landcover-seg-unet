@@ -23,9 +23,9 @@
 Multi-head UNet architectures with optional domain conditioning.
 
 This module provides UNet-based implementations built on top of the
-multi-head model framework defined in :mod:`landseg.models.frames`.
+multi-head model framework defined in `landseg.models.frames`.
 
-The primary implementation, ``MultiHeadUNet``, combines:
+The primary implementation, `MultiHeadUNet`, combines:
 - a configurable UNet-style backbone,
 - shared feature extraction,
 - multiple prediction heads,
@@ -47,32 +47,32 @@ Domain conditioning is supported through two complementary mechanisms:
 The implementation separates responsibilities across composable
 components:
 
-- ``MultiHeadUNet``:
+- `MultiHeadUNet`:
     Coordinates backbone execution, domain routing, conditioning, and
     prediction heads.
 
-- ``HeadManager``:
+- `HeadManager`:
     Manages per-task output heads, active/frozen state, and optional
     logit adjustment.
 
-- ``DomainContextRouter``:
+- `DomainContextRouter`:
     Routes domain identifiers and vectors to concatenation and/or FiLM
     pathways.
 
-- ``NumericSafety``:
+- `NumericSafety`:
     Centralizes autocast handling and value clamping to improve
     numerical stability.
 
 Expected tensor shapes:
-- Input image: N, C_in, H, W)
-- Shared feature map: (N, base_ch, H, W)
-- Per-head logits: (N, C_head, H, W)
+- Input image: `(N, C_in, H, W)`
+- Shared feature map: `(N, base_ch, H, W)`
+- Per-head logits: `(N, C_head, H, W)`
 
 Notes:
-- Logit adjustment tensors are stored as non-trainable buffers with shape
-    ``(1, C_head, 1, 1)``.
-- Backbone implementations are expected to expose compatible ``encode()``
-    and ``decode()`` methods.
+- Logit adjustment tensors are stored as non-trainable buffers with
+  shape `(1, C_head, 1, 1)`.
+- Backbone implementations are expected to expose compatible
+  `encode()` and `decode()` methods.
 '''
 
 # third-party imports
@@ -95,17 +95,17 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
     - numerical safety utilities for stable execution.
 
     Supported conditioning mechanisms:
-    - Input concatenation via ``ConcatAdapter``.
-    - Bottleneck FiLM modulation via ``FilmConditioner``.
+    - Input concatenation via `ConcatAdapter`.
+    - Bottleneck FiLM modulation via `FilmConditioner`.
 
     Main components:
-    - ``body``:
-        Shared UNet backbone implementing ``encode()`` and ``decode()``.
-    - ``heads``:
+    - `body`:
+        Shared UNet backbone implementing `encode()` and `decode()`.
+    - `heads`:
         Multi-head prediction manager producing task-specific logits.
-    - ``domain_router``:
+    - `domain_router`:
         Routes domain information to conditioning pathways.
-    - ``num_safety``:
+    - `num_safety`:
         Handles autocast control and activation clamping.
     '''
 
@@ -140,34 +140,35 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         - or neither.
 
         Args:
-            input_patch_size: Spatial dimension (assumes square
-                patches).
-            dataspecs: Dataset and model specification container
-                describing image properties, task heads, domains,
-                and class mappings.
-            backbone_config: Backbone configuration describing
-                architecture selection, encoder parameters, and
-                bottleneck type.
-            conditioning_config: Mapping of conditioning targets
-                (e.g., 'concat', 'film') to domain-routing
-                configurations.
+            input_patch_size:
+                Spatial dimension assuming square patches.
+            dataspecs:
+                Dataset and model specification container describing
+                image properties, task heads, domains, and classes.
+            backbone_config:
+                Backbone configuration describing architecture
+                selection, encoder parameters, and bottleneck type.
+            conditioning_config:
+                Mapping of conditioning targets (e.g., `'concat'`,
+                `'film'`) to domain-routing configurations.
             **kwargs:
-                Optional runtime configuration overrides. Supported
-                options:
-                - enable_clamp: Enable activation clamping for
-                    numerical stability. Default: ``True``.
-                - clamp_range: Tuple defining minimum and maximum
-                    clamp bounds. Default: ``(1e-4, 1e4)``.
+                Optional runtime configuration overrides including
+                `device`, `enable_clamp` (default `True`), and
+                `clamp_range` (default `(1e-4, 1e4)`).
+
+        Raises:
+            RuntimeError:
+                If the configured image height/width is not divisible by
+                the backbone's `spatial_divisor`.
 
         Notes:
-        - All arguments are keyword-only to make configuration
-          boundaries explicit and order-independent.
-        - Backbone implementations are expected to expose compatible
-          ``encode()`` and ``decode()`` methods.
-        - Logit adjustment tensors are registered as non-trainable
-          buffers and broadcast during head inference.
+            - All arguments are keyword-only to make configuration
+              boundaries explicit and order-independent.
+            - Backbone implementations are expected to expose compatible
+              `encode()` and `decode()` methods.
+            - Logit adjustment tensors are registered as non-trainable
+              buffers and broadcast during head inference.
         '''
-
         super().__init__()
 
         self.dataspecs = dataspecs
@@ -234,7 +235,7 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
 
     @property
     def spatial_divisor(self) -> int:
-        '''Minimum spatial divisor from the model body.'''
+        '''Return minimum spatial divisor from the model body.'''
         return self.body.spatial_divisor
 
     def build_dummy_batch(
@@ -242,8 +243,20 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         batch_size: int = 2,
         device: str = 'cpu'
     ) -> dict[str, torch.Tensor]:
-        '''Construct synthetic input tensors for validation etc.'''
+        '''
+        Construct synthetic input tensors for validation tests.
 
+        Args:
+            batch_size:
+                Number of synthetic samples to generate.
+            device:
+                Target device for generated tensors.
+
+        Returns:
+            dict[str, torch.Tensor]:
+                Dictionary containing synthetic `'x'` and optional
+                `'ids_domain'` / `'vec_domain'` tensors.
+        '''
         in_ch = self.dataspecs.meta.image_specs.num_channels
         size = self.dataspecs.meta.image_specs.height_width
         ids_num = self.dataspecs.domains.ids_num
@@ -289,17 +302,19 @@ class MultiHeadUNet(frames.MultiHeadBaseModel):
         3. Optional FiLM conditioning at the bottleneck.
         4. Decoder reconstruction into shared output features.
 
-        Numerical clamping and controlled autocast execution are applied
-        throughout the pipeline to improve numerical stability.
+        Numerical clamping is applied throughout the pipeline to
+        improve numerical stability.
 
         Args:
-            x: Input tensor of shape: (batch, channels, height, width)
-            domains: Routed domain payloads from the domain router.
+            x:
+                Input tensor of shape `(B, C, H, W)`.
+            domains:
+                Routed domain payloads from the domain router.
 
         Returns:
-            Shared decoder feature tensor consumed by output heads.
+            torch.Tensor:
+                Shared decoder feature tensor consumed by output heads.
         '''
-
         # feed domain to router
         concat = domains.get('concat')
         film = domains.get('film')

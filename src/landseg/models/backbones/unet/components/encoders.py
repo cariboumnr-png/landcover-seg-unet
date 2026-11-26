@@ -22,22 +22,18 @@
 '''
 UNet encoder stages with configurable convolution blocks.
 
-This module provides encoder implementations for UNet architectures.
-It constructs multi-stage downsampling pathways with configurable
-normalization and dropout applied uniformly across all encoding
-stages.
+Provides encoder implementations for UNet architectures, constructing
+multi-stage downsampling pathways with configurable normalization and
+dropout applied uniformly across all encoding stages.
 
-**Design**
+Design:
+    Exposes an initial `DoubleConv` and four `Downsample` stages,
+    progressing from `base_ch` to `16 * base_ch` channels. Convolution
+    parameters are applied consistently across blocks.
 
-The encoder exposes initial convolution and four downsampling
-stages, progressing from base_ch to 16*base_ch channels.
-Convolution parameters (normalization, group count, dropout) are
-applied consistently to DoubleConv and Downsample blocks.
-
-**Output**
-
-The forward pass returns a 5-tuple of feature tensors
-representing increasing receptive field and channel width.
+Output:
+    The forward pass returns a 5-tuple of feature tensors representing
+    increasing receptive field and channel width.
 '''
 
 # third-party imports
@@ -48,9 +44,10 @@ import landseg.models.backbones.unet.components as components
 
 class UNetEncoders(torch.nn.Module):
     '''
-    Contract for any feature extractor used by MultiHeadModel.
-    Implementations must produce a feature map with a known channel
-    width that matches the heads' expected input (e.g., base_ch).
+    Multi-stage UNet encoder producing five hierarchical feature maps.
+
+    Combines an initial `DoubleConv` block with four `Downsample`
+    stages, doubling channel widths from `base_ch` to `16 * base_ch`.
     '''
 
     def __init__(
@@ -63,12 +60,16 @@ class UNetEncoders(torch.nn.Module):
         Initialize multi-stage encoder with 4 downsampling levels.
 
         Args:
-            in_ch: Input channels (typically from image or concatenated
-                domain features).
-            base_ch: Base channel width; outputs are
-                base_ch, 2*base_ch, 4*base_ch, 8*base_ch, 16*base_ch.
-            params: ConvolutionParameters specifying normalization,
-                dropout, and other conv block options.
+            in_ch:
+                Number of input channels from the image or concatenated
+                domain features.
+            base_ch:
+                Base channel width; outputs have `base_ch`,
+                `2 * base_ch`, `4 * base_ch`, `8 * base_ch`, and
+                `16 * base_ch` channels.
+            params:
+                `ConvolutionParameters` specifying normalization,
+                dropout, and convolution block options.
         '''
         super().__init__()
 
@@ -88,8 +89,18 @@ class UNetEncoders(torch.nn.Module):
         return len(self.downs)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        '''Return 5-level encoder features.'''
+        '''
+        Extract five hierarchical feature maps from the input tensor.
 
+        Args:
+            x:
+                Input tensor of shape `(B, in_ch, H, W)`.
+
+        Returns:
+            tuple[torch.Tensor, ...]:
+                Five feature tensors `(x1, x2, x3, x4, x5)` across
+                progressively halved spatial resolutions.
+        '''
         x1 = self.inc(x)                # H     in_ch ->  b
         x2 = self.downs[0](x1)          # H/2   b     ->  2b
         x3 = self.downs[1](x2)          # H/4   2b    ->  4b

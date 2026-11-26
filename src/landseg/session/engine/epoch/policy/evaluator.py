@@ -98,9 +98,9 @@ class MultiHeadEvaluator(base.EngineBase):
             infer_every:
                 Number of epochs between inference executions.
             dataset:
-                Dataset split used for inference ('val' or 'test').
+                Dataset split used for evaluation (`'val'` or `'test'`).
             **kwargs:
-                Forwarded to ``EngineBase`` for runtime, dataloaders,
+                Forwarded to `EngineBase` for runtime, dataloaders,
                 dispatcher, and device configuration.
 
         Notes:
@@ -127,21 +127,22 @@ class MultiHeadEvaluator(base.EngineBase):
         This method defines validation policy, including:
 
         - Switching the model to evaluation mode
-        - Configuring validation-time logit adjustment
         - Delegating batch execution to the execution engine
         - Finalizing and formatting epoch-level metrics
-        - Updating best-metric tracking and patience state
+        - Emitting validation lifecycle callbacks for side effects
 
         Batch-level metric accumulation (e.g., confusion matrices) is
         performed by the batch execution engine during validation.
         Epoch-level computation and interpretation are performed here.
 
-        Lifecycle callback hooks are emitted as semantic markers for
-        observation and side effects.
+        Args:
+            epoch:
+                Current zero-based or step-aligned epoch index used to
+                check the `val_every` cadence.
 
         Returns:
             core.ValStepResults | None:
-                finalized validation metrics, or None if skipped.
+                Finalized validation metrics, or `None` if skipped.
         '''
         # early exit if this epoch is not to be validated
         if not epoch % self.val_every == 0:
@@ -201,13 +202,19 @@ class MultiHeadEvaluator(base.EngineBase):
         This method defines inference policy, including:
 
         - Switching the model to evaluation mode
-        - Configuring inference-time logit adjustment
         - Delegating batch execution to the execution engine
+        - Stitching collected patch outputs into full-grid maps
         - Emitting inference lifecycle callbacks for side effects
 
-        Batch-level inference execution and aggregation are handled by
-        the batch execution engine. This method does not interpret or
-        post-process inference results directly.
+        Args:
+            epoch:
+                Current epoch index used to check the `infer_every`
+                execution cadence.
+
+        Returns:
+            core.InferStepResults | None:
+                Stitched inference predictions and metrics, or `None`
+                if skipped or preview grid metadata is unavailable.
         '''
         # early exit if this epoch is not to be inferred
         if not epoch % self.infer_every == 0:
@@ -270,8 +277,7 @@ class MultiHeadEvaluator(base.EngineBase):
         return self.infer_results
 
     def _stitch_patches(self) -> None:
-        '''Stitch collected input, label, prediction, and error patches.'''
-
+        '''Stitch collected patch tensors into full-grid maps.'''
         def stitch_2d(
             placements: dict[tuple[int, int], torch.Tensor],
         ) -> torch.Tensor:

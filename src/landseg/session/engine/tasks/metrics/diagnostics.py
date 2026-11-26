@@ -45,7 +45,6 @@ import landseg.session.engine.tasks.constraints as constraints
 @dataclasses.dataclass
 class _Tally:
     '''Internal counter for horizontal metrics.'''
-
     hits: int = 0
     samples: int = 0
 
@@ -71,9 +70,9 @@ class MTLMetricsAggregator:
 
         Args:
             cons:
-                optional list of logical constraints to evaluate.
+                Optional list of logical constraints to evaluate.
             ignore_index:
-                index to ignore in ground truth for GEM and validity
+                Index to ignore in ground truth for GEM and validity
                 masks.
         '''
         self.ignore_index = ignore_index
@@ -99,9 +98,9 @@ class MTLMetricsAggregator:
 
         Args:
             preds_1b:
-                predicted class IDs (1-based) per head.
+                Predicted class IDs (1-based) per head.
             targets_1b:
-                ground truth labels (1-based) per head.
+                Ground-truth labels (1-based) per head.
         '''
         if not preds_1b or not targets_1b:
             return
@@ -113,7 +112,14 @@ class MTLMetricsAggregator:
         self._check_violations(preds_1b, targets_1b)
 
     def compute(self) -> dict[str, float]:
-        '''Compute final ratios for GEM and violations.'''
+        '''
+        Compute final ratios for GEM and constraint violations.
+
+        Returns:
+            dict[str, float]:
+                Dictionary containing `'gem'` and `'violation_<name>'`
+                ratios across accumulated valid samples.
+        '''
         results = {}
         if self.gem_samples > 0:
             results['gem'] = float(self.gem_hits) / self.gem_samples
@@ -123,7 +129,7 @@ class MTLMetricsAggregator:
         return results
 
     def reset(self) -> None:
-        '''Zero all counters and move state to device if needed.'''
+        '''Zero all GEM and constraint violation counters.'''
         self.gem_hits = 0
         self.gem_samples = 0
         for tally in self.violations.values():

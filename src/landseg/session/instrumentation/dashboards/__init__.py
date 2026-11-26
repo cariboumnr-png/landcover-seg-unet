@@ -22,8 +22,13 @@
 '''
 Top-level namespace for `landseg.session.instrumentation.dashboards`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public classes via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `BaseTracker`: Abstract interface for experiment trackers.
+    - `MLFlowTracker`: MLflow experiment tracking backend.
+    - `TensorBoardTracker`: TensorBoard experiment tracking backend.
 '''
 
 # standard imports

@@ -27,8 +27,8 @@ online algorithm and aggregates per-head label class counts across
 selected block subsets.
 
 Public APIs:
-    - `aggregate_image_stats`: aggregate per-band image statistics.
-    - `count_label`: aggregate label class counts across block subsets.
+    - `aggregate_image_stats`: Aggregate per-band image statistics.
+    - `count_label`: Aggregate label class counts across block subsets.
 '''
 
 # standard imports
@@ -50,13 +50,17 @@ def count_label(
 
     Args:
         raw_class_counts:
-            mapping of block coordinate to per-head class count lists.
+            Mapping of block coordinate to per-head class count lists.
         selected_block_id:
-            list of block filename strings to aggregate.
+            List of block filename strings to aggregate.
 
     Returns:
         dict[str, list[int]]:
-            aggregated per-head class pixel counts.
+            Aggregated per-head class pixel counts.
+
+    Raises:
+        ValueError:
+            If any block ID string cannot be parsed into coordinates.
     '''
     # parse selected block id
     parsed_id: set[tuple[int, int]] = set()
@@ -91,14 +95,19 @@ def aggregate_image_stats(
 
     Args:
         input_blocks:
-            set of file paths to block artifacts to scan.
+            Set of file paths to block artifacts to scan.
         channel_indices:
-            optional list of 0-based channel indices to select for
+            Optional list of 0-based channel indices to select for
             aggregation.
 
     Returns:
-        dict[str, ImageBandStats]:
-            mapping of band keys to aggregated count, mean, and std.
+        dict[str, contracts.ImageBandStats]:
+            Mapping of band keys to aggregated count, mean, and std.
+
+    Raises:
+        ValueError:
+            If `input_blocks` is empty, `channel_indices` is invalid,
+            or block `image_stats` metadata is missing or malformed.
     '''
     if not input_blocks:
         raise ValueError(

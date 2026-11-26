@@ -28,7 +28,7 @@ non-curriculum training workflows where a single phase defines the full
 training lifecycle.
 
 The runner consumes events emitted by `PhasePolicy` and exposes progress
-as a stream of TrainingStep records, one per completed epoch.
+as a stream of `SessionStepSummary` records, one per completed epoch.
 '''
 
 # standard imports
@@ -49,11 +49,11 @@ class ContinuousRunner(base.BaseRunner):
     This runner executes exactly one training phase using a shared epoch
     execution engine. It consumes the event stream emitted by a
     `PhasePolicy` and translates epoch-completion events into immutable
-    `TrainingStep` records.
+    `SessionStepSummary` records.
 
     The runner exposes training progress exclusively as a generator
-    stream, yielding one `TrainingStep` per completed epoch and exactly
-    one terminal `TrainingStep` at run termination.
+    stream, yielding one `SessionStepSummary` per completed epoch and
+    one terminal `SessionStepSummary` at run termination.
 
     Characteristics:
         - Single-phase execution (no curriculum sequencing)
@@ -81,10 +81,12 @@ class ContinuousRunner(base.BaseRunner):
         including early stopping, is delegated to the `PhasePolicy`.
 
         Args:
-            phase: The sole training phase defining model configuration
-                and maximum number of epochs.
-            **kwargs: Forwarded to `BaseRunner` initialization (epoch
-                runner, logger, and configuration).
+            phase:
+                The sole training phase defining model configuration and
+                maximum number of epochs.
+            **kwargs:
+                Forwarded to `BaseRunner.__init__` (`epoch_runner`,
+                `base_config`, and `dispatcher`).
         '''
         super().__init__(**kwargs)
         # parse arguments
@@ -96,25 +98,21 @@ class ContinuousRunner(base.BaseRunner):
 
     def run(self) -> typing.Generator[core.SessionStepSummary, None, None]:
         '''
-        Execute continuous training as a stream of TrainingStep records.
+        Execute continuous training as a `SessionStepSummary` stream.
 
-        Behavior:
-        - Executes a single training phase.
-        - Consumes the event stream emitted by `PhasePolicy`.
-        - Translates EpochEnd events into `TrainingStep` records.
-        - Handles logging and checkpoint persistence as side effects.
-        - Terminates only when the phase completes or an explicit
-        `StopRun` event is emitted by the `PhasePolicy`.
+        Consumes the event stream emitted by `PhasePolicy`, translates
+        `EpochEnd` and `MetricsReport` events into `SessionStepSummary`
+        records, handles checkpointing as a side effect, and terminates
+        when the phase finishes or emits `StopRun`.
 
         Notes:
-        - This method does not expose partial or in-progress execution.
-        - External consumers may stop consuming the stream at any time.
+            - Does not expose partial or in-progress execution.
+            - External consumers may stop consuming at any time.
 
         Yields:
-            TrainingStep:
-                - One TrainingStep per completed epoch.
-                - Exactly one terminal TrainingStep with
-                `is_run_end == True` upon termination.
+            core.SessionStepSummary:
+                One summary per completed epoch, ending with a terminal
+                summary where `is_run_end` is `True`.
         '''
         # dispatch at phase begininng
         self.dispatcher.on_session_phase_begin(self.phase)

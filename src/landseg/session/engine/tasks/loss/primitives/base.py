@@ -44,6 +44,7 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
     tensor. The interface supports optional mask dictionaries for
     selective weighting of pixels or classes.
     '''
+
     @abc.abstractmethod
     def forward(
         self,
@@ -57,19 +58,22 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
         Compute the loss from model logits and targets.
 
         Args:
-            logits: Prediction logits of shape [...], typically
-                (B, C, H, W) or (B, C).
-            targets: Ground-truth labels with a shape compatible with
-                logits.
-            masks: Optional mapping from weights (floats) to boolean or
-                float masks of the same spatial shape as targets, used
-                to apply selective weighting.
-            features: Optional feature tensor (e.g., encoder output or
-                input image) of shape (B, D, H, W), used by certain
-                losses (e.g., smoothness, contrastive).
+            logits:
+                Prediction logits of shape `[B, C, H, W]` or `[B, C]`.
+            targets:
+                Ground-truth labels with a shape compatible with
+                `logits`.
+            masks:
+                Optional mapping from scalar weights to boolean or float
+                masks of the same spatial shape as `targets`, used to
+                apply selective down-weighting.
+            features:
+                Optional feature tensor of shape `[B, D, H, W]` used by
+                feature-aware losses.
 
         Returns:
-            A scalar tensor representing the computed loss.
+            torch.Tensor:
+                Scalar tensor representing the computed loss.
         '''
 
     @staticmethod
@@ -82,15 +86,9 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
         Validate shape and dimension of input tensors.
 
         Raises:
-            ValueError: when the following:
-                - logits not of [B, C, H, W]
-                - targets not of [B, H, W]
-                - logits and targets have different batch size
-                - logits and targets have different spatial size (H * W)
-                - features not of [B, C, H, W] when provided
-                - features and logts have different batch size
-                - features and logts have different spatial size
-
+            ValueError:
+                If `logits`, `targets`, or `features` fail rank,
+                batch-size, or spatial-shape compatibility checks.
         '''
         if logits.ndim != 4:
             raise ValueError(f'Expected [B,C,H,W] logits: {logits.shape}')
@@ -146,32 +144,27 @@ class PrimitiveLoss(torch.nn.Module, metaclass=abc.ABCMeta):
         Args:
             masks:
                 Mapping of scalar weights to boolean-compatible masks.
-                - Keys: Desired weight values (will clampe to [0, 1]).
-                - Values: Tensors with same shape as `targets` (which
-                    pixels the weight should apply to).
-                - If None, no mask-based weighting is applied.
-
+                Keys are clamped to `[0, 1]` and values match `targets`
+                shape (`None` disables mask-based weighting).
             targets:
-                Tensor containing target labels. Defines the shape of
-                output weight map.
-
+                Tensor containing target labels defining the weight map
+                shape.
             ignore_index:
-                Target value to ignore. Pixels with this value will
-                receive a weight of 0. If None, no pixels are ignored.
-
+                Target value to ignore (`0.0` weight). If `None`, no
+                pixels are ignored.
             device:
                 Device on which the output tensor will be allocated.
-
             dtype:
                 Data type of the output weight tensor.
 
         Returns:
-            A tensor of the same shape as `targets`, with values in
-            [0, 1], representing per-pixel weights.
+            torch.Tensor:
+                Tensor of the same shape as `targets`, with values in
+                `[0, 1]`, representing per-pixel weights.
 
         Raises:
             AssertionError:
-                If mask keys are not numeric / mask tensors have
+                If mask keys are not numeric or mask tensors have
                 incompatible shapes.
         '''
         # init weight tensor aligned with the targets

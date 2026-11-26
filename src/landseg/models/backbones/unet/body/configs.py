@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
+'''UNet body configuration protocol.'''
 
-'''Backbone components configurations.'''
+# pylint: disable=missing-function-docstring
 
 # standard imports
 import typing
@@ -29,7 +29,7 @@ import typing
 import landseg.models.backbones.unet.components as components
 
 class UNetBodyConfig(typing.Protocol):
-    '''Typed container for backbone convolution configuration.'''
+    '''Protocol for UNet body configuration.'''
     @property
     def body(self) -> str: ...
     @property

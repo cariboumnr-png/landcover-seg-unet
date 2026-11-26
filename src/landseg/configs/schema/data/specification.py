@@ -34,6 +34,7 @@ class DataSpecificationConfig(base.BaseConfigSection):
     domain_vec_name: str | None = None
 
     def validate(self) -> None:
+        '''Validate optional domain identifier and vector names.'''
         if self.domain_ids_name is not None:
             self.val.require_string(self.domain_ids_name)
         if self.domain_vec_name is not None:

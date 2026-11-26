@@ -26,7 +26,7 @@ Exposes selected public functions via lazy resolution to keep import
 order simple and circular-free.
 
 Public APIs:
-    - `build_multihead_unet`: Construct multihead UNet model architecture.
+    - `build_multihead_unet`: Construct and validate multi-head UNet.
 '''
 
 # standard imports

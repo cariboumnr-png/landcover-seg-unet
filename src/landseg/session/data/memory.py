@@ -27,8 +27,8 @@ preloaded into RAM or streamed with a block-level LRU cache, based
 on available system memory and estimated per-block byte size.
 
 Public APIs:
-    - `MemoryFlags`: preload and cache configuration per split.
-    - `get_memory_strategy`: infer `MemoryFlags` from `DataSpecs`
+    - `MemoryFlags`: Preload and cache configuration per split.
+    - `get_memory_strategy`: Infer `MemoryFlags` from `DataSpecs`
       and available system memory.
 '''
 
@@ -57,7 +57,21 @@ def get_memory_strategy(
     data_specs: core.DataSpecs,
     available_bytes: int | None = None
 ) -> MemoryFlags:
-    '''Infer dataset preload and caching strategy flags based on RAM.'''
+    '''
+    Infer dataset preload and caching strategy flags based on RAM.
+
+    Args:
+        data_specs:
+            Dataset specifications containing block byte sizes and
+            configured splits.
+        available_bytes:
+            Optional available system memory override in bytes. Defaults
+            to live `psutil.virtual_memory().available` when `None`.
+
+    Returns:
+        MemoryFlags:
+            Resolved preload and cache limits for each dataset split.
+    '''
     fbytes = data_specs.meta.blk_bytes
     if not fbytes: # can be set to 0 in `DataSpecs` to disable strategy
         return MemoryFlags(

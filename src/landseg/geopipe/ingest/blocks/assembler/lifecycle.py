@@ -28,9 +28,9 @@ integrity on disk (cleaning up corrupted files), and schedules
 parallel block-generation jobs via the project's ParallelExecutor.
 
 Public APIs:
-    - BlockBuildingInputs: Source raster paths and window mappings.
-    - `BlockBuildingConfig`: Dataclass for block building configurations.
-    - `BlockBuildingOutput`: Dataclass of block building results and stats.
+    - `BlockBuildingConfig`: Dataclass for block building configuration.
+    - `BlockBuildingInputs`: Source raster paths and window mappings.
+    - `BlockBuildingOutput`: Dataclass of block building results.
     - `build_blocks`: Validate on-disk blocks and create missing blocks.
 '''
 
@@ -84,6 +84,7 @@ class BlockBuildingOutput:
 # ----- private dataclasses
 @dataclasses.dataclass(frozen=True)
 class _StructuralValidationResults:
+    '''Internal results from on-disk block validation.'''
     coords_todo: list[tuple[int, int]]
     removed_count: int
     on_disk_before: int
@@ -124,7 +125,7 @@ def build_blocks(
 
     Args:
         inputs:
-            Source raster paths, window mappings, and expected block size.
+            Source raster paths, windows, and expected block size.
         config:
             Block building configuration container.
         output_dir:
@@ -207,7 +208,7 @@ def _prep_block_windows(
     inputs: BlockBuildingInputs,
     output_dir: pathlib.Path,
 ) -> dict[tuple[int, int], pathlib.Path]:
-    '''Find coordinates matching block size and compute window counts.'''
+    '''Find coordinates matching block size and map output paths.'''
     if inputs.label_windows:
         common_coords = (
             set(inputs.image_windows.keys()) &

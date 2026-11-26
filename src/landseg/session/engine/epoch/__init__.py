@@ -22,8 +22,17 @@
 '''
 Top-level namespace for `landseg.session.engine.epoch`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `EngineRuntime`: Container for batch engine, optimizer, and tasks.
+    - `EpochRunner`: Wrapper running one epoch of training or eval.
+    - `EpochRunnerContext`: External context for building epoch runner.
+    - `MultiHeadEvaluator`: Epoch-level validation and inference policy.
+    - `MultiHeadTrainer`: Epoch-level multi-head training policy.
+    - `ScheduleConfigShape`: Protocol for epoch schedule frequencies.
+    - `build_epoch_runner`: Construct configured `EpochRunner`.
 '''
 
 # standard imports

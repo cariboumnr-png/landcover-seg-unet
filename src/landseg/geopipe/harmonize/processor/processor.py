@@ -19,10 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
-Data harmonization pipeline command implementation.
+Raster harmonization processor for warping and composing inputs.
+
+Reprojects, resamples, and aligns compiled feature, domain, and label
+rasters onto the canonical world grid, then stacks multi-band outputs.
+
+Public APIs:
+    - `HarmonizedRasters`: Container for processed raster path dicts.
+    - `harmonizer`: Harmonize compiled raster sources onto grid.
 '''
 
 # standard imports
@@ -47,6 +52,7 @@ class HarmonizedRasters:
 # ----- private dataclasses
 @dataclasses.dataclass
 class _ParsedManifestEntry:
+    '''Parsed manifest entry parameters for raster harmonization.'''
     file_path: pathlib.Path
     tagged_name: str
     raster_type: str
@@ -66,7 +72,34 @@ def harmonizer(  # pylint: disable=too-many-arguments, too-many-locals
     categorical_resampling: str,
     continuous_resampling: str,
 ) -> typing.Generator[str, None, HarmonizedRasters]:
-    '''Harmonize all compiled raster sources onto the canonical grid.'''
+    '''
+    Harmonize all compiled raster sources onto the canonical grid.
+
+    Warps each source raster, attaches metadata tags, composes stacked
+    feature and label VRTs, and returns a `HarmonizedRasters` summary.
+
+    Args:
+        mfst_entries:
+            Compiled manifest entries to harmonize.
+        output_dir:
+            Directory for harmonized GeoTIFF and VRT outputs.
+        dst_crs:
+            Target coordinate reference system.
+        dst_transform:
+            Target affine geotransform.
+        dst_width:
+            Target raster width in pixels.
+        dst_height:
+            Target raster height in pixels.
+        categorical_resampling:
+            Resampling method name for categorical layers.
+        continuous_resampling:
+            Resampling method name for continuous layers.
+
+    Yields:
+        str:
+            Status messages describing each harmonization step.
+    '''
     features: list[pathlib.Path] = []
     labels: list[pathlib.Path] = []
     processed = HarmonizedRasters()

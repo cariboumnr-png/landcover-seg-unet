@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Hydra configs resolver
-'''
+'''Hydra configuration resolver and merger.'''
 
 # standard imports
 import pathlib
@@ -39,20 +37,20 @@ omegaconf.OmegaConf.register_new_resolver('concat', lambda x, y: x + y)
 # ----- public functions
 def resolve_configs(config: omegaconf.DictConfig) -> configs.RootConfig:
     '''
-    Resolve hierarchical configuration from schemas, recipes, and overrides.
+    Resolve hierarchical configuration from schemas and recipes.
+
+    Merges schema defaults, Hydra-composed inputs, tracked recipes, and
+    optional developer override configurations into a validated root
+    configuration.
 
     Args:
         config:
             Hydra-composed input configuration.
-        e2e_override:
-            If True and running an e2e command, end-to-end composite recipes
-            override sectional settings.
 
     Returns:
         configs.RootConfig:
             Fully resolved and validated root configuration instance.
     '''
-
     # list of configs to resolve
     config_list: list = []
 
@@ -100,6 +98,7 @@ def _resolve_recipes(
     config: omegaconf.DictConfig,
     targets: list[str],
 ) -> list[omegaconf.DictConfig]:
+    '''Load ordered recipe configurations for target commands.'''
     recipe_dir = omegaconf.OmegaConf.select(
         config, 'execution.recipe_dir', default='./configs'
     ) or './configs'
@@ -139,6 +138,7 @@ def _resolve_recipes(
 
 
 def _resolve_dev(config: omegaconf.DictConfig) -> list[omegaconf.DictConfig]:
+    '''Load optional untracked developer override configuration.'''
     fp = omegaconf.OmegaConf.select(config, 'execution.dev_cfg')
     if fp is not None:
         return [_load_config(fp)]
@@ -146,6 +146,7 @@ def _resolve_dev(config: omegaconf.DictConfig) -> list[omegaconf.DictConfig]:
 
 
 def _load_config(path: str | pathlib.Path) -> omegaconf.DictConfig:
+    '''Load and validate a YAML configuration file as a `DictConfig`.'''
     path = pathlib.Path(path)
     if path.exists():
         loaded_cfg = omegaconf.OmegaConf.load(path)

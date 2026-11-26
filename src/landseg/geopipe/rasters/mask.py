@@ -26,7 +26,7 @@ This module provides utilities to generate a unified valid-pixel boolean
 mask across all bands of a raster.
 
 Public APIs:
-    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `unify_nodata_mask`: Create 1-band valid pixel mask across bands.
 '''
 
 # standard imports
@@ -60,7 +60,7 @@ def unify_nodata_mask(
         input_path:
             Path to the multi-band source raster.
         output_mask_path:
-            Destination path for the valid-pixel mask raster (.tif or .vrt).
+            Destination path for valid-pixel mask (`.tif` or `.vrt`).
         scratch_dir:
             Optional scratch directory override.
 

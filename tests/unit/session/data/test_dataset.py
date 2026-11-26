@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for custom torch dataset module (dataset.py).'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import numpy
@@ -38,7 +38,6 @@ def test_block_config_properties():
     When: Instantiation of `BlockConfig`.
     Then: Successfully access `patch_per_dim` and `patch_per_blk`.
     '''
-
     cfg = dataset.BlockDatasetConfig(
         block_size=256,
         patch_size=128,
@@ -56,7 +55,6 @@ def test_block_config_invalid_sizes():
     When: Instantiation of `BlockConfig`.
     Then: Raises `ValueError`.
     '''
-
     with pytest.raises(ValueError, match='Data block size must > '):
         _ = dataset.BlockDatasetConfig(
             block_size=128,
@@ -106,7 +104,7 @@ def test_block_dataset_instantiation(tmp_path):
 def test_block_dataset_getitem_index_error(tmp_path):
     '''
     Given: A `_BlockDataset` configured with no augment flip.
-    When: call `__getitem__` from the class object with invalid key.
+    When: Call `__getitem__` from the class object with invalid key.
     Then: Raise `IndexError`.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=False)
@@ -118,7 +116,7 @@ def test_block_dataset_getitem_index_error(tmp_path):
 def test_block_dataset_getitem_no_label(tmp_path):
     '''
     Given: A `_BlockDataset` with a placeholder input label array.
-    When: call `__getitem__` to access label data.
+    When: Call `__getitem__` to access label data.
     Then: Returns the label data as an empty `torch.Tensor`.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=False, label=numpy.array([1]))
@@ -130,7 +128,7 @@ def test_block_dataset_getitem_no_label(tmp_path):
 def test_block_dataset_getitem_no_augment_flip(tmp_path):
     '''
     Given: A `_BlockDataset` configured with no augment flip.
-    When: call `__getitem__` from the class object.
+    When: Call `__getitem__` from the class object.
     Then: Correctly return the original values from the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=False)
@@ -157,8 +155,8 @@ def test_block_dataset_getitem_no_augment_flip(tmp_path):
 def test_block_dataset_getitem_hflip_only(tmp_path, monkeypatch: pytest.MonkeyPatch):
     '''
     Given: A `_BlockDataset` configured with augment flip.
-    When: manually set hflip only and call `__getitem__`.
-    Then: Correctly return horizontal flipped values from the called key.
+    When: Manually set hflip only and call `__getitem__`.
+    Then: Return horizontally flipped values for the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=True)
 
@@ -183,8 +181,8 @@ def test_block_dataset_getitem_hflip_only(tmp_path, monkeypatch: pytest.MonkeyPa
 def test_block_dataset_getitem_vflip_only(tmp_path, monkeypatch: pytest.MonkeyPatch):
     '''
     Given: A `_BlockDataset` configured with augment flip.
-    When: manually set vflip only and call `__getitem__`.
-    Then: Correctly return vertically flipped values from the called key.
+    When: Manually set vflip only and call `__getitem__`.
+    Then: Return vertically flipped values for the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=True)
 
@@ -209,7 +207,7 @@ def test_block_dataset_getitem_vflip_only(tmp_path, monkeypatch: pytest.MonkeyPa
 def test_block_dataset_getitem_both_flip(tmp_path, monkeypatch: pytest.MonkeyPatch):
     '''
     Given: A `_BlockDataset` configured with augment flip.
-    When: manually set to flip both directions and call `__getitem__`.
+    When: Manually set to flip both directions and call `__getitem__`.
     Then: Correctly return double-flipped values from the called key.
     '''
     dt = _test_block_dataset(tmp_path, aug_flip=True)
@@ -277,7 +275,7 @@ def test_multiblock_dataset_getitem_preload(tmp_path):
     '''
     Given: A `MultiBlockDataset` configured with `preload=True`.
     When: Call `__getitem__` across different data blocks.
-    Then: Correctly return image tensor, label tensor, and domain dictionary.
+    Then: Return image, label, and domain tensors for each block.
     '''
     dt = _test_multiblock_dataset(tmp_path, preload=True)
     x0, y0, _ = dt[0]
@@ -331,7 +329,7 @@ def test_multiblock_dataset_getitem_streaming(tmp_path):
 
 def test_multiblock_dataset_getitem_no_label(tmp_path):
     '''
-    Given: A `MultiBlockDataset` created from blocks with placeholder labels.
+    Given: A `MultiBlockDataset` built with placeholder labels.
     When: Call `__getitem__` to retrieve samples.
     Then: Return label as an empty `torch.Tensor`.
     '''
@@ -355,7 +353,7 @@ def test_multiblock_dataset_getitem_no_label(tmp_path):
 
 def test_multiblock_dataset_domain_features(tmp_path):
     '''
-    Given: A `MultiBlockDataset` with categorical and vector domains configured.
+    Given: A `MultiBlockDataset` with categorical and vector domains.
     When: Retrieve samples using `__getitem__`.
     Then: Correctly populate domain dictionary with formatted tensors.
     '''
@@ -381,7 +379,7 @@ def test_multiblock_dataset_domain_features(tmp_path):
 
 def test_multiblock_dataset_cache_eviction(tmp_path):
     '''
-    Given: A streaming `MultiBlockDataset` with cache size `blk_cache_num=1`.
+    Given: A streaming `MultiBlockDataset` with `blk_cache_num=1`.
     When: Access items belonging to different blocks sequentially.
     Then: Evict oldest cached block to maintain cache size constraint.
     '''

@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Minimal MLFlow tracker
-'''
+'''Minimal MLflow experiment dashboard tracker.'''
 
 # standard imports
 import pathlib
@@ -45,6 +43,15 @@ class MLFlowTracker(base.BaseTracker):
         uri: pathlib.Path | str,
         artifact_path: str | None = None,
     ):
+        '''
+        Initialize the MLflow tracker and ensure an active run exists.
+
+        Args:
+            uri:
+                Tracking server URI or local tracking directory path.
+            artifact_path:
+                Optional MLflow experiment name to activate.
+        '''
         super().__init__(uri, artifact_path)
 
         if self.uri:
@@ -60,25 +67,79 @@ class MLFlowTracker(base.BaseTracker):
             self._owns_run = True
 
     def log_scalar(self, key: str, value: float, step: int):
+        '''
+        Log a scalar metric to MLflow.
+
+        Args:
+            key:
+                Metric name.
+            value:
+                Scalar metric value.
+            step:
+                Step index associated with the metric.
+        '''
         mlflow.log_metric(key, value, step)
 
     def log_params(self, key: str, value: typing.Any):
+        '''
+        Log a parameter entry to MLflow.
+
+        Args:
+            key:
+                Parameter name.
+            value:
+                Parameter value.
+        '''
         mlflow.log_param(key, value)
 
     def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
+        '''
+        Log an image tensor (currently a no-op for MLflow).
+
+        Args:
+            key:
+                Image tag or identifier.
+            image:
+                Image tensor to log.
+            step:
+                Step index associated with the image.
+            **kwargs:
+                Additional keyword arguments.
+        '''
         # no ops for now
         pass
 
     def log_artifact(self, fpath: str):
+        '''
+        Log a local file artifact to MLflow.
+
+        Args:
+            fpath:
+                File path of the artifact to upload.
+        '''
         mlflow.log_artifact(fpath)
 
     def log_text(self, key: str, text: str, step: int):
+        '''
+        Log a text entry (currently a no-op for MLflow).
+
+        Args:
+            key:
+                Text entry tag or identifier.
+            text:
+                Text payload to log.
+            step:
+                Step index associated with the text entry.
+        '''
         # no ops for now
         pass
 
-    def flush(self): ...
+    def flush(self):
+        '''No-op flush because MLflow writes metrics immediately.'''
         # `mlflow` writes immediately; not required
+        ...
 
     def close(self):
+        '''End the active MLflow run if owned by this tracker.'''
         if getattr(self, '_owns_run', True):
             mlflow.end_run()

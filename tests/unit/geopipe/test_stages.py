@@ -45,13 +45,16 @@ def test_run_world_grid_stage_success_and_failure(
     '''
     Given: World grid config and output artifact paths.
     When: Running `geopipe.run_world_grid_stage` cleanly or with errors.
-    Then: Persist grid report with `SUCCESS` or `FAILED` status accordingly.
+    Then: Persist grid report with `SUCCESS` or `FAILED` status
+        accordingly.
     '''
     grid_paths = artifacts.WorldGridPaths(tmp_path / 'world_grids')
     grid_paths.init_pipeline_folders()
     wg_cfg = configs.RootConfig().data.world_grid
 
     class _FakeGrid(types.SimpleNamespace):
+        '''Minimal grid stub with fixed tile count.'''
+
         def __len__(self) -> int:
             return 4
 
@@ -92,7 +95,8 @@ def test_run_data_harmonization_stage_success_and_failure(
     '''
     Given: Harmonization config, artifact paths, and grid report path.
     When: Running `geopipe.run_data_harmonization_stage`.
-    Then: Update `harmonization_runs.json` and persist `SUCCESS`/`FAILED` report.
+    Then: Update `harmonization_runs.json` and persist `SUCCESS` or
+        `FAILED` report.
     '''
     harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harmonized')
     harm_paths.init_pipeline_folders()
@@ -138,10 +142,10 @@ def test_run_data_ingestion_stage_success_missing_and_failure(
 ):
     '''
     Given: Ingestion config and upstream/downstream artifact paths.
-    When: Running `geopipe.run_data_ingestion_stage` with pending or failing
-        batches.
-    Then: Resolve batches, invoke stage runner, update ledger, and mark `FAILED`
-        on errors.
+    When: Running `geopipe.run_data_ingestion_stage` with pending or
+        failing batches.
+    Then: Resolve batches, invoke stage runner, update ledger, and
+        mark `FAILED` on errors.
     '''
     harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harmonized')
     ing_paths = artifacts.IngestionPaths(tmp_path / 'ingested')
@@ -201,7 +205,8 @@ def test_run_data_preparation_stage_success_and_failure(
     '''
     Given: Preparation config and ingestion/preparation artifact paths.
     When: Running `geopipe.run_data_preparation_stage`.
-    Then: Build context, forward lifecycle policy, and persist report status.
+    Then: Build context, forward lifecycle policy, and persist report
+        status.
     '''
     ing_paths = artifacts.IngestionPaths(tmp_path / 'ingested')
     prep_paths = artifacts.PreparationPaths(tmp_path / 'prepared')

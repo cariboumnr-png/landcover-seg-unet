@@ -22,7 +22,7 @@
 '''
 Callback dispatcher construction utilities.
 
-Builds a ``CallbackDispatcher`` by assembling logging, tracking, and
+Builds a `CallbackDispatcher` by assembling logging, tracking, and
 visualization callbacks, optionally integrating external experiment
 trackers such as TensorBoard or MLflow.
 
@@ -54,31 +54,34 @@ def build_dispatcher(
     Construct a callback dispatcher with logging and tracking support.
 
     Builds a dispatcher composed of standard callbacks for logging,
-    experiment tracking, and preview generation. Optionally attaches
-    external trackers based on configuration.
+    metric tracking, and inference visualization. Optionally attaches
+    external experiment trackers based on configuration.
 
     Args:
-        trackers: List of tracker identifiers to enable (e.g., 'tb',
-            'mlflow').
-        uri: Tracking backend URI (required for enabled trackers).
-        artifact_path: Artifact storage path (required for MLflow).
-        reclass_color_map: Optional mapping for visualization
-            reclassification.
-        logger: Logger instance for recording session logging messages.
-        verbose: Whether logging callback should emit console output.
+        trackers:
+            List of tracker identifiers to enable (`'tb'`, `'mlflow'`).
+        uri:
+            Tracking backend URI (required when trackers are enabled).
+        artifact_path:
+            Artifact storage path or experiment name for MLflow.
+        label_color_map:
+            Optional mapping from label names to RGB color values for
+            inference visualization.
+        logger:
+            Logger instance for recording session logging messages.
 
     Returns:
-        CallbackDispatcher:
+        dispatcher.CallbackDispatcher:
             Dispatcher managing all configured callbacks.
 
     Raises:
         AssertionError:
-            If required tracker configuration is missing.
+            If `uri` is omitted when a tracker backend is enabled.
 
     Notes:
         - Trackers are optional and only initialized if specified.
-        - All callbacks are registered in a fixed execution order:
-          logging → tracking → preview.
+        - Callbacks execute in registration order: logging, training
+          tracking, validation tracking, and inference tracking.
     '''
     # trackers list
     _trackers: list[dashboards.BaseTracker] = []

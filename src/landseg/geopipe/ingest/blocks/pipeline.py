@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Canonical data-block construction pipeline.
 
@@ -30,8 +28,8 @@ metadata. This pipeline produces experiment-agnostic artifacts intended
 for reuse across downstream workflows.
 
 Public APIs:
-    - BlockPipelineRuntimeContext: Context for block pipeline.
-    - run_blocks_building: Runs the canonical data block pipeline.
+    - `BlockPipelineRuntimeContext`: Context for block pipeline.
+    - `run_blocks_building`: Runs the canonical data block pipeline.
 '''
 
 # standard imports
@@ -50,6 +48,7 @@ import landseg.geopipe.ingest.logger as logger_mod
 
 
 # ----- private types
+# pylint: disable=missing-function-docstring
 class _PipelinePaths(typing.Protocol):
     '''Typed pipeline-specific paths container.'''
     @property
@@ -58,6 +57,7 @@ class _PipelinePaths(typing.Protocol):
     def catalog(self) -> pathlib.Path: ...
     @property
     def schema(self) -> pathlib.Path: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -90,18 +90,16 @@ def run_blocks_building(
     dataset splitting.
 
     Args:
-        world_grid:
-            World grid definition used to locate raster windows.
-        artfact_paths:
-            Container holding paths for blocks, catalog, and schema.
+        image_fpath:
+            File path to the source image raster.
+        label_fpath:
+            Optional file path to the source label raster.
         config:
             Configuration for block building inputs and parameters.
-        policy:
-            Lifecycle policy governing artifact update behavior.
+        context:
+            Runtime context holding grid, paths, and run IDs.
         logger:
             Logger instance used for structured telemetry reporting.
-        collisions_fpath:
-            Optional file path to persist the run collision manifest.
     '''
     start_time = time.perf_counter()
 

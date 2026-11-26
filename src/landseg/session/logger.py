@@ -20,7 +20,15 @@
 # =========================================================================== #
 
 '''
-Subclass wrapper of Logger to handle structured session summaries.
+Structured session logger with persistent JSON run summaries.
+
+Extends `runtime.Logger` to record session metadata, input counts,
+result metrics, and final run status into a `SessionSummary` payload
+persisted on close.
+
+Public APIs:
+    - `SessionLogger`: Session-scoped logger with JSON run summary.
+    - `SessionSummary`: Typed dictionary for persisted run summary.
 '''
 
 # standard imports
@@ -49,13 +57,18 @@ class SessionSummary(typing.TypedDict):
 
 # ----- public classes
 class SessionLogger(runtime.Logger):
-    '''
-    A specialized `Logger` wrapper that collects logging during sessions
-    and persists a structured JSON session summary at closing.
-    '''
+    '''Collect session logs and persist structured JSON summaries.'''
 
     def __init__(self, *arg: typing.Any, **kwargs: typing.Any):
-        '''Initialize the `SessionLogger` instance'''
+        '''
+        Initialize the `SessionLogger` instance.
+
+        Args:
+            *arg:
+                Positional arguments forwarded to `runtime.Logger`.
+            **kwargs:
+                Keyword arguments forwarded to `runtime.Logger`.
+        '''
         super().__init__(*arg, **kwargs)
         self.summary: SessionSummary | None = None
 
@@ -66,7 +79,17 @@ class SessionLogger(runtime.Logger):
         command: str,
         timestamp: str | None = None
     ) -> None:
-        '''Initialize the structured session summary dictionary.'''
+        '''
+        Initialize the structured session summary dictionary.
+
+        Args:
+            run_id:
+                Unique identifier for the current session run.
+            command:
+                Pipeline or workflow command name.
+            timestamp:
+                Optional ISO-8601 start timestamp override.
+        '''
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
             'run_id': run_id,
@@ -79,19 +102,38 @@ class SessionLogger(runtime.Logger):
         }
 
     def set_inputs(self, inputs: dict[str, typing.Any]):
-        '''Record inputs of the session.'''
+        '''
+        Record inputs of the session.
+
+        Args:
+            inputs:
+                Mapping of input metadata keys to summary values.
+        '''
         if self.summary is not None:
             assert isinstance(self.summary['inputs'], dict) # for typing
             self.summary['inputs'].update(**inputs)
 
     def set_results(self, results: dict[str, typing.Any]):
-        '''Record outputs of the session.'''
+        '''
+        Record outputs of the session.
+
+        Args:
+            results:
+                Mapping of result metric keys to summary values.
+        '''
         if self.summary is not None:
             assert isinstance(self.summary['results'], dict) # for typing
             self.summary['results'].update(**results)
 
     def set_status(self, status: SessionStatusLiteral) -> None:
-        '''Update the overall run summary status.'''
+        '''
+        Update the overall run summary status.
+
+        Args:
+            status:
+                Terminal or active status (`'RUNNING'`, `'SUCCESS'`, or
+                `'FAILED'`).
+        '''
         if self.summary is not None:
             self.summary['status'] = status
 

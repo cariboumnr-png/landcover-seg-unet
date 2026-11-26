@@ -27,20 +27,20 @@ prediction previews, palette colorization, diagnostic heatmaps, spatial
 layout grids, and multi-band spectral composites.
 
 Public APIs:
-    - `DEFAULT_ERROR_PALETTE`: Standard orange/gray error highlight palette.
-    - `DEFAULT_MATCH_PALETTE`: Standard green/gray match highlight palette.
+    - `DEFAULT_ERROR_PALETTE`: Standard orange/gray error palette.
+    - `DEFAULT_MATCH_PALETTE`: Standard green/gray match palette.
     - `FORESTRY_FRI_PALETTE`: Standard Ontario FRI tree species palette.
-    - `NLCD_16_PALETTE`: Standard 16-class National Land Cover Database palette.
+    - `NLCD_16_PALETTE`: Standard 16-class NLCD land cover palette.
     - `colorize`: Map 2D class integer masks to 3D RGB tensors.
     - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
     - `generate_prediction_previews`: Render preview figures per head.
-    - `plot_class_frequencies`: Render class pixel count and imbalance chart.
-    - `plot_confusion_matrix`: Render normalized evaluation confusion matrix.
-    - `plot_grid_layout`: Render spatial grid tiling and partition splits.
-    - `plot_per_class_metrics`: Render horizontal bar chart for per-class metrics.
-    - `plot_qualitative_predictions`: Side-by-side segmentation inspection.
-    - `plot_spectral_composite`: Render stretched RGB/false-color composite.
-    - `plot_training_curves`: Plot multi-head training and validation curves.
+    - `plot_class_frequencies`: Render class pixel count chart.
+    - `plot_confusion_matrix`: Render normalized confusion matrix.
+    - `plot_grid_layout`: Render spatial grid tiling and splits.
+    - `plot_per_class_metrics`: Render per-class metric bar chart.
+    - `plot_qualitative_predictions`: Render comparative preview panels.
+    - `plot_spectral_composite`: Render stretched spectral composite.
+    - `plot_training_curves`: Plot multi-head training loss and metrics.
     - `render_prediction_preview`: Automated prediction preview display.
 '''
 

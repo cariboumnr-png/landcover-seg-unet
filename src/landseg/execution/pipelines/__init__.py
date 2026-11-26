@@ -22,8 +22,19 @@
 '''
 Top-level namespace for `landseg.execution.pipelines`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes pipeline base and stage runner classes via lazy resolution to
+keep import order simple and circular-free.
+
+Public APIs:
+    - `BasePipeline`: Root abstract pipeline runner base class.
+    - `DataHarmonization`: Data harmonization stage pipeline.
+    - `DataIngestion`: Data ingestion stage pipeline.
+    - `DataPreparation`: Data preparation stage pipeline.
+    - `GeoPipeline`: Base class for geospatial data pipelines.
+    - `ModelEvaluation`: Model evaluation session pipeline.
+    - `ModelTraining`: Model training session pipeline.
+    - `SessionPipeline`: Base class for neural session pipelines.
+    - `WorldGridGeneration`: World grid generation stage pipeline.
 '''
 
 # standard imports

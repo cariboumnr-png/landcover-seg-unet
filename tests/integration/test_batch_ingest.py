@@ -40,7 +40,8 @@ def test_batch_ingest_multi_batch_catchup_and_idempotence(
 ):
     '''
     Given: Two completed harmonization runs and no prior ingestion.
-    When: `execute_batch_ingest` runs in auto pending mode, then runs again.
+    When: `execute_batch_ingest` runs in auto pending mode, then
+        runs again.
     Then: Both batches are ingested sequentially, and re-run is a no-op.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
@@ -183,7 +184,7 @@ def test_data_ingest_with_spectral_and_topo_derivation(
 def test_data_harmonize_collision_skip(tmp_path, dummy_data_paths):
     '''
     Given: An already completed harmonization run.
-    When: `DataHarmonization.run` is executed again with identical inputs.
+    When: `DataHarmonization.run` executes again with identical inputs.
     Then: Second run is detected as collision and recorded as SKIPPED.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)

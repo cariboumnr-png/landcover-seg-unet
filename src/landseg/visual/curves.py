@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Training loss and validation metric curve plotting utilities.
-'''
+'''Training loss and validation metric curve plotting utilities.'''
 
 # standard imports
 import dataclasses
@@ -183,7 +181,7 @@ def _render_head_curves(
     ax: matplotlib.axes.Axes,
     head_curves: dict[str, list[tuple[int, float]]],
 ) -> None:
-    '''Render multi-head validation metric trajectories on target axis.'''
+    '''Render multi-head validation metric curves on target axis.'''
     if not head_curves:
         ax.text(
             0.5,

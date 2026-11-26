@@ -23,16 +23,16 @@
 I/O helper utilities for block creation, padding, and integrity.
 
 This module provides functions to interface with the filesystem and
-read windowed NumPy arrays from source geospatial rasters using rasterio.
-It handles multi-band extraction, reflection padding for DEM
-neighborhoods, and compressed block load integrity verification.
+read windowed NumPy arrays from source geospatial rasters via
+`rasterio`. It handles multi-band extraction, reflection padding for
+DEM neighborhoods, and compressed block load integrity verification.
 
 Public APIs:
-    - `RasterReadContext`: Dataclass specs parameter for reading rasters.
+    - `RasterReadContext`: Dataclass of specs for reading rasters.
     - `RasterReadOutput`: Dataclass container for read raster arrays.
+    - `check_npz_integrity`: Verify whether a .npz block file is valid.
     - `read_block_raster_data`: Read image/label and DEM bands.
     - `read_schemes`: Return schemes dictionary embedded in a raster.
-    - `check_npz_integrity`: Verify whether a .npz block file is valid.
 '''
 
 # standard imports
@@ -79,7 +79,23 @@ class RasterReadContext:
         image_band_map: dict[str, int] | None = None,
         label_specs: dict[str, geo_core.CategoricalSpec] | None = None,
     ) -> typing.Self:
-        '''Construct the context from input rasters.'''
+        '''
+        Construct a read context from input raster datasets.
+
+        Args:
+            image_fpath:
+                Path to the source image raster.
+            label_fpath:
+                Optional path to the source label raster.
+            image_band_map:
+                Optional mapping of band names to 0-based indices.
+            label_specs:
+                Optional mapping of label band names to specifications.
+
+        Returns:
+            typing.Self:
+                Populated `RasterReadContext` instance.
+        '''
         return cls(
             image_fpath=image_fpath,
             label_fpath=label_fpath,
@@ -100,7 +116,20 @@ class RasterReadContext:
         add_spectral: list[str] | None = None,
         add_topo: list[str] | None = None,
     ):
-        '''Validate if feature engineering choices are feasible.'''
+        '''
+        Validate whether requested feature choices are feasible.
+
+        Args:
+            add_spectral:
+                Optional list of spectral indices to compute.
+            add_topo:
+                Optional list of topographic features to compute.
+
+        Raises:
+            ValueError:
+                If feature names are invalid, required source bands are
+                missing, or label specs are absent for a label raster.
+        '''
         band_map = [b.lower() for b in self.image_band_map]
 
         if add_spectral:
@@ -173,7 +202,12 @@ def read_block_raster_data(
 
     Returns:
         RasterReadOutput:
-            Container holding read arrays, padded DEM, and nodata values.
+            Container holding read arrays, padded DEM, and nodata.
+
+    Raises:
+        ValueError:
+            If image or label arrays are not 3D, spatial dimensions
+            disagree, or label band count mismatches `label_specs`.
     '''
     # read image raster
     padded_dem = None
@@ -273,7 +307,6 @@ def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
         dict[str, typing.Any]:
             Extracted schemes dictionary.
     '''
-
     def _merge_dict(target: dict, source: dict) -> None:
         for k, v in source.items():
             if isinstance(v, dict) and isinstance(target.get(k), dict):
@@ -306,33 +339,13 @@ def read_schemes(fpath: pathlib.Path | None) -> dict[str, typing.Any]:
 
 # ----- private helpers
 def _get_img_band_map(fpath: pathlib.Path) -> dict[str, int]:
-    '''
-    Return lower-case band-description to zero-based index mapping.
-
-    Args:
-        fpath:
-            File path to the raster dataset.
-
-    Returns:
-        dict[str, int]:
-            Mapping from lowercase band description to zero-based index.
-    '''
+    '''Return lowercase band-name to zero-based index mapping.'''
     raster_info = rasters.get_info(fpath)
     return raster_info.band_map
 
 
 def _get_lbl_specs(fpath: pathlib.Path) -> dict[str, geo_core.CategoricalSpec]:
-    '''
-    Return per-band label specifications embedded in a raster.
-
-    Args:
-        fpath:
-            File path to raster dataset or None.
-
-    Returns:
-        dict[str, geo_core.CategoricalSpec]:
-            Mapping from band name to categorical specifications.
-    '''
+    '''Return per-band label specifications embedded in a raster.'''
     raster_info = rasters.get_info(fpath)
 
     descriptions = raster_info.descriptions

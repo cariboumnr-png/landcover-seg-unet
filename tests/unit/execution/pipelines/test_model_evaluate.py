@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for model evaluation execution pipeline.'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import typing

@@ -19,12 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=too-many-branches
+'''
+Root configuration schema mirroring the Hydra/YAML config tree.
 
+Defines structured dataclasses suitable for OmegaConf config loading
+and command-scoped validation.
 '''
-This module mirrors the Hydra/YAML config tree using Python dataclasses,
-suitable for OmegaConf structured configs.
-'''
+
+# pylint: disable=too-many-branches
 
 # standard imports
 import dataclasses
@@ -58,7 +60,7 @@ class ExecutionContext(base.BaseConfigSection):  # pylint: disable=too-many-inst
 
     @property
     def console_level(self) -> int | None:
-        '''Normalized console level from verbosity setting.'''
+        '''Return normalized console level from verbosity setting.'''
         match self.verbosity:
             case 10: return 10
             case 20: return 20
@@ -80,7 +82,18 @@ class RootConfig(base.BaseConfigSection):
     command: str = 'default'
 
     def validate(self, command: str | list[str] | None = None) -> None:
-        '''Validate the entire configuration structure.'''
+        '''
+        Validate configuration sections required for the target command.
+
+        Args:
+            command:
+                Command name, list of command names, or `None` to fall
+                back to `self.command`.
+
+        Raises:
+            base.ConfigValidationError:
+                If a resolved command name is unrecognized or invalid.
+        '''
         to_validate = self.command if command is None else command
         need_to_validate = self.commands_to_validate(
             to_validate,
@@ -131,7 +144,23 @@ class RootConfig(base.BaseConfigSection):
         command: str | list[str] | None,
         preflight_target: str | None,
     ) -> list[str]:
-        '''Return a list of commands to be validated.'''
+        '''
+        Resolve command or preflight target into commands to validate.
+
+        Args:
+            command:
+                Command string, sequence of commands, or `None`.
+            preflight_target:
+                Section name or `'all'` when `command` is `'preflight'`.
+
+        Returns:
+            list[str]:
+                Resolved list of command names requiring validation.
+
+        Raises:
+            KeyError:
+                If `preflight_target` is not a supported section.
+        '''
         if not command or command == 'default':
             return []
 

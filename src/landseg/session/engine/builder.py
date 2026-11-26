@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Epoch engine construction utilities.
 
@@ -30,6 +28,11 @@ dataset metadata and configuration.
 
 This module serves as the orchestration entry point that wires together
 all components required for epoch-wise training and evaluation.
+
+Public APIs:
+    - `EngineConfigShape`: Configuration protocol for engine assembly.
+    - `EngineContext`: External context for building the epoch engine.
+    - `build_engine`: Construct configured epoch runner for execution.
 '''
 
 # standard imports
@@ -46,6 +49,7 @@ import landseg.session.engine.tasks as tasks
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class EngineConfigShape(typing.Protocol):
     '''Interface for constructing epoch engine runtime components.'''
     @property
@@ -56,6 +60,7 @@ class EngineConfigShape(typing.Protocol):
     def engine_schedule(self) -> epoch.ScheduleConfigShape: ...
     @property
     def engine_tasks(self) -> tasks.TaskConfigShape: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -78,11 +83,35 @@ def build_engine(
     eval_dataset: typing.Literal['val', 'test'],
 ) -> epoch.EpochRunner:
     '''
-    Construct the full execution engine for training and/or evaluation.
+    Construct the full execution engine for training or evaluation.
 
     Assembles dataloaders, batch execution engine, optimization wrapper,
     and task components into an execution runtime, then constructs the
     epoch runner configured for the specified mode.
+
+    Args:
+        context:
+            External engine context providing data specs, model,
+            dataloaders, and observer dispatcher.
+        config:
+            Engine configuration defining execution, optimization,
+            schedule, and task sub-configs.
+        device:
+            Target compute device string (e.g., `'cuda'` or `'cpu'`).
+        mode:
+            Execution mode (`'train_eval'`, `'train_only'`, or
+            `'eval_only'`).
+        eval_dataset:
+            Evaluation dataset split (`'val'` or `'test'`).
+
+    Returns:
+        epoch.EpochRunner:
+            Configured epoch runner ready for training or evaluation.
+
+    Raises:
+        ValueError:
+            If patch size is not divisible by `model.spatial_divisor`,
+            or if an unsupported execution mode is provided.
     '''
     # data loader spatial division compability
     p = context.dataloaders.meta.patch_size

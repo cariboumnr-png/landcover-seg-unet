@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for the data harmonization execution pipeline.'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import typing
@@ -38,7 +38,7 @@ import landseg.geopipe as geopipe
 # ----- `DataHarmonization` validation tests
 def test_data_harmonize_validate_missing_world_grid(tmp_path):
     '''
-    Given: Harmonization configuration without upstream world grid report.
+    Given: Harmonization config without an upstream world grid report.
     When: Calling `validate` on `DataHarmonization`.
     Then: Raise a RuntimeError indicating missing world-grid report.
     '''
@@ -59,7 +59,7 @@ def test_data_harmonize_validate_missing_world_grid(tmp_path):
 # ----- `DataHarmonization` execution and lifecycle tests
 def test_data_harmonize_pipeline_success(tmp_path, mocker):
     '''
-    Given: Upstream world-grid report and mocked geopipe harmonization runner.
+    Given: Upstream world-grid report and mocked harmonization runner.
     When: Calling `run` on `DataHarmonization`.
     Then: Initialize folders/config and delegate to `geopipe`.
     '''

@@ -20,11 +20,14 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for
-`landseg.session.engine.runtime.tasks.loss.regularizers`.
+Top-level namespace for `landseg.session.engine.tasks.regularization`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `ConsistencyRegConfigShape`: Protocol for regularizer config.
+    - `ConsistencyRegularizer`: Cross-head consistency penalty module.
 '''
 
 # standard imports

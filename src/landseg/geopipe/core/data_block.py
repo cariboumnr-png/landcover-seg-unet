@@ -22,13 +22,13 @@
 '''
 Container and serialization interface for geospatial data blocks.
 
-Defines the core storage container and compressed `.npz` archive serialization
-contracts for windowed raster arrays and structured manifest metadata.
+Defines the core storage container and compressed `.npz` archive
+serialization contracts for windowed raster arrays and metadata.
 
 Public APIs:
-    - DataBlockManifest: typed dictionary defining block manifest metadata.
-    - DataBlockArrays: container for block-wise image and label arrays.
-    - DataBlock: container for raster block arrays and manifest metadata.
+    - `DataBlock`: Container for raster block arrays and manifest.
+    - `DataBlockArrays`: Container for block image and label arrays.
+    - `DataBlockManifest`: Typed dictionary defining block metadata.
 '''
 
 # standard imports
@@ -102,14 +102,14 @@ class DataBlock:
     Container for per-block raster data and its associated manifest.
 
     Encapsulates a single raster window along with its associated
-    manifest and serialized arrays. Supports loading from and persisting to
-    compressed `.npz` artifacts.
+    manifest and serialized arrays. Supports loading from and
+    persisting to compressed `.npz` artifacts.
 
     Typical workflow:
-        - Use `load()` to restore a previously saved block from disk
-        - Access `.data.image`, `.data.label`, and `.data.valid_mask`
-        - Access `.manifest` for block provenance and channel statistics
-        - Use `save()` to persist the block to disk
+        - Use `load()` to restore a previously saved block from disk.
+        - Access `.data.image`, `.data.label`, and `.data.valid_mask`.
+        - Access `.manifest` for block provenance and channel stats.
+        - Use `save()` to persist the block to disk.
     '''
 
     def __init__(
@@ -117,7 +117,15 @@ class DataBlock:
         data: DataBlockArrays | None = None,
         manifest: DataBlockManifest | None = None,
     ):
-        '''Initialize a DataBlock with arrays and manifest metadata.'''
+        '''
+        Initialize a `DataBlock` with arrays and manifest metadata.
+
+        Args:
+            data:
+                Optional container of image, label, and mask arrays.
+            manifest:
+                Optional block manifest metadata dictionary.
+        '''
         if data is None:
             self.data = DataBlockArrays(
                 image=numpy.array([], dtype=numpy.float32),
@@ -134,18 +142,18 @@ class DataBlock:
     @classmethod
     def load(cls, fpath: pathlib.Path) -> 'DataBlock':
         '''
-        Load a DataBlock from a serialized .npz file.
+        Load a `DataBlock` from a serialized `.npz` file.
 
         Reconstructs both the data arrays and manifest metadata from
         a previously saved block artifact.
 
         Args:
             fpath:
-                path to the .npz file containing serialized data.
+                Path to the `.npz` file containing serialized data.
 
         Returns:
             DataBlock:
-                populated block instance with restored arrays and
+                Populated block instance with restored arrays and
                 manifest.
         '''
         loaded = numpy.load(fpath)
@@ -159,14 +167,18 @@ class DataBlock:
 
     def save(self, fpath: pathlib.Path | str) -> None:
         '''
-        Save the DataBlock to a compressed .npz file.
+        Save the `DataBlock` to a compressed `.npz` file.
 
         Serializes all internal arrays and manifest dictionary as a
         compressed numpy archive artifact.
 
         Args:
             fpath:
-                output file path ending with .npz.
+                Output file path ending with `.npz`.
+
+        Raises:
+            ValueError:
+                If `fpath` does not end with `.npz`.
         '''
         fpath = pathlib.Path(fpath)
         if fpath.suffix != '.npz':
@@ -183,7 +195,17 @@ class DataBlock:
 
     @staticmethod
     def empty_manifest(block_name: str = '') -> DataBlockManifest:
-        '''Generate a default empty manifest dictionary.'''
+        '''
+        Generate a default empty manifest dictionary.
+
+        Args:
+            block_name:
+                Optional canonical block identifier to embed.
+
+        Returns:
+            DataBlockManifest:
+                Empty manifest dictionary with default field values.
+        '''
         return {
             'block_name': block_name,
             'has_label': False,

@@ -22,8 +22,17 @@
 '''
 Top-level namespace for `landseg.execution.workflows`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes workflow orchestration functions via lazy resolution to keep
+import order simple and circular-free.
+
+Public APIs:
+    - `execute_batch_ingest`: Ingest pending harmonization batches.
+    - `execute_default_action`: Print CLI help summary to console.
+    - `execute_diagnose_overfit`: Run single-block overfit diagnostic.
+    - `execute_e2e_experiment`: Run full experiment pipeline sequence.
+    - `execute_e2e_intake`: Run continuous data intake sequence.
+    - `execute_study_analysis`: Analyze and rank completed sweep trials.
+    - `execute_study_sweep`: Run Optuna hyperparameter sweep study.
 '''
 
 # standard imports

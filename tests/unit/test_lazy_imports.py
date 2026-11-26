@@ -54,7 +54,7 @@ def test_package_lazy_imports(module: types.ModuleType):
     '''
     Given: Package module in `landseg` implementing lazy `__getattr__`.
     When: Accessing every symbol declared in `__all__`.
-    Then: Resolves attributes and invalid attribute raises AttributeError.
+    Then: Resolve attributes and raise `AttributeError` on invalid.
     '''
     assert hasattr(module, '__all__'), f'{module.__name__} missing __all__'
 

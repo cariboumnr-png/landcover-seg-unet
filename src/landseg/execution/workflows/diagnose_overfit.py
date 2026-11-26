@@ -20,11 +20,11 @@
 # =========================================================================== #
 
 '''
-Overfit test pipeline.
+Single-block overfit diagnostic workflow.
 
-Delegates single-block diagnostic `DataSpecs` construction to
-`landseg.geopipe` and trains until near-perfect IoU to validate the
-end-to-end model and training stack.
+Delegates diagnostic `DataSpecs` construction to `landseg.geopipe`
+and trains until near-perfect IoU to validate the end-to-end model
+and training stack.
 '''
 
 # standard imports
@@ -49,7 +49,12 @@ def execute_diagnose_overfit(config: configs.RootConfig) -> None:
     until an IoU threshold or the epoch limit is reached.
 
     Args:
-        config: RootConfig with model/trainer settings.
+        config:
+            Root configuration with model and trainer settings.
+
+    Raises:
+        Exception:
+            If an error occurs during diagnostic execution.
     '''
     artifact_paths = artifacts.ArtifactPaths.from_config(config)
     root = artifact_paths.session.root / 'overfit_test'

@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Data harmonization pipeline command implementation.
-'''
+'''Data harmonization pipeline execution entrypoint.'''
 
 # local imports
 import landseg.artifacts as artifacts
@@ -42,7 +38,19 @@ def run_data_harmonization(
     *,
     logger: harmonize_logger.HarmonizationLogger
 ):
-    '''Run data harmonization pipeline.'''
+    '''
+    Execute the data harmonization pipeline stage.
+
+    Args:
+        context:
+            Resolved harmonization execution context and grid.
+        artifacts_paths:
+            Path manager for harmonization output artifacts.
+        config:
+            Harmonization pipeline configuration object.
+        logger:
+            Logger tracking harmonization progress and summary.
+    '''
     logger.set_grid_reference(context.grid_id, context.grid_fpath)
     logger.set_identity(context.current_run_identity)
 

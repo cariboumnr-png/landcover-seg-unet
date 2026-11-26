@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Canonical filesystem paths for data harmonization (ETL) artifacts.
-'''
+'''Canonical filesystem paths for data harmonization ETL artifacts.'''
 
 # standard imports
 import dataclasses
@@ -38,16 +34,18 @@ import landseg.artifacts.paths.base as base
 @dataclasses.dataclass
 class HarmonizationPaths(base.PipelineArtifactsPaths):
     '''Paths for data harmonization ETL artifacts.'''
-
     @property
     def runs_manifest(self) -> pathlib.Path:
+        '''Return path to the harmonization runs manifest JSON.'''
         return self.root / 'harmonization_runs.json'
 
     @property
     def valid_mask_raster(self) -> pathlib.Path:
+        '''Return path to the harmonized valid pixel mask VRT.'''
         return self.effective_run_folder / 'valid_pixel_mask.vrt'
 
     def _init_pipeline_folders(self):
+        '''Create harmonization directories and empty runs manifest.'''
         super()._init_pipeline_folders()
         if not self.runs_manifest.exists():
             controller.Controller[dict](self.runs_manifest).persist({})
@@ -62,7 +60,8 @@ class HarmonizationPaths(base.PipelineArtifactsPaths):
                 and valid pixel mask exist.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:

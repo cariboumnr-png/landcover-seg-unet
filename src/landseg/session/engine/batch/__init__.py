@@ -20,10 +20,15 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.batch`.
+Top-level namespace for `landseg.session.engine.batch`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `BatchEngine`: Pure batch execution engine for session flows.
+    - `BatchExecConfigShape`: Protocol for batch execution config.
+    - `build_batch_engine`: Construct configured `BatchEngine`.
 '''
 
 # standard imports

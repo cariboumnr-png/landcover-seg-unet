@@ -19,11 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''Unit tests for calc.py.'''
 # pylint: disable=protected-access
-
-'''
-Unit tests for calc.py.
-'''
 
 # third-party imports
 import numpy

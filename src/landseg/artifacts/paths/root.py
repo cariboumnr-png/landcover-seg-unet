@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Root entrypoint for all artifact path namespaces.
 
@@ -72,7 +70,17 @@ class ArtifactPaths:
 
     @classmethod
     def from_config(cls, config: 'configs.RootConfig') -> typing.Self:
-        '''Construct `ArtifactPaths` from a `RootConfig` instance.'''
+        '''
+        Construct `ArtifactPaths` from a `RootConfig` instance.
+
+        Args:
+            config:
+                Root configuration containing stage directory paths.
+
+        Returns:
+            typing.Self:
+                Resolved `ArtifactPaths` container.
+        '''
         exp_root = config.execution.exp_root
         return cls(
             root=pathlib.Path(exp_root) if exp_root else None,
@@ -86,6 +94,7 @@ class ArtifactPaths:
 
     @property
     def world_grid(self) -> paths.WorldGridPaths:
+        '''Return path manager for world grid artifacts.'''
         r = _stage_root(
             self.world_grid_root,
             self.root,
@@ -96,6 +105,7 @@ class ArtifactPaths:
 
     @property
     def data_harmonization(self) -> paths.HarmonizationPaths:
+        '''Return path manager for harmonization artifacts.'''
         r = _stage_root(
             self.harmonization_root,
             self.root,
@@ -106,6 +116,7 @@ class ArtifactPaths:
 
     @property
     def data_ingestion(self) -> paths.IngestionPaths:
+        '''Return path manager for data ingestion artifacts.'''
         r = _stage_root(
             self.ingestion_root,
             self.root,
@@ -116,6 +127,7 @@ class ArtifactPaths:
 
     @property
     def data_preparation(self) -> paths.PreparationPaths:
+        '''Return path manager for data preparation artifacts.'''
         r = _stage_root(
             self.preparation_root,
             self.root,
@@ -126,6 +138,7 @@ class ArtifactPaths:
 
     @property
     def session(self) -> paths.SessionPaths:
+        '''Return path manager for training session artifacts.'''
         r = _stage_root(
             self.session_root,
             self.root,
@@ -136,6 +149,7 @@ class ArtifactPaths:
 
     @property
     def knowledge(self) -> paths.KnowledgePaths | None:
+        '''Return path manager for knowledge artifacts, if set.'''
         if self.knowledge_root is None:
             return None
         return paths.KnowledgePaths(self.knowledge_root)
@@ -149,12 +163,21 @@ class ArtifactPaths:
 
         Args:
             stages:
-                Optional iterable of stage attribute names to validate
-                (e.g. ['world_grid', 'data_ingestion']). If None, validates
-                all stages whose roots are explicitly configured or derived.
+                Optional iterable of stage attribute names to
+                validate (e.g., `['world_grid', 'data_ingestion']`).
+                If None, validates all stages whose roots are
+                explicitly configured or derived.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
+
+        Raises:
+            ArtifactError:
+                If any validated stage directory or file is missing.
+            ValueError:
+                If an unknown stage name is provided or an explicit
+                stage has no configured root.
         '''
         target_stages = (
             stages

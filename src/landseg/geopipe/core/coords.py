@@ -26,8 +26,8 @@ This module provides helper functions to convert between integer
 coordinate tuples (x, y) and canonical block filename identifiers.
 
 Public APIs:
-    - `xy_name`: convert (x, y) coords to canonical block name.
-    - `name_xy`: convert canonical block name to (x, y) coords.
+    - `name_xy`: Convert canonical block name to `(x, y)` coords.
+    - `xy_name`: Convert `(x, y)` coords to canonical block name.
 '''
 
 # ----- public functions

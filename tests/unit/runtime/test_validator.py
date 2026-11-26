@@ -57,12 +57,12 @@ from landseg.runtime.validator import (
     ],
 )
 def test_require_types_accepts_valid_types(value, required_type, expected):
-    '''Given a value matching required type(s), return the value.'''
+    '''Given valid typed value, when checked, then return value.'''
     assert require_types(value, required_type) == expected
 
 
 def test_require_types_rejects_invalid_type():
-    '''Given a value not matching required type, raise ValidationError.'''
+    '''Given wrong type, when checked, then raise `ValidationError`.'''
     with pytest.raises(ValidationError, match='Expected type'):
         require_types('not_int', int)
 
@@ -97,7 +97,7 @@ def test_require_numeric_enforces_requested_type(
     required_type,
     expected,
 ):
-    '''Given a value of the requested type, when validated, then return it.'''
+    '''Given typed number, when checked, then return typed value.'''
     assert require_numeric(value, required_type) == expected
 
 
@@ -114,7 +114,7 @@ def test_require_numeric_enforces_requested_type(
     ],
 )
 def test_require_numeric_rejects_invalid_types(value, required_type):
-    '''Given an invalid numeric type, when validated, then raise an error.'''
+    '''Given bad numeric type, when validated, then raise error.'''
     with pytest.raises(ValidationError):
         require_numeric(value, required_type)
 
@@ -132,7 +132,7 @@ def test_require_numeric_rejects_invalid_types(value, required_type):
     ],
 )
 def test_require_finite_accepts_finite_numbers(value, expected):
-    '''Given a finite numeric value, return the value.'''
+    '''Given finite number, when checked, then return the value.'''
     assert require_finite(value) == expected
 
 
@@ -145,13 +145,13 @@ def test_require_finite_accepts_finite_numbers(value, expected):
     ],
 )
 def test_require_finite_rejects_non_finite(value):
-    '''Given a non-finite value, raise ValidationError.'''
+    '''Given non-finite value, when checked, then raise error.'''
     with pytest.raises(ValidationError, match='Expected a finite number'):
         require_finite(value)
 
 
 def test_require_finite_rejects_boolean():
-    '''Given a boolean value, raise ValidationError.'''
+    '''Given boolean value, when checked, then raise error.'''
     with pytest.raises(ValidationError, match='Expected a number'):
         require_finite(True)
 
@@ -173,7 +173,7 @@ def test_require_numeric_min_accepts_values_at_or_above_minimum(
     required_type,
     expected,
 ):
-    '''Given a value meeting the minimum, when checked, then return it.'''
+    '''Given value >= minimum, when checked, then return value.'''
     assert (
         require_numeric_min(value, minimum, required_type)
         == expected
@@ -194,7 +194,7 @@ def test_require_numeric_min_rejects_values_below_minimum(
     minimum,
     required_type,
 ):
-    '''Given a value below the minimum, when checked, then raise an error.'''
+    '''Given value < minimum, when checked, then raise error.'''
     with pytest.raises(ValidationError, match='minimum'):
         require_numeric_min(value, minimum, required_type)
 
@@ -216,7 +216,7 @@ def test_require_numeric_max_accepts_values_at_or_below_maximum(
     required_type,
     expected,
 ):
-    '''Given a value meeting the maximum, when checked, then return it.'''
+    '''Given value <= maximum, when checked, then return value.'''
     assert (
         require_numeric_max(value, maximum, required_type)
         == expected
@@ -237,7 +237,7 @@ def test_require_numeric_max_rejects_values_above_maximum(
     maximum,
     required_type,
 ):
-    '''Given a value above the maximum, when checked, then raise an error.'''
+    '''Given value > maximum, when checked, then raise error.'''
     with pytest.raises(ValidationError, match='maximum'):
         require_numeric_max(value, maximum, required_type)
 
@@ -260,7 +260,7 @@ def test_require_numeric_range_accepts_values_within_closed_bounds(
     required_type,
     expected,
 ):
-    '''Given a value within inclusive bounds, when checked, then return it.'''
+    '''Given value in bounds, when checked, then return value.'''
     assert (
         require_numeric_range(value, bounds, required_type)
         == expected
@@ -281,7 +281,7 @@ def test_require_numeric_range_rejects_values_outside_bounds(
     bounds,
     required_type,
 ):
-    '''Given a value outside inclusive bounds, when checked, then raise.'''
+    '''Given value out of bounds, when checked, then raise error.'''
     with pytest.raises(ValidationError):
         require_numeric_range(value, bounds, required_type)
 
@@ -297,7 +297,7 @@ def test_require_numeric_range_rejects_values_outside_bounds(
     ],
 )
 def test_require_string_accepts_nonempty_strings(value):
-    '''Given a nonempty string, when validated, then return it unchanged.'''
+    '''Given nonempty string, when validated, then return it.'''
     assert require_string(value) == value
 
 
@@ -312,7 +312,7 @@ def test_require_string_accepts_nonempty_strings(value):
     ],
 )
 def test_require_string_rejects_non_string_values(value):
-    '''Given a non-string value, when validated, then raise TypeError.'''
+    '''Given non-string input, when validated, then raise error.'''
     with pytest.raises(TypeError):
         require_string(value)
 
@@ -338,7 +338,7 @@ def test_require_value_from_accepts_allowed_values(
     allowed,
     required_type,
 ):
-    '''Given an allowed value of the requested type, when checked, return it.'''
+    '''Given allowed typed value, when checked, then return it.'''
     assert (
         require_value_from(value, allowed, required_type)
         == value
@@ -358,26 +358,26 @@ def test_require_value_from_rejects_values_outside_allowed_pool(
     allowed,
     required_type,
 ):
-    '''Given a value outside the allowed pool, when checked, then raise.'''
+    '''Given disallowed value, when checked, then raise error.'''
     with pytest.raises(ValidationError):
         require_value_from(value, allowed, required_type)
 
 
 def test_require_value_from_rejects_wrong_type():
-    '''Given a value of the wrong type, when checked, then raise an error.'''
+    '''Given wrong value type, when checked, then raise error.'''
     with pytest.raises(ValidationError):
         require_value_from(1, ('1', '2'), str)
 
 
 def test_require_value_from_rejects_string_as_allowed_sequence():
-    '''Given a string pool, when checked, then reject it as a sequence.'''
+    '''Given string pool, when checked, then reject as sequence.'''
     with pytest.raises(ValidationError):
         require_value_from('a', 'abc', str)
 
 
 # ----- `require_mapping` validation
 def test_require_mapping_returns_dictionary_copy():
-    '''Given a nonempty mapping, when validated, then return a dict copy.'''
+    '''Given nonempty mapping, when validated, then return copy.'''
     source = {'a': 1, 'b': 2}
     result = require_mapping(source)
 
@@ -405,7 +405,7 @@ def test_require_mapping_accepts_mapping_proxy():
     ],
 )
 def test_require_mapping_rejects_non_mappings(value):
-    '''Given a non-mapping value, when validated, then raise TypeError.'''
+    '''Given non-mapping input, when validated, then raise error.'''
     with pytest.raises(TypeError):
         require_mapping(value)
 
@@ -417,7 +417,7 @@ def test_require_mapping_rejects_empty_mapping():
 
 
 def test_require_mapping_str_v_returns_validated_copy():
-    '''Given a mapping with string values, when checked, then return a copy.'''
+    '''Given str-value mapping, when checked, then return copy.'''
     source = {'drainage': 'drainage.tif', 'geology': 'geology.tif'}
     result = require_mapping_str_v(source)
 
@@ -426,13 +426,13 @@ def test_require_mapping_str_v_returns_validated_copy():
 
 
 def test_require_mapping_str_v_rejects_non_string_value():
-    '''Given a non-string mapping value, when checked, then raise TypeError.'''
+    '''Given non-str mapping value, when checked, then raise.'''
     with pytest.raises(TypeError):
         require_mapping_str_v({'a': 'valid', 'b': 2})
 
 
 def test_require_mapping_str_v_rejects_empty_string_value():
-    '''Given an empty mapping value, when checked, then raise ValueError.'''
+    '''Given empty mapping value, when checked, then raise error.'''
     with pytest.raises(ValueError):
         require_mapping_str_v({'a': ''})
 
@@ -447,7 +447,7 @@ def test_require_mapping_str_v_rejects_empty_string_value():
     ],
 )
 def test_require_sequence_returns_tuple(value):
-    '''Given a non-string sequence, when validated, then return a tuple.'''
+    '''Given valid sequence, when validated, then return tuple.'''
     result = require_sequence(value)
 
     assert result == tuple(value)
@@ -467,7 +467,7 @@ def test_require_sequence_returns_tuple(value):
     ],
 )
 def test_require_sequence_rejects_non_sequences(value):
-    '''Given an invalid sequence input, when validated, then raise an error.'''
+    '''Given invalid sequence, when validated, then raise error.'''
     with pytest.raises(ValidationError):
         require_sequence(value)
 
@@ -487,7 +487,7 @@ def test_require_numeric_sequence_accepts_valid_sequences(
     length,
     expected,
 ):
-    '''Given a valid numeric sequence, when checked, then return a tuple.'''
+    '''Given valid numeric sequence, when checked, then return.'''
     assert (
         require_numeric_sequence(value, required_type, length)
         == expected
@@ -509,7 +509,7 @@ def test_require_numeric_sequence_rejects_invalid_sequences(
     required_type,
     length,
 ):
-    '''Given an invalid numeric sequence, when checked, then raise an error.'''
+    '''Given bad numeric sequence, when checked, then raise error.'''
     with pytest.raises(ValidationError):
         require_numeric_sequence(value, required_type, length)
 
@@ -527,7 +527,7 @@ def test_require_string_sequence_accepts_valid_sequences(
     length,
     expected,
 ):
-    '''Given a valid string sequence, when checked, then return a tuple.'''
+    '''Given valid string sequence, when checked, then return.'''
     assert require_string_sequence(value, length) == expected
 
 
@@ -540,7 +540,7 @@ def test_require_string_sequence_accepts_valid_sequences(
     ],
 )
 def test_require_string_sequence_rejects_invalid_sequences(value, length):
-    '''Given an invalid string sequence, when checked, then raise an error.'''
+    '''Given invalid str sequence, when checked, then raise error.'''
     with pytest.raises((TypeError, ValueError, ValidationError)):
         require_string_sequence(value, length)
 
@@ -559,7 +559,7 @@ def test_require_file_returns_path_for_existing_file(tmp_path):
 
 
 def test_require_file_accepts_path_string(tmp_path):
-    '''Given a valid file path string, when checked, then return a Path.'''
+    '''Given valid file path str, when checked, then return Path.'''
     source = tmp_path / 'config.yaml'
     source.write_text('key: value\n', encoding='utf-8')
 
@@ -575,7 +575,7 @@ def test_require_file_accepts_path_object(tmp_path):
 
 
 def test_require_file_rejects_missing_file(tmp_path):
-    '''Given a nonexistent file, when validated, then raise ValidationError.'''
+    '''Given missing file path, when checked, then raise error.'''
     source = tmp_path / 'missing.tif'
 
     with pytest.raises(ValidationError, match='Not a valid file'):
@@ -583,17 +583,17 @@ def test_require_file_rejects_missing_file(tmp_path):
 
 
 def test_require_file_rejects_directory(tmp_path):
-    '''Given a directory path, when validated, then raise ValidationError.'''
+    '''Given directory path, when validated, then raise error.'''
     with pytest.raises(ValidationError, match='Not a valid file'):
         require_file(str(tmp_path))
 
 
 def test_require_file_rejects_missing_path_when_required():
-    '''Given no path and missing_ok false, when checked, then raise an error.'''
+    '''Given None and missing_ok=False, when checked, then raise.'''
     with pytest.raises(ValidationError, match='Path not provided'):
         require_file(None)
 
 
 def test_require_file_accepts_missing_path_when_optional():
-    '''Given no path and missing_ok true, when checked, then return None.'''
+    '''Given None and missing_ok=True, when checked, then return.'''
     assert require_file(None, missing_ok=True) is None

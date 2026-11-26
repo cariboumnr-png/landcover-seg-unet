@@ -22,32 +22,33 @@
 '''
 UNet++ backbone with nested skip connections.
 
-**Overview**
-UNet++ augments the standard UNet with densely connected nested skip paths
-to reduce the semantic gap between encoder and decoder representations.
-At each encoder depth `i` and refinement stage `j`, a node `X_{i,j}` is
-computed by combining:
-- the upsampled feature from the layer below (`X_{i+1, j-1}`),
-- the original encoder skip (`X_{i,0}`),
-- and all previous refinement nodes at the same depth (`X_{i,1}`, ...).
+Overview:
+    UNet++ augments the standard UNet with densely connected nested skip
+    paths to reduce the semantic gap between encoder and decoder
+    representations. At each encoder depth `i` and refinement stage `j`,
+    a node `X_{i,j}` is computed by combining:
+    - the upsampled feature from the layer below (`X_{i+1, j-1}`),
+    - the original encoder skip (`X_{i,0}`),
+    - previous refinement nodes at the same depth (`X_{i,1}`, ...).
 
-**Design points**
-- 4-level encoder (identical to UNet) producing X_{i,0} features.
-- Nested decoder computes X_{i,1}, X_{i,2}, X_{i,3}, and final X_{0,4}.
-- All decoder nodes emit `base_ch` channels for consistent concatenation.
-- Drop-in compatible with heads expecting `base_ch` width.
+Design Points:
+    - 4-level encoder matching `UNet` producing `X_{i,0}` features.
+    - Nested decoder computes `X_{i,1}`, `X_{i,2}`, `X_{i,3}`, and final
+      `X_{0,4}`.
+    - Full-resolution nodes emit `base_ch` channels for head input.
+    - Drop-in compatible with heads expecting `base_ch` width.
 
-**Expected tensor shapes**
-- Input:  (N, C_in, H, W)
-- Encoder levels: spatial size halves per level (H/2ᵏ, W/2ᵏ), channels
-  typically double per level.
-- Decoder levels: spatial size increases via bilinear upsampling;
-  concatenations occur along the channel dimension.
-- Output: (N, base_ch, H, W) as the decoded backbone feature.
+Expected Tensor Shapes:
+    - Input: `(N, C_in, H, W)`
+    - Encoder levels: spatial size halves per level (`H/2ᵏ`, `W/2ᵏ`),
+      channels double per level.
+    - Decoder levels: spatial size increases via bilinear upsampling;
+      concatenations occur along the channel dimension.
+    - Output: `(N, base_ch, H, W)` as the decoded backbone feature.
 
-**Notes**
-- This does not include deep supervision heads; it outputs X_{0,4}.
-- Convolution weights are Kaiming-initialized for ReLU activations.
+Notes:
+    - Does not include deep supervision heads; outputs `X_{0,4}` only.
+    - Convolution weights are Kaiming-initialized for ReLU activations.
 '''
 
 # third-party imports
@@ -58,25 +59,25 @@ import landseg.models.backbones.unet.body as body
 import landseg.models.backbones.unet.components as components
 
 class UNetPP(body.UNetBackbone):
-    '''UNet++ backbone with nested dense skip refinements.
+    '''
+    UNet++ backbone with nested dense skip refinements.
 
-    This class constructs a 4-level encoder identical to UNet, followed by
-    a nested decoder where each layer computes intermediate refinement
+    Constructs a 4-level encoder identical to `UNet`, followed by a
+    nested decoder where each layer computes intermediate refinement
     nodes (`X_{i,j}`) before producing the final decoded features.
 
-    **Components**
-    - inc: initial DoubleConv to lift input C_in → base_ch.
-    - downs: four Downsample blocks (x2 channels, ×½ spatial size each).
-    - nodes: ModuleDict of DoubleConv nodes that implement UNet++'s
-      `X_{i,j}` refinements at multiple depths/stages.
-    - ups: bilinear upsamplers used to align feature resolutions.
+    Components:
+        - `inc`: Initial `DoubleConv` lifting `C_in` to `base_ch`.
+        - `downs`: Four `Downsample` stages (`2x` ch, `0.5x` size).
+        - `nodes`: `ModuleDict` of `DoubleConv` refinement nodes
+          `X_{i,j}` across decoder depths and stages.
+        - `ups`: Bilinear upsamplers aligning feature resolutions.
 
-    **Notes**
-    - The backbone's `out_channels` equals `base_ch`.
-    - Skip concatenations are along channel dimension.
-    - Convolution weights are Kaiming initialized (ReLU-friendly).
+    Notes:
+        - The backbone's `out_channels` equals `base_ch`.
+        - Skip concatenations are along the channel dimension.
+        - Convolution weights are Kaiming-initialized for ReLU.
     '''
-
 
     def __init__(
         self,
@@ -86,40 +87,17 @@ class UNetPP(body.UNetBackbone):
         '''
         Construct the UNet++ nested-skip backbone.
 
-        **Architecture**
-
-        Encoder (X_{i,0}):
-            inc  → X_{0,0}
-            down → X_{1,0}
-            down → X_{2,0}
-            down → X_{3,0}
-            down → X_{4,0}
-
-        Nested decoder:
-            j = 1: X_{3,1}, X_{2,1}, X_{1,1}, X_{0,1}
-            j = 2: X_{2,2}, X_{1,2}, X_{0,2}
-            j = 3: X_{1,3}, X_{0,3}
-            j = 4: X_{0,4} (final output)
+        Initializes the 4-level encoder (`X_{i,0}`) and builds the
+        dense nested decoder graph (`X_{i,j}` for `j = 1..4`) with
+        bilinear upsamplers and Kaiming normal `Conv2d` weights.
 
         Args:
-            in_ch: Number of input channels.
-            base_ch: Base number of feature channels. Deeper layers use
-                multiples of this.
-            **kwargs: Section-level config for convolutional blocks.
-                Pass dictionaries keyed by section name, e.g.
-                `{'downs': {...}}` or `{'nodes': {...}}`. These
-                dictionaries are forwarded to `DoubleConv` modules
-                inside that section. See `models.backbones.DoubleConv`
-                for valid options (e.g., `norm`, `gn_groups`, `p_drop`).
-
-
-        **Notes**
-        - All decoder nodes output `base_ch` channels which simplifies
-          concatenation logic.
-        - This version does not include deep-supervision heads; it
-          produces only X_{0,4}.
+            in_ch:
+                Number of input channels.
+            config:
+                `UNetBodyConfig` specifying base channel width,
+                encoder parameters, and `nodes_conv_params`.
         '''
-
         super().__init__(in_ch, config)
         self._out_channels = ch = config.base_ch
 
@@ -171,12 +149,22 @@ class UNetPP(body.UNetBackbone):
 
     @property
     def spatial_divisor(self) -> int:
-        '''Minimum spatial divisor induced by the encoder hierarchy.'''
+        '''Return minimum spatial divisor induced by the encoder.'''
         return 2 ** len(self.downs)
 
     def encode(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        '''Return 5-level encoder features.'''
+        '''
+        Run the encoder path and bottleneck to extract 5-level features.
 
+        Args:
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
+        Returns:
+            tuple[torch.Tensor, ...]:
+                Five multi-scale feature tensors `(x1, x2, x3, x4, xb)`
+                ordered from finest to bottleneck resolution.
+        '''
         # unpack the 5 levels
         x1, x2, x3, x4, x5 = self.downs(x)
         # apply bottleneck to the deepest encoder feature
@@ -184,8 +172,19 @@ class UNetPP(body.UNetBackbone):
         return x1, x2, x3, x4, xb
 
     def decode(self, xs: tuple[torch.Tensor, ...]) -> torch.Tensor:
-        '''Decode nested UNet++ refinement graph.'''
+        '''
+        Decode encoder features through the nested UNet++ skip graph.
 
+        Args:
+            xs:
+                Five-element tuple `(x1, x2, x3, x4, xb)` produced by
+                `encode`.
+
+        Returns:
+            torch.Tensor:
+                Final refined feature map `X_{0,4}` of shape
+                `(B, out_channels, H, W)`.
+        '''
         # unpack
         x = {0: {}, 1: {}, 2: {}, 3: {}, 4: {}}
         x[0][0], x[1][0], x[2][0], x[3][0], x[4][0] = xs
@@ -216,13 +215,21 @@ class UNetPP(body.UNetBackbone):
         return x[0][4]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        '''End-to-end UNet++ forward pass.'''
+        '''
+        Compute the UNet++ feature map at input spatial resolution.
 
+        Args:
+            x:
+                Input tensor of shape `(B, C_in, H, W)`.
+
+        Returns:
+            torch.Tensor:
+                Output feature map of shape `(B, out_channels, H, W)`.
+        '''
         xs = self.encode(x)
         return self.decode(xs)
 
     def _cat(self, node: str, *tensors: torch.Tensor) -> torch.Tensor:
-        '''Concatenate then apply the named DoubleConv node.'''
-
+        '''Concatenate tensors and apply the named `DoubleConv` node.'''
         x = torch.cat(tensors, dim=1)
         return self.nodes[node](x)

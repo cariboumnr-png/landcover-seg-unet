@@ -23,10 +23,10 @@
 Color mapping and palette utilities for segmentation visualization.
 
 Public APIs:
-    - `DEFAULT_ERROR_PALETTE`: Standard orange/gray error highlight palette.
-    - `DEFAULT_MATCH_PALETTE`: Standard green/gray match highlight palette.
+    - `DEFAULT_ERROR_PALETTE`: Standard orange/gray error palette.
+    - `DEFAULT_MATCH_PALETTE`: Standard green/gray match palette.
     - `FORESTRY_FRI_PALETTE`: Standard Ontario FRI tree species palette.
-    - `NLCD_16_PALETTE`: Standard 16-class National Land Cover Database palette.
+    - `NLCD_16_PALETTE`: Standard 16-class NLCD land cover palette.
     - `colorize`: Map 2D class integer masks to 3D RGB tensors.
     - `colorize_continuous`: Map 2D float tensors to 3D RGB colormaps.
 '''
@@ -91,7 +91,25 @@ def colorize(
     *,
     palette: torch.Tensor | numpy.ndarray | dict[str, list[int]] | None = None,
 ) -> torch.Tensor:
-    '''Map class indices [H, W] -> RGB tensor [3, H, W].'''
+    '''
+    Map 2D class index mask `[H, W]` to RGB tensor `[3, H, W]`.
+
+    Args:
+        canvas:
+            Input 2D class index tensor `[H, W]`.
+        palette:
+            Optional color palette as tensor `[N, 3]`, NumPy array, or
+            class-index dictionary; defaults to a deterministic palette.
+
+    Returns:
+        torch.Tensor:
+            Colorized RGB uint8 tensor `[3, H, W]`.
+
+    Raises:
+        ValueError:
+            If `canvas` is not 2D or `palette` does not have shape
+            `[N, 3]`.
+    '''
     # palette handling
     if not bool(palette):  # None | empty array, dict, tensor
         max_cls = int(canvas.max().item()) if canvas.numel() > 0 else 0
@@ -142,7 +160,8 @@ def colorize_continuous(
         canvas:
             Input 2D tensor [H, W].
         cmap:
-            Matplotlib colormap identifier (e.g. 'viridis', 'turbo', 'RdYlGn').
+            Matplotlib colormap identifier (e.g., `'viridis'`,
+            `'turbo'`, `'RdYlGn'`).
         vmin:
             Optional lower normalization boundary.
         vmax:
@@ -150,7 +169,11 @@ def colorize_continuous(
 
     Returns:
         torch.Tensor:
-            Colorized RGB tensor [3, H, W] of dtype uint8.
+            Colorized RGB tensor `[3, H, W]` of dtype uint8.
+
+    Raises:
+        ValueError:
+            If `canvas` is not a 2D tensor `[H, W]`.
     '''
     if canvas.dim() != 2:
         raise ValueError('canvas must be 2D [H, W]')

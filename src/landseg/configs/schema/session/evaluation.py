@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
-'''
-Session model evaluation configuration.
-'''
+'''Session model evaluation configuration.'''
 
 # standard imports
 import dataclasses
@@ -34,6 +30,7 @@ import landseg.configs.schema.base as base
 
 @dataclasses.dataclass
 class EvaluationConfig(base.BaseConfigSection):
+    '''Configuration for model evaluation runs.'''
     checkpoint: str | None = None
     split: str = 'test'
     export_previews: bool = False
@@ -46,4 +43,5 @@ class EvaluationConfig(base.BaseConfigSection):
         return typing.cast(typing.Literal['val', 'test'], self.split)
 
     def validate(self) -> None:
+        '''Validate that evaluation split is `'val'` or `'test'`.'''
         self.val.require_value_from(self.split, ['val', 'test'], str)

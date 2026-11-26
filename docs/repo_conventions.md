@@ -17,9 +17,12 @@ These conventions apply to all contributions—whether written by human develope
    - [Section Delimiters & Script Ordering](#section-delimiters--script-ordering)
    - [Comments Formatting](#comments-formatting)
 3. [Documentation & Docstring Specifications](#3-documentation--docstring-specifications)
+   - [General Docstring Formatting](#general-docstring-formatting)
    - [Module-Level Docstrings](#module-level-docstrings)
    - [Public Functions & Methods](#public-functions--methods)
-   - [Dataclasses & Private Helpers](#dataclasses--private-helpers)
+   - [Classes, Dataclasses, and Structured Types](#classes-dataclasses-and-structured-types)
+   - [Private Helpers and Scripts](#private-helpers-and-scripts)
+   - [Test and Fixture Docstrings](#test-and-fixture-docstrings)
 4. [Typing Protocols & Static Analysis](#4-typing-protocols--static-analysis)
    - [Typing Protocols](#typing-protocols)
    - [Pylint & Code Quality Philosophy](#pylint--code-quality-philosophy)
@@ -77,10 +80,11 @@ Every Python source file (`.py`) in this repository must begin with the verbatim
 
 ### Line Length Limits
 
-* **Code Lines**: Must not exceed **80 characters**.
+* **Code Lines**: Must not exceed **80 characters** (with a hard ceiling of 90 characters in `.pylintrc` / `.agents/AGENTS.md` strictly for code lines).
   * *Pragmatic exception*: If a line exceeds 80 characters by only a couple characters (e.g., 81–83 characters) and wrapping would severely impair readability, leave it unwrapped rather than introducing awkward line breaks.
-* **Docstrings and Comments**: Must not exceed **72 characters**.
-  * Docstrings and comments must wrap cleanly to preserve terminal rendering and side-by-side diff legibility.
+* **Docstrings and Comments**: Target **72 characters**.
+  * Docstrings and comments should wrap cleanly to preserve terminal rendering and side-by-side diff legibility.
+  * *Pragmatic exception*: Do not leave huge empty space at the end of a docstring line solely because the next long word or backticked identifier would cross 72 characters (exceeding 72 by a few characters is preferable to heavily ragged wrapping), and leave unbreakable URLs or single long `Returns:` / `Yields:` type annotation lines unwrapped when splitting impairs clarity.
 
 ### Imports Organization
 
@@ -177,7 +181,10 @@ __getattr__, __dir__ = _lazy.attach(
 
 * **Top-Level Definitions**: Leave **exactly two blank lines** between top-level classes, functions, fixtures, and section delimiters.
 * **Class Methods**: Leave **exactly one blank line** between methods within a class definition.
-* **Docstring Trailing Spacing**: Leave **no blank lines** immediately after a function/method docstring before the first line of executable code.
+* **Function/Method Docstring Trailing Spacing**: Leave **no blank lines** immediately after a function/method docstring before the first line of executable code.
+* **Class Docstring Trailing Spacing**:
+  * Leave **no blank lines** after a class docstring in `typing.Protocol`, `@dataclasses.dataclass`, `TypedDict`, or `Enum` bodies (or when immediately followed by class attributes).
+  * Leave **exactly one blank line** after a standard class docstring when immediately followed by its first method (`def`).
 
 ```python
 def example_function(value: int) -> int:
@@ -233,16 +240,31 @@ When applicable, business Python modules should sequence definitions in the foll
 
 ## 3. Documentation & Docstring Specifications
 
-All docstrings must adhere to the 72-character line length limit.
+All docstrings must adhere to the 72-character target line length limit (see [Line Length Limits](#line-length-limits)).
+
+### General Docstring Formatting
+
+* **Quote Style**: Always use triple single quotes (`'''...'''`) for every docstring.
+* **Single-Line vs. Multi-Line Quote Placement**:
+  * Single-sentence docstrings must fit on one physical line (`'''Concise summary.'''`) rather than wrapping across three lines (`'''\nConcise summary.\n'''`).
+  * Multi-line docstrings must place the opening `'''` and closing `'''` on their own lines. Never place text on the opening or closing `'''` line of a multi-line docstring.
+* **Inline Markup**: Use Markdown single backticks (`` `symbol` ``) for code identifiers, parameter names, types, and module names. Never use reST double backticks (```` ``symbol`` ````) or Sphinx roles (e.g., `:mod:`, `:class:`).
+* **Summary Line & Casing**:
+  * Every docstring must begin with a concise one-line summary sentence (never start directly with `Args:` or `Returns:`), followed by a blank line before any explanatory paragraph or section header (`Args:`, `Returns:`, `Yields:`, `Raises:`, `Attributes:`).
+  * Capitalize descriptions and end sentences with terminal punctuation (e.g., `.`) across summaries, `Args:`, `Returns:`, `Yields:`, `Raises:`, and `Public APIs:`.
+* **No Work-in-Progress Markers**: Do not place `TODO`, `FIXME`, `XXX`, or `TMP` markers inside docstrings; track deferred tasks in `# TODO:` comments or issue trackers.
 
 ### Module-Level Docstrings
 
-Every Python module requires a top-level docstring placed immediately below the Crown Copyright header.
-
-* Structure:
+* **Placement (Line 22)**: Every `.py` module requires a top-level docstring placed immediately below the 20-line Crown Copyright header (after one blank line). Any file-level `# pylint: disable=...` pragmas (for diagnostics other than `missing-module-docstring`) must sit immediately **below** the module docstring before imports.
+* **Package `__init__.py` and Multi-Export `src/` Modules** (two or more public exports):
   1. A concise one-liner summary.
-  2. One or more short paragraphs explaining context, architecture, and purpose.
-  3. A `Public APIs:` section listing exported symbols and their brief descriptions in **flat ASCII alphabetical order** (`sorted()`), with no category sub-headers, matching `__all__` 1-to-1 when present.
+  2. One or more short paragraphs explaining context, architecture, and purpose (recommended for non-trivial modules and packages).
+  3. A `Public APIs:` section listing exported symbols as ``- `Symbol`: Capitalized description.`` in **flat ASCII alphabetical order** (`sorted()`), with no category sub-headers.
+  * **Synchronization**: Match `__all__` **1-to-1** when present (empty/marker `__init__.py` files with no exports omit `Public APIs:`). When `__all__` is absent, list all public classes, functions, and intentionally exported module constants or `TypeAlias`es. Prefix internal module-level aliases (e.g., `_field = dataclasses.field`) with `_` so they are not treated as public exports.
+  * **No Copy-Paste Drift**: Always verify that `__init__.py` namespace paths and module summaries match the actual file path and current responsibilities.
+* **Single-Class / Config Schema Modules, Private `_*.py` Modules, `scripts/`, and `tests/`**:
+  * Require a concise one-line summary (with an optional context paragraph); omit `Public APIs:`.
 
 ```python
 '''
@@ -254,19 +276,20 @@ evaluation, preflight readiness checks, and intake pipelines.
 Public APIs:
     - `run`: Run execution pipeline with resolved configuration.
     - `run_experiment`: Run full experiment lifecycle.
+    - `run_intake`: Run continuous intake workflow.
     - `run_preflight`: Run pre-flight diagnostic validation checks.
 '''
 ```
 
 ### Public Functions & Methods
 
-Public functions follow Google-style docstrings with arguments formatted on indented newlines:
+Public module-level functions and non-trivial public methods follow Google-style docstrings with arguments and returns formatted on indented newlines:
 
-* Structure:
+* **Full Google-Style Structure**:
   1. One-liner summary, followed by an optional descriptive paragraph.
-  2. `Args:` block where each parameter name is followed by a colon, and its description is placed on a new indented line.
-  3. `Returns:` block with the type annotation and description on a new indented line.
-  4. `Raises:` block (if applicable) documenting exceptions.
+  2. `Args:` block where each parameter name (`param:`, `*args:`, `**kwargs:`) matches the signature exactly in parameter order, with its description on a new indented line. Never embed `(type)` annotations inside `Args:`, never document `self` or `cls`, and never leave missing or stale/phantom parameters.
+  3. `Returns:` block (or `Yields:` for generators and `@contextlib.contextmanager` functions) with the return or yielded type matching the signature annotation on its own line and the description on a new indented line. Omit `Returns:` when the return annotation is `-> None`.
+  4. `Raises:` block (when exceptions are directly raised or contractually surfaced), with each exception class on its own line and its condition on a new indented line.
 
 ```python
 def configure_stage(target: str, strict: bool = False) -> StageConfig:
@@ -293,9 +316,16 @@ def configure_stage(target: str, strict: bool = False) -> StageConfig:
     ...
 ```
 
-### Dataclasses & Private Helpers
+* **Permitted One-Liners & Exemptions**:
+  * `@property` and `@cached_property`: Use a concise one-liner (`'''Return ...'''`) rather than a `Returns:` block.
+  * **Fluent Setters & Trivial Overrides**: Concise one-liners are permitted on 1-argument fluent setters (`set_*(self, value) -> typing.Self`), trivial `@override` hooks, and schema `.validate()` methods when parameters and behavior are self-evident.
+  * **Dunder Methods**: Non-trivial `__init__` (accepting arguments beyond `self`) and custom `__call__` or `__getitem__` require docstrings (Google-style `Args:` without `Returns:` for `__init__`; standard Google-style for `__call__`). Standard data-model dunders (`__str__`, `__repr__`, `__len__`, `__post_init__`) may omit docstrings unless behavior is non-obvious.
+  * **`@typing.overload` Stubs**: **Must omit docstrings** (mirroring `typing.Protocol` stubs); place the full Google-style docstring only on the concrete implementation definition.
 
-Dataclasses, private helper functions, and test setup helpers should use a concise one-liner docstring:
+### Classes, Dataclasses, and Structured Types
+
+* **Regular Classes (`class`)**: Require a class docstring—either a concise one-liner or a summary followed by an optional descriptive paragraph and `Attributes:` / `Notes:` sections. Document constructor arguments on `__init__` rather than duplicating `Args:` on the class unless `__init__` is inherited or omitted.
+* **Dataclasses, `TypedDict`, `Enum`, and `Exception` Subclasses**: Require a concise one-liner docstring on every public and private definition (multi-line descriptions are permitted for complex public contracts or `Enum` member summaries). Follow the Class Docstring Trailing Spacing rule in [Vertical Spacing & Blank Lines](#vertical-spacing--blank-lines).
 
 ```python
 @dataclasses.dataclass(frozen=True)
@@ -303,10 +333,33 @@ class GridCoordinate:
     '''Immutable spatial grid coordinate representation.'''
     x: int
     y: int
+```
 
+### Private Helpers and Scripts
 
+* **Private Helper Functions & Methods (`_helper`)** and **Script Helpers (`scripts/`)**: Use a concise one-liner docstring (`'''Compute deterministic cache key from input metadata.'''`). Avoid multi-line Google-style bloat unless a private helper carries complex invariants or non-obvious arguments.
+* **Nested Inner Functions**: Short local helper functions nested inside another function or method may omit docstrings when trivial and self-contained.
+
+```python
 def _resolve_cache_key(prefix: str, identifier: str) -> str:
     '''Compute deterministic cache key from input metadata.'''
+    ...
+```
+
+### Test and Fixture Docstrings
+
+* **Test Modules (`tests/**/*.py`)**: Use a concise one-line module docstring; omit `Public APIs:`.
+* **Test Functions (`test_*`)**: Follow the `Given: / When: / Then:` behavior-driven format (multi-line `Given:` / `When:` / `Then:` blocks, or a single-line `'''Given ..., when ..., then ...'''` within 72 characters for simple parametrized tests). Omit `Args:` and `Returns:`.
+* **Fixtures (`conftest.py`) & Private Test Setup Helpers (`_make_*`)**: Require a concise one-liner docstring (or Google-style `Yields:`/`Returns:` for multi-step factory fixtures).
+* **Local Test Fakes & Stubs**: Local fake/mock classes inside tests may use a concise class one-liner and omit docstrings on trivial stub methods.
+
+```python
+def test_logger_disabled_console(tmp_path):
+    '''
+    Given: A console logging level of None.
+    When: Initializing a `Logger` instance.
+    Then: No `StreamHandler` is attached to the logger.
+    '''
     ...
 ```
 
@@ -318,10 +371,11 @@ def _resolve_cache_key(prefix: str, identifier: str) -> str:
 
 When defining interfaces via `typing.Protocol`:
 
-* **Compact Layout**: Keep protocol class definitions compact with **no blank lines** within the class body.
+* **Class Docstring**: Every `Protocol` class (public or private) requires a concise one-liner docstring (multi-line is allowed for complex core interfaces).
+* **Compact Layout**: Keep protocol class definitions compact with **no blank lines** within the class body (immediately after the docstring and between members).
 * **No Docstrings on Stubs**: Do not place docstrings on individual method or property stubs inside the protocol.
 * **Attribute Properties**: Define protocol attributes using `@property` stubs with explicit return type annotations.
-* **Pylint Pragma**: Include `# pylint: disable=missing-function-docstring` near the top of the file when protocol definitions omit method docstrings.
+* **Module Isolation & Scoped Pragmas**: Place `Protocol` classes in dedicated `protocols.py` or `contracts/*.py` modules whenever possible, with `# pylint: disable=missing-function-docstring` placed immediately below the module docstring before imports. When a `Protocol` shares a file with concrete code, scope `# pylint: disable=missing-function-docstring` strictly around the `Protocol` class and restore it afterward with `# pylint: enable=missing-function-docstring`.
 
 ```python
 class SessionConfigShape(typing.Protocol):
@@ -337,8 +391,11 @@ class SessionConfigShape(typing.Protocol):
 ### Pylint & Code Quality Philosophy
 
 * **No Score Chasing / Pragma Spam**: Do not force a 10.0 Pylint score by spamming `# pylint: disable` flags across codebase files.
-* **Pragmatic Disables**: Only use disable pragmas when strictly warranted (e.g., `# pylint: disable=protected-access` in unit tests accessing internal states, or `# pylint: disable=missing-function-docstring` for protocols).
-* **Fix the Root Cause**: Address underlying typing, architectural, or modularization issues instead of masking valid linter diagnostics.
+* **No Docstring Suppression Abuse**:
+  * Never use file-level `# pylint: disable=missing-class-docstring`.
+  * Never use `# pylint: disable=missing-function-docstring` in files without `typing.Protocol` definitions (never use it to skip documenting base classes, property containers, or `conftest.py` fixtures).
+* **Pragmatic Disables**: Only use disable pragmas when strictly warranted (e.g., `# pylint: disable=protected-access` in unit tests accessing internal states, or scoped `missing-function-docstring` for `typing.Protocol` stubs).
+* **Automated AST Enforcement & Root Fixes**: Address underlying typing, documentation, or modularization issues instead of masking diagnostics. Because `.pylintrc` (`max-line-length=90`) cannot catch 73–90 character docstrings, signature/`Public APIs:` drift, post-docstring blank lines, or reST markup, enforce these conventions via automated AST checks/tests alongside code review.
 
 ---
 
@@ -468,15 +525,15 @@ Before submitting code, verify adherence to this checklist:
 | **Crown Copyright** | Verbatim 20-line header at lines 1–20 of every `.py` file | [Section 1](#1-crown-copyright--legal-compliance) |
 | **Imports** | 3 categories, lowercase headers, no blank lines between categories, no `np`/`pd` | [Section 2](#imports-organization) |
 | **Wrapping & `__all__`** | One-or-vertical (never bin-pack); flat ASCII-sorted `__all__`, no group comments | [Section 2](#multi-line-wrapping--package-namespaces) |
-| **Line Length** | Code $\le$ 80 chars; docstrings and comments $\le$ 72 chars | [Section 2](#line-length-limits) |
-| **Vertical Spacing** | 2 blank lines top-level; 1 between methods; 0 after docstring | [Section 2](#vertical-spacing--blank-lines) |
+| **Line Length** | Code $\le$ 80 chars (90 hard max); docstrings and comments target $\le$ 72 chars | [Section 2](#line-length-limits) |
+| **Vertical Spacing** | 2 blank lines top-level; 1 between methods; 0 after func/Protocol/dataclass docstrings | [Section 2](#vertical-spacing--blank-lines) |
 | **Section Delimiters** | `# ----- `[Symbol]` [action]`, 2 blank lines before, 0 after | [Section 2](#section-delimiters--script-ordering) |
 | **Comments** | Start with lowercase letter or `` `Symbol` ``, 1 space after `#` | [Section 2](#comments-formatting) |
-| **Docstrings** | Module docstring with ASCII-sorted `Public APIs:`; Google-style function docs | [Section 3](#3-documentation--docstring-specifications) |
-| **Typing Protocols** | Compact, no blank lines, `@property` stubs, top-level pylint disable | [Section 4](#typing-protocols) |
-| **Pylint** | No score chasing or pragma spam; clean architecture first | [Section 4](#pylint--code-quality-philosophy) |
+| **Docstrings** | `'''` quotes, single backticks; line 22 module doc (`Public APIs:` for packages/multi-export); Google-style public funcs; `Given/When/Then` tests | [Section 3](#3-documentation--docstring-specifications) |
+| **Typing Protocols** | Class docstring, compact body, no stub docstrings, isolated or block-scoped pylint disable | [Section 4](#typing-protocols) |
+| **Pylint** | No `missing-class-docstring` file disables; no `missing-function-docstring` outside protocols; AST checks | [Section 4](#pylint--code-quality-philosophy) |
 | **Test Boundary** | Fast unit tests in `tests/unit/`; e2e pipelines in `tests/integration/` | [Section 5](#unit-vs-integration-boundary) |
-| **Fixtures** | Shared fixtures in `conftest.py`; test helpers in `_helper` functions | [Section 5](#fixture-scope--placement) |
+| **Fixtures** | Shared fixtures in `conftest.py` (with one-liners); test helpers in `_helper` functions | [Section 5](#fixture-scope--placement) |
 | **Path Handling** | Consistently use `pathlib.Path` over raw strings | [Section 5](#pathlib-contracts) |
 | **Scratch Space** | All exploratory/debug scripts placed in git-ignored `sandbox/` | [Section 6](#scratch--analysis-space-sandbox) |
 | **Diff Hygiene** | Tightly scoped changes; no unsolicited refactoring sweeps | [Section 6](#diff-hygiene--scoped-changes) |

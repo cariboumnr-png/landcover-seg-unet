@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Session observer protocol definitions for the training engine.
 
@@ -47,8 +45,10 @@ All methods are optional at runtime, but type-checking ensures interface
 compliance when explicitly implemented.
 
 Public APIs:
-    - `SessionObserverLike`: protocol for session event observers.
+    - `SessionObserverLike`: Protocol for session event observers.
 '''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 import typing

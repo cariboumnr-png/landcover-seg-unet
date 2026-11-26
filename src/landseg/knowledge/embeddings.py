@@ -20,8 +20,15 @@
 # =========================================================================== #
 
 '''
-Generate Sentence Transformer embeddings for tree species ecological
-profiles.
+Sentence Transformer embeddings for tree species ecological profiles.
+
+Generates species embedding tensors, cosine similarity matrices, and
+metadata JSON artifacts from ecological profile CSV definitions.
+
+Public APIs:
+    - `SpeciesEmbeddingsMetadata`: Species profile metadata TypedDict.
+    - `SpeciesEntry`: Per-species embedding entry TypedDict.
+    - `generate_embeddings_and_matrix`: Build embeddings and matrix.
 '''
 
 # standard imports
@@ -62,14 +69,17 @@ def generate_embeddings_and_matrix(
     normalize: bool = True,
 ) -> None:
     '''
-    Generate Sentence Transformer embeddings and similarity matrix from
-    species CSV.
+    Generate Sentence Transformer embeddings and matrix from CSV.
 
     Args:
-        csv_path: Path to species/grouped profiles CSV.
-        knowledge_root: Root directory path for knowledge base artifacts.
-        model_name: HuggingFace sentence transformer model name.
-        normalize: Whether to L2-normalize embeddings for cosine similarity.
+        csv_path:
+            Path to species or grouped profiles CSV file.
+        knowledge_root:
+            Root directory path for knowledge base artifacts.
+        model_name:
+            HuggingFace Sentence Transformer model identifier.
+        normalize:
+            Whether to L2-normalize embeddings for cosine similarity.
     '''
     csv_stem = csv_path.stem
     kp = artifacts.KnowledgePaths(root=knowledge_root)

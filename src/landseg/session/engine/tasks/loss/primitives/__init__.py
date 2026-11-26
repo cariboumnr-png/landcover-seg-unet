@@ -20,11 +20,17 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for
-`landseg.session.engine.runtime.tasks.loss.primitives`.
+Top-level namespace for `landseg.session.engine.tasks.loss.primitives`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `DiceLoss`: Multi-class soft Dice segmentation loss.
+    - `EcologicalSimilarityLoss`: Cosine-dissimilarity species loss.
+    - `FocalLoss`: Weighted multi-class focal classification loss.
+    - `SpectralSmoothnessLoss`: Feature-aware pairwise smoothness loss.
+    - `TotalVariationLoss`: Spatial total-variation smoothness loss.
 '''
 
 # standard imports

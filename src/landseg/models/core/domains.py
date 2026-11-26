@@ -22,22 +22,14 @@
 '''
 Domain conditioning routing utilities.
 
-This module provides lightweight infrastructure for routing raw domain
-conditioning inputs to named architecture targets.
+Provides lightweight infrastructure for routing raw domain conditioning
+inputs (discrete identifiers and continuous vectors) to named
+architecture targets. Consumption of routed payloads is delegated to
+downstream conditioning modules.
 
-Supported conditioning sources include:
-- discrete domain identifiers
-- continuous domain vectors
-
-Each target independently defines:
-- whether identifier embeddings are used
-- whether vector projections are used
-- the projection architecture for vector conditioning
-
-The router itself is architecture-agnostic and only produces routed
-conditioning payloads. Consumption of routed payloads is delegated to
-downstream conditioning modules (e.g., concatenation adapters, FiLM
-layers, normalization conditioning, attention modulation).
+Public APIs:
+    - `DomainContextRouter`: Route domain inputs to named targets.
+    - `DomainTargetPayload`: Container for routed domain tensors.
 '''
 
 # standard imports
@@ -82,18 +74,17 @@ class DomainContextRouter(torch.nn.Module):
         conditioning source.
 
         Args:
-            domain_ids_num: Total number of discrete domain identifiers.
-                Required when one or more targets enable identifier
-                embeddings.
-
-            domain_vec_dim: Input dimensionality of continuous domain
-                vectors. Required when one or more targets enable vector
+            domain_ids_num:
+                Total number of discrete domain identifiers. Required
+                when one or more targets enable identifier embeddings.
+            domain_vec_dim:
+                Input dimensionality of continuous domain vectors.
+                Required when one or more targets enable vector
                 projections.
-
-            targets: Mapping of target names to target-specific
+            targets:
+                Mapping of target names to target-specific
                 conditioning configurations.
         '''
-
         super().__init__()
         self.targets = targets
         self.ids_embd = torch.nn.ModuleDict()
@@ -123,24 +114,20 @@ class DomainContextRouter(torch.nn.Module):
         Route domain conditioning inputs to configured targets.
 
         Args:
-            ids: Tensor containing discrete domain identifiers. May be
-                omitted if identifier conditioning is unused.
-
-            vec: Tensor containing continuous domain vectors. May be
-                omitted if vector conditioning is unused.
+            ids:
+                Tensor containing discrete domain identifiers, or `None`
+                if identifier conditioning is unused.
+            vec:
+                Tensor containing continuous domain vectors, or `None`
+                if vector conditioning is unused.
 
         Returns:
-            dict:
+            dict[str, DomainTargetPayload]:
                 Mapping of target names to routed conditioning payloads.
-
-            Each payload may contain:
-            - embedded domain identifiers
-            - projected domain vectors
-
-            Individual payload fields are `None` when the corresponding
-            conditioning source is unavailable or disabled for the target.
+                Individual payload fields are `None` when the
+                corresponding conditioning source is unavailable or
+                disabled for the target.
         '''
-
         routed: dict[str, DomainTargetPayload] = {}
         for name, _ in self.targets.items():
 
@@ -167,7 +154,6 @@ def _make_projection(
     projection_config: config.DomainProjectionConfig,
 ) -> torch.nn.Module:
     '''Build a linear or MLP projection for domain vectors.'''
-
     # parse configs with defaults
     use_mlp = projection_config.get('use_mlp', False)
     hidden_dim = projection_config.get('hidden_dim', 0) or out_dim
@@ -196,7 +182,6 @@ def _make_projection(
 
 def _get_activation(name: str) -> torch.nn.Module:
     '''Return an activation module by name.'''
-
     if name == 'relu':
         return torch.nn.ReLU()
     if name == 'gelu':

@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for domain context routing (domains.py).'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest

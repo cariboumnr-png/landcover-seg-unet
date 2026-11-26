@@ -28,8 +28,7 @@ duality of `DatasetItem` batches and stacks domain tensors across
 batch items.
 
 Public APIs:
-    - `batch`: collate a sequence of `DatasetItem` into a
-      single batched `DatasetItem`.
+    - `batch`: Collate a sequence of `DatasetItem` into one batch.
 '''
 
 # standard imports
@@ -45,12 +44,25 @@ def batch(
     input_batch: typing.Sequence[contracts.DatasetItem]
 ) -> contracts.DatasetItem:
     '''
-    Customized collate function to properly stack a batch.
+    Collate a sequence of `DatasetItem` tuples into a single batch.
 
     Contract per split:
-      - Labeled: every y is [ps, ps] (long) -> stacked to [B, ps, ps]
-      - Unlabeled: every y is empty tensor -> stacked to [B, 0] (long)
-      - Domain: all items share the same keys; each stacks to [B, ...]
+        - Labeled: `y` of shape `[ps, ps]` stacks to `[B, ps, ps]`.
+        - Unlabeled: empty `y` tensors stack to `[B, 0]`.
+        - Domain: all items share keys, stacked along dim 0.
+
+    Args:
+        input_batch:
+            Sequence of `(x, y, domain)` dataset items to stack.
+
+    Returns:
+        contracts.DatasetItem:
+            Batched `(x, y, domain)` tuple with leading batch axis.
+
+    Raises:
+        ValueError:
+            If labeled items have inconsistent `y` shapes or labeled
+            and unlabeled items are mixed in the same batch.
     '''
     # unpack batch items into separate lists
     xs, ys, ds = zip(*input_batch)

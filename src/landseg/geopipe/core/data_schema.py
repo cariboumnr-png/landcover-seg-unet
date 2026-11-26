@@ -51,14 +51,13 @@ class DataSchema(typing.TypedDict):
     tensor layouts, and labeling configuration.
 
     Fields:
-        dataset: dataset identity and provenance information.
-        io_conventions: serialization format, tensor ordering, dtypes.
-        tensor_shapes: explicit tensor shape specifications.
-        labels: label schema, hierarchy, and ignore rules.
+        dataset: Dataset identity and provenance information.
+        io_conventions: Serialization format, tensor ordering, dtypes.
+        tensor_shapes: Explicit tensor shape specifications.
+        labels: Label schema, hierarchy, and ignore rules.
 
     Schema: SCHEMA_ID = 'data_schema/v0.1.0'
     '''
-
     schema_id: str
     dataset: _DatasetInfo
     io_conventions: _IOConventions

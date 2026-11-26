@@ -50,7 +50,19 @@ class InspectionContext:
         config: configs.RootConfig,
         artifact_paths: artifacts.ArtifactPaths | None = None,
     ) -> 'InspectionContext':
-        '''Build inspection context from a root configuration.'''
+        '''
+        Build an inspection context from a root configuration.
+
+        Args:
+            config:
+                Root execution configuration.
+            artifact_paths:
+                Optional pre-resolved artifact paths container.
+
+        Returns:
+            InspectionContext:
+                Immutable inspection context instance.
+        '''
         return cls(
             config=config,
             paths=(

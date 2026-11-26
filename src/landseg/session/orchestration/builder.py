@@ -38,11 +38,11 @@ centralizes runner instantiation in order to:
 - isolate runner selection logic from higher-level application code
 
 All constructed runners expose training progress exclusively as a
-generator of epoch-level ``TrainingStep`` records, ensuring a uniform
-external contract regardless of internal training structure.
+generator of `SessionStepSummary` records, ensuring a uniform external
+contract regardless of internal training structure.
 
 Public APIs:
-    - `build_runner`: factory function constructing concrete runners.
+    - `build_runner`: Factory function constructing concrete runners.
 '''
 
 # standard imports
@@ -107,28 +107,28 @@ def build_runner(
 
     Args:
         epoch_engine:
-            epoch execution engine responsible for running epochs.
+            Epoch execution engine responsible for running epochs.
         config:
-            orchestration configuration containing monitor settings and
+            Orchestration configuration containing monitor settings and
             phase definitions.
         dispatcher:
-            callback dispatcher broadcasting lifecycle events to
+            Callback dispatcher broadcasting lifecycle events to
             registered observers.
         session_artifact_paths:
-            resolved session directory paths for saving checkpoints and
+            Resolved session directory paths for saving checkpoints and
             metrics.
         runner_type:
-            selector for the runner implementation to construct
+            Selector for the runner implementation to construct
             (`'continuous'` or `'curriculum'`).
 
     Returns:
         runner.ContinuousRunner | runner.CurriculumRunner:
-            concrete runner instance exposing training progress as a
+            Concrete runner instance exposing training progress as a
             generator of step records.
 
     Raises:
         ValueError:
-            if phase configuration does not match the expected type
+            If phase configuration does not match the expected type
             for the selected `runner_type`.
     '''
     base_config = runner.BaseRunnerConfig(

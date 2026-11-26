@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Loss and regularization preset objectives.'''
+'''
+Loss and regularization preset objectives.
+
+Public APIs:
+    - `obj_loss_aux`: Sample auxiliary spectral and TV loss weights.
+    - `obj_loss_balance`: Sample focal and dice loss component weights.
+    - `obj_regularization`: Sample multi-task consistency lambda.
+'''
 
 # third-party imports
 import optuna
@@ -31,11 +38,18 @@ def obj_loss_balance(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Main loss balance mutations:
-      - Focal loss weight (`float`)
-      - Dice loss weight (`float`)
-    '''
+    Sample primary focal and dice loss weights for an Optuna trial.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.objectives.loss_balance
 
     trial_cfg.set_objective_focal_weight(
@@ -61,11 +75,18 @@ def obj_loss_aux(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Auxiliary loss mutations:
-      - Spectral loss weight (`float`)
-      - TV loss weight (`float`)
-    '''
+    Sample auxiliary spectral and total variation loss weights.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.objectives.loss_auxiliary
 
     trial_cfg.set_objective_spectral_weight(
@@ -91,10 +112,18 @@ def obj_regularization(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Regularization mutations:
-      - consistency regularizer lambda weight (`float`)
-    '''
+    Sample multi-task consistency regularization weight.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.objectives.regularization
 
     trial_cfg.set_mtl_consistency_lambda(

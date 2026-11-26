@@ -22,8 +22,20 @@
 '''
 Top-level namespace for `landseg.models.core`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes core domain conditioning adapters, routing utilities,
+configuration contracts, multi-task head management, and numerical
+safety helpers via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `ConcatAdapter`: Channel concatenation domain conditioner.
+    - `DomainContextRouter`: Router for domain conditioning payloads.
+    - `DomainProjectionConfig`: TypedDict for domain vector projection.
+    - `DomainTargetConfig`: Protocol for domain target configuration.
+    - `DomainTargetPayload`: Container for routed domain tensors.
+    - `FilmConditioner`: FiLM affine modulation domain conditioner.
+    - `HeadManager`: Multi-task output head and freeze manager.
+    - `NumericSafety`: AMP autocast and tensor clamping helper.
 '''
 
 # standard imports

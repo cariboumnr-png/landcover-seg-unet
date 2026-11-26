@@ -19,11 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''CLI entry point for Hydra-configured pipeline execution.'''
 # pylint: disable=no-value-for-parameter
-
-'''
-CLI entry.
-'''
 
 # standard imports
 import pathlib
@@ -41,8 +38,17 @@ import landseg.runtime as runtime
 # main process
 @hydra.main('pkg://landseg/configs/hydra', 'config', version_base='1.3')
 def main(config: omegaconf.DictConfig) -> typing.Any:
-    '''Run the selected CLI pipeline with resolved configuration.'''
+    '''
+    Run the selected CLI pipeline with resolved configuration.
 
+    Args:
+        config:
+            Hydra-composed configuration mapping.
+
+    Returns:
+        typing.Any:
+            Result returned by the dispatched pipeline command.
+    '''
     # cli logger
     # use platform-agnostic temp directory
     # /tmp is databricks compute node friendly

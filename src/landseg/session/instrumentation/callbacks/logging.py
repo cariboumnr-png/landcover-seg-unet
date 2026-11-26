@@ -30,7 +30,7 @@ import landseg.session.instrumentation.callbacks.base as base
 
 # ----- public classes
 class LoggingCallback(base.BaseCallback):
-    '''Logging callback'''
+    '''Logging callback for session lifecycle events.'''
 
     def __init__(
         self,
@@ -38,11 +38,26 @@ class LoggingCallback(base.BaseCallback):
         *,
         verbose: bool = True
     ):
-        '''Initialize the logging callback.'''
+        '''
+        Initialize the logging callback.
+
+        Args:
+            logger:
+                Optional logger instance for recording session messages.
+            verbose:
+                Whether verbose console output is enabled.
+        '''
         super().__init__(verbose=verbose)
         self.logger = logger
 
     def on_session_phase_begin(self, phase: contracts.PhaseLike) -> None:
+        '''
+        Log phase configuration details at phase start.
+
+        Args:
+            phase:
+                Phase configuration entering execution.
+        '''
         if self.logger:
             self.logger.info(f'[START] Phase {phase.name}')
             self.logger.info(f'- Max Epochs:\t{phase.num_epochs}')
@@ -51,10 +66,28 @@ class LoggingCallback(base.BaseCallback):
             self.logger.info(f'- Frozen Heads:\t{phase.frozen_heads}')
 
     def on_batch_begin(self, action: str, bidx: int) -> None:
+        '''
+        Log debug message at batch start.
+
+        Args:
+            action:
+                Execution mode name for the batch.
+            bidx:
+                Zero-based index of the batch starting execution.
+        '''
         if self.logger:
             self.logger.debug(f'{action}... batch_{bidx:04d}')
 
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
+        '''
+        Log training batch losses, regularization, and learning rate.
+
+        Args:
+            bidx:
+                Zero-based index of the completed training batch.
+            results:
+                Training step results for the completed batch.
+        '''
         if self.logger and results.metrics_updated:
             text_list: list[str] = []
             text_list.append(f'total_obj: {results.total_objective:.4f}')
@@ -71,6 +104,13 @@ class LoggingCallback(base.BaseCallback):
             self.logger.debug(msg)
 
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
+        '''
+        Log epoch summary metrics at session step completion.
+
+        Args:
+            results:
+                Summary of metrics and status for the completed step.
+        '''
         metrics = results.raw_metrics
         if self.logger:
             # training metrics is always present
@@ -88,9 +128,25 @@ class LoggingCallback(base.BaseCallback):
             self.logger.info(epoch_str)
 
     def on_session_phase_end(self, phase: str, reason: str) -> None:
+        '''
+        Log completion banner when a session phase ends.
+
+        Args:
+            phase:
+                Name of the completed phase.
+            reason:
+                Reason the phase terminated.
+        '''
         if self.logger:
             self.logger.info(f'[COMPLETE] Phase {phase} ({reason})')
 
     def on_checkpointing(self, fp: str) -> None:
+        '''
+        Log the file path of a newly saved checkpoint.
+
+        Args:
+            fp:
+                File path where the checkpoint was saved.
+        '''
         if self.logger:
             self.logger.info(f'Checkpoint saved: {fp}')

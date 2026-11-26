@@ -19,10 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''Unit tests for objective module (objective.py).'''
+
 # pylint: disable=protected-access
 # pylint: disable=unsubscriptable-object
-
-'''Unit tests for objective module (objective.py).'''
 
 # standard imports
 import dataclasses
@@ -38,7 +38,7 @@ def test_shift_1_to_0_basic():
     '''
     Given: 1-based target tensor and ignore_index.
     When: Calling `_shift_1_to_0`.
-    Then: Labels are shifted 1..K -> 0..K-1, keeping ignore_index unchanged.
+    Then: Shift labels 1..K -> 0..K-1 while keeping `ignore_index`.
     '''
     target = torch.tensor([[1, 2], [3, 0]])
     ignore_idx = 0
@@ -67,7 +67,7 @@ def test_get_masks_exclusion_and_parent():
     '''
     Given: Target tensor, exclusion classes, and parent gating details.
     When: Calling `_get_masks`.
-    Then: Return mask dict mapping 0.05 for exclusion and 0.0 for parent gating.
+    Then: Return mask dict with 0.05 exclusion and 0.0 parent gating.
     '''
     raw = torch.tensor([[1, 3], [2, 1]])
     parent_tensor = torch.tensor([[1, 1], [2, 1]])
@@ -115,9 +115,9 @@ def test_prep_loss_compute(mock_hlosses, mock_hspecs):
 # ----- `multihead_objective` public function tests
 def test_multihead_objective_basic(mock_hlosses, mock_hspecs):
     '''
-    Given: Multihead predictions, targets, features, and TrainingObjectives.
+    Given: Multihead predictions, targets, features, and objectives.
     When: Calling `multihead_objective`.
-    Then: Calculate per-head loss, total loss, and return `_ObjectiveResults`.
+    Then: Compute per-head and total losses in `_ObjectiveResults`.
     '''
     preds = {'head_1': torch.tensor([[[[1.0]], [[2.0]]]])} # [1, 2, 1, 1]
     targets = {'head_1': torch.tensor([[[1]]])} # [1, 1, 1]
@@ -141,7 +141,7 @@ def test_multihead_objective_with_regularizer(mock_hlosses, mock_hspecs):
     '''
     Given: `TrainingObjectives` configured with a regularizer.
     When: Calling `multihead_objective`.
-    Then: Add regularizer output to total loss and store in regularization dict.
+    Then: Add regularizer loss to total and regularization dict.
     '''
     preds = {'head_1': torch.tensor([[[[1.0]], [[2.0]]]])}
     targets = {'head_1': torch.tensor([[[1]]])}
@@ -182,8 +182,10 @@ def test_multihead_objective_nan_loss_raises(mock_hlosses, mock_hspecs):
 
 # ----- internal helpers
 def _get_objective(mock_hspecs, mock_hlosses, has_regularizer = False):
-
+    '''Build `TrainingObjectives` with optional mock regularizer.'''
     class _MockRegularizer(torch.nn.Module):
+        '''Mock regularizer returning a constant scalar penalty.'''
+
         def __init__(self, reduction: str = 'mean', val: float = 0.5):
             super().__init__()
             self.reduction = reduction

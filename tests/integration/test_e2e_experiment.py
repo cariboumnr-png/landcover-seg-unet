@@ -41,8 +41,10 @@ def test_full_ml_experiment_and_evaluate_lifecycle(
 ):
     '''
     Given: Canonical dummy raw raster datasets and manifest.
-    When: `execute_e2e_experiment` runs end-to-end, followed by evaluation.
-    Then: Produce all ETL artifacts, train UNet model, and evaluate checkpoint.
+    When: `execute_e2e_experiment` runs end-to-end, followed by
+        evaluation.
+    Then: Produce all ETL artifacts, train UNet model, and evaluate
+        checkpoint.
     '''
     cfg_schema = omegaconf.OmegaConf.structured(configs.RootConfig)
 

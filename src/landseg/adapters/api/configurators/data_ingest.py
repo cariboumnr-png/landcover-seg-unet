@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Data ingestion configurator
-'''
+'''Data ingestion configurator.'''
 
 # standard imports
 import pathlib
@@ -43,6 +41,18 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         output_dpath: str | pathlib.Path | None = None,
         experiment_root: str | pathlib.Path | None = None,
     ):
+        '''
+        Initialize the data ingestion configurator.
+
+        Args:
+            upstream_dpath:
+                Optional directory path for upstream harmonization
+                outputs.
+            output_dpath:
+                Optional destination directory for ingested artifacts.
+            experiment_root:
+                Optional experiment root directory for unified mode.
+        '''
         super().__init__(
             'data-ingest',
             upstream_dpath=upstream_dpath,
@@ -59,7 +69,7 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
         self,
         target: int | str | pathlib.Path = 'latest',
     ) -> typing.Self:
-        '''Set targeted harmonization run index, folder name, or path.'''
+        '''Set target harmonization run index, folder name, or path.'''
         self.cfg.data.ingestion.harmonization_run = (
             str(target)
             if isinstance(target, pathlib.Path)
@@ -82,6 +92,10 @@ class DataIngestionConfigurator(configurators.BaseConfigurator):
             add_spectral:
                 List of spectral indices to calculate (e.g.,
                 `['ndvi', 'ndmi', 'nbr']`).
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
         '''
         self.cfg.data.ingestion.datablocks.add_topo = add_topo
         self.cfg.data.ingestion.datablocks.add_spectral = add_spectral

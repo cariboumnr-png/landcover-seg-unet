@@ -50,6 +50,7 @@ class DataConfig(base.BaseConfigSection):
     specification: DataSpecification = field(default_factory=DataSpecification)
 
     def validate(self):
+        '''Validate all nested geospatial data config sections.'''
         self.world_grid.validate()
         self.harmonization.validate()
         self.ingestion.validate()

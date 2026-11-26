@@ -19,10 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Utility script to generate dummy/mock geospatial datasets (GeoTIFFs)
-and corresponding configurations for local pipeline runs and testing.
-'''
+'''Generate mock geospatial datasets and configs for local runs.'''
 
 # standard imports
 import argparse

@@ -80,7 +80,7 @@ def test_artifact_paths_custom_overrides():
     '''
     Given: Explicit per-pipeline sub-root path overrides.
     When: Instantiating `ArtifactPaths` with sub-root parameters.
-    Then: Prioritize custom sub-root paths over central exp_root defaults.
+    Then: Prioritize custom sub-root paths over `exp_root` defaults.
     '''
     art = paths_mod.ArtifactPaths(
         root=pathlib.Path('/tmp/exp'),
@@ -97,7 +97,7 @@ def test_artifact_paths_custom_overrides():
 
 def test_artifact_paths_from_config():
     '''
-    Given: A resolved `RootConfig` instance with explicit output directories.
+    Given: A `RootConfig` instance with explicit output directories.
     When: Instantiating `ArtifactPaths` via `from_config`.
     Then: Correctly extract root and stage output directory paths.
     '''
@@ -179,7 +179,7 @@ def test_harmonization_paths_get_run_folder(tmp_path):
 def test_ingestion_paths(tmp_path):
     '''
     Given: An ingestion root directory string.
-    When: Accessing `IngestionPaths` properties and sub-container helpers.
+    When: Accessing `IngestionPaths` properties and helper methods.
     Then: Return expected report, config, and domain map filepaths.
     '''
     f = tmp_path / 'ingested_data'
@@ -403,7 +403,8 @@ def test_ingestion_paths_validate(tmp_path):
     '''
     Given: An IngestionPaths instance.
     When: Calling `validate`.
-    Then: Defensively enforce data blocks schema, domains, blocks pool, and manifest.
+    Then: Enforce data blocks schema, domains, blocks pool, and
+        manifest.
     '''
     ing_root = tmp_path / 'ingestion'
     ing_root.mkdir()
@@ -440,7 +441,8 @@ def test_preparation_paths_validate(tmp_path):
     '''
     Given: A PreparationPaths instance.
     When: Calling `validate`.
-    Then: Validate schema and optionally split block directories and manifest.
+    Then: Validate schema and optional split block directories and
+        manifest.
     '''
     prep_root = tmp_path / 'preparation'
     prep_root.mkdir()
@@ -523,7 +525,7 @@ def test_artifact_paths_validate(tmp_path):
     '''
     Given: An ArtifactPaths aggregation instance.
     When: Calling `validate`.
-    Then: Validate configured stage directories and handle stage selection.
+    Then: Validate configured stage directories and stage selection.
     '''
     exp_root = tmp_path / 'exp'
     art = paths_mod.ArtifactPaths(root=exp_root)

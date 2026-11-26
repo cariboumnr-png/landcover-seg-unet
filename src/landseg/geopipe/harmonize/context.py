@@ -27,7 +27,8 @@ reference for data harmonization from upstream pipeline artifacts.
 
 Public APIs:
     - `HarmonizationContext`: Container holding resolved world grid.
-    - `build_harmonization_context`: Load grid context from report.
+    - `build_harmonization_context`: Build harmonization context.
+    - `load_grid_reference`: Load and validate world grid reference.
 '''
 
 # standard imports
@@ -64,11 +65,15 @@ def build_harmonization_context(
     Args:
         grid_report_path:
             File path to grid report JSON.
+        runs_manifest_fpath:
+            File path to harmonization runs manifest JSON.
+        config:
+            Harmonization pipeline configuration object.
 
     Returns:
         HarmonizationContext:
-            Execution context containing the restored GridLayout and
-            grid reference metadata.
+            Execution context containing the restored `GridLayout`,
+            compiled manifest, and collision metadata.
     '''
     # load world grid
     world_grid, grid_id, grid_fpath = load_grid_reference(grid_report_path)
@@ -107,7 +112,17 @@ def build_harmonization_context(
 def load_grid_reference(
     grid_report_path: pathlib.Path,
 ) -> tuple[geo_core.GridLayout, str, pathlib.Path]:
-    '''Load and validate world grid reference from upstream grid report.'''
+    '''
+    Load and validate world grid reference from a grid report.
+
+    Args:
+        grid_report_path:
+            File path to upstream world grid JSON report.
+
+    Returns:
+        tuple[geo_core.GridLayout, str, pathlib.Path]:
+            Restored `GridLayout`, grid identifier, and grid file path.
+    '''
     Ctrl = artifacts.Controller[contracts.GridReportSchema]
     grid_report = Ctrl(grid_report_path).fetch()
     grid_id = grid_report['grid']['grid_id']

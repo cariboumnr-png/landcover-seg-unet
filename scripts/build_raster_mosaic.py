@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Assemble multiple raster tiles into a unified GDAL Virtual Raster (VRT).
-'''
+'''Assemble raster tiles into a unified GDAL Virtual Raster (VRT).'''
 
 # standard imports
 import argparse
@@ -33,7 +31,18 @@ import landseg.geopipe as geopipe
 
 # ----- public functions
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    '''Parse command-line arguments for building a raster mosaic VRT.'''
+    '''
+    Parse command-line arguments for building a raster mosaic VRT.
+
+    Args:
+        argv:
+            Optional list of CLI argument strings; uses `sys.argv` when
+            `None`.
+
+    Returns:
+        argparse.Namespace:
+            Parsed CLI arguments for mosaic construction.
+    '''
     parser = argparse.ArgumentParser(
         description=(
             'Harmonize and assemble multiple raster tiles into a single '
@@ -111,7 +120,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def resolve_inputs(patterns: list[str]) -> list[pathlib.Path]:
-    '''Resolve file paths and wildcard glob patterns into sorted paths.'''
+    '''
+    Resolve file paths and wildcard glob patterns into sorted paths.
+
+    Args:
+        patterns:
+            List of file paths or wildcard glob patterns.
+
+    Returns:
+        list[pathlib.Path]:
+            Deduplicated list of resolved input raster paths.
+    '''
     resolved: list[pathlib.Path] = []
     for pattern in patterns:
         path = pathlib.Path(pattern)
@@ -136,7 +155,14 @@ def resolve_inputs(patterns: list[str]) -> list[pathlib.Path]:
 
 
 def main(argv: list[str] | None = None) -> None:
-    '''CLI entrypoint for building a raster mosaic VRT.'''
+    '''
+    CLI entry point for building a raster mosaic VRT.
+
+    Args:
+        argv:
+            Optional list of CLI argument strings; uses `sys.argv` when
+            `None`.
+    '''
     args = parse_args(argv)
     input_files = resolve_inputs(args.inputs)
     if not input_files:

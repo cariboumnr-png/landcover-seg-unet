@@ -22,11 +22,11 @@
 '''
 Top-level namespace for `landseg.adapters.api`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes selected public symbols via lazy resolution to keep import
 order simple and circular-free.
 
 Public APIs:
-    - `DataHarmonizationConfigurator`: Configurator for data harmonization.
+    - `DataHarmonizationConfigurator`: Configurator for harmonization.
     - `DataIngestionConfigurator`: Configurator for data ingestion.
     - `DataPreparationConfigurator`: Configurator for data preparation.
     - `StudySweepConfigurator`: Configurator for study sweeps.

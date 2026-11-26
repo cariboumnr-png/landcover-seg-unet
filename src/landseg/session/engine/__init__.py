@@ -22,8 +22,14 @@
 '''
 Top-level namespace for `landseg.session.engine`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `EngineConfigShape`: Configuration protocol for engine assembly.
+    - `EngineContext`: External context for building the epoch engine.
+    - `EpochRunner`: Runner orchestrating epoch training and evaluation.
+    - `build_engine`: Construct configured epoch runner and runtime.
 '''
 
 # standard imports

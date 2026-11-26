@@ -82,7 +82,8 @@ def test_partition_validation():
     '''
     Given: `Partition` instances with valid and invalid split ratios.
     When: `Partition.validate()` is executed.
-    Then: Accept valid ratio bounds [0.0, 1.0] or raise ConfigValidationError.
+    Then: Accept valid ratio bounds [0.0, 1.0] or raise
+        `ConfigValidationError`.
     '''
     partition = prep_sec.Partition(val_ratio=0.2, test_ratio=0.1)
     partition.validate()
@@ -99,7 +100,8 @@ def test_scoring_and_hydration_validation():
     '''
     Given: `Scoring` and `Hydration` sub-configuration objects.
     When: `.validate()` is called with valid or negative boundaries.
-    Then: Pass valid params or raise ConfigValidationError for negatives.
+    Then: Pass valid params or raise `ConfigValidationError` for
+        negatives.
     '''
     scoring = prep_sec.Scoring(alpha=0.5, beta=0.5)
     scoring.validate()

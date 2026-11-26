@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Canonical filesystem paths for data ingestion artifacts.
-'''
+'''Canonical filesystem paths for data ingestion artifacts.'''
 
 # standard imports
 import dataclasses
@@ -38,28 +34,33 @@ import landseg.artifacts.paths.base as base
 @dataclasses.dataclass
 class IngestionPaths(base.PipelineArtifactsPaths):
     '''Paths for ingested datasets and knowledge artifacts.'''
-
     @property
     def runs_manifest(self) -> pathlib.Path:
+        '''Return path to the ingestion runs manifest JSON.'''
         return self.root / 'ingestion_runs.json'
 
     @property
     def data_blocks(self) -> '_DataBlocks':
+        '''Return container paths for canonical data blocks.'''
         return _DataBlocks(self.root / 'data_blocks')
 
     @property
     def domains(self) -> '_DomainMaps':
+        '''Return container paths for domain knowledge artifacts.'''
         return _DomainMaps(self.root / 'domain_knowledge')
 
     @property
     def windows(self) -> pathlib.Path:
+        '''Return path to the block windows manifest JSON.'''
         return self.root / 'block_windows.json'
 
     @property
     def collisions(self) -> pathlib.Path:
+        '''Return path to the run collision records JSON.'''
         return self.effective_run_folder / 'collisions.json'
 
     def _init_pipeline_folders(self):
+        '''Create ingestion directories and empty runs manifest.'''
         super()._init_pipeline_folders()
         self.data_blocks.root.mkdir(parents=True, exist_ok=True)
         self.data_blocks.blocks.mkdir(parents=True, exist_ok=True)
@@ -78,14 +79,17 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 
         Args:
             require_domains:
-                If True, validates that domain knowledge directory exists.
+                If True, validates that domain knowledge directory
+                exists.
             require_blocks:
-                If True, validates that data blocks pool directory exists.
+                If True, validates that data blocks pool directory
+                exists.
             require_manifest:
                 If True, validates that ingestion runs manifest exists.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:
@@ -116,10 +120,34 @@ class _DomainMaps:
         self.root = pathlib.Path(self.root)
 
     def domain_map_fpath(self, domain_name: str) -> pathlib.Path:
+        '''
+        Return path to the serialized domain mapping JSON file.
+
+        Args:
+            domain_name:
+                Name or path of the domain source layer.
+
+        Returns:
+            pathlib.Path:
+                Destination JSON file path for the domain map.
+        '''
         stem = pathlib.Path(domain_name).stem
         return self.root / f'{stem}.json'
 
     def mapped_tiles_fpath(self, domain_name: str, gid: str) -> pathlib.Path:
+        '''
+        Return path to mapped domain tiles `.npz` archive.
+
+        Args:
+            domain_name:
+                Name or path of the domain source layer.
+            gid:
+                World grid identifier string.
+
+        Returns:
+            pathlib.Path:
+                Destination `.npz` file path for mapped tiles.
+        '''
         stem = pathlib.Path(domain_name).stem
         return self.root / f'{stem}_tiles_{gid}.npz'
 
@@ -134,26 +162,31 @@ class _DataBlocks:
 
     @property
     def blocks(self) -> pathlib.Path:
+        '''Return directory path storing block `.npz` archives.'''
         return self.root / 'blocks'
 
     @property
     def catalog(self) -> pathlib.Path:
+        '''Return path to the data blocks catalog JSON file.'''
         return self.root / 'catalog.json'
 
     @property
     def schema(self) -> pathlib.Path:
+        '''Return path to the canonical data blocks schema JSON.'''
         return self.root / 'schema.json'
 
     def validate(self, require_blocks: bool = False) -> typing.Self:
         '''
-        Validate that data blocks directory and canonical schema exist.
+        Validate that data blocks directory and schema exist.
 
         Args:
             require_blocks:
-                If True, also validates that the blocks directory exists.
+                If True, also validates that the blocks directory
+                exists.
 
         Returns:
-            typing.Self: The validated instance for method chaining.
+            typing.Self:
+                Validated instance for method chaining.
 
         Raises:
             ArtifactError:

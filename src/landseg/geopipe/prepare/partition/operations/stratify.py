@@ -26,8 +26,8 @@ Selects blocks to match global class proportions using greedy deviation
 scoring, preserving block atomicity to prevent spatial leakage.
 
 Public APIs:
-    - SplitsResult: container for split coordinates and class stats.
-    - stratified_splitter: stratified splitter for train/val/test.
+    - `SplitsResult`: Container for split coordinates and class stats.
+    - `stratified_splitter`: Stratified splitter for train/val/test.
 '''
 
 # standard imports
@@ -99,18 +99,22 @@ def stratified_splitter(
 
     Args:
         base_counts:
-            per-block integer class counts indexed by coordinates.
+            Per-block integer class counts indexed by coordinates.
         val_ratio:
-            target fraction of blocks in validation.
+            Target fraction of blocks in validation.
         test_ratio:
-            target fraction of blocks in test (use 0.0 to skip).
+            Target fraction of blocks in test (use `0.0` to skip).
         weight_mode:
-            weighting strategy for deviation scoring ('none' or
-            'inverse').
+            Weighting strategy for deviation scoring (`'none'` or
+            `'inverse'`).
 
     Returns:
         SplitsResult:
-            split coordinates, class counts, and distributions.
+            Split coordinates, class counts, and distributions.
+
+    Raises:
+        ValueError:
+            If inputs or ratios are invalid, or blocks leak splits.
     '''
     # base class counts dict to array
     counts: Int64Array = numpy.array(

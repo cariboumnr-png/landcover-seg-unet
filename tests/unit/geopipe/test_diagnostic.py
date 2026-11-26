@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for diagnostic overfit `DataSpecs` builder (`geopipe`).'''
+# pylint: disable=protected-access
 
 # standard imports
 import pathlib
@@ -46,7 +45,7 @@ def _make_block(
     label_count: dict[str, list[int]] | None = None,
     valid_ratio: float = 1.0,
 ) -> geo_core.DataBlock:
-    '''Create a minimal in-memory DataBlock for diagnostic builder tests.'''
+    '''Create a minimal in-memory `DataBlock` for diagnostic tests.'''
     img = (
         image
         if image is not None
@@ -89,9 +88,11 @@ def test_build_overfit_dataspec_reuses_existing_block_and_knowledge(
     monkeypatch: pytest.MonkeyPatch,
 ):
     '''
-    Given: A cached diagnostic `.npz` block and an existing knowledge folder.
+    Given: A cached diagnostic `.npz` block and an existing knowledge
+        folder.
     When: Calling `geopipe.build_overfit_dataspec`.
-    Then: Reuse cached block, build neutral class counts, and resolve knowledge.
+    Then: Reuse cached block, build neutral class counts, and resolve
+        knowledge.
     '''
     save_dir = tmp_path / 'overfit_test'
     save_dir.mkdir(parents=True)
@@ -143,10 +144,11 @@ def test_build_overfit_dataspec_creates_and_normalizes_block(
     monkeypatch: pytest.MonkeyPatch,
 ):
     '''
-    Given: Empty overfit directory and candidate rasters lacking one class
-        under strict all-class filtering.
+    Given: Empty overfit directory and candidate rasters lacking one
+        class under strict all-class filtering.
     When: Calling `geopipe.build_overfit_dataspec`.
-    Then: Fall back to relaxed filtering, normalize image values, and save `.npz`.
+    Then: Fall back to relaxed filtering, normalize image values, and
+        save `.npz`.
     '''
     save_dir = tmp_path / 'overfit_new'
     harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')

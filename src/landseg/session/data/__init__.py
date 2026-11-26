@@ -22,8 +22,13 @@
 '''
 Top-level namespace for `landseg.session.data`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `DataLoaderConfig`: Protocol for dataloader batch and patch sizes.
+    - `DataLoaders`: Container for split dataloaders and metadata.
+    - `build_dataloaders`: Build dataloaders and metadata from specs.
 '''
 
 # standard imports

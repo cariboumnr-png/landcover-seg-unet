@@ -28,8 +28,8 @@ and stops early when all targets are met or additions skew toward
 non-target classes.
 
 Public APIs:
-    - HydrationResults: container for hydrated blocks and counts.
-    - hydrate_train_split: hydrate training split toward targets.
+    - `HydrationResults`: Container for hydrated blocks and counts.
+    - `hydrate_train_split`: Hydrate training split toward targets.
 '''
 
 # standard imports
@@ -70,17 +70,17 @@ def hydrate_train_split(
 
     Args:
         current_class_count:
-            current per-class pixel counts across the training split.
+            Current per-class pixel counts across the training split.
         candidates:
-            mapping of candidate block coordinates to class counts.
+            Mapping of candidate block coordinates to class counts.
         target_ratios:
-            target multipliers per class index (ratio > 1.0 to grow).
+            Target multipliers per class index (`ratio > 1.0` to grow).
         max_skew_rate:
-            maximum allowed ratio of non-target to target gain.
+            Maximum allowed ratio of non-target to target gain.
 
     Returns:
         HydrationResults:
-            selected blocks, updated class counts, and termination info.
+            Selected blocks, updated class counts, and termination info.
     '''
     # sanity check
     assert all(len(c) == len(current_class_count) for c in candidates.values())

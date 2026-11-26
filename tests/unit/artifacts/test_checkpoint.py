@@ -30,8 +30,8 @@ import landseg.artifacts.checkpoint as ckpt_mod
 # ----- Checkpoint save and load tests
 def test_save_and_load_checkpoint_full(tmp_path, mock_model):
     '''
-    Given: Model, optimizer, scheduler instances, and checkpoint metadata.
-    When: Calling `save_checkpoint` and restoring with `load_checkpoint`.
+    Given: Model, optimizer, scheduler, and checkpoint metadata.
+    When: Calling `save_checkpoint` and `load_checkpoint`.
     Then: Restore state dicts and return matching metadata.
     '''
     optim_src = torch.optim.SGD(mock_model.parameters(), lr=0.01)
@@ -71,8 +71,8 @@ def test_save_and_load_checkpoint_full(tmp_path, mock_model):
 def test_load_checkpoint_optional_components(tmp_path, mock_model):
     '''
     Given: A saved model checkpoint file without scheduler.
-    When: `load_checkpoint` is called in evaluation mode with model only.
-    Then: Successfully load parameters without error and return metadata.
+    When: Calling `load_checkpoint` in evaluation mode with model only.
+    Then: Load parameters without error and return saved metadata.
     '''
     optim_src = torch.optim.SGD(mock_model.parameters(), lr=0.01)
     meta_in: ckpt_mod.CheckpointMeta = {'metric': 0.92, 'epoch': 5, 'step': 250}

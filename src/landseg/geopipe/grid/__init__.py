@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=import-outside-toplevel
-
 '''
 Top-level namespace for `landseg.geopipe.grid`.
 
@@ -33,6 +31,8 @@ Public APIs:
     - `validators`: Preflight validation namespace.
 '''
 
+# pylint: disable=import-outside-toplevel
+
 # standard imports
 from __future__ import annotations
 import typing
@@ -41,10 +41,21 @@ import landseg._lazy as _lazy
 
 
 class _Validators: # pylint: disable=R0903
+    '''Validation namespace for world grid preflight checks.'''
 
     @staticmethod
     def grid_specs(config: contracts.WorldGridPrepConfig):
-        '''Validate grid generation configurations.'''
+        '''
+        Validate grid generation configurations.
+
+        Args:
+            config:
+                World grid preparation configuration object.
+
+        Returns:
+            GridSpec:
+                Compiled and validated world grid specification.
+        '''
         import landseg.geopipe.grid.builder as builder
         return builder.compile_inputs(config)
 

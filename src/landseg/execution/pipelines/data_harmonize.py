@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Data harmonization pipeline command implementation.
-'''
+'''Data harmonization pipeline command implementation.'''
 
 # local imports
 import landseg.artifacts as artifacts
@@ -32,13 +30,12 @@ import landseg.geopipe as geopipe
 # ----- public classes
 class DataHarmonization(base.GeoPipeline):
     '''Data harmonization pipeline.'''
-
     pipeline_name: str = 'data-harmonize'
     pipeline_paths: artifacts.HarmonizationPaths
 
     @property
     def upstream_paths(self) -> artifacts.WorldGridPaths:
-        '''Return upstream <world-grid> artifact paths.'''
+        '''Return upstream `world-grid` artifact paths.'''
         return self.artifact_paths.world_grid
 
     def run(self) -> None:

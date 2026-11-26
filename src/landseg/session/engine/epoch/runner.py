@@ -26,13 +26,11 @@ Provides a minimal execution wrapper responsible for running a single
 epoch of training and/or evaluation. This module isolates batch-level
 execution from higher-level orchestration concerns.
 
-Design principles
------------------
-- Execution-only: no control flow, scheduling, or early stopping logic.
-- Orchestration-agnostic: no phases, curricula, or policies.
-- Stable interface: intended as a thin, testable façade that can be
-  composed by external orchestration layers (e.g., generator-based
-  engines).
+Design principles:
+    - Execution-only: no control flow, scheduling, or early stopping.
+    - Orchestration-agnostic: no phases, curricula, or policies.
+    - Stable interface: thin, testable facade composable by external
+      orchestration layers (e.g., generator-based engines).
 '''
 
 # standard imports
@@ -88,16 +86,17 @@ class EpochRunner:
         evaluator: policy.MultiHeadEvaluator | None,
     ):
         '''
-        Execute a single epoch of training and/or evaluation.
+        Initialize the epoch runner with execution mode and policies.
 
-        Encapsulates batch-level execution for one epoch, including
-        optional training and validation steps. This class does not
-        manage iteration across epochs, stopping conditions, logging, or
-        phase transitions.
-
-        Intended usage:
-            Instantiated and invoked by higher-level orchestration,
-            such as training policies or engine controllers.
+        Args:
+            mode:
+                Execution mode (`'train_eval'`, `'train_only'`, or
+                `'eval_only'`).
+            trainer:
+                Training policy controller, or `None` for `'eval_only'`.
+            evaluator:
+                Evaluation policy controller, or `None` when
+                `'train_only'`.
         '''
         # parse arguments
         self.mode: Mode = mode
@@ -106,7 +105,7 @@ class EpochRunner:
 
     @property
     def training_batch_count(self) -> int:
-        '''Returns total number of training samples of the epoch.'''
+        '''Return total number of training samples of the epoch.'''
         if not self.trainer:
             return 0
         return self.trainer.dataloaders.meta.patch_count.train
@@ -117,11 +116,16 @@ class EpochRunner:
 
         Args:
             epoch:
-                current epoch index, forwarded to trainer.
+                Current epoch index, forwarded to trainer and evaluator.
 
         Returns:
             core.SessionStepResults:
-                training, validation, and inference results.
+                Training, validation, and inference results.
+
+        Raises:
+            ValueError:
+                If a required trainer or evaluator policy is missing for
+                the configured `mode`.
         '''
         # run by mode
         match self.mode:
@@ -150,7 +154,15 @@ class EpochRunner:
         active_heads: list[str] | None = None,
         frozen_heads: list[str] | None = None,
     ) -> None:
-        '''Set head state for trainer or evaluator when present.'''
+        '''
+        Set head state for trainer or evaluator when present.
+
+        Args:
+            active_heads:
+                Head names to activate, or `None` for all heads.
+            frozen_heads:
+                Head names whose parameters remain frozen.
+        '''
         if self.trainer:
             self.trainer.set_head_state(active_heads, frozen_heads)
         if self.evaluator:

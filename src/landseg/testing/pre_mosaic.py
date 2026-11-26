@@ -19,10 +19,15 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Dummy dataset generator for mosaic utility testing and local execution.
+
+Generates synthetic GeoTIFF feature and label rasters across UTM zones
+17N and 18N for VRT mosaicking tests.
+
+Public APIs:
+    - `PreMosaickingDummyPaths`: Pre-mosaicking dummy paths.
+    - `generate_pre_mosaic_data`: Generate cross-UTM dummy mosaic data.
 '''
 
 # standard imports
@@ -45,24 +50,29 @@ class PreMosaickingDummyPaths:
 
     @property
     def image_17n(self) -> pathlib.Path:
+        '''Return path to the UTM 17N synthetic feature GeoTIFF.'''
         return pathlib.Path(self.root) / 'utm_rasters' / 'image_17n.tif'
 
     @property
     def image_18n(self) -> pathlib.Path:
+        '''Return path to the UTM 18N synthetic feature GeoTIFF.'''
         return pathlib.Path(self.root) / 'utm_rasters' / 'image_18n.tif'
 
     @property
     def label_17n(self) -> pathlib.Path:
+        '''Return path to the UTM 17N synthetic label GeoTIFF.'''
         return pathlib.Path(self.root) / 'utm_rasters' / 'label_17n.tif'
 
     @property
     def label_18n(self) -> pathlib.Path:
+        '''Return path to the UTM 18N synthetic label GeoTIFF.'''
         return pathlib.Path(self.root) / 'utm_rasters' / 'label_18n.tif'
 
 
 # ----- public function
 def generate_pre_mosaic_data(input_root: str | pathlib.Path) -> None:
-    '''Generate the cross-UTM rasters under input root.
+    '''
+    Generate cross-UTM rasters under `input_root`.
 
     Args:
         input_root:

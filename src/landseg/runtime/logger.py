@@ -38,11 +38,11 @@ import pathlib
 # ----- public classes
 class Logger:
     '''
-    A class to handle logging messages to a file and optionally to the
-    console.
+    Handle logging messages to a file and optionally the console.
 
     Attributes:
-        logger (logging.Logger): The logger instance.
+        logger:
+            Underlying standard library `logging.Logger` instance.
     '''
 
     def __init__(
@@ -54,21 +54,25 @@ class Logger:
         enable_file_log: bool = True
     ):
         '''
-        Initializes the Logger instance.
+        Initialize the `Logger` instance.
 
-        If `name` is not provided, the script file name will be used and
-        if `log_file` is not provided, a proj.log file will be created
-        at the current working directory.
+        If `name` is not provided, the script file name is used, and if
+        `log_file` is not provided, a `proj.log` file is created under
+        the current working directory.
 
         Args:
-            name (str, optional): Name of the logger. If None use the
-                script name.
-            log_file (str, optional): Path to the log file.
-            log_lvl (int, optional): Logging level for the file handler.
-            console_lvl (int, optional): Logging level for the console
-                handler. If None, console logging is disabled.
-            enable_file_log (bool, optional): Whether to write text logs
-                to file.
+            name:
+                Name of the logger; defaults to script file name when
+                `None`.
+            log_file:
+                Path to the log file.
+            log_lvl:
+                Logging level for the file handler.
+            console_lvl:
+                Logging level for the console handler; `None` disables
+                console logging.
+            enable_file_log:
+                Whether to write text logs to file.
         '''
         if name is None:
             name = pathlib.Path(__file__).name
@@ -124,15 +128,18 @@ class Logger:
         exc_info: bool = False
     ) -> None:
         '''
-        Logs a message with the specified logging level.
+        Log a message with the specified severity level.
 
         Args:
-            level (str): The logging level ('debug', 'info', 'warning',
-                'error', 'critical').
-            message (str): The message to log.
-            skip_log (bool, optional): Flag whether to log or not.
-            exc_info (bool, optional): Flag whether to include
-                traceback.
+            level:
+                Severity level (`'debug'`, `'info'`, `'warning'`,
+                `'error'`, or `'critical'`).
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+            exc_info:
+                Whether to include exception traceback information.
         '''
         if skip_log:
             return
@@ -147,7 +154,17 @@ class Logger:
         skip_log: bool = False,
         exc_info: bool = False
     ) -> None:
-        '''Log a debug-level message.'''
+        '''
+        Log a debug-level message.
+
+        Args:
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+            exc_info:
+                Whether to include exception traceback information.
+        '''
         self.log('debug', message, skip_log=skip_log, exc_info=exc_info)
 
     def info(
@@ -156,7 +173,17 @@ class Logger:
         skip_log: bool = False,
         exc_info: bool = False
     ) -> None:
-        '''Log an info-level message.'''
+        '''
+        Log an info-level message.
+
+        Args:
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+            exc_info:
+                Whether to include exception traceback information.
+        '''
         self.log('info', message, skip_log=skip_log, exc_info=exc_info)
 
     def warning(
@@ -165,7 +192,17 @@ class Logger:
         skip_log: bool = False,
         exc_info: bool = False
     ) -> None:
-        '''Log a warning-level message.'''
+        '''
+        Log a warning-level message.
+
+        Args:
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+            exc_info:
+                Whether to include exception traceback information.
+        '''
         self.log('warning', message, skip_log=skip_log, exc_info=exc_info)
 
     def error(
@@ -174,7 +211,17 @@ class Logger:
         skip_log: bool = False,
         exc_info: bool = False
     ) -> None:
-        '''Log an error-level message.'''
+        '''
+        Log an error-level message.
+
+        Args:
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+            exc_info:
+                Whether to include exception traceback information.
+        '''
         self.log('error', message, skip_log=skip_log, exc_info=exc_info)
 
     def critical(
@@ -183,7 +230,17 @@ class Logger:
         skip_log: bool = False,
         exc_info: bool = False
     ) -> None:
-        '''Log a critical-level message.'''
+        '''
+        Log a critical-level message.
+
+        Args:
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+            exc_info:
+                Whether to include exception traceback information.
+        '''
         self.log('critical', message, skip_log=skip_log, exc_info=exc_info)
 
     def exception(
@@ -191,7 +248,15 @@ class Logger:
         message: str,
         skip_log: bool = False
     ) -> None:
-        '''Log an error-level message with exception traceback.'''
+        '''
+        Log an error-level message with exception traceback.
+
+        Args:
+            message:
+                Message text to log.
+            skip_log:
+                Whether to skip emitting the log record.
+        '''
         self.log('error', message, skip_log=skip_log, exc_info=True)
 
     def log_sep(
@@ -200,20 +265,21 @@ class Logger:
         ln: int = 90
     ) -> None:
         '''
-        Log a separator with a length of repeated string.
+        Log a repeated separator line.
 
         Args:
-            sep (str, optional): Repeats to form a separator line
-                (default: `'='`).
-            ln (int, optional): Length of the line (default: 90).
+            sep:
+                Character or string repeated to form the separator line.
+            ln:
+                Number of repetitions for the separator line.
         '''
         self.log('info', sep * ln)
 
     def on_close(self) -> None:
-        '''Hook for subclasses to execute code when close() is called.'''
+        '''Hook invoked by subclasses when closing the logger.'''
 
     def close(self) -> None:
-        '''Closes the file handler.'''
+        '''Close active log handlers and invoke `on_close`.'''
         self.on_close()
         handlers = self.logger.handlers[:]
         for handler in handlers:
@@ -222,5 +288,15 @@ class Logger:
 
     @staticmethod
     def abs_path(fp: str | pathlib.Path) -> str:
-        '''Shared method to return an absolute path from input.'''
+        '''
+        Resolve input path to its absolute path string.
+
+        Args:
+            fp:
+                File or directory path to resolve.
+
+        Returns:
+            str:
+                Absolute filesystem path string.
+        '''
         return str(pathlib.Path(fp).resolve())

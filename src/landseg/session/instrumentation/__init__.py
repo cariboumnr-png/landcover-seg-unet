@@ -22,8 +22,12 @@
 '''
 Top-level namespace for `landseg.session.instrumentation`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes selected public symbols via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `CallbackDispatcher`: Dispatcher broadcasting events to callbacks.
+    - `build_dispatcher`: Build a configured callback dispatcher.
 '''
 
 # standard imports

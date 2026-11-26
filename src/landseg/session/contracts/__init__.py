@@ -22,8 +22,14 @@
 '''
 Top-level namespace for `landseg.session.contracts`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public contracts and type aliases via lazy resolution
+to keep import order simple and circular-free.
+
+Public APIs:
+    - `DatasetItem`: Tuple representing a dataset sample or batch.
+    - `PhaseLike`: Protocol specifying a training session phase.
+    - `SessionObserverLike`: Protocol for session lifecycle observers.
+    - `TensorDict`: Mapping from string identifiers to PyTorch tensors.
 '''
 
 # standard imports

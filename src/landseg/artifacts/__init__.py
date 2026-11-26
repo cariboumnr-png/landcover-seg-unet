@@ -44,9 +44,9 @@ Public APIs:
     - `get_scratch_dir`: Resolve and validate active scratch directory.
     - `load_checkpoint`: Restore model and optimizer checkpoint.
     - `save_checkpoint`: Persist model and optimizer checkpoint.
-    - `savez_compressed`: Write arrays to a compressed npz archive sequentially.
+    - `savez_compressed`: Write arrays sequentially to an `.npz` file.
     - `scratch_file`: Context-managed temporary file in scratch storage.
-    - `stage_to_scratch`: Context manager staging writes before publishing.
+    - `stage_to_scratch`: Stage writes before publishing to target.
 '''
 
 # standard imports

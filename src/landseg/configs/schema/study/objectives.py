@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Objective, loss, and regularization search spaces for study sweeps.'''
+'''Objective, loss, and regularization search spaces for sweeps.'''
 
 # standard imports
 import dataclasses
@@ -46,7 +46,7 @@ class LossAuxiliary(base.BaseConfigSection):
 
 @dataclasses.dataclass
 class Regularization(base.BaseConfigSection):
-    ''''Regularization search space.'''
+    '''Regularization search space.'''
     consistency_lambda: tuple[float, float] = (0.0, 1.0)
 
 
@@ -81,6 +81,7 @@ class ObjectivesSearchConfig(base.BaseConfigSection):
     hierarchy: Hierarchy = field(default_factory=Hierarchy)
 
     def validate(self) -> None:
+        '''Validate all nested objective search space sections.'''
         self.loss_balance.validate()
         self.loss_auxiliary.validate()
         self.regularization.validate()

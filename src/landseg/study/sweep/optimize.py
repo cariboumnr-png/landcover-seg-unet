@@ -42,19 +42,26 @@ def run_sweep(
     root_config: configs.RootConfig,
 ) -> optuna.Study:
     '''
-    Create and execute an Optuna study using the configured sweep policy.
+    Create and run an Optuna study using the configured sweep policy.
 
-    This function constructs an Optuna Study using parameters defined in
-    the pipeline study-sweep configuration, including storage, sampler,
-    pruner, optimization direction, and trial count. It then executes
-    the optimization loop by binding the project runner to an Optuna
-    objective function.
+    Constructs an Optuna `Study` using parameters defined in the sweep
+    configuration, including storage, sampler, pruner, optimization
+    direction, and trial count, then executes the optimization loop.
 
-    The returned Study object provides access to completed trials and
-    metadata but does not perform any post hoc aggregation or ranking;
-    such responsibilities belong to the study analysis layer.
+    The returned `Study` provides access to completed trials and
+    metadata without performing post-hoc aggregation or ranking.
+
+    Args:
+        runner_builder:
+            Callable accepting a `RootConfig` and returning a tuple of
+            step-results output path and step generator runner.
+        root_config:
+            Root configuration providing sweep settings and base state.
+
+    Returns:
+        optuna.Study:
+            Executed Optuna study instance containing trial history.
     '''
-
     # sweep config
     config = root_config.study.sweep
 

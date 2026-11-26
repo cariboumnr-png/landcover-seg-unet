@@ -59,6 +59,10 @@ def prepare_world_grid(
     Returns:
         tuple[bool, pathlib.Path, geo_core.GridLayout]:
             Tuple of (is_loaded, grid file path, GridLayout instance).
+
+    Raises:
+        ValueError:
+            If `config` is not provided when generating path or grid.
     '''
     if override_grid_fpath:
         grid_fpath = override_grid_fpath

@@ -28,8 +28,8 @@ means" for each target and is consumed both by the inspection engine
 (informational) and by execution gating (fail-fast).
 
 Public APIs:
-    - `SUPPORTED_TARGETS`: Execution targets with a registered suite.
     - `ProbeSpec`: A single named check bound to a callable.
+    - `SUPPORTED_TARGETS`: Execution targets with a registered suite.
     - `suite_for`: Return the ordered probe specs for a target.
 '''
 
@@ -79,7 +79,7 @@ def _lineage_dir(path_attr: str, pid: str) -> ProbeSpec:
 
 
 def _upstream_report(pid: str, report_attr: str, target: str) -> ProbeSpec:
-    '''Build an report lineage probe from a report path attribute.'''
+    '''Build a report lineage probe from a report path attribute.'''
     def run(ctx):
         fp = _resolve_path_attr(ctx, report_attr)
         return checks.lineage.upstream_report(fp, target, pid=pid)
@@ -87,7 +87,7 @@ def _upstream_report(pid: str, report_attr: str, target: str) -> ProbeSpec:
 
 
 def _upstream_manifest(pid: str, manifest_attr: str, target: str) -> ProbeSpec:
-    '''Build an manifest lineage probe from a manifest path attribute.'''
+    '''Build a manifest lineage probe from a path attribute.'''
     def run(ctx):
         fp = _resolve_path_attr(ctx, manifest_attr)
         return checks.lineage.upstream_manifest(fp, target, pid=pid)
@@ -95,7 +95,7 @@ def _upstream_manifest(pid: str, manifest_attr: str, target: str) -> ProbeSpec:
 
 
 def _resolve_path_attr(ctx: context.InspectionContext, dotted: str):
-    '''Resolve a dotted attribute chain rooted at the artifact paths.'''
+    '''Resolve a dotted attribute chain on artifact paths.'''
     obj: typing.Any = ctx.paths
     for part in dotted.split('.'):
         obj = getattr(obj, part)
@@ -219,5 +219,15 @@ SUPPORTED_TARGETS: tuple[str, ...] = tuple(SUITES.keys())
 
 # ----- public functions
 def suite_for(target: str) -> tuple[ProbeSpec, ...]:
-    '''Return the ordered probe specs for a target.'''
+    '''
+    Return the ordered probe specs for a target.
+
+    Args:
+        target:
+            Execution target identifier.
+
+    Returns:
+        tuple[ProbeSpec, ...]:
+            Ordered probe specs for `target`, or empty if unknown.
+    '''
     return SUITES.get(target, ())

@@ -248,7 +248,7 @@ def test_multihead_unetppp_with_film_forward(
     '''
     Given: A MultiHeadUNet configured with UNetPPP and FiLM conditioner.
     When: Running forward pass.
-    Then: Successfully compute outputs without bottleneck channel mismatch.
+    Then: Compute outputs without bottleneck channel mismatch.
     '''
     backbone_cfg = mock_backbone_config_factory(
         body_type='unetppp', base_ch=16

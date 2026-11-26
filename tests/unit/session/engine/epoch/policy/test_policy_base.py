@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for policy base module (policy/base.py).'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import torch

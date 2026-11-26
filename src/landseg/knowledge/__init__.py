@@ -27,13 +27,13 @@ generation, and profile resolution APIs via lazy resolution to keep
 import order simple and circular-free.
 
 Public APIs:
-    - `SpeciesEmbeddingsMetadata`: TypedDict for embeddings profile metadata.
-    - `SpeciesEntry`: TypedDict for per-species embedding entry metadata.
-    - `TaxonomySpec`: TypedDict for domain taxonomy specification.
-    - `generate_embeddings_and_matrix`: Build species embeddings and matrix.
-    - `resolve_head_knowledge`: Resolve head taxonomies and similarity matrices.
-    - `resolve_profile_metadata`: Load embeddings metadata for a profile.
-    - `resolve_similarity_matrix`: Load precomputed species similarity matrix.
+    - `SpeciesEmbeddingsMetadata`: Species profile metadata TypedDict.
+    - `SpeciesEntry`: Per-species embedding entry TypedDict.
+    - `TaxonomySpec`: Domain taxonomy specification TypedDict.
+    - `generate_embeddings_and_matrix`: Build embeddings and matrix.
+    - `resolve_head_knowledge`: Resolve head taxonomies and matrices.
+    - `resolve_profile_metadata`: Load profile embeddings metadata.
+    - `resolve_similarity_matrix`: Load species similarity matrix.
     - `validate_specs`: Validate taxonomy specs against knowledge base.
 '''
 

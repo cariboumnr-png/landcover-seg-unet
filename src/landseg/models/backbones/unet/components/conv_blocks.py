@@ -22,20 +22,17 @@
 '''
 Convolution blocks for UNet-like encoder-decoder models.
 
-**Overview**
-This module provides the common building blocks used across UNet-likes:
-- DoubleConv: two Conv2d → Norm → ReLU stages (optional dropout).
-- Downsample: 2x max-pool followed by a DoubleConv.
-- Upsample: bilinear upsample, skip concatenation, then DoubleConv.
+Provides the standard convolutional building blocks shared across UNet
+backbones, operating on 4D `(N, C, H, W)` feature tensors.
 
-**Expected tensor shapes**
-- Inputs/outputs are 4D tensors: (N, C, H, W).
-- Spatial size halves with Downsample and doubles with Upsample.
-- Channel counts are determined by in_ch/out_ch passed to the blocks.
+Notes:
+    - `GroupNorm` with 1 group behaves like `LayerNorm` over channels.
+    - Normalization can be disabled by passing `norm=None`.
 
-**Notes**
-- GroupNorm with 1 group behaves like LayerNorm over channels for 2D features.
-- Normalization can be disabled with norm=None (Identity).
+Public APIs:
+    - `DoubleConv`: Two stacked Conv-Norm-ReLU stages with dropout.
+    - `Downsample`: Max-pool downsampling followed by `DoubleConv`.
+    - `Upsample`: Bilinear upsample, skip concat, and `DoubleConv`.
 '''
 
 # third-part imports
@@ -48,13 +45,13 @@ class DoubleConv(torch.nn.Module):
     '''
     Two stacked Conv-Norm-ReLU units with optional dropout.
 
-    **Architecture**\n
-    (Conv2d → Norm → ReLU → Dropout2d?) x 1 → Conv2d → Norm → ReLU
+    Architecture:
+        `Conv2d -> Norm -> ReLU -> Dropout2d? -> Conv2d -> Norm -> ReLU`
 
-    **Notes**
-    - Returns a torch.Tensor as feature map of shape (N, out_ch, H, W).
-    - Convs use kernel_size=3, padding=1, bias=False.
-    - ReLU configured with inplace=False to be conservative with autograd.
+    Notes:
+        - Produces a `torch.Tensor` of shape `(N, out_ch, H, W)`.
+        - Convolutions use `kernel_size=3`, `padding=1`, `bias=False`.
+        - `ReLU` is configured with `inplace=False` for autograd safety.
     '''
 
     def __init__(
@@ -64,19 +61,17 @@ class DoubleConv(torch.nn.Module):
         params: components.ConvolutionParameters | None,
     ):
         '''
-        Initiate a double-conv block with configurable normalization.
+        Initialize a double-convolution block with optional norm.
 
         Args:
-            in_ch: Number of input channels.
-            out_ch: Number of output channels.
-            **kwargs: Additional options pass to convolutional blocks.
-                - `norm` (str | None): normalization kind; one of
-                    {'bn', 'gn', 'ln', None}. Default: 'gn'.
-                - `gn_groups` (int): number of groups when `norm='gn'`.
-                    Automatically reduced to a divisor of channels.
-                    Default: 8.
-                - `p_drop` (float): dropout probability used in
-                    `DoubleConvBlock`. Default: 0.05.
+            in_ch:
+                Number of input channels.
+            out_ch:
+                Number of output channels.
+            params:
+                Optional `ConvolutionParameters` specifying
+                normalization mode, group count, and dropout rate. When
+                `None`, normalization and dropout are omitted.
         '''
         super().__init__()
 
@@ -102,13 +97,22 @@ class DoubleConv(torch.nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        '''Apply two Conv-Norm-ReLU stages (with optional dropout).'''
+        '''
+        Apply two Conv-Norm-ReLU stages with optional dropout.
+
+        Args:
+            x:
+                Input feature tensor of shape `(B, in_ch, H, W)`.
+
+        Returns:
+            torch.Tensor:
+                Output feature tensor of shape `(B, out_ch, H, W)`.
+        '''
         return self.block(x)
 
     @staticmethod
     def _norm(mode: str | None, ch: int, gn_groups: int | None) -> torch.nn.Module:
         '''Return the requested normalization layer or identity.'''
-
         # no normalization
         if mode is None or mode.lower() == 'none':
             return torch.nn.Identity() # Indentity layer
@@ -128,10 +132,9 @@ class DoubleConv(torch.nn.Module):
 
 class Downsample(torch.nn.Module):
     '''
-    Max-pool downsampling followed by a DoubleConv.
+    Max-pool downsampling stage followed by `DoubleConv`.
 
-    **Architecture**\n
-    MaxPool2d(stride=2) → DoubleConv(in_ch, out_ch, **kwargs)
+    Applies `MaxPool2d(2)` followed by a `DoubleConv` block.
     '''
 
     def __init__(
@@ -144,11 +147,13 @@ class Downsample(torch.nn.Module):
         Initialize a pooling-plus-double-conv downsampling stage.
 
         Args:
-            in_ch: Number of input channels.
-            out_ch: Number of output channels.
-            **kwargs: Additional options pass to `DoubleConv`.
+            in_ch:
+                Number of input channels.
+            out_ch:
+                Number of output channels.
+            params:
+                `ConvolutionParameters` forwarded to `DoubleConv`.
         '''
-
         super().__init__()
         self.block = torch.nn.Sequential(
             torch.nn.MaxPool2d(2),
@@ -156,16 +161,26 @@ class Downsample(torch.nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        '''Downsample by 2x and refine with convolutions.'''
+        '''
+        Downsample input by 2x and refine with `DoubleConv`.
 
+        Args:
+            x:
+                Input feature tensor of shape `(B, in_ch, H, W)`.
+
+        Returns:
+            torch.Tensor:
+                Downsampled feature tensor of shape
+                `(B, out_ch, H // 2, W // 2)`.
+        '''
         return self.block(x)
 
 class Upsample(torch.nn.Module):
     '''
-    Bilinear upsample, skip concatenation, and DoubleConv refinement.
+    Bilinear upsample, skip concatenation, and `DoubleConv` refinement.
 
-    **Architecture**\n
-    Upsample(scale_factor=2) → Concat([x_up, skip], dim=1) → DoubleConv
+    Upsamples input by a factor of 2, concatenates the matching encoder
+    skip tensor along channels, and applies `DoubleConv`.
     '''
 
     def __init__(
@@ -175,14 +190,16 @@ class Upsample(torch.nn.Module):
         params: components.ConvolutionParameters
     ):
         '''
-        Bilinear upsample, skip concatenation, and DoubleConv refinement.
+        Initialize upsample, skip concatenation, and `DoubleConv`.
 
         Args:
-            in_ch: Number of input channels.
-            out_ch: Number of output channels.
-            params: Convolution parameters.
+            in_ch:
+                Number of concatenated input channels.
+            out_ch:
+                Number of output channels.
+            params:
+                `ConvolutionParameters` forwarded to `DoubleConv`.
         '''
-
         super().__init__()
         self.upsample = torch.nn.Upsample(
             scale_factor=2, mode='bilinear', align_corners=False
@@ -190,8 +207,19 @@ class Upsample(torch.nn.Module):
         self.conv = DoubleConv(in_ch, out_ch, params)
 
     def forward(self, x: torch.Tensor, skip: torch.Tensor) -> torch.Tensor:
-        '''Upsample, concatenate the skip feature, and refine.'''
+        '''
+        Upsample feature map, concatenate skip, and refine.
 
+        Args:
+            x:
+                Coarse feature tensor to upsample.
+            skip:
+                Skip-connection tensor at the target resolution.
+
+        Returns:
+            torch.Tensor:
+                Refined feature tensor with `out_ch` channels.
+        '''
         x = self.upsample(x)
         x = torch.cat([x, skip], dim=1) # concatenate skip connection here
         x = x.contiguous()

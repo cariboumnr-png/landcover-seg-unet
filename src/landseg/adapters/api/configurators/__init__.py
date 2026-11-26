@@ -22,8 +22,17 @@
 '''
 Top-level namespace for `landseg.adapters.api.configurators`.
 
-Exposes selected public functions via lazy resolution to keep import
+Exposes selected configurator classes via lazy resolution to keep import
 order simple and circular-free.
+
+Public APIs:
+    - `BaseConfigurator`: Base configurator for execution commands.
+    - `DataHarmonizationConfigurator`: Configurator for harmonization.
+    - `DataIngestionConfigurator`: Configurator for data ingestion.
+    - `DataPreparationConfigurator`: Configurator for data preparation.
+    - `StudySweepConfigurator`: Configurator for study sweeps.
+    - `TrainingSessionConfigurator`: Configurator for training sessions.
+    - `WorldGridConfigurator`: Configurator for world grid generation.
 '''
 
 # standard imports

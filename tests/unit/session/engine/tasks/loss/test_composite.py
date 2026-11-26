@@ -152,7 +152,7 @@ def test_composite_loss_passes_masks(session_config):
 
 def test_composite_loss_init_with_ecological(session_config):
     '''
-    Given: Composite loss with ecological weight > 0.0 and similarity matrix.
+    Given: Config with `ecological.weight > 0` and similarity matrix.
     When: Instantiating `CompositeLoss`.
     Then: Register EcologicalSimilarityLoss primitive loss module.
     '''

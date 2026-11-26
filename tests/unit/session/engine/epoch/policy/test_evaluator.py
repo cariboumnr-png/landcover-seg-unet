@@ -19,10 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''Unit tests for evaluator policy module (policy/evaluator.py).'''
+
 # pylint: disable=duplicate-code
 # pylint: disable=redefined-outer-name
-
-'''Unit tests for evaluator policy module (policy/evaluator.py).'''
 
 # third-party imports
 import torch
@@ -158,7 +158,7 @@ def test_evaluator_stitch_patches_without_inputs(
     mock_dispatcher,
 ):
     '''
-    Given: `MultiHeadEvaluator` with populated labels/preds/errors and no inputs.
+    Given: `MultiHeadEvaluator` with labels/preds/errors and no inputs.
     When: Calling `_stitch_patches`.
     Then: Set `infer_inputs` to None while stitching 2D head tensors.
     '''

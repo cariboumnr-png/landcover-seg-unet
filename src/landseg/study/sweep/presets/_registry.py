@@ -57,7 +57,21 @@ _REGISTRY: dict[str, PresetFn] = {
 
 #
 def resolve(name: str) -> PresetFn:
-    '''Resolve presets from name'''
+    '''
+    Resolve a sweep objective preset function by registry name.
+
+    Args:
+        name:
+            Registered sweep preset identifier.
+
+    Returns:
+        PresetFn:
+            Preset function that applies trial parameter mutations.
+
+    Raises:
+        ValueError:
+            If `name` is not registered in `_REGISTRY`.
+    '''
     try:
         return _REGISTRY[name]
     except KeyError as e:

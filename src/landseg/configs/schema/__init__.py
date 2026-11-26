@@ -30,7 +30,7 @@ Public APIs:
     - `ExecutionContext`: Runtime execution and path settings.
     - `ModelsConfig`: Composite configuration for model architectures.
     - `RootConfig`: Root structured configuration schema.
-    - `SessionConfig`: Composite configuration for training and evaluation.
+    - `SessionConfig`: Composite settings for training and evaluation.
     - `StudyConfig`: Composite configuration for hyperparameter sweeps.
 '''
 

@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for geopipe runtime DataSpecs builder (factory.py).'''
+# pylint: disable=protected-access
 
 # standard imports
 import typing
@@ -32,7 +31,8 @@ import landseg.geopipe.factory as factory
 # ----- `_get_heads` tests
 def test_get_heads_with_prepared_heads():
     '''
-    Given: Prepared schema containing a `heads` reclassification section.
+    Given: Prepared schema containing a `heads` reclassification
+        section.
     When: Populating `core.Heads` via `_get_heads`.
     Then: Correctly map `head_parent` and `head_parent_cls` for heads.
     '''

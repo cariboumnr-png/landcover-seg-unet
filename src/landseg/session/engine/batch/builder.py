@@ -19,17 +19,12 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
-Epoch engine construction utilities.
+Batch execution engine builder.
 
-Builds the epoch-level execution engine by assembling data loaders,
-runtime execution components, and training/evaluation policies from
-dataset metadata and configuration.
-
-This module serves as the orchestration entry point that wires together
-all components required for epoch-wise training and evaluation.
+Assembles initial `EngineState`, `BatchExecContext`, and `BatchEngine`
+instances from dataset specifications, dataloaders, model, and batch
+execution configuration.
 '''
 
 # local imports
@@ -49,8 +44,24 @@ def build_batch_engine(
     device: str
 ) -> engine.BatchEngine:
     '''
-    Construct the full engine runtime from model, data specifications,
-    dataloaders, and configuration objects.
+    Construct a configured `BatchEngine` from runtime dependencies.
+
+    Args:
+        dataspecs:
+            Dataset specifications providing head names and hierarchy.
+        dataloaders:
+            Data loader container providing batch size and preview
+            layout metadata.
+        model:
+            Multi-head segmentation model instance.
+        config:
+            Batch execution configuration (e.g., AMP and logit alpha).
+        device:
+            Target compute device identifier.
+
+    Returns:
+        engine.BatchEngine:
+            Initialized batch execution engine ready for running.
     '''
     # initialize engine state
     engine_state = state.initialize_state(

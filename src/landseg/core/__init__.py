@@ -22,8 +22,23 @@
 '''
 Top-level namespace for `landseg.core`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes core data specification contracts, model protocols, and session
+step result containers via lazy resolution to keep import order simple
+and circular-free.
+
+Public APIs:
+    - `AccumulatedMetrics`: Container for IoU metrics and active views.
+    - `DataSpecs`: Canonical dataset specs for trainers and models.
+    - `Domains`: Discrete and continuous domain metadata container.
+    - `Heads`: Head-wise label statistics and topology container.
+    - `InferStepResults`: Container for epoch inference step results.
+    - `Meta`: General dataset metadata for image and label specs.
+    - `MultiheadModelLike`: Structural protocol for multihead models.
+    - `SessionStepResults`: Immutable container for epoch step metrics.
+    - `SessionStepSummary`: Immutable training progress snapshot.
+    - `Splits`: Train, validation, and test block file mappings.
+    - `TrainStepResults`: Container for training step loss metrics.
+    - `ValStepResults`: Container for aggregated validation metrics.
 '''
 
 # standard imports

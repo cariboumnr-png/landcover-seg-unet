@@ -26,7 +26,7 @@ This module provides functions to reproject, resample, and snap input
 rasters to a canonical world grid layout as GDAL Virtual Rasters (VRT).
 
 Public APIs:
-    - `is_same_crs`: Compare two coordinate reference systems for equality.
+    - `is_same_crs`: Compare two CRS definitions for equality.
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
     - `write_warped_gtiff`: Write a materialized tiled GeoTIFF to disk.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
@@ -52,7 +52,19 @@ def is_same_crs(
     crs1: t.CRS | str | None,
     crs2: t.CRS | str | None,
 ) -> bool:
-    '''Compare two coordinate reference systems for equality.'''
+    '''
+    Compare two coordinate reference systems for equality.
+
+    Args:
+        crs1:
+            First coordinate reference system or string.
+        crs2:
+            Second coordinate reference system or string.
+
+    Returns:
+        bool:
+            `True` if both CRS values match, `False` otherwise.
+    '''
     if crs1 is None or crs2 is None:
         return crs1 == crs2
     try:
@@ -81,9 +93,9 @@ def write_warped_gtiff( # pylint: disable=too-many-arguments
     '''
     Write a materialized, tiled, compressed GeoTIFF raster to disk.
 
-    Warps the source raster into a materialized GeoTIFF on the target grid
-    using local scratch staging to prevent write-seek corruption on cloud
-    FUSE storage.
+    Warps the source raster into a materialized GeoTIFF on the target
+    grid using local scratch staging to prevent write-seek corruption
+    on cloud FUSE storage.
 
     Args:
         src:
@@ -224,7 +236,19 @@ def resolve_resampling_algorithm(
     method_name: str,
     is_categorical: bool,
 ) -> t.Resampling:
-    '''Resolve rasterio resampling algorithm enum.'''
+    '''
+    Resolve rasterio resampling algorithm enum.
+
+    Args:
+        method_name:
+            Requested resampling method name (e.g., `'bilinear'`).
+        is_categorical:
+            If `True`, strictly forces nearest-neighbor resampling.
+
+    Returns:
+        t.Resampling:
+            Resolved rasterio resampling enum member.
+    '''
     if is_categorical or method_name == 'nearest':
         return rasterio.enums.Resampling.nearest
     if method_name == 'cubic':
@@ -251,7 +275,7 @@ def _write_warped_gtiff( # pylint: disable=too-many-arguments
     tags: dict[str, str] | None,
     band_descriptions: dict[int, str] | None,
 ) -> pathlib.Path:
-    '''Warp an open reader to disk as a tiled GeoTIFF via scratch staging.'''
+    '''Warp reader to disk as a tiled GeoTIFF via scratch staging.'''
     effective_nodata = reader.nodata if nodata is None else nodata
     with artifacts.stage_to_scratch(out_p, scratch_dir=scratch_dir) as stage_f:
         with rasterio.vrt.WarpedVRT(

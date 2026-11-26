@@ -19,30 +19,29 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
-TypedDict definitions for data ingestion execution summaries and
-reports.
+TypedDict schemas for data ingestion summaries and reports.
 
 This module provides schemas for serializing execution reports, domain
 statistics, block generation metrics, and catalog update summaries.
 
 Public APIs:
-    - `CollisionPolicyType`: Literal type for collision policies.
-    - `StatusLiteral`: Ingestion run status literal.
-    - `IngestionPipelineConfig`: Protocol for pipeline configs.
-    - `CollisionRecord`: TypedDict for block collision entry.
-    - `RunCollisionManifest`: TypedDict for run collision report.
     - `BlocksBuildingStats`: Aggregate metrics on block collisions.
-    - `IngestionRunRecord`: TypedDict for ingestion run entry.
-    - `IngestReportSchema`: Root report for data ingestion run.
+    - `CollisionPolicyType`: Literal type for collision policies.
+    - `CollisionRecord`: TypedDict for block collision entry.
+    - `DataBlocksReport`: TypedDict for data block execution report.
     - `DomainMapReport`: TypedDict for domain map execution report.
     - `DomainStats`: TypedDict for domain layer re-indexing statistics.
-    - `DataBlocksReport`: TypedDict for data block execution report.
+    - `IngestReportSchema`: Root report for data ingestion run.
+    - `IngestionPipelineConfig`: Protocol for pipeline configs.
+    - `IngestionRunRecord`: TypedDict for ingestion run entry.
     - `ManifestStats`: TypedDict for catalog/schema update details.
     - `MappedRasterWindowsPayload`: Payload for window mappings.
+    - `RunCollisionManifest`: TypedDict for run collision report.
+    - `StatusLiteral`: Ingestion run status literal.
 '''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 from __future__ import annotations
@@ -62,6 +61,7 @@ class IngestionPipelineConfig(typing.Protocol):
 
 
 class _DomainsConfig(typing.Protocol):
+    '''Shape of domain mapping configuration.'''
     @property
     def valid_threshold(self) -> float: ...
     @property
@@ -69,6 +69,7 @@ class _DomainsConfig(typing.Protocol):
 
 
 class _DataBlocksConfig(typing.Protocol):
+    '''Shape of data block building configuration.'''
     @property
     def ignore_index(self) -> int: ...
     @property
@@ -82,7 +83,7 @@ class _DataBlocksConfig(typing.Protocol):
 
 
 class CollisionRecord(typing.TypedDict):
-    '''Record of an individual block spatial collision and action taken.'''
+    '''Record of an individual spatial block collision and action.'''
     block_name: str
     grid_coord: list[int]
     incumbent_ingest_run: str | None
@@ -158,9 +159,7 @@ class DomainStats(typing.TypedDict):
 
 
 class DataBlocksReport(typing.TypedDict):
-    '''
-    Execution report for data block partitioning (dev or test holdout).
-    '''
+    '''Execution report for data block partitioning (dev or test).'''
     image_filepath: str
     label_filepath: str | None
     duration_sec: float
@@ -177,7 +176,7 @@ class ManifestStats(typing.TypedDict):
 
 
 class MappedRasterWindowsPayload(typing.TypedDict):
-    '''Serialized JSON payload contract for cached raster window mappings.'''
+    '''Serialized JSON payload for cached raster window mappings.'''
     grid_id: str
     image: list[list[int]]
     label: list[list[int]]

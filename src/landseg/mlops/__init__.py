@@ -22,17 +22,17 @@
 '''
 Top-level namespace for `landseg.mlops`.
 
-Provides standardized enterprise MLOps capabilities across CLI and notebooks:
-Unity Catalog Model Registry integration, runtime environment detection,
-lineage harvesting, and cloud volume storage resolution.
+Provides standardized MLOps capabilities across CLI and notebooks:
+Unity Catalog Model Registry integration, runtime environment
+detection, lineage harvesting, and cloud volume storage resolution.
 
 Public APIs:
-    - `load_study_trials`: Load persisted sweep trials dataframe or summary.
-    - `register_unity_catalog_model`: Register checkpoint to Unity Catalog.
+    - `load_study_trials`: Load persisted sweep trials or summary.
+    - `register_unity_catalog_model`: Register model to Unity Catalog.
     - `resolve_exp_root`: Resolve experiment root path across contexts.
     - `resolve_optuna_storage`: Resolve environment-safe Optuna URI.
-    - `sync_optuna_study`: Persist Optuna study trials to volume storage.
-    - `validate_output_root`: Validate user-designated session output root.
+    - `sync_optuna_study`: Persist Optuna study trials to storage.
+    - `validate_output_root`: Validate user-designated output root.
 '''
 
 # standard imports

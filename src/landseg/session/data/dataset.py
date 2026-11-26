@@ -22,43 +22,22 @@
 '''
 Dataset utilities for block-tiling segmentation with optional domains.
 
-This module turns a collection of square block `.npz` files into fixed-
-size patch samples suitable for training/evaluating segmentation models.
+This module converts square block `.npz` files into fixed-size patch
+samples `(x, y, dom)` suitable for training and evaluation.
 
 Key concepts:
-- Block tiling: Each block of size `block_size x block_size` is split
-    into uniform patches of size `patch_size x patch_size` in a
-    deterministic scanline order.
-- Two modes:
-    * preload=True: eagerly load & patchify all blocks into RAM
-        (i.e., for small static sets).
-    * preload=False: lazily map a global index to (block_idx, patch_idx)
-        and stream blocks via LRU-like cache (i.e., for large sets).
-- Domain features: An optional per-block `domain_map` can attach
-    categorical IDs (int) or continuous vectors (list[float]) to each
-    returned sample.
+    - Block tiling: Each `block_size x block_size` block is split into
+      uniform `patch_size x patch_size` patches in scanline order.
+    - Preload mode (`preload=True`): Eagerly loads and patchifies all
+      blocks into RAM for small static datasets.
+    - Streaming mode (`preload=False`): Lazily maps global indices to
+      `(block_idx, patch_idx)` using a bounded LRU block cache.
+    - Domain features: Optional per-block mappings attach categorical
+      IDs or continuous vectors to each patch sample.
 
-Classes:
-    BlockConfig: Configuration for tiling, simple flips, and optional
-        domain map.
-    MultiBlockDataset: Dataset over multiple `.npz` blocks producing
-        (x, y, dom).
-    _BlockDataset: Internal helper to patchify a single block and
-        prepare its (x, y, dom).
-    _CacheDict: Small fixed-size, LRU-like cache used in streaming mode.
-
-Returns (per sample):
-    tuple(
-        x: torch.FloatTensor[C, ps, ps],\n
-        y: torch.LongTensor[ps, ps],\n
-        dom: dict[str, torch.Tensor]
-    )
-
-Notes:
-- Domain tensors are attached per block; image/label flips do not\
-    affect domain.
-- For uniform patches per block, global index mapping uses integer\
-    division; a cumulative index array is unnecessary.
+Public APIs:
+    - `BlockDatasetConfig`: Configuration for block tiling and domains.
+    - `MultiBlockDataset`: Dataset over `.npz` blocks yielding patches.
 '''
 
 # standard imports
@@ -79,8 +58,7 @@ import landseg.session.contracts as contracts
 @dataclasses.dataclass
 class BlockDatasetConfig:
     '''
-    Configuration for partitioning blocks into patches and attaching
-    optional per-block domain features.
+    Configure block patch extraction and optional domain features.
 
     The configuration defines how square image blocks are partitioned
     into uniformly sized patches, identifies the image and label arrays
@@ -88,15 +66,22 @@ class BlockDatasetConfig:
     domain metadata to be attached to every returned sample.
 
     Attributes:
-        block_size: Side length (pixels) of each square data block.
-        patch_size: Side length (pixels) of each square patch.
-        image_key: Name of the image array in each `.npz` file.
-        label_key: Name of the label array in each `.npz` file.
-        ids_domain: Mapping {blk name: categorical domain ID}.
-        vec_domain: Mapping {blk name: continuous domain vector}.
+        block_size:
+            Side length (pixels) of each square data block.
+        patch_size:
+            Side length (pixels) of each square patch.
+        image_key:
+            Name of the image array in each `.npz` file.
+        label_key:
+            Name of the label array in each `.npz` file.
+        ids_domain:
+            Mapping from block name to categorical domain ID.
+        vec_domain:
+            Mapping from block name to continuous domain vector.
 
     Raises:
-        ValueError: If `block_size` is smaller than `patch_size`, or if
+        ValueError:
+            If `block_size` is smaller than `patch_size`, or if
             `block_size` is not evenly divisible by `patch_size`.
     '''
     block_size: int
@@ -136,22 +121,20 @@ class _MultiBlockData:
 # ----- public classes
 class MultiBlockDataset(torch.utils.data.Dataset):
     '''
-    Unified dataset over multiple block .npz files with patch extraction
-    and optional domain features.
+    Unified dataset over block `.npz` files yielding patches.
 
     This dataset abstracts a set of block files and yields fixed-size
     patches `(x, y, dom)` for training segmentation models.
 
     Operating modes:
-    * preload=True: eagerly load, patchify, and concatenate all blocks
-        into RAM. Samples are indexed directly from contiguous arrays.
-    * preload=False: map global index to (block_idx, patch_idx),
-        loading patchified blocks on demand into a small LRU-like cache.
+        - `preload=True`: Eagerly load, patchify, and concatenate all
+          blocks into RAM for direct array indexing.
+        - `preload=False`: Map global index to `(block_idx, patch_idx)`
+          and load patchified blocks on demand via an LRU-like cache.
 
-    The optional `domain_map` in `BlockConfig` is consulted per block;
-    when present, a per-block domain dict is attached to each returned
-    patch. Integer values are converted to `torch.long` and list values
-    to `torch.float32`.
+    Optional `ids_domain` and `vec_domain` maps in `BlockDatasetConfig`
+    are consulted per block; integer values convert to `torch.long` and
+    float lists convert to `torch.float32`.
     '''
 
     def __init__(
@@ -164,21 +147,20 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         blk_cache_num: int = 16
     ):
         '''
-        Initialize the dataset over multiple data blocks (.npz files).
+        Initialize the dataset over multiple data blocks (`.npz` files).
 
         Args:
             block_src:
                 Mapping of block name to `.npz` path.
             config:
                 Dataset tiling and domain configuration.
-            preload:
-                If True, eagerly load all blocks.
             augment_flip:
                 Apply random horizontal/vertical flips when labels are
                 present.
+            preload:
+                If True, eagerly load all blocks into memory.
             blk_cache_num:
                 Maximum number of streamed blocks to retain in cache.
-                Passed via `kwargs`.
         '''
         super().__init__()
 
@@ -221,6 +203,17 @@ class MultiBlockDataset(torch.utils.data.Dataset):
         return len(self.blk_src) * self.cfg.patch_per_blk
 
     def __getitem__(self, idx: int) -> contracts.DatasetItem:
+        '''
+        Fetch patch image, label, and domain tensors at `idx`.
+
+        Args:
+            idx:
+                Global zero-based patch index across all blocks.
+
+        Returns:
+            contracts.DatasetItem:
+                Tuple `(x, y, dom)` for the requested patch.
+        '''
         if self._preload:
             x = self.data.img[idx].astype(numpy.float32)  # [C, ps, ps]
             if (
@@ -305,26 +298,20 @@ class _BlockDataset(torch.utils.data.Dataset):
     Prepare per-patch `(x, y, dom)` samples from a single data block.
 
     This internal dataset:
-      1) Loads a block from `.npz` (expects indexed arrays).
-      2) Patchifies the image and label into `(P, C, ps, ps)` and
-        `(P, ps, ps)`.
-      3) Converts provided per-block domain features into tensors
-        (int → long, list[float] → float32) and attaches the same dict
-        to each returned patch.
-      4) Optionally applies synchronized random horizontal and vertical
-        flips to both image and label. Domain tensors are unaffected..
+        1. Loads a block from `.npz` (expects indexed arrays).
+        2. Patchifies the image and label into `(P, C, ps, ps)` and
+           `(P, ps, ps)`.
+        3. Converts provided per-block domain features into tensors
+           (`int` to `long`, `list[float]` to `float32`) and attaches
+           the resulting dictionary to each returned patch.
+        4. Optionally applies synchronized random horizontal and
+           vertical flips to both image and label (domain unchanged).
 
     Attributes:
-        config (BlockConfig): Tiling and augmentation configuration.
-        domain (dict): Per-block domain dict converted to tensors.
-        imgs (numpy.ndarray): Patchified image array of shape
-            `(P, C, ps, ps)`.
-        lbls (numpy.ndarray): Patchified label array of shape
-            `(P, ps, ps)`.
-        meta (dict): Metadata loaded from the block (e.g., identifiers).
-
-    Raises:
-        ValueError: If patch extraction fails due to bad shapes.
+        config: Tiling and augmentation configuration.
+        domain: Per-block domain dict converted to tensors.
+        imgs: Patchified image array of shape `(P, C, ps, ps)`.
+        lbls: Patchified label array of shape `(P, ps, ps)`.
     '''
 
     def __init__(
@@ -339,12 +326,18 @@ class _BlockDataset(torch.utils.data.Dataset):
         Initialize the per-block dataset and patchify arrays.
 
         Args:
-            fpath: Path to the block `.npz` file.
+            fpath:
+                Path to the block `.npz` file.
             config:
+                Block tiling and array key configuration.
             domains:
+                Per-block domain values keyed by `'ids'` and `'vec'`.
+            augment_flip:
+                Whether to apply random spatial flips to labeled items.
 
         Raises:
-            ValueError: If patch extraction fails due to shape mismatch.
+            ValueError:
+                If patch extraction fails due to shape mismatch.
         '''
         super().__init__()
 
@@ -373,6 +366,21 @@ class _BlockDataset(torch.utils.data.Dataset):
         return self.config.patch_per_blk
 
     def __getitem__(self, idx: int) -> contracts.DatasetItem:
+        '''
+        Fetch one patch image, label, and domain dictionary.
+
+        Args:
+            idx:
+                Local patch index within the block.
+
+        Returns:
+            contracts.DatasetItem:
+                Tuple `(x, y, domain)` for the requested patch.
+
+        Raises:
+            IndexError:
+                If `idx` is outside `[0, patch_per_blk)`.
+        '''
         if not idx in range(self.config.patch_per_blk):
             raise IndexError(f'Invalid patch idx: {idx}') # sanity check
 
@@ -421,21 +429,35 @@ class _CacheDict(collections.OrderedDict):
     oldest item when inserting a new item that exceeds `maxsize`.
 
     Attributes:
-        maxsize (int): Maximum number of items to retain.
+        maxsize: Maximum number of items to retain.
     '''
 
     def __init__(self, maxsize: int, *args, **kwargs):
         '''
-        Initialize the cache dict.
+        Initialize the cache dictionary.
 
         Args:
-            maxsize (int): Maximum number of items; 0 disables eviction.
+            maxsize:
+                Maximum number of items; 0 disables eviction.
+            *args:
+                Positional arguments forwarded to `OrderedDict`.
+            **kwargs:
+                Keyword arguments forwarded to `OrderedDict`.
         '''
         super().__init__(*args, **kwargs)
         self.maxsize = maxsize
         assert isinstance(maxsize, int) and maxsize >= 0
 
     def __setitem__(self, key, value):
+        '''
+        Insert or update an entry while enforcing `maxsize` eviction.
+
+        Args:
+            key:
+                Cache key to insert or refresh.
+            value:
+                Cached value associated with `key`.
+        '''
         if self.maxsize == 0:
             super().__setitem__(key, value)
         else:

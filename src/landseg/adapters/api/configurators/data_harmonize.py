@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Data harmonization ETL configurator
-'''
+'''Data harmonization ETL configurator.'''
 
 # standard imports
 import pathlib
@@ -40,6 +38,17 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         output_dpath: str | pathlib.Path | None = None,
         experiment_root: str | pathlib.Path | None = None,
     ):
+        '''
+        Initialize the data harmonization configurator.
+
+        Args:
+            upstream_dpath:
+                Optional directory path for upstream world grid outputs.
+            output_dpath:
+                Optional destination directory for harmonized artifacts.
+            experiment_root:
+                Optional experiment root directory for unified mode.
+        '''
         super().__init__(
             'data-harmonize',
             upstream_dpath=upstream_dpath,
@@ -60,7 +69,19 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         continuous: str = 'bilinear',
         categorical: str = 'nearest',
     ) -> typing.Self:
-        '''Set raster resampling methods.'''
+        '''
+        Set raster resampling methods.
+
+        Args:
+            continuous:
+                Resampling method for continuous raster bands.
+            categorical:
+                Resampling method for categorical label rasters.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.data.harmonization.resampling_continuous = continuous
         self.cfg.data.harmonization.resampling_categorical = categorical
         return self
@@ -71,7 +92,21 @@ class DataHarmonizationConfigurator(configurators.BaseConfigurator):
         tile_stride: int = 0,
         output_dpath: str | pathlib.Path | None = None,
     ) -> typing.Self:
-        '''Set target world grid tile dimensions.'''
+        '''
+        Set target world grid tile dimensions and output path.
+
+        Args:
+            tile_size:
+                Square tile side length in pixels.
+            tile_stride:
+                Stride between adjacent tiles in pixels.
+            output_dpath:
+                Optional destination directory for world grid outputs.
+
+        Returns:
+            typing.Self:
+                Configurator instance for method chaining.
+        '''
         self.cfg.data.world_grid.tile_size = (tile_size, tile_size)
         self.cfg.data.world_grid.tile_stride = (tile_stride, tile_stride)
         if output_dpath:

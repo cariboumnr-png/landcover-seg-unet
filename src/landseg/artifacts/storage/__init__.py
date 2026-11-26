@@ -28,9 +28,9 @@ staged file writing to remote filesystems.
 Public APIs:
     - `cleanup_scratch`: Remove lingering temporary files from scratch.
     - `get_scratch_dir`: Resolve and validate active scratch directory.
-    - `savez_compressed`: Write arrays to a compressed npz archive sequentially.
+    - `savez_compressed`: Write arrays sequentially to an `.npz` file.
     - `scratch_file`: Context-managed temporary file in scratch storage.
-    - `stage_to_scratch`: Context manager staging writes before publishing.
+    - `stage_to_scratch`: Stage writes before publishing to target.
 '''
 
 # standard imports

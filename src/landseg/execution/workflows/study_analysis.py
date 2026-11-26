@@ -20,11 +20,11 @@
 # =========================================================================== #
 
 '''
-Study-level trial analysis.
+Study-level trial analysis workflow.
 
-This module performs lightweight, post hoc analysis over completed sweep
-trials. It operates strictly on persisted Optuna study metadata and
-materializes simple ranked summaries for downstream inspect
+Performs lightweight, post hoc analysis over completed sweep trials.
+Operates strictly on persisted Optuna study metadata and materializes
+simple ranked summaries for downstream inspection.
 '''
 
 # standard imports
@@ -39,12 +39,14 @@ def execute_study_analysis(config: configs.RootConfig):
     '''
     Analyze and rank completed sweep trials.
 
-    This function loads an existing Optuna study using the configured
-    study name and storage backend, ranks completed trials according to
-    their objective values, and persists a small ranked summary as a
-    study-level artifact.
-    '''
+    Loads an existing Optuna study using the configured study name and
+    storage backend, ranks completed trials by their objective values,
+    and persists a ranked JSON summary artifact.
 
+    Args:
+        config:
+            Root execution configuration containing study settings.
+    '''
     # load and rank
     sweep_config = config.study.sweep
     ranked = study.rank_trials(

@@ -38,7 +38,11 @@ matplotlib.use('Agg')
 
 # ----- Colorization Tests
 def test_colorize_tensor():
-    '''Test mapping 2D class integer tensor to 3D RGB tensor.'''
+    '''
+    Given: A 2D integer class tensor and color palette dictionary.
+    When: Calling `colorize`.
+    Then: Return a 3D `uint8` RGB tensor with mapped pixel colors.
+    '''
     canvas = torch.tensor([[0, 1], [2, 0]], dtype=torch.long)
     palette = {
         '0': [0, 0, 0],
@@ -53,14 +57,22 @@ def test_colorize_tensor():
 
 
 def test_colorize_invalid_dim():
-    '''Test that non-2D tensor raises ValueError.'''
+    '''
+    Given: A 3D tensor instead of a 2D class tensor.
+    When: Calling `colorize`.
+    Then: Raise `ValueError`.
+    '''
     canvas = torch.zeros((2, 2, 2), dtype=torch.long)
     with pytest.raises(ValueError, match='2D'):
         visual.colorize(canvas)
 
 
 def test_colorize_default_error_palette():
-    '''Test colorizing with canonical DEFAULT_ERROR_PALETTE.'''
+    '''
+    Given: A 2D class tensor and `DEFAULT_ERROR_PALETTE`.
+    When: Calling `colorize`.
+    Then: Return an RGB tensor with canonical error palette colors.
+    '''
     canvas = torch.tensor([[0, 1]], dtype=torch.long)
     rgb = visual.colorize(canvas, palette=visual.DEFAULT_ERROR_PALETTE)
     assert rgb.shape == (3, 1, 2)
@@ -71,7 +83,11 @@ def test_colorize_default_error_palette():
 
 
 def test_colorize_reference_palettes():
-    '''Test colorizing with NLCD and FRI forestry palettes.'''
+    '''
+    Given: A 2D class tensor with `NLCD_16` and `FORESTRY_FRI` palettes.
+    When: Calling `colorize`.
+    Then: Return RGB tensors matching each reference palette.
+    '''
     canvas = torch.tensor([[1, 2], [8, 9]], dtype=torch.long)
     nlcd_rgb = visual.colorize(canvas, palette=visual.NLCD_16_PALETTE)
     assert nlcd_rgb.shape == (3, 2, 2)
@@ -83,7 +99,11 @@ def test_colorize_reference_palettes():
 
 
 def test_colorize_continuous_viridis():
-    '''Test continuous float tensor colorization.'''
+    '''
+    Given: A 2D float tensor and `viridis` colormap.
+    When: Calling `colorize_continuous`.
+    Then: Return a non-empty 3D `uint8` RGB tensor.
+    '''
     canvas = torch.tensor([[0.0, 0.5], [1.0, 0.2]], dtype=torch.float32)
     rgb = visual.colorize_continuous(canvas, cmap='viridis')
     assert rgb.shape == (3, 2, 2)
@@ -93,7 +113,11 @@ def test_colorize_continuous_viridis():
 
 
 def test_colorize_continuous_invalid_dim():
-    '''Test continuous colorization rejects non-2D tensors.'''
+    '''
+    Given: A 3D float tensor instead of a 2D map.
+    When: Calling `colorize_continuous`.
+    Then: Raise `ValueError`.
+    '''
     canvas = torch.zeros((2, 2, 2), dtype=torch.float32)
     with pytest.raises(ValueError, match='2D'):
         visual.colorize_continuous(canvas)
@@ -101,7 +125,11 @@ def test_colorize_continuous_invalid_dim():
 
 # ----- Curves Plotting Tests
 def test_plot_training_curves_multi_head(tmp_path: pathlib.Path):
-    '''Test plotting curves with multiple active heads.'''
+    '''
+    Given: A JSON file with multi-head step metrics and GEM scores.
+    When: Calling `plot_training_curves`.
+    Then: Return a figure and save a non-empty PNG file.
+    '''
     steps = [
         {
             'epoch_in_phase': 1,
@@ -138,7 +166,11 @@ def test_plot_training_curves_multi_head(tmp_path: pathlib.Path):
 
 
 def test_plot_training_curves_from_step_summaries(tmp_path: pathlib.Path):
-    '''Test plotting curves from serialized SessionStepSummary records.'''
+    '''
+    Given: Serialized `SessionStepSummary` records persisted to JSON.
+    When: Calling `plot_training_curves`.
+    Then: Return a figure and save a non-empty PNG file.
+    '''
     training1 = core.TrainStepResults(total_objective=1.5)
     validation1 = core.ValStepResults(
         head_metrics={'landcover': core.AccumulatedMetrics(mean=0.45)}
@@ -200,7 +232,11 @@ def test_plot_training_curves_from_step_summaries(tmp_path: pathlib.Path):
 
 
 def test_plot_training_curves_empty_steps(tmp_path: pathlib.Path):
-    '''Test that empty step results file raises ValueError.'''
+    '''
+    Given: A `step_results.json` file containing an empty list.
+    When: Calling `plot_training_curves`.
+    Then: Raise `ValueError`.
+    '''
     json_path = tmp_path / 'step_results.json'
     artifacts.Controller[list](json_path).persist([])
     with pytest.raises(ValueError, match='No training step records found'):
@@ -208,7 +244,11 @@ def test_plot_training_curves_empty_steps(tmp_path: pathlib.Path):
 
 
 def test_plot_training_curves_nonexistent_path(tmp_path: pathlib.Path):
-    '''Test that non-existent path raises FileNotFoundError.'''
+    '''
+    Given: A path to a non-existent `step_results.json` file.
+    When: Calling `plot_training_curves`.
+    Then: Raise `FileNotFoundError`.
+    '''
     missing = tmp_path / 'nonexistent.json'
     with pytest.raises(
         FileNotFoundError, match='Specified path does not exist'
@@ -217,7 +257,11 @@ def test_plot_training_curves_nonexistent_path(tmp_path: pathlib.Path):
 
 
 def test_plot_training_curves_no_validation_metrics(tmp_path: pathlib.Path):
-    '''Test plotting curves when no validation head metrics are recorded.'''
+    '''
+    Given: Step records with training loss and no validation metrics.
+    When: Calling `plot_training_curves`.
+    Then: Render the loss curve cleanly and return a figure.
+    '''
     step_data = [
         {'epoch_in_phase': 1, 'training': {'total_objective': 1.5}},
         {'epoch_in_phase': 2, 'training': {'total_objective': 1.1}},
@@ -231,7 +275,11 @@ def test_plot_training_curves_no_validation_metrics(tmp_path: pathlib.Path):
 
 # ----- Qualitative Inspection Tests
 def test_plot_qualitative_predictions(tmp_path: pathlib.Path):
-    '''Test 3-panel and 4-panel qualitative segmentation plots.'''
+    '''
+    Given: Synthetic image, ground truth, prediction, and error arrays.
+    When: Calling `plot_qualitative_predictions`.
+    Then: Return a figure and save the 4-panel PNG to disk.
+    '''
     img = numpy.random.rand(64, 64, 3).astype(numpy.float32)
     gt = numpy.random.randint(0, 3, size=(64, 64), dtype=numpy.int32)
     pred = numpy.random.randint(0, 3, size=(64, 64), dtype=numpy.int32)
@@ -250,7 +298,11 @@ def test_plot_qualitative_predictions(tmp_path: pathlib.Path):
 
 # ----- Preview Generation Empty / Rendering Tests
 def test_generate_prediction_previews_skips_empty_results():
-    '''Test skipping preview generation when inference inputs/preds are absent.'''
+    '''
+    Given: `None` or incomplete `InferStepResults` payloads.
+    When: Calling `generate_prediction_previews`.
+    Then: Skip rendering and return an empty dictionary.
+    '''
     specs = _make_mock_dataspecs()
 
     assert not visual.generate_prediction_previews(None, specs)
@@ -265,7 +317,11 @@ def test_generate_prediction_previews_skips_empty_results():
 
 
 def test_plot_training_curves_from_file_and_dir(tmp_path: pathlib.Path):
-    '''Test loading step_results from json file and directory.'''
+    '''
+    Given: A `step_results.json` file path and its parent directory.
+    When: Calling `plot_training_curves` with both paths.
+    Then: Load records and return figures in both cases.
+    '''
     step_data = [
         {
             'epoch_in_phase': 1,
@@ -289,7 +345,11 @@ def test_plot_training_curves_from_file_and_dir(tmp_path: pathlib.Path):
 
 
 def test_generate_prediction_previews_renders_pngs(tmp_path: pathlib.Path):
-    '''Test pure preview rendering from InferStepResults and DataSpecs.'''
+    '''
+    Given: Complete `InferStepResults` with labels, preds, and errors.
+    When: Calling `generate_prediction_previews` with `save_pngs=True`.
+    Then: Return figures and save per-head preview PNGs to disk.
+    '''
     specs = _make_mock_dataspecs(
         band_map={'red': 2, 'green': 1, 'blue': 0, 'nir': 3},
         color_map={'0': [0, 0, 0], '1': [255, 0, 0]},
@@ -320,7 +380,11 @@ def test_generate_prediction_previews_renders_pngs(tmp_path: pathlib.Path):
 
 
 def test_generate_prediction_previews_unlabeled(tmp_path: pathlib.Path):
-    '''Test pure preview rendering when labels and errors are absent.'''
+    '''
+    Given: `InferStepResults` with predictions but no labels or errors.
+    When: Calling `generate_prediction_previews` with `save_pngs=True`.
+    Then: Return figures and save per-head preview PNGs cleanly.
+    '''
     specs = _make_mock_dataspecs()
     infer_results = core.InferStepResults(
         infer_inputs=torch.zeros((1, 64, 64), dtype=torch.float32),
@@ -341,7 +405,11 @@ def test_generate_prediction_previews_unlabeled(tmp_path: pathlib.Path):
 
 # ----- Render Prediction Preview Display
 def test_render_prediction_preview_loads_existing_png(tmp_path: pathlib.Path):
-    '''Test render_prediction_preview finds and displays existing PNGs.'''
+    '''
+    Given: An existing head preview PNG inside the `previews` directory.
+    When: Calling `render_prediction_preview`.
+    Then: Load the PNG and return the rendered figure.
+    '''
     prev_dir = tmp_path / 'previews'
     prev_dir.mkdir(parents=True)
     sample_png = prev_dir / 'head1_preview.png'

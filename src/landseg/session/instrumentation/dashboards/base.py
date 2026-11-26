@@ -19,11 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
-'''
-Base tracker class
-'''
+'''Abstract base class for experiment dashboard trackers.'''
 
 # standard imports
 import abc
@@ -38,11 +34,21 @@ if typing.TYPE_CHECKING:
 # ----- public classes
 class BaseTracker(abc.ABC):
     '''Interface of the base tracker.'''
+
     def __init__(
         self,
         uri: pathlib.Path | str,
         artifact_path: str | None = None
     ):
+        '''
+        Initialize the dashboard tracker.
+
+        Args:
+            uri:
+                Tracking directory path or backend tracking URI.
+            artifact_path:
+                Optional experiment or artifact storage identifier.
+        '''
         if isinstance(uri, pathlib.Path):
             self.uri = uri.absolute().as_uri() # safe URI generation
         else:
@@ -50,16 +56,82 @@ class BaseTracker(abc.ABC):
         self.artifact_path = artifact_path
 
     @abc.abstractmethod
-    def log_scalar(self, key: str, value: float, step: int): ...
+    def log_scalar(self, key: str, value: float, step: int):
+        '''
+        Log a scalar metric value at a given step.
+
+        Args:
+            key:
+                Metric name or tag.
+            value:
+                Scalar metric value to log.
+            step:
+                Global or epoch step index.
+        '''
+        ...
+
     @abc.abstractmethod
-    def log_params(self, key: str, value: typing.Any): ...
+    def log_params(self, key: str, value: typing.Any):
+        '''
+        Log a configuration parameter or metadata entry.
+
+        Args:
+            key:
+                Parameter name.
+            value:
+                Parameter value to record.
+        '''
+        ...
+
     @abc.abstractmethod
-    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs): ...
+    def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
+        '''
+        Log an image tensor at a given step.
+
+        Args:
+            key:
+                Image tag or identifier.
+            image:
+                Image tensor to log.
+            step:
+                Global or epoch step index.
+            **kwargs:
+                Additional backend-specific keyword arguments.
+        '''
+        ...
+
     @abc.abstractmethod
-    def log_artifact(self, fpath: str): ...
+    def log_artifact(self, fpath: str):
+        '''
+        Log a local file artifact to the tracking backend.
+
+        Args:
+            fpath:
+                File path of the artifact to log.
+        '''
+        ...
+
     @abc.abstractmethod
-    def log_text(self, key: str, text: str, step: int): ...
+    def log_text(self, key: str, text: str, step: int):
+        '''
+        Log a text entry at a given step.
+
+        Args:
+            key:
+                Text entry tag or identifier.
+            text:
+                Text payload to log.
+            step:
+                Global or epoch step index.
+        '''
+        ...
+
     @abc.abstractmethod
-    def flush(self): ...
+    def flush(self):
+        '''Flush buffered events to the tracking backend.'''
+        ...
+
     @abc.abstractmethod
-    def close(self): ...
+    def close(self):
+        '''Close the tracker and release underlying resources.'''
+        ...

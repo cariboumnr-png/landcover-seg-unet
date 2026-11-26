@@ -29,7 +29,7 @@ to source imagery and labels, computes file-level integrity hashes, and
 standardizes spatial and statistical descriptors.
 
 Public APIs:
-    - build_catalog: Builds or updates a dataset-level catalog.
+    - `build_catalog`: Builds or updates a dataset-level catalog.
 '''
 
 # standard imports

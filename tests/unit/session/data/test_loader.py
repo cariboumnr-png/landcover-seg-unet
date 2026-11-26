@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for dataloader construction module (loader.py).'''
+
+# pylint: disable=protected-access
 
 import pytest
 import torch
@@ -36,7 +36,7 @@ def test_collate_multi_block_labeled():
     '''
     Given: A batch of labeled dataset patch samples.
     When: `collate.batch` is called on the batch.
-    Then: Correctly stack image tensors, label tensors, and domain features.
+    Then: Stack image tensors, label tensors, and domain features.
     '''
     sample1 = (
         torch.ones((4, 128, 128), dtype=torch.float32),
@@ -59,7 +59,7 @@ def test_collate_multi_block_labeled():
 
 def test_collate_multi_block_unlabeled():
     '''
-    Given: A batch of unlabeled dataset patch samples with empty label tensors.
+    Given: A batch of unlabeled patch samples with empty labels.
     When: `collate.batch` is called on the batch.
     Then: Correctly stack image tensors and empty label tensor.
     '''
@@ -84,7 +84,7 @@ def test_collate_multi_block_unlabeled():
 
 def test_collate_multi_block_inconsistent_y_shape():
     '''
-    Given: A batch containing labeled samples with mismatched label shapes.
+    Given: A batch of labeled samples with mismatched label shapes.
     When: `collate.batch` is called on the batch.
     Then: Raise `ValueError` for inconsistent label shapes.
     '''
@@ -105,7 +105,7 @@ def test_collate_multi_block_inconsistent_y_shape():
 
 def test_collate_multi_block_mixed_labeled_unlabeled():
     '''
-    Given: A batch containing a mixture of unlabeled and labeled samples.
+    Given: A batch mixing unlabeled and labeled dataset samples.
     When: `collate.batch` is called on the batch.
     Then: Raise `ValueError` for mixed batch composition.
     '''
@@ -144,7 +144,7 @@ def test_get_memory_stratege_high_memory(dataspecs):
     '''
     Given: Abundant system RAM relative to dataset size.
     When: `get_memory_strategy` is called with high available bytes.
-    Then: Return flags configuring preloading for both train and val splits.
+    Then: Return flags enabling preloading for train and val splits.
     '''
     dataspecs.meta.blk_bytes = 100_000_000 # 100MB per block
     # available RAM: 10GB
@@ -174,7 +174,7 @@ def test_get_memory_stratege_low_memory(dataspecs):
 # ----- `_generate_preview_context` tests
 def test_generate_preview_context_valid():
     '''
-    Given: Valid square patch count per block and test block grid dimensions.
+    Given: Valid square patch count and test block grid dimensions.
     When: `_generate_preview_context` is called.
     Then: Correctly return `_PreviewContext` dataclass instance.
     '''
@@ -199,9 +199,9 @@ def test_generate_preview_context_non_square():
 
 def test_build_dataloaders_default_mode(dataspecs, session_config):
     '''
-    Given: Dataset specs configured for default mode with valid temp blocks.
+    Given: Dataset specs in default mode with valid temp blocks.
     When: `build_dataloaders` is called without logger.
-    Then: Return `DataLoaders` container with train, val, and test dataloaders.
+    Then: Return `DataLoaders` with train, val, and test loaders.
     '''
     dataspecs.mode = 'default'
 
@@ -223,9 +223,9 @@ def test_build_dataloaders_default_mode(dataspecs, session_config):
 
 def test_build_dataloaders_default_mode_no_test(dataspecs, session_config):
     '''
-    Given: Dataset specs configured for default mode without test blocks.
+    Given: Dataset specs in default mode without test blocks.
     When: `build_dataloaders` is called without logger.
-    Then: Return `DataLoaders` container with train, and val dataloaders.
+    Then: Return `DataLoaders` with train and val dataloaders.
     '''
     dataspecs.mode = 'default'
     dataspecs.splits.test.clear()
@@ -246,7 +246,7 @@ def test_build_dataloaders_val_only_mode(dataspecs, session_config):
     '''
     Given: Dataset specs configured for val_only mode.
     When: `build_dataloaders` is called.
-    Then: Return `DataLoaders` with only validation dataloader populated.
+    Then: Return `DataLoaders` with only the validation dataloader.
     '''
     dataspecs.mode = 'val_only'
     dataspecs.splits.train.clear()

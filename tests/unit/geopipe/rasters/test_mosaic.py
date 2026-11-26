@@ -127,7 +127,8 @@ def test_build_vrt_mosaic_multi_utm_zones_to_epsg3161(
     '''
     Given: Rasters from two management units in UTM 16N and UTM 17N.
     When: Assembling a virtual mosaic reprojected to EPSG:3161.
-    Then: Produces a valid multi-band VRT in EPSG:3161 readable by rasterio.
+    Then: Produces a valid multi-band VRT in EPSG:3161 readable by
+        rasterio.
     '''
     tf1 = rasterio.transform.from_origin(300000.0, 5000000.0, 20.0, 20.0)
     t1 = dummy_geotiff_factory(

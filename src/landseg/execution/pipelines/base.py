@@ -28,7 +28,7 @@ learning session pipeline base classes.
 Public APIs:
     - `BasePipeline`: Root abstract pipeline runner class.
     - `GeoPipeline`: Base class for geospatial data pipelines.
-    - `SessionPipeline`: Base class for neural network session pipelines.
+    - `SessionPipeline`: Base class for neural session pipelines.
 '''
 
 # standard imports
@@ -50,7 +50,6 @@ import landseg.session as session
 # ----- public classes
 class BasePipeline(abc.ABC):
     '''Base pipeline runner class common to all pipelines.'''
-
     pipeline_name: str = 'unknown'
     context: typing.Any
     logger: typing.Any
@@ -63,7 +62,17 @@ class BasePipeline(abc.ABC):
         artifact_paths: artifacts.ArtifactPaths | None = None,
         disable_console_logging: bool = False
     ) -> None:
-        '''Initialize common pipeline configuration and attributes.'''
+        '''
+        Initialize common pipeline configuration and attributes.
+
+        Args:
+            config:
+                Root execution configuration.
+            artifact_paths:
+                Optional pre-resolved artifact paths container.
+            disable_console_logging:
+                Whether to suppress console log output.
+        '''
         self.config = config
         self.artifact_paths = (
             artifact_paths
@@ -81,7 +90,13 @@ class BasePipeline(abc.ABC):
 
     @abc.abstractmethod
     def run(self) -> typing.Any:
-        '''Initialize a pipeline runner and run end-to-end process.'''
+        '''
+        Initialize a pipeline runner and run end-to-end process.
+
+        Returns:
+            typing.Any:
+                Pipeline execution result, if any.
+        '''
 
     @abc.abstractmethod
     def _resolve_pipeline_paths(self) -> None:
@@ -126,14 +141,13 @@ class GeoPipeline(BasePipeline):
 
 class SessionPipeline(BasePipeline):
     '''Base class for neural network session pipelines.'''
-
     context: core.DataSpecs
     logger: session.SessionLogger
     pipeline_paths: artifacts.SessionPaths
 
     @abc.abstractmethod
     def _create_logger(self) -> session.SessionLogger:
-        '''Instantiate and configure the session logger for this pipeline.'''
+        '''Instantiate and configure the pipeline session logger.'''
 
     @abc.abstractmethod
     def _build_context(self) -> core.DataSpecs:
@@ -191,13 +205,13 @@ class SessionPipeline(BasePipeline):
 
         Args:
             mode_override:
-                optional session mode to override configuration.
+                Optional session mode to override configuration.
             eval_split:
-                dataset split to use during evaluation.
+                Dataset split to use during evaluation.
 
         Returns:
             session.EpochRunner | session.ContinuousRunner | session.CurriculumRunner:
-                instantiated session runner.
+                Instantiated session runner.
         '''
         dataspecs = self._build_context()
         self.context = dataspecs

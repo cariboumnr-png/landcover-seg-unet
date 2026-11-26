@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base class for a configuration section'''
+'''Base class for a configuration section.'''
 
 # standard imports
 import dataclasses
@@ -34,7 +34,7 @@ ConfigValidationError = val.ValidationError
 
 # ----- public classes
 class BaseConfigSection:
-    '''Base configuration class providing shared validation primitives.'''
+    '''Base configuration class with shared validation primitives.'''
 
     @property
     def as_dict(self) -> dict[str, typing.Any]:
@@ -42,7 +42,7 @@ class BaseConfigSection:
         return dataclasses.asdict(typing.cast(typing.Any, self))
 
     def validate(self) -> None:
-        '''Validate section integrity. Default is a no-op.'''
+        '''Validate section integrity with a default no-op.'''
         return None
 
     val = val

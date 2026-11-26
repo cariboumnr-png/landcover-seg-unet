@@ -22,8 +22,14 @@
 '''
 Top-level namespace for `landseg.models.backbones`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes backbone interfaces, configuration contracts, and factory
+builders via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `Backbone`: Abstract base class for backbone feature extractors.
+    - `UNetBackboneConfig`: Protocol for UNet backbone configuration.
+    - `build_unet_backbone`: Build a configured UNet backbone instance.
 '''
 
 # standard imports

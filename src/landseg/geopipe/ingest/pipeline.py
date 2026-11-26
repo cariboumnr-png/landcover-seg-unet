@@ -44,7 +44,25 @@ def run_data_ingestion(
     policy: artifacts.LifecyclePolicy,
     logger: ingest_logger.IngestionLogger,
 ) -> None:
-    '''Run the ingestion pipeline.'''
+    '''
+    Run the data ingestion pipeline.
+
+    Validates run collision status, builds canonical data blocks when
+    feature and label rasters are available, and materializes domain
+    knowledge maps into ingestion artifacts.
+
+    Args:
+        context:
+            Resolved ingestion context with grid and input rasters.
+        ingestion_paths:
+            Artifact path manager for ingestion outputs.
+        config:
+            Ingestion pipeline configuration parameters.
+        policy:
+            Artifact lifecycle policy governing rebuild behavior.
+        logger:
+            Structured logger recording ingestion progress and report.
+    '''
     assert logger.summary
 
     logger.set_harmonization_reference(

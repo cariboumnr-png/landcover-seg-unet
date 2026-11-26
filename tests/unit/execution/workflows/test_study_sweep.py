@@ -19,10 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-# pylint: disable=missing-class-docstring
-
 '''Unit tests for study sweep workflow.'''
+
+# pylint: disable=protected-access
 
 # standard imports
 import dataclasses
@@ -44,6 +43,7 @@ def test_sweep_pipeline(tmp_path, monkeypatch):
     '''
     @dataclasses.dataclass
     class MockStudyResult:
+        '''Minimal study result stub for sweep workflow tests.'''
         best_value: float = 0.92
         best_params: dict = dataclasses.field(
             default_factory=lambda: {'lr': 0.01}
@@ -69,7 +69,7 @@ def test_sweep_pipeline(tmp_path, monkeypatch):
 def test_runner_builder(tmp_path):
     '''
     Given: A RootConfig instance.
-    When: `_runner_builder` is called.
+    When: `_build_runner` is called.
     Then: Return step results path and callable wrapper.
     '''
     schema = omegaconf.OmegaConf.structured(configs.RootConfig)

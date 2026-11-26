@@ -31,11 +31,21 @@ def obj_base(
     trial: optuna.Trial,
 ) -> mutator.TrialMutator:
     '''
-    Base preset mutations:
-      - Learning rate (`float`)
-      - Data batch size (`int`)
-    '''
+    Sample baseline optimization parameters for an Optuna trial.
 
+    Mutates the optimizer learning rate and dataloader batch size for
+    sweep smoke tests.
+
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        mutator.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.optimization.base
 
     # optimizer domain example

@@ -20,10 +20,20 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for `landseg.session.engine.runtime.tasks`.
+Top-level namespace for `landseg.session.engine.tasks`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `CompositeLoss`: Weighted combination of primitive loss modules.
+    - `ConfusionMatrix`: Incremental per-head confusion matrix and IoU.
+    - `ConsistencyRegularizer`: Cross-head consistency penalty module.
+    - `EngineTasks`: Container for session-level task components.
+    - `HeadSpec`: Configuration dataclass for a single training head.
+    - `MTLMetricsAggregator`: Multi-task geometric and rule metrics.
+    - `TaskConfigShape`: Protocol for engine task configuration.
+    - `build_engine_tasks`: Construct head specs, losses, and metrics.
 '''
 
 # standard imports

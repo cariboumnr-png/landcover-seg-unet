@@ -27,9 +27,9 @@ layout, generating windowed read boundaries for image and label bands
 used during block construction and model training workflows.
 
 Public APIs:
-    - MappedRasterWindows: Dataclass container for read windows.
-    - map_rasters: Maps input rasters to grid and builds windows.
-    - validate_raster_alignment: Validates raster alignment with grid.
+    - `MappedRasterWindows`: Dataclass container for read windows.
+    - `map_rasters`: Maps input rasters to grid and builds windows.
+    - `validate_raster_alignment`: Validates raster alignment with grid.
 '''
 
 # standard imports
@@ -76,7 +76,7 @@ def validate_raster_alignment(
     Returns:
         tuple[tuple[float, float], rasters.BoundingBox]:
             Pair of `(pixel_size, inter_bbox)` where `pixel_size` is
-            `(x_res, y_res)` and `inter_bbox` is the intersection extent.
+            `(x_res, y_res)` and `inter_bbox` is the overlap bounds.
 
     Raises:
         ValueError:

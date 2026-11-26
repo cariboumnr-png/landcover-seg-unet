@@ -30,9 +30,9 @@ This module translates dataset metadata into structured runtime head
 specifications used during loss computation and evaluation.
 
 Public APIs:
-    - `HeadSpec`: configuration dataclass for a single training head.
-    - `HeadSpecs`: container wrapper around mapping of head specs.
-    - `build_headspecs`: construct per-head specifications from
+    - `HeadSpec`: Configuration dataclass for a single training head.
+    - `HeadSpecs`: Container wrapper around mapping of head specs.
+    - `build_headspecs`: Construct per-head specifications from
       metadata.
 '''
 
@@ -65,25 +65,49 @@ class HeadSpecs:
     Typed wrapper around a mapping of heads to `HeadSpec` objects.
 
     This class provides:
-    - key-based access to individual `Spec` instances.
-    - a stable, strongly-typed container for passing head specs through
-    the codebase.
+        - Key-based access to individual `HeadSpec` instances.
+        - A stable, strongly-typed container for passing head specs
+          through the codebase.
 
     It is *not* a full `dict` replacement. To work with the underlying
-    mapping directly, use method: `as_dict()`.
+    mapping directly, use `as_dict()`.
     '''
 
     def __init__(self, specs: dict[str, HeadSpec]):
+        '''
+        Initialize the container from a head specification mapping.
+
+        Args:
+            specs:
+                Mapping of head name to `HeadSpec` instance.
+        '''
         self._specs = specs
 
     def __getitem__(self, key: str) -> HeadSpec:
+        '''
+        Retrieve the specification for a given head name.
+
+        Args:
+            key:
+                Head name key.
+
+        Returns:
+            HeadSpec:
+                Specification dataclass registered for `key`.
+        '''
         return self._specs[key]
 
     def __len__(self) -> int:
         return len(self._specs)
 
     def as_dict(self) -> dict[str, HeadSpec]:
-        '''Return a shallow copy of the mapping as `dict[str, Spec]`.'''
+        '''
+        Return a shallow copy of the head specification mapping.
+
+        Returns:
+            dict[str, HeadSpec]:
+                Shallow copy mapping head names to `HeadSpec` objects.
+        '''
         return dict(self._specs)
 
 
@@ -99,21 +123,24 @@ def build_headspecs(
     '''
     Construct per-head specifications from dataset metadata.
 
-    Generates a ``HeadSpec`` for each head defined in the dataset,
+    Generates a `HeadSpec` for each head defined in the dataset,
     computing class-balanced loss weights, attaching pre-resolved
     taxonomy similarity matrices, hierarchy, and exclusion information.
 
     Args:
-        data: Dataset specification containing per-head class counts
-            and hierarchical relationships.
-        alpha_fn: Strategy for computing class weights ('effective_n' or
-            'inverse').
-        en_beta: Beta parameter for effective number weighting (required
-            when ``alpha_fn='effective_n'``).
-        excluded_cls: Optional mapping of head names to class indices to
-            ignore.
-        head_weights: Optional mapping of head names to scalar loss
-            weights.
+        data:
+            Dataset specification containing per-head class counts and
+            hierarchical relationships.
+        alpha_fn:
+            Strategy for computing class weights (`'effective_n'` or
+            `'inverse'`).
+        en_beta:
+            Beta parameter for effective number weighting (required when
+            `alpha_fn='effective_n'`).
+        excluded_cls:
+            Optional mapping of head names to class indices to ignore.
+        head_weights:
+            Optional mapping of head names to scalar loss weights.
 
     Returns:
         HeadSpecs:
@@ -121,11 +148,12 @@ def build_headspecs(
 
     Raises:
         ValueError:
-            If an unknown alpha function is specified.
+            If an unknown alpha function is specified or `en_beta` is
+            missing for `'effective_n'`.
 
     Notes:
         - Class weights are normalized per head.
-        - Class indices in ``exclude_cls`` are assumed to be 1-based.
+        - Class indices in `excluded_cls` are assumed to be 1-based.
         - Head weights default to 1.0 if unspecified for a head.
     '''
     # currently supported alpha compute functions
@@ -195,7 +223,7 @@ def _count_to_inv_weights(count: list[int]) -> list[float]:
 
 
 def _count_to_effective_num(counts: list[int], *, b: float) -> list[float]:
-    '''Convert count to EN weights Cui et al. 2019'''
+    '''Convert counts to effective-number weights (Cui et al., 2019).'''
     counts_arr = numpy.array(counts)
     # note: float dtype prevents truncation of weights < 1 to zero
     weights = numpy.zeros_like(counts_arr, dtype=float)

@@ -27,7 +27,7 @@ patches do not overlap validation or test patches, with configurable
 buffer steps to reduce spatial autocorrelation leakage.
 
 Public APIs:
-    - filter_safe_tiles: keep candidate tile coordinates safely.
+    - `filter_safe_tiles`: Keep candidate tile coordinates safely.
 '''
 
 # ----- public functions
@@ -55,21 +55,26 @@ def filter_safe_tiles(
 
     Args:
         candidates:
-            list of (x, y) coordinate tuples representing candidate
+            List of `(x, y)` coordinate tuples representing candidate
             tile top-left positions.
         base_tiles:
-            list of (x, y) coordinate tuples for base tiles that
+            List of `(x, y)` coordinate tuples for base tiles that
             must not be overlapped.
         block_size:
-            the tile size in pixels for both candidate and base tiles.
+            Tile size in pixels for both candidate and base tiles.
         block_stride:
-            the stride of candidate tiles (0 < stride <= block_size).
+            Stride of candidate tiles (`0 <= stride <= block_size`).
         buffer_steps:
-            number of stride units to expand exclusion threshold.
+            Number of stride units to expand exclusion threshold.
 
     Returns:
         list[tuple[int, int]]:
-            candidate coordinates that do not overlap any base tiles.
+            Candidate coordinates that do not overlap any base tiles.
+
+    Raises:
+        ValueError:
+            If `block_size` is non-positive, `block_stride` is out of
+            range, or `buffer_steps` is negative.
     '''
     # sanity checks
     if block_size <= 0:

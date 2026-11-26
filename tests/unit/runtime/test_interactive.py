@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit test suite for interactive notebook widgets and session safety (interactive.py).'''
+'''Unit tests for interactive notebook widgets and session safety.'''
 
 # standard imports
 import json
@@ -32,6 +32,8 @@ import landseg.runtime.interactive as interactive
 
 # Helper fake classes for testing Databricks widgets
 class _FakeWidgets:
+    '''Minimal fake Databricks widgets stub for testing.'''
+
     def __init__(self, store: dict[str, str] | None = None):
         self._store = dict(store) if store else {}
 
@@ -89,6 +91,8 @@ class _FakeWidgets:
 
 
 class _FakeDbutils:
+    '''Minimal fake Databricks `dbutils` stub for testing.'''
+
     def __init__(self, initial: dict[str, str] | None = None):
         self.widgets = _FakeWidgets(initial)
 
@@ -96,6 +100,7 @@ class _FakeDbutils:
 def _create_fake_dbutils(
     initial: dict[str, str] | None = None,
 ) -> _FakeDbutils:
+    '''Build a fake `dbutils` instance with initial widget values.'''
     return _FakeDbutils(initial)
 
 
@@ -268,7 +273,7 @@ def test_require_widget_validator_failure():
 # ----- `safe_training_session` tests
 def test_safe_training_session_normal_exit():
     '''
-    Given: An uninterrupted training block wrapped in safe_training_session.
+    Given: An uninterrupted block wrapped in `safe_training_session`.
     When: Block executes to completion.
     Then: State records uninterrupted execution.
     '''
@@ -309,7 +314,8 @@ def test_02_model_train_notebook_structure():
     '''
     Given: 02_model_train.ipynb notebook file.
     When: Auditing cell definitions and structure.
-    Then: Verifies widgets are isolated, validation precedes training, and no hardcoded cloud paths exist.
+    Then: Verify widgets are isolated, validation precedes training, and
+        no hardcoded cloud paths exist.
     '''
     nb_path = pathlib.Path('notebooks/02_model_train.ipynb')
     assert nb_path.is_file()

@@ -68,7 +68,7 @@ def test_execute_batch_ingest_runs_all_planned_batches(
     '''
     Given: Multiple pending harmonization records.
     When: Calling `execute_batch_ingest`.
-    Then: Run `pipelines.DataIngestion(config).run(record)` for each batch.
+    Then: Run `pipelines.DataIngestion` for each pending batch record.
     '''
     cfg = configs.RootConfig()
     cfg.execution.exp_root = str(tmp_path)
@@ -85,7 +85,7 @@ def test_execute_batch_ingest_runs_all_planned_batches(
     ran: list[typing.Any] = []
 
     class _FakeIngestionPipeline:
-        '''Minimal DataIngestion pipeline stub capturing invoked batches.'''
+        '''Minimal `DataIngestion` stub capturing invoked batches.'''
 
         def __init__(self, pipeline_cfg: configs.RootConfig):
             assert pipeline_cfg is cfg

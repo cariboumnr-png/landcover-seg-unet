@@ -19,7 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Architecture preset objectives.'''
+'''
+Architecture preset objectives.
+
+Public APIs:
+    - `obj_architecture`: Sample model body, base channels, bottleneck.
+    - `obj_bottleneck`: Sample bottleneck block counts and transformer.
+    - `obj_conditioning`: Sample active feature conditioner sets.
+'''
 
 # third-party imports
 import optuna
@@ -31,12 +38,21 @@ def obj_architecture(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Architecture preset mutations:
-      - Model body (`str`)
-      - Base channel count (`int`)
-      - Bottleneck type (`str`)
-    '''
+    Sample core model architecture parameters for an Optuna trial.
 
+    Mutates the model body variant, base channel count, and bottleneck
+    type.
+
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.architecture.architecture
 
     trial_cfg.set_model_body(
@@ -69,11 +85,21 @@ def obj_bottleneck(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Bottlenect preset mutations:
-      - Blocks count (`int`)
-      - Transformer hyperparameters
-    '''
+    Sample bottleneck architecture and transformer hyperparameters.
 
+    Selects the bottleneck variant and samples convolution block count,
+    transformer block count, head count, MLP ratio, and dropouts.
+
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.architecture.bottleneck
 
     bottleneck = trial.suggest_categorical(
@@ -136,10 +162,18 @@ def obj_conditioning(
     trial: optuna.Trial,
 ) -> sweep.TrialMutator:
     '''
-    Conditioning preset mutations:
-      - Conditioner selection (`list[str]`)
-    '''
+    Sample active feature conditioner combination for an Optuna trial.
 
+    Args:
+        trial_cfg:
+            Mutable trial configuration wrapper.
+        trial:
+            Active Optuna trial providing parameter suggestions.
+
+    Returns:
+        sweep.TrialMutator:
+            Updated trial mutator instance.
+    '''
     study_cfg = trial_cfg.study.architecture.conditioning
 
     # auto construct conditioners mapping

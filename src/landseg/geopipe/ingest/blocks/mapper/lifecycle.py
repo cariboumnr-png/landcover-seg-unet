@@ -27,7 +27,7 @@ a predefined grid layout and persisting the resulting window mappings
 as artifacts to avoid redundant recomputations.
 
 Public APIs:
-    - map_rasters_to_grid: Maps rasters onto grid with caching.
+    - `map_rasters_to_grid`: Maps rasters onto grid with caching.
 '''
 
 # standard imports

@@ -22,8 +22,12 @@
 '''
 Top-level namespace for `landseg.study`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes hyperparameter sweep execution and trial ranking entry points
+via lazy resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `rank_trials`: Load and rank completed trials from a study.
+    - `run_sweep`: Create and execute an Optuna hyperparameter sweep.
 '''
 
 # standard imports

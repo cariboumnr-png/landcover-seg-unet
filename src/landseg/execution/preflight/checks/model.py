@@ -26,9 +26,9 @@ Inspects neural backbone configuration, evaluation checkpoints, and
 target dataset splits prior to model execution.
 
 Public APIs:
-    - `model_body`: Inspect configured model architecture.
-    - `checkpoint_ready`: Check evaluation checkpoint existence and size.
+    - `checkpoint_ready`: Check evaluation checkpoint path and size.
     - `eval_split`: Verify target evaluation dataset split.
+    - `model_body`: Inspect configured model architecture.
 '''
 
 # standard imports
@@ -47,7 +47,19 @@ def model_body(
     ctx: context.InspectionContext,
     pid: str = 'model_body',
 ) -> schema.ProbeResult:
-    '''Inspect configured model body architecture.'''
+    '''
+    Inspect configured model body architecture.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Model architecture configuration probe outcome.
+    '''
     body = ctx.config.models.model_body
     return schema.ProbeResult(
         pid=pid,
@@ -62,7 +74,19 @@ def checkpoint_ready(
     ctx: context.InspectionContext,
     pid: str = 'checkpoint_ready',
 ) -> schema.ProbeResult:
-    '''Inspect evaluation checkpoint file existence and readable size.'''
+    '''
+    Inspect evaluation checkpoint existence and file size.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Model checkpoint readiness probe outcome.
+    '''
     checkpoint = ctx.config.session.evaluation.checkpoint
     ckpt_path = pathlib.Path(checkpoint) if checkpoint else None
 
@@ -89,7 +113,19 @@ def eval_split(
     ctx: context.InspectionContext,
     pid: str = 'eval_split',
 ) -> schema.ProbeResult:
-    '''Validate configured evaluation dataset partition split.'''
+    '''
+    Validate configured evaluation dataset partition split.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Evaluation split validation probe outcome.
+    '''
     split = ctx.config.session.evaluation.split
     if split in _SUPPORTED_SPLITS:
         return schema.ProbeResult(

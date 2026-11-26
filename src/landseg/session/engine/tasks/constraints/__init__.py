@@ -20,11 +20,15 @@
 # =========================================================================== #
 
 '''
-Top-level namespace for
-`landseg.session.engine.runtime.tasks.constraints`.
+Top-level namespace for `landseg.session.engine.tasks.constraints`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `CompiledMTLConstraint`: Tensor-ready compiled constraint view.
+    - `MTLConstraint`: Protocol defining multi-task constraint config.
+    - `compile_mtl_constraints`: Validate and compile constraints.
 '''
 
 # standard imports

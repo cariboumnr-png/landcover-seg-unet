@@ -19,19 +19,20 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
+'''
+Bootstrap runner script for Databricks job compute or VM environments.
+
+Adds `src` directory to Python path and invokes the CLI entry point.
+'''
 # pylint: disable=no-value-for-parameter
 # pylint: disable=wrong-import-position
-
-'''
-Bootstrapping runner script for Databricks job compute or VM environments.
-Adds 'src' directory to python path and invokes the CLI entry point.
-'''
 
 # standard imports
 import pathlib
 import sys
 
 def _get_script_dir() -> pathlib.Path:
+    '''Resolve parent directory of the script with CWD fallback.'''
     if '__file__' in globals():
         return pathlib.Path(__file__).resolve().parent
     return pathlib.Path.cwd()  # Databricks fallback

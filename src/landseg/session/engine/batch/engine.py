@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Batch-level execution engine for session workflows.
 
@@ -46,8 +44,13 @@ The batch execution engine deliberately does NOT:
 It answers the question:
     "What happened mathematically in this batch?"
 
-Higher-level controllers (e.g. Trainer, Evaluator, Runner) answer:
+Higher-level controllers (e.g. `Trainer`, `Evaluator`, `Runner`) answer:
     "How should these batch results be used?"
+
+Public APIs:
+    - `BatchEngine`: Pure batch execution engine for session workflows.
+    - `BatchExecConfigShape`: Protocol for batch execution settings.
+    - `BatchExecContext`: Static auxiliary context for batch execution.
 '''
 
 # standard imports
@@ -64,12 +67,14 @@ import landseg.session.engine.batch.state as state
 
 
 # ----- public types
+# pylint: disable=missing-function-docstring
 class BatchExecConfigShape(typing.Protocol):
     '''Interface for batch execution precision and logit adjustment.'''
     @property
     def use_amp(self) -> bool: ...
     @property
     def logit_adjust_alpha(self) -> float: ...
+# pylint: enable=missing-function-docstring
 
 
 # ----- public dataclasses
@@ -107,7 +112,7 @@ class BatchEngine:
     - Logging cadence
     - Experiment or run orchestration
 
-    The engine operates on a shared RuntimeState instance that is
+    The engine operates on a shared `EngineState` instance that is
     constructed externally (e.g. at CLI or Runner level) and shared
     across Runner, Trainer/Evaluator, and this executor.
 
@@ -127,14 +132,14 @@ class BatchEngine:
 
         Args:
             model:
-                multi-head model used for forward execution.
+                Multi-head model used for forward execution.
             engine_state:
-                shared state container storing batch outputs, metric
+                Shared state container storing batch outputs, metric
                 accumulators, and inference results.
             config:
-                configuration specifying loss and metric engines.
+                Configuration specifying precision and logit adjustment.
             context:
-                execution context containing parent map and device.
+                Execution context containing parent map and device.
         '''
         # parse arguments
         self.model = model
@@ -375,12 +380,13 @@ class BatchEngine:
         This method computes loss values using the active head loss
         modules and writes the following fields into runtime state:
 
-        - state.batch_out.total_loss
-        - state.batch_out.head_loss
+        - `state.batch_out.total_objective`
+        - `state.batch_out.head_losses`
+        - `state.batch_out.regularization`
 
         The interpretation, aggregation, backward pass, and optimization
         associated with these loss values are handled externally by the
-        Trainer.
+        `MultiHeadTrainer`.
         '''
         # sanity
         assert self.state.batch_cxt.y_dict is not None

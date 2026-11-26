@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for block scoring calculations (score.py).'''
+# pylint: disable=protected-access
 
 # third-party imports
 import numpy

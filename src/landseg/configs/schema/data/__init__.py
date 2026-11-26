@@ -22,8 +22,11 @@
 '''
 Top-level namespace for `landseg.configs.schema.data`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes the composite geospatial data configuration schema via lazy
+resolution to keep import order simple and circular-free.
+
+Public APIs:
+    - `DataConfig`: Composite configuration for geospatial data stages.
 '''
 
 # standard imports

@@ -22,8 +22,16 @@
 '''
 Top-level namespace for `landseg.models.backbones.unet.body`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes UNet body base classes, configuration contracts, and concrete
+architectures via lazy resolution to keep import order simple and
+circular-free.
+
+Public APIs:
+    - `UNet`: Standard UNet backbone with skip connections.
+    - `UNetBackbone`: Abstract base class for UNet backbones.
+    - `UNetBodyConfig`: Protocol for UNet body configuration.
+    - `UNetPP`: UNet++ backbone with nested dense skip connections.
+    - `UNetPPP`: UNet3+ backbone with full-scale skip aggregation.
 '''
 
 # standard imports

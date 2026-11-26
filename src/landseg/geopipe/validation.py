@@ -20,21 +20,21 @@
 # =========================================================================== #
 
 '''
-Public pre-flight and stage-contract validation facade for `landseg.geopipe`.
+Pre-flight and stage-contract validation facade for `landseg.geopipe`.
 
-Provides lightweight, plain-data validation entrypoints over internal stage
-validators (`grid`, `harmonize`, `ingest`, `prepare`) so external execution
-and pre-flight callers never assemble `IngestionContext` or inspect internal
-schema payloads directly.
+Provides lightweight, plain-data validation entrypoints over internal
+stage validators (`grid`, `harmonize`, `ingest`, `prepare`) so external
+callers never assemble `IngestionContext` or inspect internal schema
+payloads directly.
 
 Public APIs:
+    - `validate_feature_specs`: Validate requested feature specs.
+    - `validate_grid_reference`: Validate persisted grid reference.
     - `validate_grid_specs`: Validate world grid definition inputs.
-    - `validate_grid_reference`: Validate a persisted world grid reference.
-    - `validate_manifest_contract`: Validate input dataset manifest entries.
+    - `validate_manifest_contract`: Validate dataset manifest entries.
     - `validate_pool_compatibility`: Validate grid/pool compatibility.
-    - `validate_feature_specs`: Validate requested feature engineering specs.
-    - `validate_raster_alignment`: Validate raster/grid alignment for ingest.
-    - `validate_prepare_semantics`: Validate preparation feature & head specs.
+    - `validate_prepare_semantics`: Validate prepare feature/head specs.
+    - `validate_raster_alignment`: Validate raster and grid alignment.
 '''
 
 # standard imports
@@ -55,7 +55,17 @@ import landseg.geopipe.prepare as prepare_mod
 def validate_grid_specs(
     config: contracts.WorldGridPrepConfig,
 ) -> dict[str, typing.Any]:
-    '''Validate world grid generation inputs and return detail mapping.'''
+    '''
+    Validate world grid generation inputs and return detail mapping.
+
+    Args:
+        config:
+            World grid preparation configuration object.
+
+    Returns:
+        dict[str, typing.Any]:
+            Dictionary of validated world grid specification fields.
+    '''
     specs = grid_mod.validators.grid_specs(config)
     return _as_details(specs)
 
@@ -63,7 +73,17 @@ def validate_grid_specs(
 def validate_grid_reference(
     report_fpath: pathlib.Path,
 ) -> dict[str, typing.Any]:
-    '''Validate a persisted world grid reference and return summary metadata.'''
+    '''
+    Validate a persisted world grid reference and return summary.
+
+    Args:
+        report_fpath:
+            Path to the persisted world grid JSON report.
+
+    Returns:
+        dict[str, typing.Any]:
+            Summary metadata with grid ID, tile count, and paths.
+    '''
     grid, gid, grid_fp = harmonize_mod.validators.grid_reference(report_fpath)
     return {
         'grid_id': gid,
@@ -76,7 +96,17 @@ def validate_grid_reference(
 def validate_manifest_contract(
     manifest_fpath: pathlib.Path,
 ) -> dict[str, typing.Any]:
-    '''Validate the input dataset manifest contract and return entry count.'''
+    '''
+    Validate the input dataset manifest contract and return counts.
+
+    Args:
+        manifest_fpath:
+            Path to the input dataset manifest JSON or YAML file.
+
+    Returns:
+        dict[str, typing.Any]:
+            Summary mapping containing validated entry count and path.
+    '''
     entries = harmonize_mod.validators.manifest_contract(manifest_fpath)
     return {
         'entry_count': len(entries),
@@ -88,7 +118,23 @@ def validate_pool_compatibility(
     schema_fpath: pathlib.Path,
     report_fpath: pathlib.Path,
 ) -> dict[str, typing.Any]:
-    '''Validate world grid compatibility with an existing ingestion pool.'''
+    '''
+    Validate world grid compatibility with an existing ingestion pool.
+
+    Args:
+        schema_fpath:
+            Path to the existing ingestion `schema.json` file.
+        report_fpath:
+            Path to the target world grid JSON report.
+
+    Returns:
+        dict[str, typing.Any]:
+            Summary metadata with grid ID, schema path, and existence.
+
+    Raises:
+        ValueError:
+            If loading or validating the world grid reference fails.
+    '''
     try:
         target_grid = harmonize_mod.validators.grid_reference(report_fpath)[0]
     except Exception as err:
@@ -112,11 +158,30 @@ def validate_feature_specs(  # pylint: disable=too-many-arguments
     add_topo: list[str] | None = None,
 ) -> dict[str, typing.Any]:
     '''
-    Validate requested feature engineering specs against pending batch bands.
+    Validate requested feature engineering specs against batch bands.
 
-    Returns a plain outcome dictionary with `'status'` equal to `'skip'`
-    (plus `'message'`) when no pending harmonization batch can be resolved,
-    or `'pass'` with the validated spec fields when feasible.
+    Returns a plain outcome dictionary with `'status'` equal to
+    `'skip'` (plus `'message'`) when no pending harmonization batch
+    can be resolved, or `'pass'` with the validated spec fields when
+    feasible.
+
+    Args:
+        harmonization_paths:
+            Path manager for upstream harmonization artifacts.
+        ingestion_paths:
+            Path manager for ingestion runs manifest and outputs.
+        target:
+            Target harmonization run identifier or index.
+        rebuild:
+            Whether to consider already-ingested batches for rebuild.
+        add_spectral:
+            Optional spectral index names requested for ingestion.
+        add_topo:
+            Optional topographic derivative names requested for ingest.
+
+    Returns:
+        dict[str, typing.Any]:
+            Plain outcome summary indicating `'skip'` or `'pass'`.
     '''
     ingest_ctx, skip_message = _resolve_validation_ingestion_context(
         harmonization_paths,
@@ -148,11 +213,25 @@ def validate_raster_alignment(
     rebuild: bool = False,
 ) -> dict[str, typing.Any]:
     '''
-    Validate harmonized rasters align with their world grid for pending ingest.
+    Validate harmonized rasters align with their world grid for ingest.
 
-    Returns a plain outcome dictionary with `'status'` equal to `'skip'`
-    (plus `'message'`) when no pending harmonization batch can be resolved,
-    or `'pass'` with aligned raster/grid metadata.
+    Returns a plain outcome dictionary with `'status'` equal to
+    `'skip'` (plus `'message'`) when no pending harmonization batch
+    can be resolved, or `'pass'` with aligned raster/grid metadata.
+
+    Args:
+        harmonization_paths:
+            Path manager for upstream harmonization artifacts.
+        ingestion_paths:
+            Path manager for ingestion runs manifest and outputs.
+        target:
+            Target harmonization run identifier or index.
+        rebuild:
+            Whether to consider already-ingested batches for rebuild.
+
+    Returns:
+        dict[str, typing.Any]:
+            Plain outcome summary indicating `'skip'` or `'pass'`.
     '''
     ingest_ctx, skip_message = _resolve_validation_ingestion_context(
         harmonization_paths,
@@ -180,7 +259,19 @@ def validate_prepare_semantics(
     schema_fpath: pathlib.Path,
     config: contracts.PreparationDatasetViewConfig | None = None,
 ) -> dict[str, typing.Any]:
-    '''Load ingestion data schema and validate preparation dataset semantics.'''
+    '''
+    Load ingestion data schema and validate preparation semantics.
+
+    Args:
+        schema_fpath:
+            Path to the ingestion `schema.json` file.
+        config:
+            Optional preparation dataset view configuration object.
+
+    Returns:
+        dict[str, typing.Any]:
+            Validated focal head, feature names, target heads, and path.
+    '''
     Ctrl = artifacts.Controller[geo_core.DataSchema]
     schm = Ctrl(schema_fpath, schema_id=geo_core.data_schema.SCHEMA_ID).fetch()
     fts, targets, focal = prepare_mod.validators.dataset_semantics(schm, config)
@@ -200,7 +291,7 @@ def _resolve_validation_ingestion_context(
     target: int | str | None = 'latest',
     rebuild: bool = False,
 ) -> tuple[ingest_mod.IngestionContext | None, str | None]:
-    '''Resolve pending batch record and build ingestion context for checks.'''
+    '''Resolve pending batch record and build ingestion context.'''
     resolved_target = target or 'latest'
     try:
         batches = ingest_mod.resolve_pending_ingestion_batches(

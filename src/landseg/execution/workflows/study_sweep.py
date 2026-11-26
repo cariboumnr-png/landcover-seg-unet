@@ -50,10 +50,17 @@ def execute_study_sweep(config: configs.RootConfig):
     '''
     Execute a configured study sweep.
 
-    This function runs an Optuna study using the provided configuration
-    and returns a small summary of the best observed result for CLI
-    consumption. Full study inspection is performed separately by the
-    study analysis pipeline.
+    Runs an Optuna study using the provided configuration and returns
+    a summary of the best observed trial for CLI consumption. Full
+    study inspection is performed separately by study analysis.
+
+    Args:
+        config:
+            Root execution configuration containing study settings.
+
+    Returns:
+        dict[str, typing.Any]:
+            Mapping with `'best_value'` and `'best_params'` keys.
     '''
     # run sweep and return
     s = study.run_sweep(_build_runner, config)

@@ -81,7 +81,7 @@ def test_generate_embeddings_with_knowledge_root_str(dummy_csv_path, tmp_path):
 
 def test_generate_embeddings_with_knowledge_root_path(dummy_csv_path, tmp_path):
     '''
-    Given: A dummy species profiles CSV and `pathlib.Path` knowledge root.
+    Given: A dummy species CSV and `pathlib.Path` knowledge root.
     When: `generate_embeddings_and_matrix()` is called.
     Then: Target artifacts are built in the expected directory.
     '''

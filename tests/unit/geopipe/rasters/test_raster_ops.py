@@ -33,7 +33,8 @@ import landseg.geopipe.rasters.stack as stack
 # ----- `stack_rasters` tests
 def test_stack_rasters(dummy_geotiff_factory, tmp_path):
     '''
-    Given: A 10-band optical TIFF and a 1-band DEM TIFF aligned in EPSG:3161.
+    Given: A 10-band optical TIFF and a 1-band DEM TIFF aligned in
+        EPSG:3161.
     When: Invoking `stack_rasters`.
     Then: Produces an 11-band composite Virtual Raster (.vrt).
     '''
@@ -154,7 +155,8 @@ def test_unify_nodata_mask(dummy_geotiff_factory, tmp_path):
     '''
     Given: A multi-band composite GeoTIFF with nodata flags.
     When: Invoking `unify_nodata_mask`.
-    Then: Creates a 1-band boolean valid pixel mask Virtual Raster (.vrt).
+    Then: Creates a 1-band boolean valid pixel mask Virtual Raster
+        (.vrt).
     '''
     comp_path = dummy_geotiff_factory(
         filename='comp_with_nodata.tif',

@@ -19,16 +19,14 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
 Multihead model protocol.
 
 This module defines the structural interface for multihead models used
 throughout the project.
 
-The `MultiheadModelLike` protocol specifies the expected behavior and API
-surface of models that expose multiple prediction heads (e.g., for
+The `MultiheadModelLike` protocol specifies the expected behavior and
+API surface of models that expose multiple prediction heads (e.g., for
 multi-task or hierarchical learning).
 
 Models conforming to this protocol are:
@@ -40,10 +38,11 @@ Models conforming to this protocol are:
       this protocol for consistent interaction (forward pass, head
       control, state management, etc.).
 
-As part of the `./core/` package, this protocol acts as a contract
-between model implementations and downstream runtime components,
-enabling decoupled development and interchangeability of model backends.
+As part of `landseg.core`, this protocol acts as a contract between
+model implementations and downstream runtime components, enabling
+decoupled development and interchangeability of model backends.
 '''
+# pylint: disable=missing-function-docstring
 
 # standard imports
 import typing
@@ -64,11 +63,11 @@ class MultiheadModelLike(typing.Protocol):
     invoked, configured, and managed during training and evaluation.
 
     Key capabilities include:
-        - Forward execution returning a mapping of head names to outputs
-        - Device placement and training/evaluation mode control
-        - Selective activation and freezing of heads
-        - Optional logit adjustment configuration for imbalance handling
-        - Compatibility with PyTorch state management (`state_dict`)
+        - Forward execution mapping head names to output tensors.
+        - Device placement and training/evaluation mode control.
+        - Selective activation and freezing of heads.
+        - Optional logit adjustment for class imbalance handling.
+        - Compatibility with PyTorch state management (`state_dict`).
 
     This interface enables trainers and evaluators to operate on any
     compliant model without depending on specific implementations,

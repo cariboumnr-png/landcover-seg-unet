@@ -22,18 +22,14 @@
 '''
 Spatial domain-feature concatenation adapters.
 
-This module provides lightweight conditioning adapters that consume
-routed domain conditioning payloads and concatenate them to convolutional
-feature maps as additional channels.
+Provides lightweight conditioning adapters that consume routed domain
+conditioning payloads and concatenate them to convolutional feature maps
+as additional channels.
 
 Conditioning tensors are produced externally by a
-`DomainContextRouter`. This module is intentionally limited to:
-    - consuming routed payloads
-    - broadcasting conditioning tensors spatially
-    - concatenating conditioning channels to feature maps
-
-Projection, embedding, and routing logic are delegated to the routing
-subsystem.
+`DomainContextRouter`. This module is intentionally limited to
+consuming routed payloads, broadcasting conditioning tensors spatially,
+and concatenating conditioning channels to feature maps.
 '''
 
 # third-party imports
@@ -46,20 +42,9 @@ class ConcatAdapter(torch.nn.Module):
     '''
     Concatenate routed domain features to spatial feature maps.
 
-    This adapter consumes precomputed domain conditioning produced by
-    `DomainContextRouter`. It does not perform embedding or projection.
-
-    Supported inputs:
-        - ids_embd: embedded domain identifiers [B, D]
-        - vec_proj: projected domain vectors [B, D]
-
-    If both are provided, they are summed.
-
-    Args:
-        out_dom: Number of domain channels expected for concatenation.
-
-    Raises:
-        ValueError: If payload dimensions do not match `concat_dim`.
+    Consumes precomputed domain conditioning produced by
+    `DomainContextRouter` without performing embedding or projection.
+    When both `ids_embd` and `vec_proj` are provided, they are summed.
     '''
 
     def __init__(self, *, concat_dim: int) -> None:
@@ -67,8 +52,9 @@ class ConcatAdapter(torch.nn.Module):
         Initialize the concatenation adapter with output dimension.
 
         Args:
-            concat_dim: Number of domain channels to concatenate to
-                feature maps.
+            concat_dim:
+                Number of domain channels to concatenate to feature
+                maps.
         '''
         super().__init__()
         self.output_dim = concat_dim
@@ -79,17 +65,25 @@ class ConcatAdapter(torch.nn.Module):
         payload: domains.DomainTargetPayload | None,
     ) -> torch.Tensor:
         '''
-        Concatenate domain conditioning to input tensor.
+        Concatenate domain conditioning channels to input tensor.
 
         Args:
-            x: Input tensor [B, C, H, W].
-            payload: Routed domain payload for this target.
+            x:
+                Input feature tensor of shape `(B, C, H, W)`.
+            payload:
+                Routed domain conditioning payload for this target, or
+                `None` when `concat_dim <= 0`.
 
         Returns:
-            Tensor: [B, C + concat_dim, H, W] if concat_dim > 0.
+            torch.Tensor:
+                Tensor of shape `(B, C + concat_dim, H, W)` when
+                `concat_dim > 0`, otherwise `x` unchanged.
 
         Raises:
-            ValueError: If payload is missing or invalid when required.
+            ValueError:
+                If `concat_dim > 0` and `payload` is `None`, empty,
+                has mismatched embedding dimensions, or does not match
+                `concat_dim`.
         '''
         if self.output_dim <= 0:
             return x

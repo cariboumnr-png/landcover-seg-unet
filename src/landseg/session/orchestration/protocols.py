@@ -19,9 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=too-few-public-methods
-
 '''
 Protocols for orchestration-level engine and configuration contracts.
 
@@ -29,10 +26,13 @@ Defines typing protocol shapes required by runners and policies to
 interact with the underlying epoch engine and monitor configuration.
 
 Public APIs:
-    - `EpochEngineLike`: protocol for epoch-level engine interface.
-    - `EngineBaseLike`: protocol for sub-engine access.
-    - `OrchestrationConfigShape`: protocol for orchestration configs.
+    - `EngineBaseLike`: Protocol for sub-engine access.
+    - `EpochEngineLike`: Protocol for epoch-level engine interface.
+    - `OrchestrationConfigShape`: Protocol for orchestration configs.
 '''
+
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-few-public-methods
 
 # standard imports
 from __future__ import annotations

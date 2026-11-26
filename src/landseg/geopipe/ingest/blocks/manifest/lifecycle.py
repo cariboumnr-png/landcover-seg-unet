@@ -22,15 +22,15 @@
 '''
 Data block catalog and schema artifact lifecycle management.
 
-This module orchestrates creation, validation, and incremental updates of
-dataset manifest artifacts, including `catalog.json` and `schema.json`.
+This module orchestrates creation, validation, and incremental
+updates of dataset manifest artifacts (`catalog.json`, `schema.json`).
 It coordinates policy-driven rebuilds, detects newly created or modified
 data blocks, and ensures consistency between on-disk block artifacts and
 their recorded schema throughout data preparation and update workflows.
 
 Public APIs:
-    - ManifestProvenance: Lineage and grid identity metadata.
-    - update_manifest: Updates dataset catalog and schema artifacts.
+    - `ManifestProvenance`: Lineage and grid identity metadata.
+    - `update_manifest`: Updates dataset catalog and schema artifacts.
 '''
 
 # standard imports
@@ -92,6 +92,10 @@ def update_manifest(
     Returns:
         contracts.ManifestStats:
             Status mapping containing update results and metrics.
+
+    Raises:
+        artifacts.ArtifactError:
+            If existing catalog or schema artifacts cannot be read.
     '''
     # ----- catalog
     Ctrl = artifacts.Controller[dict[str, geo_core.DataCatalogEntry]]

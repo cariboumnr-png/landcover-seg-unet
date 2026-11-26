@@ -20,15 +20,15 @@
 # =========================================================================== #
 
 '''
-Feature engineering and DataBlock assembly pipeline for geospatial rasters.
+Feature engineering and `DataBlock` assembly for geospatial rasters.
 
 Processes raw windowed imagery and label arrays, generating derived
 spectral indices, topographic metrics from elevation models, canonical
 multi-head label stacks, and initial per-block statistics into a
-materialized DataBlock.
+materialized `DataBlock`.
 
 Public APIs:
-    - build_data_block: construct a DataBlock with derived features.
+    - `build_data_block`: Construct a block with derived features.
 '''
 
 # third-party imports
@@ -59,7 +59,7 @@ def build_data_block(
         block_name:
             Unique identifier for the block.
         raster_data:
-            Loaded raster arrays and metadata from `io.RasterReadOutput`.
+            Loaded arrays and metadata from `io.RasterReadOutput`.
         ignore_index:
             Target ignore index for categorical labels.
         add_spectral:
@@ -300,7 +300,7 @@ def _canonicalize_single_head(
     name: str,
     manifest: geo_core.DataBlockManifest,
 ) -> numpy.ndarray:
-    '''Normalize a single label channel and update manifest statistics.'''
+    '''Normalize a single label channel and update manifest stats.'''
     nodata = manifest['label_nodata']
     ignore_index = manifest['label_ignore_index']
     manifest['label_ignore_cls'][name] = list(spec['ignore_cls'])

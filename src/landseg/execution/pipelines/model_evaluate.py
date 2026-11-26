@@ -19,9 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''
-Evaluating a model.
-'''
+'''Model evaluation pipeline implementation.'''
 
 # standard imports
 import typing
@@ -37,11 +35,20 @@ import landseg.visual as visual
 # ----- public classes
 class ModelEvaluation(base.SessionPipeline):
     '''Model evaluation pipeline.'''
-
     pipeline_name: str = 'model-evaluate'
 
     def run(self) -> float:
-        '''Run model evaluation pipeline.'''
+        '''
+        Run model evaluation pipeline.
+
+        Returns:
+            float:
+                Target evaluation metric value.
+
+        Raises:
+            Exception:
+                If an error occurs during model evaluation.
+        '''
         self._initialize_run()
 
         try:
@@ -91,7 +98,7 @@ class ModelEvaluation(base.SessionPipeline):
         results: core.SessionStepResults,
         runner: typing.Any,
     ) -> None:
-        '''Generate diagnostic evaluation plots (confusion matrix and per-class metrics).'''
+        '''Plot confusion matrices and per-class evaluation metrics.'''
         if not results.validation or not results.validation.head_metrics:
             return
 
@@ -145,6 +152,7 @@ class ModelEvaluation(base.SessionPipeline):
                 )
 
     def _create_logger(self) -> session.SessionLogger:
+        '''Instantiate and configure the evaluation session logger.'''
         logger = session.SessionLogger(
             name=self.pipeline_name,
             log_file=self.pipeline_paths.report,
@@ -158,6 +166,7 @@ class ModelEvaluation(base.SessionPipeline):
         return logger
 
     def _build_context(self) -> core.DataSpecs:
+        '''Build data specs and validate the evaluation split.'''
         dataspecs = geopipe.build_dataspec(
             self.artifact_paths.data_preparation,
             mode='default',

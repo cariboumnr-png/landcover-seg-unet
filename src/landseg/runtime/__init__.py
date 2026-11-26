@@ -43,7 +43,7 @@ Public APIs:
     - `require_widget`: Enforce and validate required notebook widgets.
     - `resolve_amp_dtype`: Resolve safe autocast dtype for device.
     - `resolve_device`: Resolve hardware execution target string.
-    - `safe_training_session`: Interruption-safe training context manager.
+    - `safe_training_session`: Interruption-safe training context.
     - `validator`: Parameter and directory validation routines.
 '''
 

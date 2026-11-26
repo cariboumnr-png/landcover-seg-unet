@@ -22,8 +22,12 @@
 '''
 Top-level namespace for `landseg.session.orchestration.policy`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public classes via lazy resolution to keep import order
+simple and circular-free.
+
+Public APIs:
+    - `PhasePolicy`: Orchestrate execution and tracking across a phase.
+    - `TrackingConfig`: Configuration for metric tracking and stopping.
 '''
 
 # standard imports

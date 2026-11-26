@@ -22,12 +22,12 @@
 '''
 Domain tile map construction and PCA feature reduction utilities.
 
-This module constructs per-domain `DomainTileMap` objects by reading grid
-windows from categorical rasters, computing class majorities, deriving
-normalized frequency vectors, and performing PCA dimensionality reduction.
+Constructs per-domain `DomainTileMap` objects by reading grid windows
+from categorical rasters, computing class majorities, deriving
+normalized frequency vectors, and applying PCA dimensionality reduction.
 
 Public APIs:
-    - `build_domain`: Build DomainTileMap with majority stats and PCA features.
+    - `build_domain`: Build `DomainTileMap` with stats and PCA features.
 '''
 
 # standard imports
@@ -74,7 +74,7 @@ def build_domain(
 
     Returns:
         geo_core.DomainTileMap:
-            Constructed domain tile map with computed statistics and PCA.
+            Constructed domain tile map with stats and PCA features.
     '''
     # get domain tiles dict
     context, domain_dict = _get_domain_dict(
@@ -106,7 +106,7 @@ def _get_domain_dict(
     valid_threshold: float,
     target_variance: float,
 ) -> tuple[_BuildingContext, dict[tuple[int, int], geo_core.DomainTile]]:
-    '''Compute per-tile statistics and PCA features to populate domain map.'''
+    '''Compute per-tile statistics and PCA features for domain map.'''
     # prep
     domain_dict: dict[tuple[int, int], geo_core.DomainTile] = {}
     context = _BuildingContext(
@@ -221,7 +221,7 @@ def _pca_transform(
 
 
 def _fit_pca(x: numpy.ndarray) -> tuple[numpy.ndarray, ...]:
-    '''Fit PCA on centered data matrix using singular value decomposition.'''
+    '''Fit PCA on centered data matrix via SVD.'''
     assert x.ndim == 2, x.shape
     # center
     mean = x.mean(axis=0, keepdims=True)
@@ -239,7 +239,7 @@ def _k_from_target_evr(
     evr_full: numpy.ndarray,
     target: float,
 ) -> int:
-    '''Determine minimum number of PCA components to reach target variance.'''
+    '''Find minimum PCA components needed for target variance.'''
     if not 0.0 < target <= 1.0:
         raise ValueError('target must be in (0, 1].')
     cum = numpy.cumsum(evr_full)

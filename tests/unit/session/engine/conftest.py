@@ -19,10 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-# pylint: disable=redefined-outer-name
-
 '''Fixtures for testing `landseg.session.engine.batch` module.'''
+
+# pylint: disable=redefined-outer-name
 
 # standard imports
 import dataclasses
@@ -40,12 +39,14 @@ field = dataclasses.field
 
 @pytest.fixture
 def mock_hspecs(dataspecs):
+    '''Build `HeadSpecs` from the `dataspecs` fixture.'''
     # see dataspecs fixture @unit/conftest.py
     return headspecs.build_headspecs(dataspecs, alpha_fn='inverse')
 
 
 @pytest.fixture
 def mock_hlosses(mock_hspecs):
+    '''Build `HeadLosses` from `mock_hspecs` and default config.'''
     return loss_builder.build_headlosses(
         mock_hspecs,
         config=engine_sec.LossConfigs(),
@@ -56,6 +57,7 @@ def mock_hlosses(mock_hspecs):
 
 @pytest.fixture
 def mock_hmetrics(mock_hspecs):
+    '''Build `HeadMetrics` from `mock_hspecs`.'''
     return metrics.build_headmetrics(
         mock_hspecs,
         ignore_index=255
@@ -64,6 +66,7 @@ def mock_hmetrics(mock_hspecs):
 
 @pytest.fixture
 def mock_constraint():
+    '''Provide a factory creating `MTLConstraints` test rules.'''
     def _create(
         name: str = 'rule_1',
         source_head: str = 'head_1',

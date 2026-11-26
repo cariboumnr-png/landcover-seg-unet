@@ -19,9 +19,8 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for domain map builder (builder.py).'''
+# pylint: disable=protected-access
 
 # third-party imports
 import numpy

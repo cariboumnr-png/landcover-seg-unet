@@ -19,8 +19,6 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-class-docstring
-
 '''Study configuration section.'''
 
 # standard imports
@@ -49,6 +47,7 @@ class StudyConfig(base.BaseConfigSection):
     sweep: StudySweep = field(default_factory=StudySweep)
 
     def validate(self) -> None:
+        '''Validate all nested study sweep search space configs.'''
         self.optimization.validate()
         self.architecture.validate()
         self.objectives.validate()

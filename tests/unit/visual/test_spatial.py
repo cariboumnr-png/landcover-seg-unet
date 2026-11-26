@@ -36,7 +36,11 @@ matplotlib.use('Agg')
 
 # ----- Grid Layout Tests
 def test_plot_grid_layout_dict(tmp_path: pathlib.Path):
-    '''Test plotting grid layout from dict specifications with split mappings.'''
+    '''
+    Given: Grid dimensions dict and coordinate split mappings.
+    When: Calling `plot_grid_layout`.
+    Then: Return a figure and save the grid PNG to disk.
+    '''
     grid = {'rows': 3, 'cols': 4}
     splits = {
         'train': [(0, 0), (1, 0), (0, 1)],
@@ -55,7 +59,11 @@ def test_plot_grid_layout_dict(tmp_path: pathlib.Path):
 
 
 def test_plot_grid_layout_string_splits(tmp_path: pathlib.Path):
-    '''Test plotting grid layout with string-formatted tile identifiers.'''
+    '''
+    Given: Grid dimensions dict and string-formatted tile splits.
+    When: Calling `plot_grid_layout`.
+    Then: Return a figure and save the grid PNG to disk.
+    '''
     grid = {'rows': 2, 'cols': 2}
     splits = {
         'train': ['tile_0_0', 'tile_1_0'],
@@ -73,7 +81,11 @@ def test_plot_grid_layout_string_splits(tmp_path: pathlib.Path):
 
 
 def test_plot_grid_layout_fallback():
-    '''Test plotting grid layout with list-like collection fallback.'''
+    '''
+    Given: A flat list of tile identifiers without grid metadata.
+    When: Calling `plot_grid_layout`.
+    Then: Render fallback layout and return a figure.
+    '''
     tiles = ['a', 'b', 'c', 'd', 'e']
     fig = visual.plot_grid_layout(tiles, show=False)
     assert fig is not None
@@ -81,7 +93,11 @@ def test_plot_grid_layout_fallback():
 
 # ----- Class Frequencies Tests
 def test_plot_class_frequencies_dict(tmp_path: pathlib.Path):
-    '''Test plotting class pixel frequencies from dictionary.'''
+    '''
+    Given: A dictionary of class pixel counts and class names.
+    When: Calling `plot_class_frequencies`.
+    Then: Return a figure and save the frequency PNG to disk.
+    '''
     counts = {
         '0': 150000,
         '1': 45000,
@@ -99,14 +115,22 @@ def test_plot_class_frequencies_dict(tmp_path: pathlib.Path):
 
 
 def test_plot_class_frequencies_empty():
-    '''Test plotting class pixel frequencies with empty dictionary fallback.'''
+    '''
+    Given: An empty class pixel counts dictionary.
+    When: Calling `plot_class_frequencies`.
+    Then: Render fallback plot cleanly and return a figure.
+    '''
     fig = visual.plot_class_frequencies({}, show=False)
     assert fig is not None
 
 
 # ----- Spectral Composite Tests
 def test_plot_spectral_composite_numpy(tmp_path: pathlib.Path):
-    '''Test plotting spectral composite from multi-band numpy array.'''
+    '''
+    Given: A 3D channels-first multi-band NumPy raster array.
+    When: Calling `plot_spectral_composite` with target bands.
+    Then: Return a figure and save the composite PNG to disk.
+    '''
     raster = numpy.random.rand(4, 32, 32).astype(numpy.float32)
     save_path = tmp_path / 'composite.png'
     fig = visual.plot_spectral_composite(
@@ -120,7 +144,11 @@ def test_plot_spectral_composite_numpy(tmp_path: pathlib.Path):
 
 
 def test_plot_spectral_composite_channels_last(tmp_path: pathlib.Path):
-    '''Test plotting spectral composite when channels are in last dimension.'''
+    '''
+    Given: A 3D channels-last multi-band NumPy raster array.
+    When: Calling `plot_spectral_composite`.
+    Then: Return a figure and save the composite PNG to disk.
+    '''
     raster = numpy.random.rand(32, 32, 4).astype(numpy.float32)
     save_path = tmp_path / 'composite_cl.png'
     fig = visual.plot_spectral_composite(
@@ -134,7 +162,11 @@ def test_plot_spectral_composite_channels_last(tmp_path: pathlib.Path):
 
 
 def test_plot_spectral_composite_tensor(tmp_path: pathlib.Path):
-    '''Test plotting spectral composite from PyTorch tensor.'''
+    '''
+    Given: A 3D multi-band PyTorch raster tensor.
+    When: Calling `plot_spectral_composite` with target bands.
+    Then: Return a figure and save the composite PNG to disk.
+    '''
     raster = torch.from_numpy(numpy.random.rand(4, 32, 32).astype(numpy.float32))
     save_path = tmp_path / 'composite_tensor.png'
     fig = visual.plot_spectral_composite(
@@ -148,14 +180,22 @@ def test_plot_spectral_composite_tensor(tmp_path: pathlib.Path):
 
 
 def test_plot_spectral_composite_invalid_dim():
-    '''Test that 2D array raises ValueError.'''
+    '''
+    Given: A 2D raster array missing the channel dimension.
+    When: Calling `plot_spectral_composite`.
+    Then: Raise `ValueError`.
+    '''
     raster_2d = numpy.zeros((32, 32), dtype=numpy.float32)
     with pytest.raises(ValueError, match='3D'):
         visual.plot_spectral_composite(raster_2d)
 
 
 def test_plot_spectral_composite_invalid_bands():
-    '''Test that out-of-range band indices raise IndexError.'''
+    '''
+    Given: A 3-band raster and an out-of-range band index tuple.
+    When: Calling `plot_spectral_composite`.
+    Then: Raise `IndexError`.
+    '''
     raster = numpy.zeros((3, 32, 32), dtype=numpy.float32)
     with pytest.raises(IndexError, match='exceed'):
         visual.plot_spectral_composite(raster, bands=(0, 1, 5))

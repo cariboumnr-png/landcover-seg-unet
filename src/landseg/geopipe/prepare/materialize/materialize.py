@@ -27,7 +27,7 @@ computed from training data. Produces normalized block artifacts with
 reclassified multi-head label stacks and maintains file mappings.
 
 Public APIs:
-    - materialize_blocks: normalize blocks and write artifacts to disk.
+    - `materialize_blocks`: Normalize blocks and save artifacts.
 '''
 
 # standard imports
@@ -62,19 +62,19 @@ def materialize_blocks(
 
     Args:
         input_blocks:
-            set of file paths to raw block artifacts.
+            Set of file paths to raw block artifacts.
         stats:
-            per-band global image statistics from training data.
+            Per-band global image statistics from training data.
         context:
-            dataset context containing features and target hierarchy.
+            Dataset context containing features and target hierarchy.
         output_dir:
-            directory where normalized block files are written.
+            Directory where normalized block files are written.
         rebuild:
-            if True, reprocesses all blocks regardless of existence.
+            If True, reprocesses all blocks regardless of existence.
 
     Returns:
         tuple[dict[str, str], int]:
-            mapping of block names to file paths, and count of purged
+            Mapping of block names to file paths, and count of purged
             files.
     '''
     names: list[str] = []
@@ -251,7 +251,7 @@ def _build_reclass_layers(
     reclass_cfg: dict[int, tuple[int, ...]],
     ignore_index: int,
 ) -> list[numpy.ndarray]:
-    '''Build parent grouping and child slice layers for reclass config.'''
+    '''Build parent grouping and child slice layers for reclass.'''
     layers: list[numpy.ndarray] = [arr]
 
     # grouping layer (parent)

@@ -26,10 +26,10 @@ Defines diagnostic probe categories, execution statuses, individual
 probe result records, and aggregated pre-flight readiness results.
 
 Public APIs:
-    - `ProbeCategory`: Enumeration of probe concern families.
-    - `ProbeStatus`: Diagnostic probe status enumeration.
-    - `ProbeResult`: Immutable evaluation record for a single probe.
     - `PreflightResult`: Aggregated validation result for a target.
+    - `ProbeCategory`: Enumeration of probe concern families.
+    - `ProbeResult`: Immutable evaluation record for a single probe.
+    - `ProbeStatus`: Diagnostic probe status enumeration.
 '''
 
 # standard imports
@@ -94,7 +94,13 @@ class PreflightResult:
         return [p.message for p in self.probes if p.status == ProbeStatus.WARN]
 
     def as_dict(self) -> dict[str, typing.Any]:
-        '''Return dictionary representation for report serialization.'''
+        '''
+        Return dictionary representation for report serialization.
+
+        Returns:
+            dict[str, typing.Any]:
+                Serialized pre-flight result payload.
+        '''
         return {
             'target': self.target,
             'status': self.status,

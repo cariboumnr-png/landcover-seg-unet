@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for regularization module (regularization.py).'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest
@@ -45,7 +45,7 @@ def test_regularizer_init_invalid_reduction(session_config):
 
 def test_regularizer_duplicated_constrains(session_config, mock_constraint):
     '''
-    Given: `ConsistencyRegularizer` init args with duplicated constraints.
+    Given: `ConsistencyRegularizer` args with duplicated constraints.
     When: Class initiation.
     Then: Raise `ValueError`.
     '''
@@ -72,8 +72,8 @@ def test_regularizer_forward_reductions(
     expected
 ):
     '''
-    Given: One active constraint with two valid pixels and uniform logits.
-    When: `ConsistencyRegularizer.forward()` is called with each reduction.
+    Given: One active constraint, two valid pixels, and uniform logits.
+    When: `ConsistencyRegularizer.forward()` runs for each reduction.
     Then: Return the correctly reduced and lambda-scaled penalty.
     '''
     reg_cfg = session_config.engine_tasks.mtl_reg_configs
@@ -253,8 +253,8 @@ def test_regularizer_by_constraint(session_config, mock_constraint):
 )
 def test_validate_head_pair(logits, labels, match):
     '''
-    Given: Input logits and labels pair
-    When: Private function _validate_head_pair() is called
+    Given: Input logits and labels pair.
+    When: Private function `_validate_head_pair()` is called.
     Then: Correctly raise when input logits/targets are invalid.
     '''
     with pytest.raises(ValueError, match=match):
@@ -309,7 +309,7 @@ def test_validate_shapes(mock_constraint):
 def test_invalid_stats_prob_single_forbidden_class():
     '''
     Given: Source and target logits for a single pixel with two classes.
-    When: source=class_0 (trigger) * target=class_1 (forbidden)
+    When: Trigger is class 0 and forbidden target is class 1.
     Then: The result is 0.25 (0.5 * 0.5).
     '''
     # 1 pixel with 2 classes for both source and target [1, 2, 1, 1]
@@ -333,8 +333,8 @@ def test_invalid_stats_prob_single_forbidden_class():
 
 def test_invalid_stats_prob_multiple_forbidden_classes():
     '''
-    Given: Source and target logits for a single pixel with three classes.
-    When: source=class_0 (trigger) and target=class_1/2 (forbidden)
+    Given: Source and target logits for one pixel with three classes.
+    When: Trigger is class 0 and forbidden targets are classes 1 and 2.
     Then: The result is 2/9  (1/3 * 2/3).
     '''
     # 1 pixel with 3 classes for both source and target [1, 3, 1, 1]

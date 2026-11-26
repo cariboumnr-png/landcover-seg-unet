@@ -19,11 +19,10 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=duplicate-code
-# pylint: disable=missing-function-docstring
-# pylint: disable=redefined-outer-name
-
 '''Unit tests for epoch executor module (executor.py).'''
+
+# pylint: disable=duplicate-code
+# pylint: disable=redefined-outer-name
 
 # third-party imports
 import pytest
@@ -99,7 +98,7 @@ def test_epoch_engine_run_epoch_train_only(mock_trainer):
     '''
     Given: `EpochEngine` in `train_only` mode.
     When: Calling `run_epoch(epoch=1)`.
-    Then: Execute training policy and return training `SessionStepResults`.
+    Then: Execute training policy and return `SessionStepResults`.
     '''
     epoch_engine = exec_mod.EpochRunner(
         mode='train_only',

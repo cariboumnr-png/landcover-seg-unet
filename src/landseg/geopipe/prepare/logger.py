@@ -50,7 +50,15 @@ class PreparationLogger(runtime.Logger):
     '''
 
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
-        '''Initialize the PreparationLogger instance.'''
+        '''
+        Initialize the `PreparationLogger` instance.
+
+        Args:
+            *args:
+                Positional arguments forwarded to `runtime.Logger`.
+            **kwargs:
+                Keyword arguments forwarded to `runtime.Logger`.
+        '''
         super().__init__(*args, **kwargs)
         self.summary: contracts.PreparationReportSchema | None = None
 
@@ -60,7 +68,15 @@ class PreparationLogger(runtime.Logger):
         run_id: str = '',
         timestamp: str | None = None
     ) -> None:
-        '''Initialize the structured run report summary dictionary.'''
+        '''
+        Initialize the structured run report summary dictionary.
+
+        Args:
+            run_id:
+                Human-readable preparation run identifier.
+            timestamp:
+                Optional ISO-8601 timestamp string; defaults to now.
+        '''
         t = timestamp or datetime.datetime.now().strftime(c.TF_ISO8601)
         self.summary = {
             'run_id': run_id,
@@ -72,22 +88,46 @@ class PreparationLogger(runtime.Logger):
         }
 
     def set_data_partition(self, report: contracts.DataPartitionReport) -> None:
-        '''Record the data partition report to summary.'''
+        '''
+        Record the data partition report to summary.
+
+        Args:
+            report:
+                Data partitioning stage report payload.
+        '''
         if self.summary is not None:
             self.summary['data_partition'] = report
 
     def set_normalization(self, report: contracts.NormalizationReport) -> None:
-        '''Record the normalization report to summary.'''
+        '''
+        Record the normalization report to summary.
+
+        Args:
+            report:
+                Block normalization stage report payload.
+        '''
         if self.summary is not None:
             self.summary['normalization'] = report
 
     def set_schema(self, report: contracts.SchemaReport) -> None:
-        '''Record the schema generation report to summary.'''
+        '''
+        Record the schema generation report to summary.
+
+        Args:
+            report:
+                Prepared dataset schema stage report payload.
+        '''
         if self.summary is not None:
             self.summary['schema'] = report
 
     def set_status(self, status: typing.Literal['SUCCESS', 'FAILED']) -> None:
-        '''Update the overall run summary status.'''
+        '''
+        Update the overall run summary status.
+
+        Args:
+            status:
+                Terminal preparation run status literal.
+        '''
         if self.summary is not None:
             self.summary['status'] = status
 

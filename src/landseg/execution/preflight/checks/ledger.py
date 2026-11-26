@@ -46,7 +46,19 @@ def ingested_pool_state(
     ctx: context.InspectionContext,
     pid: str = 'ingested_blocks_pool',
 ) -> schema.ProbeResult:
-    '''Inspect canonical block pool catalog state and block count.'''
+    '''
+    Inspect canonical block pool catalog state and block count.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+
+    Returns:
+        schema.ProbeResult:
+            Ledger probe outcome summarizing ingested pool count.
+    '''
     catalog_path = ctx.paths.data_ingestion.data_blocks.catalog
     catalog_str = str(catalog_path.resolve())
 
@@ -86,7 +98,21 @@ def prepared_blocks_state(
     *,
     desire_existing: bool = False,
 ) -> schema.ProbeResult:
-    '''Inspect prepared blocks state and split counts.'''
+    '''
+    Inspect prepared blocks state and split counts.
+
+    Args:
+        ctx:
+            Pre-resolved inspection context.
+        pid:
+            Probe identifier for the returned result.
+        desire_existing:
+            Whether existing prepared blocks are expected.
+
+    Returns:
+        schema.ProbeResult:
+            Ledger probe outcome summarizing prepared block splits.
+    '''
     schema_path = ctx.paths.data_preparation.schema
     try:
         prep_schema = artifacts.Controller[dict](schema_path).fetch()

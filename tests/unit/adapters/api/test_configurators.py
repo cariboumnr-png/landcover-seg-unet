@@ -240,9 +240,9 @@ def test_configurator_preflight(mocker, tmp_path):
 # ----- Canonical Decoupled & E2E Resolution Tests
 def test_canonical_decoupled_configurators(tmp_path):
     '''
-    Given: Explicit output and upstream directory paths (without experiment_root).
-    When: Instantiating configurators in canonical standalone recipe mode.
-    Then: Correctly wire output and upstream paths on the underlying RootConfig.
+    Given: Explicit output and upstream paths without `experiment_root`.
+    When: Instantiating configurators in standalone recipe mode.
+    Then: Wire output and upstream paths on the underlying `RootConfig`.
     '''
     grid_out = tmp_path / 'grids'
     harm_out = tmp_path / 'harmonized'
@@ -295,9 +295,12 @@ def test_canonical_decoupled_configurators(tmp_path):
 
 def test_study_sweep_configurator_canonical(tmp_path):
     '''
-    Given: Canonical parameters for study sweep without experiment_root.
-    When: Initializing StudySweepConfigurator with output_dpath and optuna_storage.
-    Then: Correctly sets sweep storage, session output, and upstream preparation paths.
+    Given: Canonical parameters for study sweep without
+        `experiment_root`.
+    When: Initializing `StudySweepConfigurator` with `output_dpath` and
+        `optuna_storage`.
+    Then: Set sweep storage, session output, and upstream preparation
+        paths.
     '''
     results_out = tmp_path / 'sweep_results'
     prep_out = tmp_path / 'prepared_data'
@@ -327,8 +330,8 @@ def test_study_sweep_configurator_set_sweep_and_validation(tmp_path):
     Given: A `StudySweepConfigurator` instance.
     When: Calling `set_sweep` with valid or unknown presets, or mutating
         `preset_name` before reading `running_root_config`.
-    Then: Accept valid presets, raise ValueError eagerly in `set_sweep`, and
-        validate study sweep config in `running_root_config`.
+    Then: Accept valid presets, raise `ValueError` eagerly in
+        `set_sweep`, and validate config in `running_root_config`.
     '''
     prep_out = tmp_path / 'prepared_data'
     prep_out.mkdir(parents=True, exist_ok=True)
@@ -384,8 +387,8 @@ def test_study_sweep_configurator_does_not_import_optuna():
 def test_configurator_set_output_and_upstream_dpaths(tmp_path):
     '''
     Given: An initialized configurator.
-    When: Calling set_output_dpath and set_upstream_dpath fluent methods.
-    Then: Updates the respective target and upstream paths on the underlying config.
+    When: Calling `set_output` and `set_upstream` fluent methods.
+    Then: Update target and upstream paths on the underlying config.
     '''
     ts = configurators.TrainingSessionConfigurator(experiment_root=tmp_path)
     new_results = tmp_path / 'custom_results'
@@ -406,9 +409,10 @@ def test_configurator_set_output_and_upstream_dpaths(tmp_path):
 
 def test_e2e_unified_experiment_root_resolution(tmp_path):
     '''
-    Given: An experiment_root path.
-    When: Initializing configurators with experiment_root (e2e notebook mode).
-    Then: Cascades default artifact paths under <exp_root>/artifacts/... and /results.
+    Given: An `experiment_root` path.
+    When: Initializing configurators with `experiment_root` in e2e mode.
+    Then: Cascade default artifact paths under `artifacts/` and
+        `results/`.
     '''
     root = tmp_path / 'unified_exp'
 

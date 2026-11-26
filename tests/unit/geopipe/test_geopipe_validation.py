@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for `landseg.geopipe.validation` public contract facade.'''
+'''Unit tests for `landseg.geopipe.validation` contract facade.'''
 
 # standard imports
 import types
@@ -36,8 +36,8 @@ import landseg.geopipe.validation as validation
 # ----- grid & manifest facade tests
 def test_validate_grid_specs_extracts_dict_details(monkeypatch):
     '''
-    Given: A stage `grid.validators.grid_specs` return value with/without
-        `as_dict()`.
+    Given: A stage `grid.validators.grid_specs` return value with or
+        without `as_dict()`.
     When: Calling `geopipe.validate_grid_specs`.
     Then: Return normalized dict details or `{}` when unavailable.
     '''
@@ -107,7 +107,8 @@ def test_validate_pool_compatibility_success_and_errors(monkeypatch, tmp_path):
     '''
     Given: Schema and world grid report paths.
     When: Calling `geopipe.validate_pool_compatibility`.
-    Then: Return compatibility metadata or propagate wrapped grid / pool errors.
+    Then: Return compatibility metadata or propagate wrapped grid or
+        pool errors.
     '''
     schema_fp = tmp_path / 'schema.json'
     report_fp = tmp_path / 'report.json'
@@ -148,8 +149,10 @@ def test_validate_pool_compatibility_success_and_errors(monkeypatch, tmp_path):
 def test_validate_feature_specs_skip_missing_and_pass(monkeypatch, tmp_path):
     '''
     Given: Harmonization and ingestion path containers.
-    When: Pending batch is absent, lacks feature rasters, or validates cleanly.
-    Then: Return skip outcome, raise ValueError, or return validated spec fields.
+    When: Pending batch is absent, lacks feature rasters, or validates
+        cleanly.
+    Then: Return skip outcome, raise `ValueError`, or return validated
+        spec fields.
     '''
     harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')
     ing_paths = artifacts.IngestionPaths(tmp_path / 'ingest')
@@ -224,7 +227,8 @@ def test_validate_raster_alignment_skip_and_pass(monkeypatch, tmp_path):
     '''
     Given: Harmonization and ingestion path containers.
     When: Calling `geopipe.validate_raster_alignment`.
-    Then: Return skip when batch unavailable or pass with raster/grid details.
+    Then: Return skip when batch unavailable or pass with raster and
+        grid details.
     '''
     harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')
     ing_paths = artifacts.IngestionPaths(tmp_path / 'ingest')
@@ -275,7 +279,8 @@ def test_validate_prepare_semantics_fetches_data_schema(monkeypatch, tmp_path):
     '''
     Given: An ingestion schema file path and dataset view config.
     When: Calling `geopipe.validate_prepare_semantics`.
-    Then: Fetch via `DataSchema` schema ID and return plain head/feature lists.
+    Then: Fetch via `DataSchema` schema ID and return plain head and
+        feature lists.
     '''
     schema_fp = tmp_path / 'schema.json'
     captured_schema_ids: list[str | None] = []

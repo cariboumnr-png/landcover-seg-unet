@@ -19,9 +19,9 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=protected-access
-
 '''Unit tests for dataclasses and functions in session_results.py.'''
+
+# pylint: disable=protected-access
 
 # third-party imports
 import pytest
@@ -35,7 +35,7 @@ def test_session_step_summary_as_dict():
     '''
     Given: SessionStepSummary instances with full and partial results.
     When: Accessing as_dict property.
-    Then: Serialize correctly and produce immutable dictionary snapshots.
+    Then: Serialize correctly and produce immutable dict snapshots.
     '''
     training = session_results.TrainStepResults(
         total_objective=1.5,
@@ -196,9 +196,11 @@ def test_session_step_results_inference_metrics_default_mean():
 
 def test_infer_step_results_inputs_and_as_dict():
     '''
-    Given: InferStepResults with tensor fields including infer_inputs.
-    When: Inspecting defaults, setting infer_inputs, and serializing as_dict.
-    Then: Default infer_inputs is None and tensor fields are excluded from as_dict.
+    Given: `InferStepResults` with `infer_inputs` and tensor fields.
+    When: Inspecting defaults, setting `infer_inputs`, and calling
+        `as_dict`.
+    Then: `infer_inputs` defaults to `None` and tensor fields are
+        excluded from `as_dict`.
     '''
     empty = session_results.InferStepResults()
     assert empty.infer_inputs is None
@@ -293,7 +295,7 @@ def test_accumulated_metrics_as_str_list():
     '''
     Given: AccumulatedMetrics with and without active classes.
     When: Formatting metrics string lists.
-    Then: Return formatted string representations for all and active classes.
+    Then: Return formatted string lines for all and active classes.
     '''
     metrics_all = session_results.AccumulatedMetrics(
         mean=0.5,

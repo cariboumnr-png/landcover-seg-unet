@@ -45,6 +45,9 @@ def compose_rasters(
     '''
     Stack feature and label rasters into composite VRT files.
 
+    Yields progress status messages and returns a mapping of raster
+    role (`'features'`, `'labels'`) to the stacked VRT file path.
+
     Args:
         features_fpaths:
             List of file paths for feature rasters.
@@ -55,12 +58,7 @@ def compose_rasters(
 
     Yields:
         str:
-            Status messages during stacking process.
-
-    Returns:
-        dict[str, pathlib.Path]:
-            Mapping of raster role ('features', 'labels') to stacked
-            VRT file path.
+            Status messages during the stacking process.
     '''
     output_dir = pathlib.Path(output_dir)
     stacked: dict[str, pathlib.Path] = {}

@@ -19,34 +19,18 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-# pylint: disable=missing-function-docstring
-
 '''
-Internal orchestration runtime configuration protocols.
+Training session phase protocol definitions.
 
-This module defines structured, type-safe protocols used by the
-training orchestration layer to coordinate execution behavior across
-phases, scheduling, and monitoring.
-
-It formalizes how configuration is accessed at runtime by exposing:
-- Scheduling controls (validation, inference, checkpoint cadence)
-- Monitoring and early-stopping behavior
-- Phase definitions for single-phase and multi-phase execution
-
-The ``PhaseLike`` protocol provides an immutable description of a
-training phase, specifying *what* is trained and for how long, while
-leaving execution strategy to the orchestration engine.
-
-The ``OrchestrationConfigShape`` protocol acts as a unified contract
-for runtime configuration, enabling consistent access across the engine
-regardless of how user configs are originally defined or loaded.
-
-These protocols enable strong typing, implementation flexibility, and
-clear separation between config structure and orchestration logic.
+Defines the `PhaseLike` structural protocol used across session
+orchestration and engine components to describe an executable training
+phase without coupling to concrete configuration objects.
 
 Public APIs:
-    - `PhaseLike`: protocol defining a single training phase.
+    - `PhaseLike`: Protocol defining a single training phase.
 '''
+
+# pylint: disable=missing-function-docstring
 
 # standard imports
 import typing

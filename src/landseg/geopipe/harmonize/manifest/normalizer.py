@@ -54,8 +54,12 @@ def normalize_manifest_entry(entry: typing.Any) -> schema.ManifestEntry:
             Raw manifest entry mapping from user configuration.
 
     Returns:
-        ManifestEntry:
+        schema.ManifestEntry:
             Canonical validated manifest entry.
+
+    Raises:
+        ValueError:
+            If domain entries define schemes or validation fails.
     '''
     _entry = val.require_mapping(entry)
     name = val.require_string(_entry.get('name'))
@@ -108,7 +112,7 @@ def _normalize_category(category: typing.Any) -> schema.AllowedCategory:
 
 
 def _normalize_band_mapping(raw: typing.Any) -> dict[int, str]:
-    '''Validate and convert band mapping keys to contiguous 1-based ints.'''
+    '''Validate and convert band keys to contiguous 1-based ints.'''
     mapping = val.require_mapping_str_v(raw)
     normalized: dict[int, str] = {}
     for k, v in mapping.items():

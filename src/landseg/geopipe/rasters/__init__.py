@@ -39,15 +39,15 @@ Public APIs:
     - `check_raster_resolution`: Verify pixel size consistency.
     - `compute_overlap_bounds`: Calculate intersected bounding box.
     - `get_info`: Retrieve structured dataset info from a raster.
-    - `is_same_crs`: Compare two coordinate reference systems for equality.
+    - `is_same_crs`: Compare two CRS definitions for equality.
     - `parse_vrt_tag`: Decode serialized JSON or literal VRT tag value.
     - `read_raster`: Context manager yielding an open dataset reader.
     - `read_rasters`: Context manager yielding multiple dataset readers.
-    - `read_window`: Read array window with boundless or reflect padding.
+    - `read_window`: Read array window with optional edge padding.
     - `reproject_bounds`: Reproject bounding box to destination CRS.
     - `resolve_resampling_algorithm`: Resolve rasterio resampling enum.
     - `stack_rasters`: Stack spatially aligned rasters into a VRT.
-    - `unify_nodata_mask`: Create a 1-band valid pixel mask across bands.
+    - `unify_nodata_mask`: Create 1-band valid pixel mask across bands.
     - `write_warped_gtiff`: Write a materialized tiled GeoTIFF to disk.
     - `write_warped_vrt`: Write a virtual warped raster (VRT) to disk.
 '''

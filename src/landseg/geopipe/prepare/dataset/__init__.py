@@ -22,8 +22,8 @@
 '''
 Top-level namespace for `landseg.geopipe.prepare.dataset`.
 
-Exposes in-memory dataset view containers and builders via lazy resolution
-to keep import order simple and circular-free.
+Exposes in-memory dataset view containers and builders via lazy
+resolution to keep import order simple and circular-free.
 
 Public APIs:
     - `DataBlocksManifestInputs`: Bundled datablocks manifest artifacts.

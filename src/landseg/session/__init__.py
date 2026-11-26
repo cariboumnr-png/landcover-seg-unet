@@ -22,8 +22,8 @@
 '''
 Top-level namespace for `landseg.session`.
 
-Exposes selected public functions via lazy resolution to keep import
-order simple and circular-free.
+Exposes selected public APIs via lazy resolution to keep import order
+simple and circular-free.
 
 Public APIs:
     - `ContinuousRunner`: Single-phase training session runner.
@@ -33,7 +33,7 @@ Public APIs:
     - `SessionConfigShape`: Configuration protocol for session assembly.
     - `SessionLogger`: Session-scoped structured logger.
     - `build_session_runner`: Build a configured session runner variant.
-    - `run_preview_inference`: Execute stitched preview inference on test.
+    - `run_preview_inference`: Execute stitched preview inference.
     - `select_representative_block`: Select a diverse fallback block.
 '''
 

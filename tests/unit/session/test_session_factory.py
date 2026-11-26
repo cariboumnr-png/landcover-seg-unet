@@ -129,9 +129,9 @@ def test_build_session_runner_databricks_tracker_defaults_to_mlflow(
     mock_session_paths,
 ):
     '''
-    Given: SessionBuildContext with is_databricks=True and without explicit trackers.
+    Given: Context with `is_databricks=True` and no explicit trackers.
     When: Calling `build_session_runner`.
-    Then: Automatically defaults to MLflow tracker with 'databricks' URI.
+    Then: Default to MLflow tracker with `'databricks'` URI.
     '''
     with unittest.mock.patch('mlflow.set_tracking_uri') as mock_set_uri, \
          unittest.mock.patch('mlflow.start_run'):
@@ -148,7 +148,7 @@ def test_build_session_runner_databricks_tracker_defaults_to_mlflow(
 
 def test_base_tracker_string_uri():
     '''
-    Given: BaseTracker or MLFlowTracker with a string URI (e.g. 'databricks').
+    Given: `BaseTracker` or `MLFlowTracker` with a string URI.
     When: Initializing tracker.
     Then: Safely stores the string URI without calling .absolute().
     '''
@@ -160,6 +160,7 @@ def test_base_tracker_string_uri():
 
 # ----- internal helpers
 def _get_context(mock_session_paths, **kwargs):
+    '''Build a `SessionBuildContext` for unit tests.'''
     return factory_mod.SessionBuildContext(
         device='cpu',
         session_paths=mock_session_paths,

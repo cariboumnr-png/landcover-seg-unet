@@ -27,7 +27,7 @@ computing target distributions from global counts and scoring blocks
 with log-lift or weighted L1 metrics on reward classes.
 
 Public APIs:
-    - score_blocks: score and rank blocks based on label distributions.
+    - `score_blocks`: Score and rank blocks based on label counts.
 '''
 
 # standard imports
@@ -56,22 +56,27 @@ def score_blocks(
 
     Args:
         global_class_count:
-            global per-class counts used to derive target distribution.
+            Global per-class counts used to derive target distribution.
         input_blocks:
-            mapping of block coordinates to class counts to score.
+            Mapping of block coordinates to class counts to score.
         reward:
-            0-based class indices to prioritize with reward terms.
+            Zero-based class indices to prioritize with reward terms.
         alpha:
-            exponent for smoothing or sharpening block counts.
+            Exponent for smoothing or sharpening block counts.
         beta:
-            reward weight factor for classes during L1 distance scoring.
+            Reward weight factor for classes during L1 distance scoring.
         **kwargs:
-            optional scoring mode override (e.g. 'log_lift').
+            Optional scoring mode override (e.g., `'log_lift'`).
 
     Returns:
         dict[tuple[int, int], list[int]]:
-            mapping of block coordinates to counts, sorted by score
-            in descending order.
+            Mapping of block coordinates to counts, sorted by score in
+            descending order.
+
+    Raises:
+        IndexError:
+            If any reward class index is out of range for
+            `global_class_count`.
     '''
     if not global_class_count or not input_blocks:
         return {}
