@@ -26,9 +26,11 @@ Exposes selected public APIs via lazy resolution to keep import order
 simple and circular-free.
 
 Public APIs:
+    - `CheckpointCatalog`: Reader, writer, and resolver for session runs.
     - `ContinuousRunner`: Single-phase training session runner.
     - `CurriculumRunner`: Multi-phase curriculum session runner.
     - `EpochRunner`: Single-epoch execution runner.
+    - `PhaseCheckpointEntry`: Per-phase checkpoint paths and metrics.
     - `SessionBuildContext`: Runtime context for session building.
     - `SessionConfigShape`: Configuration protocol for session assembly.
     - `SessionLogger`: Session-scoped structured logger.
@@ -43,9 +45,11 @@ import typing
 import landseg._lazy as _lazy
 
 __all__ = [
+    'CheckpointCatalog',
     'ContinuousRunner',
     'CurriculumRunner',
     'EpochRunner',
+    'PhaseCheckpointEntry',
     'SessionBuildContext',
     'SessionConfigShape',
     'SessionLogger',
@@ -57,6 +61,10 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
+    from .checkpoint_catalog import (
+        CheckpointCatalog,
+        PhaseCheckpointEntry,
+    )
     from .engine import EpochRunner
     from .factory import (
         SessionBuildContext,
@@ -75,6 +83,10 @@ if typing.TYPE_CHECKING:
 
 
 __getattr__, __dir__ = _lazy.attach(__name__, {
+    '.checkpoint_catalog': [
+        'CheckpointCatalog',
+        'PhaseCheckpointEntry',
+    ],
     '.engine': ['EpochRunner'],
     '.factory': [
         'SessionBuildContext',

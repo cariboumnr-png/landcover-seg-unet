@@ -131,6 +131,9 @@ def run_preview_inference(
             Stitched inputs, labels, predictions, and errors, or `None`
             when no test blocks or checkpoint exist.
     '''
+    if not dataspecs.splits.test or not checkpoint_fpath.is_file():
+        return None
+
     target_device = runtime.resolve_device(device)
 
     artifacts.load_checkpoint(

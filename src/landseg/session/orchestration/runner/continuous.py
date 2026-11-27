@@ -174,6 +174,7 @@ class ContinuousRunner(base.BaseRunner):
                         # yield and exit on stop signal
                         self._is_phase_end = True
                         yield self._get_step(reason=reason)
+                        self._mark_phase_complete(self.phase.name)
                         self.dispatcher.on_session_phase_end(
                             self.phase.name, reason
                         )
@@ -184,6 +185,7 @@ class ContinuousRunner(base.BaseRunner):
 
                     case events.PhaseEnd(phase_name=phase_name):
                         reason = 'Max epoch reached'
+                        self._mark_phase_complete(phase_name)
                         self.dispatcher.on_session_phase_end(phase_name, reason)
                         return
         finally:
