@@ -23,8 +23,9 @@
 Base abstractions for stage and run-scoped artifact path handles.
 
 Public APIs:
-    - `PipelineArtifactsPaths`:
-    - `RunScopedArtifactPaths`:
+    - `RUN_DIR_RE`: Canonical run folder naming regular expresion pattern.
+    - `PipelineArtifactsPaths`: Base path handler for a pipeline stage.
+    - `RunScopedArtifactPaths`: Base path handler for run-based pipeline.
 '''
 
 # standard imports
@@ -35,8 +36,8 @@ import typing
 # local imports
 import landseg.artifacts.controller as controller
 
-# ----- private constants
-_RUN_DIR_RE = re.compile(r'^run_(\d+)$')
+# ----- public constants
+RUN_DIR_RE = re.compile(r'^run_(\d+)$')
 
 
 # ----- public dataclasses
@@ -175,7 +176,7 @@ class RunScopedArtifactPaths(PipelineArtifactsPaths):
         for entry in root_path.iterdir():
             if not entry.is_dir():
                 continue
-            m = _RUN_DIR_RE.match(entry.name)
+            m = RUN_DIR_RE.match(entry.name)
             if m is not None:
                 matched.append((int(m.group(1)), entry.name))
         matched.sort(key=lambda item: (item[0], item[1]))
@@ -287,7 +288,7 @@ class RunScopedArtifactPaths(PipelineArtifactsPaths):
 # ----- private helpers
 def _parse_run_index(run_name: str) -> int:
     '''Extract integer index from a canonical `run_XXXX` name.'''
-    m = _RUN_DIR_RE.match(run_name)
+    m = RUN_DIR_RE.match(run_name)
     if m is None:
         raise controller.ArtifactError(f'Invalid run folder name: {run_name}')
     return int(m.group(1))

@@ -30,14 +30,12 @@ Public APIs:
 # standard imports
 import dataclasses
 import pathlib
-import re
 import typing
 # local imports
 import landseg.artifacts.controller as controller
 import landseg.artifacts.paths.base as base
 
 # ----- private constants
-_RUN_DIR_RE = re.compile(r'^run_(\d+)$')
 _SESSION_RUN_MARKERS = (
     'step_results.json',
     'evaluation.json',
@@ -288,7 +286,7 @@ def resolve_session_run(
 # ----- private helpers
 def _is_run_folder(path: pathlib.Path) -> bool:
     '''Return True when `path` exhibits session run folder markers.'''
-    if _RUN_DIR_RE.match(path.name) is not None:
+    if base.RUN_DIR_RE.match(path.name) is not None:
         return True
     return any((path / marker).exists() for marker in _SESSION_RUN_MARKERS)
 

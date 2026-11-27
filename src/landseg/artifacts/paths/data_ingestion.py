@@ -115,7 +115,6 @@ class IngestionPaths(base.RunScopedArtifactPaths):
 @dataclasses.dataclass(frozen=True)
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''
-
     root: pathlib.Path
 
     def __post_init__(self):
@@ -157,7 +156,6 @@ class _DomainMaps:
 @dataclasses.dataclass(frozen=True)
 class _DataBlocks:
     '''Container for canonical dataset data blocks.'''
-
     root: pathlib.Path
 
     def __post_init__(self):
