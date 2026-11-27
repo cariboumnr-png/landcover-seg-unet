@@ -98,7 +98,7 @@ def test_run_data_harmonization_stage_success_and_failure(
     Then: Update `harmonization_runs.json` and persist `SUCCESS` or
         `FAILED` report.
     '''
-    harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harmonized')
+    harm_paths = artifacts.HarmonizationPaths.allocate_run(tmp_path / 'harmonized')
     harm_paths.init_pipeline_folders()
     harm_cfg = configs.RootConfig().data.harmonization
     manifest_fp = tmp_path / 'manifest.json'
@@ -148,7 +148,7 @@ def test_run_data_ingestion_stage_success_missing_and_failure(
         mark `FAILED` on errors.
     '''
     harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harmonized')
-    ing_paths = artifacts.IngestionPaths(tmp_path / 'ingested')
+    ing_paths = artifacts.IngestionPaths.allocate_run(tmp_path / 'ingested')
     ing_paths.init_pipeline_folders()
     ing_cfg = configs.RootConfig().data.ingestion
 

@@ -70,8 +70,7 @@ def test_build_ingestion_context_success(tmp_path):
         report_fp
     ).persist(report_content)
 
-    harm_paths = artifacts.HarmonizationPaths(harm_dpath)
-    harm_paths.init_pipeline_folders()
+    harm_paths = artifacts.HarmonizationPaths.from_root(harm_dpath)
     manifest_rec: contracts.HarmonizationRunRecord = {
         'run_uid': 'uid_test_0001',
         'run_id': 'run_0001',
@@ -119,7 +118,7 @@ def test_discover_runs_no_successful_runs_raises(tmp_path):
     When: `_resolve_harmonization_runs` is invoked.
     Then: Raise ArtifactError indicating no successful runs.
     '''
-    harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')
+    harm_paths = artifacts.HarmonizationPaths.allocate_run(tmp_path / 'harm')
     harm_paths.init_pipeline_folders()
     manifest_rec: contracts.HarmonizationRunRecord = {
         'run_uid': 'uid_fail_0001',
@@ -197,7 +196,7 @@ def test_discover_ingested_harmonization_uids(tmp_path):
     When: `_resolve_ingestion_runs` is invoked.
     Then: Return only UIDs corresponding to SUCCESS runs.
     '''
-    ingest_paths = artifacts.IngestionPaths(tmp_path / 'ingest')
+    ingest_paths = artifacts.IngestionPaths.allocate_run(tmp_path / 'ingest')
     # when manifest does not exist
     assert ingest_context._resolve_ingestion_runs(
         ingest_paths.runs_manifest
@@ -240,9 +239,9 @@ def test_resolve_pending_ingestion_batches(tmp_path):
     When: `resolve_pending_ingestion_batches` is called under modes.
     Then: Correctly plan batches for pending, latest, and targeted.
     '''
-    harm_paths = artifacts.HarmonizationPaths(tmp_path / 'harm')
+    harm_paths = artifacts.HarmonizationPaths.allocate_run(tmp_path / 'harm')
     harm_paths.init_pipeline_folders()
-    ingest_paths = artifacts.IngestionPaths(tmp_path / 'ingest')
+    ingest_paths = artifacts.IngestionPaths.allocate_run(tmp_path / 'ingest')
     ingest_paths.init_pipeline_folders()
 
     harm_manifest: dict[str, contracts.HarmonizationRunRecord] = {

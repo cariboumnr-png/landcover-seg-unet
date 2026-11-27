@@ -31,9 +31,10 @@ import landseg.artifacts.paths.base as base
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class IngestionPaths(base.PipelineArtifactsPaths):
+@dataclasses.dataclass(frozen=True)
+class IngestionPaths(base.RunScopedArtifactPaths):
     '''Paths for ingested datasets and knowledge artifacts.'''
+
     @property
     def runs_manifest(self) -> pathlib.Path:
         '''Return path to the ingestion runs manifest JSON.'''
@@ -111,13 +112,14 @@ class IngestionPaths(base.PipelineArtifactsPaths):
 
 
 # ----- private dataclasses
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class _DomainMaps:
     '''Paths for domain knowledge maps and tile mappings.'''
+
     root: pathlib.Path
 
     def __post_init__(self):
-        self.root = pathlib.Path(self.root)
+        object.__setattr__(self, 'root', pathlib.Path(self.root))
 
     def domain_map_fpath(self, domain_name: str) -> pathlib.Path:
         '''
@@ -152,13 +154,14 @@ class _DomainMaps:
         return self.root / f'{stem}_tiles_{gid}.npz'
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class _DataBlocks:
     '''Container for canonical dataset data blocks.'''
+
     root: pathlib.Path
 
     def __post_init__(self):
-        self.root = pathlib.Path(self.root)
+        object.__setattr__(self, 'root', pathlib.Path(self.root))
 
     @property
     def blocks(self) -> pathlib.Path:

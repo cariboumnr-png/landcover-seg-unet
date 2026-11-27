@@ -19,55 +19,83 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Base class for artifact paths dataclasses for each pipeline.'''
+'''
+Base abstractions for stage and run-scoped artifact path handles.
+
+Public APIs:
+    - `PipelineArtifactsPaths`:
+    - `RunScopedArtifactPaths`:
+'''
 
 # standard imports
 import dataclasses
 import pathlib
+import re
 import typing
 # local imports
 import landseg.artifacts.controller as controller
 
+# ----- private constants
+_RUN_DIR_RE = re.compile(r'^run_(\d+)$')
+
 
 # ----- public dataclasses
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class PipelineArtifactsPaths:
-    '''Paths for pipeline specific artifacts.'''
+    '''
+    Base frozen artifact path handle for a pipeline stage.
+
+    Constructing directly or via `from_root` binds only `root` without
+    filesystem probing or run allocation.
+    '''
     root: pathlib.Path
     run_folder: pathlib.Path | None = None
-    trace_to_last: bool = False
-    _run_id: str = ''
-    _run_folder: pathlib.Path | None = None
 
-    def __post_init__(self):
-        '''Compile current run folder.'''
-        self.root = pathlib.Path(self.root)
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'root', pathlib.Path(self.root))
         if self.run_folder is not None:
-            self.run_folder = pathlib.Path(self.run_folder)
-        if not self._run_id:
-            i = 1
-            root_path = self.root
-            while True:
-                candidate_id = f'run_{i:04d}'
-                candidate_folder = root_path / candidate_id
-                if not candidate_folder.exists():
-                    break
-                i += 1
-            if self.trace_to_last and i > 1:
-                i -= 1
-                self._run_id = f'run_{i:04d}'
-            else:
-                self._run_id = f'run_{i:04d}'
-            self._run_folder = root_path / self._run_id
-            self.run_folder = self._run_folder
+            object.__setattr__(
+                self, 'run_folder', pathlib.Path(self.run_folder)
+            )
+
+    @classmethod
+    def from_root(cls, root: str | pathlib.Path) -> typing.Self:
+        '''
+        Return an unbound stage path handle without filesystem writes.
+
+        Args:
+            root:
+                Stage output root directory path.
+
+        Returns:
+            typing.Self:
+                Stage path handle bound to `root`.
+        '''
+        return cls(root=pathlib.Path(root))
+
+    @property
+    def is_run_bound(self) -> bool:
+        '''Return True when handle points to a concrete run folder.'''
+        return self.run_folder is not None
 
     @property
     def effective_run_folder(self) -> pathlib.Path:
-        '''Return either provided or compiled run folder path.'''
-        return (
-            self.run_folder
-            if self.run_folder is not None
-            else (self._run_folder if self._run_folder is not None else self.root)
+        '''
+        Return the bound run folder for this handle.
+
+        Returns:
+            pathlib.Path:
+                Concrete directory holding outputs for this run.
+
+        Raises:
+            ArtifactError:
+                If the handle is unbound (no `run_folder` attached).
+        '''
+        if self.run_folder is not None:
+            return self.run_folder
+        raise controller.ArtifactError(
+            f'{type(self).__name__} handle is not bound to a run folder; '
+            'use open_run(), from_run_folder(), or allocate_run().'
         )
 
     @property
@@ -84,68 +112,6 @@ class PipelineArtifactsPaths:
     def config(self) -> pathlib.Path:
         '''Return path to persisted configuration JSON.'''
         return self.effective_run_folder / 'config.json'
-
-    def get_run_folder(
-        self,
-        run_id: int | str | pathlib.Path | None = None
-    ) -> pathlib.Path:
-        '''
-        Return the path to a run folder.
-
-        Args:
-            run_id:
-                Integer run ID (e.g. 1 -> run_0001), string run folder
-                name/ID (e.g. "run_0001" or "1"), or directory path. If
-                None, returns the latest existing run folder.
-
-        Returns:
-            pathlib.Path:
-                Resolved path to the target run directory.
-
-        Raises:
-            FileNotFoundError:
-                If the requested run does not exist or no run folders
-                exist.
-            TypeError:
-                If run_id is of an invalid type.
-        '''
-        root_path = self.root
-        if run_id is not None:
-            if isinstance(run_id, int):
-                folder = root_path / f'run_{run_id:04d}'
-            elif isinstance(run_id, (str, pathlib.Path)):
-                p = pathlib.Path(run_id)
-                if isinstance(run_id, str) and run_id.isdigit():
-                    folder = root_path / f'run_{int(run_id):04d}'
-                elif p.is_dir():
-                    folder = p
-                elif (root_path / p).is_dir():
-                    folder = root_path / p
-                else:
-                    raise FileNotFoundError(
-                        f'Run folder does not exist: {run_id}'
-                    )
-            else:
-                raise TypeError(f'Invalid run_id type: {type(run_id)}')
-
-            if not folder.is_dir():
-                raise FileNotFoundError(f'Run folder does not exist: {folder}')
-            self.run_folder = folder
-            return self.run_folder
-
-        if not root_path.exists():
-            raise FileNotFoundError('No run folders found.')
-
-        runs = sorted(
-            d.name for d in root_path.iterdir()
-            if d.name.startswith('run_') and d.is_dir()
-        )
-
-        if not runs:
-            raise FileNotFoundError('No run folders found.')
-
-        self.run_folder = root_path / runs[-1]
-        return self.run_folder
 
     def init_pipeline_folders(self) -> typing.Self:
         '''
@@ -181,3 +147,147 @@ class PipelineArtifactsPaths:
                 f'Root does not exist or is not a directory: {self.root}'
             )
         return self
+
+
+@dataclasses.dataclass(frozen=True)
+class RunScopedArtifactPaths(PipelineArtifactsPaths):
+    '''Base handle for stages organized into `run_XXXX` folders.'''
+
+    @classmethod
+    def list_runs(cls, root: str | pathlib.Path) -> list[str]:
+        '''
+        List existing `run_XXXX` folder names sorted by numeric run ID.
+
+        Performs read-only directory inspection with no side effects.
+
+        Args:
+            root:
+                Stage output root directory to inspect.
+
+        Returns:
+            list[str]:
+                Sorted run directory names (oldest to newest by ID).
+        '''
+        root_path = pathlib.Path(root)
+        if not root_path.is_dir():
+            return []
+        matched: list[tuple[int, str]] = []
+        for entry in root_path.iterdir():
+            if not entry.is_dir():
+                continue
+            m = _RUN_DIR_RE.match(entry.name)
+            if m is not None:
+                matched.append((int(m.group(1)), entry.name))
+        matched.sort(key=lambda item: (item[0], item[1]))
+        return [name for _, name in matched]
+
+    @classmethod
+    def open_run(
+        cls,
+        root: str | pathlib.Path,
+        run_id: int | str | pathlib.Path | None = None,
+    ) -> typing.Self:
+        '''
+        Open an existing run folder without creating directories.
+
+        Args:
+            root:
+                Stage output root directory.
+            run_id:
+                Integer index, numeric string, folder name, or path. If
+                `None`, selects the highest run ID under `root`.
+
+        Returns:
+            typing.Self:
+                Frozen run-bound handle for the resolved run folder.
+
+        Raises:
+            ArtifactError:
+                If `root`, any run folders, or the requested run folder
+                cannot be found.
+            TypeError:
+                If `run_id` is of an unsupported type.
+        '''
+        root_path = pathlib.Path(root)
+        if not root_path.is_dir():
+            raise controller.ArtifactError(
+                f'Stage root does not exist or is not a directory: {root_path}'
+            )
+
+        if run_id is None:
+            runs = cls.list_runs(root_path)
+            if not runs:
+                raise controller.ArtifactError(
+                    f'No run folders found under: {root_path}'
+                )
+            folder = root_path / runs[-1]
+        elif isinstance(run_id, int) and not isinstance(run_id, bool):
+            folder = root_path / f'run_{run_id:04d}'
+        elif isinstance(run_id, (str, pathlib.Path)):
+            if isinstance(run_id, str) and run_id.isdigit():
+                folder = root_path / f'run_{int(run_id):04d}'
+            else:
+                p = pathlib.Path(run_id)
+                folder = p if p.is_dir() else (root_path / p)
+        else:
+            raise TypeError(f'Invalid run_id type: {type(run_id)}')
+
+        if not folder.is_dir():
+            raise controller.ArtifactError(
+                f'Run folder does not exist: {folder}'
+            )
+        return cls(root=root_path, run_folder=folder)
+
+    @classmethod
+    def from_run_folder(cls, run_dpath: str | pathlib.Path) -> typing.Self:
+        '''
+        Bind a handle directly to an existing concrete run folder.
+
+        Args:
+            run_dpath:
+                Existing run directory path.
+
+        Returns:
+            typing.Self:
+                Frozen run-bound handle for `run_dpath`.
+
+        Raises:
+            ArtifactError:
+                If `run_dpath` does not exist or is not a directory.
+        '''
+        folder = pathlib.Path(run_dpath)
+        if not folder.is_dir():
+            raise controller.ArtifactError(
+                f'Run folder does not exist or is not a directory: {folder}'
+            )
+        return cls(root=folder.parent, run_folder=folder)
+
+    @classmethod
+    def allocate_run(cls, root: str | pathlib.Path) -> typing.Self:
+        '''
+        Allocate the next sequential `run_XXXX` folder for writing.
+
+        Args:
+            root:
+                Stage output root directory.
+
+        Returns:
+            typing.Self:
+                Frozen run-bound handle pointing to the newly allocated
+                run directory.
+        '''
+        root_path = pathlib.Path(root)
+        runs = cls.list_runs(root_path)
+        next_idx = (_parse_run_index(runs[-1]) + 1) if runs else 1
+        folder = root_path / f'run_{next_idx:04d}'
+        folder.mkdir(parents=True, exist_ok=True)
+        return cls(root=root_path, run_folder=folder)
+
+
+# ----- private helpers
+def _parse_run_index(run_name: str) -> int:
+    '''Extract integer index from a canonical `run_XXXX` name.'''
+    m = _RUN_DIR_RE.match(run_name)
+    if m is None:
+        raise controller.ArtifactError(f'Invalid run folder name: {run_name}')
+    return int(m.group(1))

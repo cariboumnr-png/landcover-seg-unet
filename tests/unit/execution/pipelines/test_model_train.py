@@ -249,6 +249,9 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
         omegaconf.OmegaConf.to_object(schema)
     )
     pipeline = train_pipeline.ModelTraining(config)
+    pipeline.pipeline_paths = artifacts.SessionPaths.allocate_run(
+        pipeline.pipeline_paths.root
+    )
     pipeline.logger = mocker.Mock()
 
     # Create dummy step_results.json
@@ -315,6 +318,9 @@ def test_train_generate_post_run_visuals_skips_when_infer_none(tmp_path, mocker)
         omegaconf.OmegaConf.to_object(schema)
     )
     pipeline = train_pipeline.ModelTraining(config)
+    pipeline.pipeline_paths = artifacts.SessionPaths.allocate_run(
+        pipeline.pipeline_paths.root
+    )
     pipeline.logger = mocker.Mock()
 
     pipeline.pipeline_paths.checkpoints.mkdir(parents=True, exist_ok=True)
