@@ -33,6 +33,7 @@ Public APIs:
 '''
 
 # standard imports
+import os
 import pathlib
 import typing
 # third-party imports
@@ -162,7 +163,7 @@ def plot_qualitative_predictions(
 def generate_prediction_previews(
     infer_results: core.InferStepResults | None,
     dataspecs: core.DataSpecs,
-    previews_dpath: str | pathlib.Path,
+    save_fpaths: typing.Mapping[str, str | pathlib.Path],
 ) -> dict[str, pathlib.Path]:
     '''
     Render qualitative prediction preview PNGs from inference results.
@@ -179,12 +180,16 @@ def generate_prediction_previews(
         dataspecs:
             Data specification object supplying band mapping and palette
             metadata.
-        previews_dpath:
-            Output directory for saving rendered preview PNGs.
+        save_fpaths:
+            Mapping from head name to explicit output PNG file path.
 
     Returns:
         dict[str, pathlib.Path]:
-            Mapping from head name saved preview figure.
+            Mapping from head name to saved preview PNG file path.
+
+    Raises:
+        ValueError:
+            If an active head is missing from `save_fpaths`.
     '''
     if (
         infer_results is None
@@ -200,9 +205,14 @@ def generate_prediction_previews(
     active_heads = _resolve_active_heads(infer_results, dataspecs)
     color_map = dataspecs.meta.label_color_map
 
-    result_figs: dict[str, typing.Any] = {}
+    saved_paths: dict[str, pathlib.Path] = {}
 
     for head in active_heads:
+        if head not in save_fpaths:
+            raise ValueError(
+                f'Missing output path for head {head!r} in save_fpaths.'
+            )
+        save_file = pathlib.Path(save_fpaths[head])
         pred_tensor = infer_results.infer_preds[head]
         gt_tensor = infer_results.infer_labels.get(head)
 
@@ -215,11 +225,6 @@ def generate_prediction_previews(
             if err_display is None:
                 err_display = (pred_tensor == gt_tensor).int()
 
-        save_file = (
-            pathlib.Path(previews_dpath) / f'{head}_preview.png'
-            if previews_dpath
-            else None
-        )
         fig = plot_qualitative_predictions(
             image=rgb_image,
             ground_truth=gt_display,
@@ -231,34 +236,44 @@ def generate_prediction_previews(
             color_map=color_map,
         )
         matplotlib.pyplot.close(fig)
-        result_figs[head] = save_file
+        saved_paths[head] = save_file
 
-    return result_figs
+    return saved_paths
 
 
-def render_prediction_preview(target_dpath: str | pathlib.Path) -> typing.Any:
+def render_prediction_preview(
+    png_fpaths: typing.Sequence[str | pathlib.Path],
+) -> None:
     '''
     Display previously generated prediction preview PNGs.
 
-    Resolves the latest experiment run and loads its existing preview
-    images. Does not execute inference or regenerate figures.
+    Loads and displays existing preview images from explicit file paths.
+    Does not scan directories, run inference, or regenerate figures.
 
     Args:
-        target_dpath:
-            Experiment root or individual run directory.
+        png_fpaths:
+            Ordered sequence of preview PNG file paths to display.
+
+    Raises:
+        TypeError:
+            If a single path-like object is passed instead of a sequence.
+        FileNotFoundError:
+            If `png_fpaths` is empty or any target PNG does not exist.
     '''
-    run_dpath = _resolve_latest_run(target_dpath)
-    preview_dpath = run_dpath / 'previews'
+    if isinstance(png_fpaths, (str, os.PathLike)):
+        raise TypeError(
+            'Expected a sequence of preview PNG paths, got single path.'
+        )
 
-    if not preview_dpath.is_dir():
-        raise FileNotFoundError(f'No preview directory found: {preview_dpath}')
+    targets = [pathlib.Path(fp) for fp in png_fpaths]
+    if not targets:
+        raise FileNotFoundError('No preview PNG paths supplied.')
 
-    png_files = sorted(preview_dpath.glob('*_preview.png'))
+    for png_file in targets:
+        if not png_file.is_file():
+            raise FileNotFoundError(f'No preview PNG found: {png_file}')
 
-    if not png_files:
-        raise FileNotFoundError(f'No preview PNGs found in {preview_dpath}')
-
-    for png_file in png_files:
+    for png_file in targets:
         image = matplotlib.pyplot.imread(png_file)
         fig, ax = matplotlib.pyplot.subplots(figsize=(14, 4))
 
@@ -278,22 +293,6 @@ def render_prediction_preview(target_dpath: str | pathlib.Path) -> typing.Any:
 
 
 # ----- private helpers
-def _resolve_latest_run(target_dpath: str | pathlib.Path) -> pathlib.Path:
-    '''Resolve the run directory containing the latest step results.'''
-    target = pathlib.Path(target_dpath)
-
-    if not target.is_dir():
-        raise FileNotFoundError(f'Results directory does not exist: {target}')
-
-    candidates = list(target.glob('**/step_results.json'))
-
-    if not candidates:
-        raise FileNotFoundError(f'No step_results.json found under {target}')
-
-    latest = max(candidates, key=lambda p: p.stat().st_mtime)
-    return latest.parent
-
-
 def _extract_rgb_image(
     image: torch.Tensor,
     band_map: dict[str, int] | None,

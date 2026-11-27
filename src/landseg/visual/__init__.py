@@ -42,7 +42,7 @@ Public APIs:
     - `plot_qualitative_predictions`: Render comparative preview panels.
     - `plot_spectral_composite`: Render stretched spectral composite.
     - `render_prediction_preview`: Automated prediction preview display.
-    - 'render_training_curves': Render training curves.
+    - `render_training_curves`: Render training curves.
 '''
 
 # standard imports
