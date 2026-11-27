@@ -85,6 +85,9 @@ def make_objective(
 
         # build the runner with trial config
         step_results_path, run = runner_builder(mutator.config)
+        run_folder = step_results_path.parent
+        if run_folder.is_dir():
+            trial.set_user_attr('run_folder', str(run_folder))
 
         # tracking
         # - step results
@@ -121,6 +124,10 @@ def make_objective(
                 'state': 'pruned'
             })
             raise
+
+        finally:
+            if run_folder.is_dir():
+                trial.set_user_attr('run_folder', str(run_folder))
 
         # return the last value
         return last_value

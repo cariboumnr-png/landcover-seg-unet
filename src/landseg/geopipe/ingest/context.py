@@ -168,8 +168,11 @@ def build_ingestion_context(
             Loaded execution context with world grid and input rasters.
     '''
     # parse targeted harmonization run
-    harmonization_artifact_paths.get_run_folder(harmonization_record['run_id'])
-    report_fp = harmonization_artifact_paths.report
+    harm_run = artifacts.HarmonizationPaths.open_run(
+        harmonization_artifact_paths.root,
+        run_id=harmonization_record['run_id'],
+    )
+    report_fp = harm_run.report
     Ctrl = artifacts.Controller[contracts.HarmonizationReportSchema]
     report = Ctrl(report_fp).fetch()
 
@@ -222,9 +225,7 @@ def build_ingestion_context(
             'features': str(features.resolve()) if features else None,
             'labels': str(labels.resolve()) if labels else None,
             'domains': {k: str(v.resolve()) for k, v in domains.items()},
-            'valid_mask_raster': str(
-                harmonization_artifact_paths.valid_mask_raster.resolve()
-            ),
+            'valid_mask_raster': str(harm_run.valid_mask_raster.resolve()),
         },
         'config': config_dict,
     }
@@ -241,7 +242,7 @@ def build_ingestion_context(
         domains=domains,
         features=features,
         labels=labels,
-        valid_mask_raster=harmonization_artifact_paths.valid_mask_raster,
+        valid_mask_raster=harm_run.valid_mask_raster,
         run_uid=harmonization_record['run_uid'],
         harmonization_run_id=harmonization_record['run_id'],
         current_run_identity=fingerprint,

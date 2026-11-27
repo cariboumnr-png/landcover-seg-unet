@@ -1,6 +1,6 @@
 # Architecture Overview
 
-**Last updated: 2026-11-25**
+**Last updated: 2026-11-26**
 
 ---
 
@@ -109,8 +109,11 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, Visual Diagnostics, 
   or `overwrite` artifacts based on file presence, content hashes, and CLI flags.
 - Tracks multi-batch run lineage in append-only JSON run ledgers
   (`harmonization_runs.json`, `ingestion_runs.json`).
-- Governs canonical disk paths for world grids, harmonized batches, block pool
-  tiles, prepared datasets, model checkpoints, and run reports.
+- Governs canonical disk paths (`artifacts.paths`) via side-effect-free read
+  handles (`from_root`, `open_run`, `from_run_folder`), explicit run
+  allocation (`allocate_run`), and schema-marker session lookup
+  (`resolve_session_run`) for grids, harmonized batches, block pool tiles,
+  prepared datasets, checkpoints, logs, plots, and previews.
 
 ---
 
@@ -178,7 +181,12 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, Visual Diagnostics, 
     tracking facade (TensorBoard, MLflow, CSV/console), and report formatters
     (`formatters.report`).
   - **Orchestration (`session.orchestration`)**: Continuous or curriculum
-    runners, phase transitions, and training state preservation.
+    runners, phase transitions, and training state preservation, indexing
+    saved checkpoints into `CheckpointCatalog` (`checkpoints/status.json`) for
+    deterministic `final` selection (`last_phase_best`).
+  - **Checkpoint Catalog (`session.orchestration.catalog`)**: Reads and validates
+    per-phase checkpoint paths (`checkpoint_catalog/v0.1.0`) with single-file
+    legacy fallback.
   - **Preview Inference (`session.preview`)**: Representative test-block selection
     and stitched inference (`select_representative_block`, `run_preview_inference`)
     feeding `landseg.visual` without coupling visualization to session data/models.
@@ -233,13 +241,15 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, Visual Diagnostics, 
 
 ### 11. Visual Presentation & Diagnostics ([`visual`](../src/landseg/visual))
 - Pure, headless visualization layer (Matplotlib `Agg`) decoupled from host
-  interactive globals, training loops, model construction, and dataloaders:
+  interactive globals, artifact layout discovery, training loops, model
+  construction, and dataloaders (strictly path-in / path-out with zero
+  `landseg.artifacts` imports):
   - **Palettes & Colorization (`visual.color`)**: Standardized land cover and
     forestry palettes (`DEFAULT_ERROR_PALETTE`, `DEFAULT_MATCH_PALETTE`,
     `FORESTRY_FRI_PALETTE`, `NLCD_16_PALETTE`), categorical color mapping,
     and continuous colormaps.
   - **Curves & Trends (`visual.curves`)**: Multi-head training and validation
-    metric plotting from persisted artifact paths.
+    metric plotting from in-memory step records to explicit PNG file paths.
   - **Qualitative Previews (`visual.preview`)**: Pure side-by-side input, ground
     truth, and multi-head prediction masks rendered directly from
     [`InferStepResults`](../src/landseg/core/session_results.py) and
@@ -292,7 +302,9 @@ Artifact Results (`SessionResults`), Evaluated Checkpoints, Visual Diagnostics, 
   architectures ([`ModelProtocol`](../src/landseg/core/model_protocol.py)); [`session`](../src/landseg/session) owns dataloaders, loss functions,
   metrics, optimization, preview inference, and training loops.
 - **Pure visual presentation**: [`visual`](../src/landseg/visual) renders figures
-  from persisted logs and [`core`](../src/landseg/core) contracts without constructing models, schemas, or dataloaders.
+  from in-memory step records, explicit PNG paths, and [`core`](../src/landseg/core)
+  contracts without importing [`artifacts`](../src/landseg/artifacts), discovering
+  runs, or constructing models, schemas, or dataloaders.
 - **DataSpecs is the only dataset contract**: Model, session, and visual layers
   interface with geospatial data exclusively through [`DataSpecs`](../src/landseg/core/data_specs.py).
 - **Isomorphic schemas & decoupled surfaces**: Ergonomic user YAML configs and

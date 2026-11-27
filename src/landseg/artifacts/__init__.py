@@ -36,6 +36,7 @@ Public APIs:
     - `LifecyclePolicy`: Artifact lifecycle retention policy.
     - `PipelineArtifactsPaths`: Base paths dataclass for pipeline runs.
     - `PreparationPaths`: Preparation artifact directory paths.
+    - `RunScopedArtifactPaths`: Base handle for `run_XXXX` stages.
     - `SessionPaths`: Session artifact directory paths.
     - `WorldGridPaths`: Canonical filesystem paths for world grid runs.
     - `cleanup_scratch`: Remove obsolete temporary files from scratch.
@@ -43,6 +44,7 @@ Public APIs:
     - `find_run_collision`: Search runs manifest for matching run.
     - `get_scratch_dir`: Resolve and validate active scratch directory.
     - `load_checkpoint`: Restore model and optimizer checkpoint.
+    - `resolve_session_run`: Resolve experiment, results, or run path.
     - `save_checkpoint`: Persist model and optimizer checkpoint.
     - `savez_compressed`: Write arrays sequentially to an `.npz` file.
     - `scratch_file`: Context-managed temporary file in scratch storage.
@@ -65,6 +67,7 @@ __all__ = [
     'LifecyclePolicy',
     'PipelineArtifactsPaths',
     'PreparationPaths',
+    'RunScopedArtifactPaths',
     'SessionPaths',
     'WorldGridPaths',
     'cleanup_scratch',
@@ -72,6 +75,7 @@ __all__ = [
     'find_run_collision',
     'get_scratch_dir',
     'load_checkpoint',
+    'resolve_session_run',
     'save_checkpoint',
     'savez_compressed',
     'scratch_file',
@@ -101,8 +105,10 @@ if typing.TYPE_CHECKING:
         KnowledgePaths,
         PipelineArtifactsPaths,
         PreparationPaths,
+        RunScopedArtifactPaths,
         SessionPaths,
         WorldGridPaths,
+        resolve_session_run,
     )
     from .policy import LifecyclePolicy
     from .storage import (
@@ -135,8 +141,10 @@ __getattr__, __dir__ = _lazy.attach(__name__, {
         'KnowledgePaths',
         'PipelineArtifactsPaths',
         'PreparationPaths',
+        'RunScopedArtifactPaths',
         'SessionPaths',
         'WorldGridPaths',
+        'resolve_session_run',
     ],
     '.policy': ['LifecyclePolicy'],
     '.storage': [

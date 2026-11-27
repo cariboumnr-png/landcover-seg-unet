@@ -223,6 +223,61 @@ def test_sync_optuna_study_decoupled_output_dpath(tmp_path: pathlib.Path):
     assert (dest_dir / 'checkpoints').is_dir()
 
 
+def test_sync_optuna_study_copies_best_trial_checkpoint(tmp_path: pathlib.Path):
+    '''
+    Given: Optuna study trials with `run_folder` attrs and catalogs.
+    When: Calling `sync_optuna_study`.
+    Then: Copy the best trial final checkpoint via `CheckpointCatalog`.
+    '''
+    import landseg.artifacts as artifacts
+    import landseg.session as session
+
+    study_name = 'test_sweep_ckpt_sync'
+    storage_uri = f'sqlite:///{tmp_path / "sweep.db"}'
+    exp_root = tmp_path / 'exp'
+
+    study = optuna.create_study(
+        study_name=study_name,
+        storage=storage_uri,
+        direction='maximize',
+    )
+
+    scores = [0.55, 0.88]
+
+    def objective(trial: optuna.Trial) -> float:
+        run = artifacts.SessionPaths.allocate_run(
+            exp_root / 'results'
+        ).init_pipeline_folders()
+        best_pt = run.best_checkpoint('cont_epoch')
+        last_pt = run.last_checkpoint('cont_epoch')
+        score = scores[trial.number]
+        best_pt.write_bytes(f'weights-{score}'.encode('utf-8'))
+        last_pt.write_bytes(b'last')
+        cat = session.CheckpointCatalog(run=run)
+        cat.record_save(
+            'cont',
+            last_fpath=last_pt,
+            epoch=1,
+            best_fpath=best_pt,
+            metric=score,
+        )
+        cat.mark_phase_completed('cont')
+        cat.persist()
+        trial.set_user_attr('run_folder', str(run.effective_run_folder))
+        return score
+
+    study.optimize(objective, n_trials=2)
+
+    summary = mlops.sync_optuna_study(
+        study_name=study_name,
+        exp_root=exp_root,
+        storage=storage_uri,
+    )
+    copied = pathlib.Path(summary['best_checkpoint'])
+    assert copied.is_file()
+    assert copied.read_bytes() == b'weights-0.88'
+
+
 # ----- `validate_output_root` tests
 def test_validate_output_root_empty_raises(monkeypatch: pytest.MonkeyPatch):
     '''

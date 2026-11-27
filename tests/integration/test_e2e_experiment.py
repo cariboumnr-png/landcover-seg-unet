@@ -30,6 +30,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines as pipelines
 import landseg.execution.workflows.e2e_experiment as e2e_experiment
+import landseg.session as session
 
 
 # ----- `execute_e2e_experiment` lifecycle integration tests
@@ -133,9 +134,15 @@ def test_full_ml_experiment_and_evaluate_lifecycle(
     ckpt_files = list(ckpt_dir.glob('*.pt'))
     assert len(ckpt_files) >= 1
 
+    train_run = artifacts.resolve_session_run(exp_root, run_id='run_0001')
+    assert train_run.checkpoint_catalog.is_file()
+    assert train_run.training_curves.is_file()
+    final_ckpt = session.CheckpointCatalog.from_run(train_run).final
+    assert final_ckpt.is_file()
+
     # execute model evaluation on the trained checkpoint
     eval_cfg = config.session.evaluation
-    eval_cfg.checkpoint = ckpt_files[0]
+    eval_cfg.checkpoint = final_ckpt
     eval_cfg.split = 'val'
 
     eval_metric = pipelines.ModelEvaluation(config).run()

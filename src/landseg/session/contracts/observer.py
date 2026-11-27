@@ -51,6 +51,7 @@ Public APIs:
 # pylint: disable=missing-function-docstring
 
 # standard imports
+import pathlib
 import typing
 # local imports
 import landseg.core as core
@@ -90,4 +91,4 @@ class SessionObserverLike(typing.Protocol):
     # session end
     def on_session_end(self) -> None: ...
     # utilities
-    def on_checkpointing(self, fp: str) -> None: ...
+    def on_checkpointing(self, fp: pathlib.Path) -> None: ...

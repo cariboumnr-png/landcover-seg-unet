@@ -108,14 +108,14 @@ et de résultats (`results/`) correspondants.
 │       └── config.json                          # Enregistrement de configuration de la préparation
 │
 ├── results/                                     # Produit par 'model-train' / 'model-evaluate'
-│   └── run_0001/                                # Répertoire de session d'expérience sérialisé
+│   └── run_0001/                                # Répertoire de session sérialisé (alloué explicitement)
 │       ├── checkpoints/
-│       │   ├── status.json                      # Suivi du statut de la phase d'entraînement
+│       │   ├── status.json                      # CheckpointCatalog (`checkpoint_catalog/v0.1.0`, `last_phase_best`)
 │       │   ├── <name>_best.pt                   # Poids des meilleurs points de contrôle du modèle
-│       │   └── <name>_last.pt                   # Poids des derniers points de contrôle du modèle
+│       │   └── <name>_last.pt                   # Poids des derniers points de contrôle par époque
 │       ├── logs/                                # Journaux d'exécution de la session d'entraînement
-│       ├── plots/                               # Graphiques de visualisation des métriques et diagnostics
-│       ├── previews/                            # Aperçus des prédictions de sortie du modèle
+│       ├── plots/                               # `training_curves.png` et graphiques d'évaluation
+│       ├── previews/                            # Aperçus par tête `<head>_preview.png`
 │       ├── config.json                          # Configuration d'exécution entièrement résolue
 │       ├── evaluation.json                      # JSON de métriques d'évaluation (si session d'évaluation)
 │       ├── summary.json                         # JSON de métriques globales de la session

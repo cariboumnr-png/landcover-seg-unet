@@ -46,11 +46,13 @@ Public APIs:
 # standard imports
 import abc
 import dataclasses
+import pathlib
 import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
 import landseg.session.contracts as contracts
+import landseg.session.orchestration.catalog as catalog
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.protocols as protocols
 
@@ -160,6 +162,7 @@ class BaseRunner(abc.ABC):
         self._is_phase_end: bool = False
         self._current_epoch: int = -1
         self._current_metrics = core.SessionStepResults()
+        self._checkpoint_catalog = catalog.CheckpointCatalog(run=self.paths)
 
     @property
     def trainer(self) -> protocols.EngineBaseLike:
@@ -263,29 +266,49 @@ class BaseRunner(abc.ABC):
                 Whether current state should also be recorded as best.
         '''
         # build checkpoint meta dict
+        metric = self._current_metrics.target_metrics
+        epoch = (
+            self._current_epoch
+            if self._current_epoch >= 0
+            else self.trainer.state.progress.epoch
+        )
         ckpt_meta: artifacts.CheckpointMeta = {
-            'metric':self._current_metrics.target_metrics,
-            'epoch': self.trainer.state.progress.epoch,
-            'step': self.trainer.state.progress.global_step
+            'metric': metric,
+            'epoch': epoch,
+            'step': self.trainer.state.progress.global_step,
         }
         # always save a '*last.pt'
-        fp = self.paths.last_checkpoint(f'{phase_name}_epoch')
+        last_fp = self.paths.last_checkpoint(f'{phase_name}_epoch')
         artifacts.save_checkpoint(
             model=self.trainer.model,
-            fpath=fp,
+            fpath=last_fp,
             ckpt_meta=ckpt_meta,
             optimizer=self.trainer.optimization.optimizer,
             scheduler=self.trainer.optimization.scheduler,
         )
-        self.dispatcher.on_checkpointing(fp)
+        self.dispatcher.on_checkpointing(last_fp)
+        best_fp: pathlib.Path | None = None
         # if this is also the best, save/overwrite the '*.best.pt'
         if is_best:
-            fp = self.paths.best_checkpoint(f'{phase_name}_epoch')
+            best_fp = self.paths.best_checkpoint(f'{phase_name}_epoch')
             artifacts.save_checkpoint(
                 model=self.trainer.model,
-                fpath=fp,
+                fpath=best_fp,
                 ckpt_meta=ckpt_meta,
                 optimizer=self.trainer.optimization.optimizer,
                 scheduler=self.trainer.optimization.scheduler,
             )
-            self.dispatcher.on_checkpointing(fp)
+            self.dispatcher.on_checkpointing(best_fp)
+        self._checkpoint_catalog.record_save(
+            phase_name,
+            last_fpath=last_fp,
+            epoch=epoch,
+            best_fpath=best_fp,
+            metric=metric,
+        )
+        self._checkpoint_catalog.persist()
+
+    def _mark_phase_complete(self, phase_name: str) -> None:
+        '''Mark `phase_name` complete and persist checkpoint catalog.'''
+        self._checkpoint_catalog.mark_phase_completed(phase_name)
+        self._checkpoint_catalog.persist()

@@ -22,6 +22,7 @@
 '''Unit tests for curriculum training runner (runner/curriculum.py).'''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.configs.schema.session.orchestration as orch_sec
 import landseg.session.orchestration.runner.curriculum as curriculum_mod
 
@@ -87,6 +88,13 @@ def test_curriculum_runner_run_generator(
     assert steps[1].global_epoch == 2
     assert steps[1].is_run_end is True
     assert on_end.call_count == 1
+
+    cat_fp = mock_runner_config.artifacts_paths.checkpoint_catalog
+    assert cat_fp.is_file()
+    raw_cat = artifacts.Controller[dict](cat_fp).fetch()
+    assert list(raw_cat['phases'].keys()) == ['phase_1', 'phase_2']
+    assert raw_cat['phases']['phase_1']['completed'] is True
+    assert raw_cat['phases']['phase_2']['completed'] is True
 
 
 def test_curriculum_runner_execute(

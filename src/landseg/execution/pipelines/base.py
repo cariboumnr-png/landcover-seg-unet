@@ -60,6 +60,7 @@ class BasePipeline(abc.ABC):
         config: configs.RootConfig,
         *,
         artifact_paths: artifacts.ArtifactPaths | None = None,
+        pipeline_paths: artifacts.PipelineArtifactsPaths | None = None,
         disable_console_logging: bool = False
     ) -> None:
         '''
@@ -70,6 +71,8 @@ class BasePipeline(abc.ABC):
                 Root execution configuration.
             artifact_paths:
                 Optional pre-resolved artifact paths container.
+            pipeline_paths:
+                Optional pre-bound pipeline paths container override.
             disable_console_logging:
                 Whether to suppress console log output.
         '''
@@ -86,7 +89,10 @@ class BasePipeline(abc.ABC):
         )
         self.timer: dict[str, float] = {}
 
-        self._resolve_pipeline_paths()
+        if pipeline_paths is not None:
+            self.pipeline_paths = pipeline_paths
+        else:
+            self._resolve_pipeline_paths()
 
     @abc.abstractmethod
     def run(self) -> typing.Any:
@@ -98,6 +104,10 @@ class BasePipeline(abc.ABC):
                 Pipeline execution result, if any.
         '''
 
+    def prepare_run(self) -> None:
+        '''Validate environment, initialize folders, and persist config.'''
+        self._initialize_run()
+
     @abc.abstractmethod
     def _resolve_pipeline_paths(self) -> None:
         '''Resolve canonical artifact paths based on pipeline name.'''
@@ -107,6 +117,13 @@ class BasePipeline(abc.ABC):
         self._validate()
 
         assert isinstance(self.pipeline_paths, artifacts.PipelineArtifactsPaths)
+        if (
+            isinstance(self.pipeline_paths, artifacts.RunScopedArtifactPaths)
+            and not self.pipeline_paths.is_run_bound
+        ):
+            self.pipeline_paths = type(self.pipeline_paths).allocate_run(
+                self.pipeline_paths.root
+            )
         self.pipeline_paths.init_pipeline_folders()
 
         config_ctrl = artifacts.Controller[dict](self.pipeline_paths.config)

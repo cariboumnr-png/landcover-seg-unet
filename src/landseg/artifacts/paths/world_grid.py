@@ -31,9 +31,15 @@ import landseg.artifacts.paths.base as base
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class WorldGridPaths(base.PipelineArtifactsPaths):
     '''Paths for world grid artifacts.'''
+
+    @property
+    def is_run_bound(self) -> bool:
+        '''Return True because world grid paths are root-scoped.'''
+        return True
+
     @property
     def effective_run_folder(self) -> pathlib.Path:
         '''Return root directory as the effective run folder.'''

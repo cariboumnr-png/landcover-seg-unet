@@ -31,8 +31,10 @@ Public APIs:
     - `KnowledgePaths`: Paths for knowledge base embeddings/profiles.
     - `PipelineArtifactsPaths`: Base paths dataclass for pipeline runs.
     - `PreparationPaths`: Paths for prepared datasets and split runs.
+    - `RunScopedArtifactPaths`: Base handle for `run_XXXX` stages.
     - `SessionPaths`: Paths for training and evaluation session runs.
     - `WorldGridPaths`: Paths for canonical world grid artifacts.
+    - `resolve_session_run`: Resolve experiment, results, or run path.
 '''
 
 # standard imports
@@ -47,30 +49,44 @@ __all__ = [
     'KnowledgePaths',
     'PipelineArtifactsPaths',
     'PreparationPaths',
+    'RunScopedArtifactPaths',
     'SessionPaths',
     'WorldGridPaths',
+    'resolve_session_run',
 ]
 
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .base import PipelineArtifactsPaths
+    from .base import (
+        PipelineArtifactsPaths,
+        RunScopedArtifactPaths,
+    )
     from .data_harmonization import HarmonizationPaths
     from .data_ingestion import IngestionPaths
     from .data_preparation import PreparationPaths
     from .knowledge import KnowledgePaths
     from .root import ArtifactPaths
-    from .session import SessionPaths
+    from .session import (
+        SessionPaths,
+        resolve_session_run,
+    )
     from .world_grid import WorldGridPaths
 
 
 __getattr__, __dir__ = _lazy.attach(__name__, {
-    '.base': ['PipelineArtifactsPaths'],
+    '.base': [
+        'PipelineArtifactsPaths',
+        'RunScopedArtifactPaths',
+    ],
     '.data_harmonization': ['HarmonizationPaths'],
     '.data_ingestion': ['IngestionPaths'],
     '.data_preparation': ['PreparationPaths'],
     '.knowledge': ['KnowledgePaths'],
     '.root': ['ArtifactPaths'],
-    '.session': ['SessionPaths'],
+    '.session': [
+        'SessionPaths',
+        'resolve_session_run',
+    ],
     '.world_grid': ['WorldGridPaths'],
 })

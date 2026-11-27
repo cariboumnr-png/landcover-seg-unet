@@ -30,13 +30,13 @@ import landseg.artifacts.controller as controller
 
 
 # ----- `KnowledgePaths` definition
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class KnowledgePaths:
     '''Path manager for knowledge base embeddings and profiles.'''
     root: pathlib.Path = pathlib.Path('knowledge')
 
     def __post_init__(self):
-        self.root = pathlib.Path(self.root)
+        object.__setattr__(self, 'root', pathlib.Path(self.root))
 
     def profile_dpath(self, profile: str) -> pathlib.Path:
         '''

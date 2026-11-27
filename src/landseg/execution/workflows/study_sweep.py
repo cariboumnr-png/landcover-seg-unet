@@ -75,13 +75,17 @@ def _build_runner(cfg: configs.RootConfig) -> tuple[pathlib.Path, StepRunner]:
     cfg.session.mode = 'continuous' # ensure session type
 
     artifact_paths = artifacts.ArtifactPaths.from_config(cfg)
+    session_paths = artifacts.SessionPaths.allocate_run(artifact_paths.session.root)
+    session_paths.init_pipeline_folders()
 
     def run_wrapper():
         training_pipeline = pipelines.ModelTraining(
             cfg,
             artifact_paths=artifact_paths,
-            disable_console_logging=True
+            pipeline_paths=session_paths,
+            disable_console_logging=True,
         )
+        training_pipeline.prepare_run()
 
         runner = training_pipeline.build_session_runner(mode_override='continuous')
         logger = training_pipeline.logger
@@ -100,4 +104,4 @@ def _build_runner(cfg: configs.RootConfig) -> tuple[pathlib.Path, StepRunner]:
             logger.log_sep()
             logger.close() # summary dict will be persisted
 
-    return artifact_paths.session.step_results, run_wrapper
+    return session_paths.step_results, run_wrapper

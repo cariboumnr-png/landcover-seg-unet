@@ -21,6 +21,8 @@
 
 '''Logging callback.'''
 
+# standard imports
+import pathlib
 # local imports
 import landseg.core as core
 import landseg.runtime as runtime
@@ -140,7 +142,7 @@ class LoggingCallback(base.BaseCallback):
         if self.logger:
             self.logger.info(f'[COMPLETE] Phase {phase} ({reason})')
 
-    def on_checkpointing(self, fp: str) -> None:
+    def on_checkpointing(self, fp: pathlib.Path) -> None:
         '''
         Log the file path of a newly saved checkpoint.
 

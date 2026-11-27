@@ -47,7 +47,7 @@ def session_config():
 @pytest.fixture
 def mock_session_paths(tmp_path):
     '''Provide `SessionPaths` rooted at a temporary directory.'''
-    return artifacts.SessionPaths(tmp_path / 'temp_results')
+    return artifacts.SessionPaths.allocate_run(tmp_path / 'temp_results')
 
 
 @pytest.fixture

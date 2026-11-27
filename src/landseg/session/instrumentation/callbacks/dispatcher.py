@@ -21,6 +21,8 @@
 
 '''Callback dispatcher for broadcasting session lifecycle events.'''
 
+# standard imports
+import pathlib
 # local imports
 import landseg.core as core
 import landseg.session.contracts as contracts
@@ -229,7 +231,7 @@ class CallbackDispatcher(contracts.SessionObserverLike):
             cb.on_session_end()
 
     # utilities
-    def on_checkpointing(self, fp: str) -> None:
+    def on_checkpointing(self, fp: pathlib.Path) -> None:
         '''
         Broadcast checkpoint persistence to registered callbacks.
 

@@ -99,8 +99,7 @@ src/landseg/
 |   |-- checkpoint.py             Checkpoint save/load helpers
 |   |-- controller.py             Policy-driven artifact resolve/build/rebuild logic
 |   |-- ledger.py                 Fingerprint calculation and run collision detection
-|   |-- paths/                    Canonical artifact path definitions
-|   |-- payload_io.py             Structured payload and metadata persistence
+|   |-- paths/                    Side-effect-free artifact path handles and session resolver
 |   |-- policy.py                 Artifact lifecycle rules
 |   `-- storage/                  Sequential archive persistence (npzio)
 |
@@ -230,6 +229,7 @@ src/landseg/
 |   |   `-- formatters/           Report rendering and formatting
 |   |-- orchestration/
 |   |   |-- builder.py            Session orchestration construction
+|   |   |-- catalog.py            Structured checkpoint index and final-checkpoint policy
 |   |   |-- policy/               Epoch and phase policies
 |   |   `-- runner/               Continuous and curriculum runners
 |   |-- factory.py                Session factory
@@ -300,5 +300,6 @@ src/landseg/
   and `__dir__`) to `landseg._lazy.attach`, keeping `src/landseg/__init__.py`
   restricted to package metadata and empty markers free of exports.
 - `visual/` is pure headless presentation over `core` contracts (`DataSpecs`,
-  `InferStepResults`) and persisted paths; fallback inference orchestration lives
-  in `session/preview.py`.
+  `InferStepResults`), in-memory step records, and explicit PNG paths (no
+  `artifacts/` imports or directory discovery); fallback inference
+  orchestration lives in `session/preview.py`.

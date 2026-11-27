@@ -38,8 +38,10 @@ import typing
 # third-party imports
 import mlflow
 # local imports
+import landseg.artifacts as artifacts
 import landseg.mlops.storage as storage_mod
 import landseg.runtime as runtime
+import landseg.session as session
 
 
 # ----- public functions
@@ -175,34 +177,20 @@ def _resolve_checkpoint(
     exp_root: pathlib.Path,
     explicit_path: str | pathlib.Path | None,
 ) -> pathlib.Path | None:
-    '''Locate model checkpoint binary from path or experiment dirs.'''
+    '''Locate model checkpoint binary from explicit path or session catalog.'''
     if explicit_path is not None:
         p = pathlib.Path(explicit_path)
         if p.is_file():
             return p
+        raise artifacts.ArtifactError(
+            f'Explicit checkpoint path does not exist: {p}'
+        )
 
-    search_dirs = [
-        exp_root / 'results',
-        exp_root / 'artifacts' / 'checkpoints',
-        exp_root / 'artifacts' / 'session',
-        exp_root / 'artifacts',
-        exp_root,
-    ]
-
-    candidates: list[pathlib.Path] = []
-    for sdir in search_dirs:
-        if sdir.is_dir():
-            candidates.extend(sdir.glob('**/*.pt'))
-
-    valid = [p for p in candidates if 'interrupted' not in p.name and p.is_file()]
-    if valid:
-        # Prefer best checkpoint if available, otherwise most recently updated
-        bests = [p for p in valid if 'best' in p.name]
-        if bests:
-            return max(bests, key=lambda p: p.stat().st_mtime)
-        return max(valid, key=lambda p: p.stat().st_mtime)
-
-    return None
+    try:
+        run = artifacts.resolve_session_run(exp_root)
+    except artifacts.ArtifactError:
+        return None
+    return session.CheckpointCatalog.from_run(run).final
 
 
 def _probe_manifest_hash(exp_root: pathlib.Path) -> str | None:
@@ -222,11 +210,16 @@ def _probe_manifest_hash(exp_root: pathlib.Path) -> str | None:
             except OSError:
                 pass
 
-    hash_files = list(exp_root.glob('**/_hash.json'))
-    if hash_files:
-        try:
-            return hash_files[0].read_text(encoding='utf-8').strip()
-        except OSError:
-            pass
+    candidate_hashes = [
+        exp_root / '_hash.json',
+        exp_root / 'artifacts' / '_hash.json',
+        exp_root / 'checkpoints' / '_hash.json',
+    ]
+    for hash_fp in candidate_hashes:
+        if hash_fp.is_file():
+            try:
+                return hash_fp.read_text(encoding='utf-8').strip()
+            except OSError:
+                pass
 
     return None

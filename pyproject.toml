@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "landseg"
-version = "v0.5.0"
+version = "v0.6.0"
 description = "Multi-Modal Landcover Classification Framework"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -57,6 +57,7 @@ addopts = "-ra --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning:rasterio.*",
     "ignore:Setting the shape on a NumPy array:DeprecationWarning",
+    "ignore:.*FigureCanvasAgg.*:UserWarning",
 ]
 
 [tool.coverage.run]

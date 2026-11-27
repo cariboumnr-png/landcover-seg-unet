@@ -31,9 +31,15 @@ import landseg.artifacts.paths.base as base
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class PreparationPaths(base.PipelineArtifactsPaths):
     '''Paths for prepared datasets and split artifacts.'''
+
+    @property
+    def is_run_bound(self) -> bool:
+        '''Return True because preparation paths are root-scoped.'''
+        return True
+
     @property
     def effective_run_folder(self) -> pathlib.Path:
         '''Return root directory as the effective run folder.'''

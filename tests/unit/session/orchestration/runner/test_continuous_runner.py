@@ -22,6 +22,7 @@
 '''Unit tests for continuous training runner (runner/continuous.py).'''
 
 # local imports
+import landseg.artifacts as artifacts
 import landseg.session.orchestration.runner.continuous as continuous_mod
 
 
@@ -91,6 +92,14 @@ def test_continuous_runner_run_generator(
     first_ckpt_meta = mock_save.call_args_list[0].kwargs['ckpt_meta']
     assert first_ckpt_meta['metric'] != -float('inf')
     assert first_ckpt_meta['metric'] == steps[0].val_metrics_value
+
+    # assert checkpoint catalog populated with completed phase
+    ctrl_cat = mock_runner_config.artifacts_paths.checkpoint_catalog
+    assert ctrl_cat.is_file()
+    raw_cat = artifacts.Controller[dict](ctrl_cat).fetch()
+    assert raw_cat['policy'] == 'last_phase_best'
+    assert raw_cat['phases'][phase.name]['completed'] is True
+    assert raw_cat['phases'][phase.name]['last_epoch'] == 2
 
 
 def test_continuous_runner_execute(

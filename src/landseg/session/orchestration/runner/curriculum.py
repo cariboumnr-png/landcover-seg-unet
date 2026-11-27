@@ -190,15 +190,17 @@ class CurriculumRunner(base.BaseRunner):
                             self._save_progress(phase.name, is_best=tag=='best')
 
                         case events.StopRun(reason=reason):
+                            self._mark_phase_complete(phase.name)
                             self.dispatcher.on_session_phase_end(
                                 phase.name, reason
                             )
                             break
 
-                        case events.PhaseEnd:
+                        case events.PhaseEnd(phase_name=phase_name):
                             reason = 'Max epoch reached'
+                            self._mark_phase_complete(phase_name)
                             self.dispatcher.on_session_phase_end(
-                                phase.name, reason
+                                phase_name, reason
                             )
                             break
         finally:

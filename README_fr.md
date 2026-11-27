@@ -325,6 +325,12 @@ d'apercus, les exports d'evaluation et les rapports de comparaison.
 
 Recemment complete ou stabilise :
 
+- Poignées de chemins d'artefacts et résolution finale des checkpoints ([ADR-0070](./docs/ADRs/ADR-0070-artifact-path-handles-and-final-checkpoint-resolution.md)) :
+  poignées `artifacts.paths` sans effets de bord avec `allocate_run` explicite,
+  résolution de session par marqueurs `resolve_session_run`,
+  `session.CheckpointCatalog` résolvant `.final` selon la politique
+  `last_phase_best`, et `landseg.visual` strictement chemin-en-entrée /
+  chemin-en-sortie sans dépendance à `artifacts`.
 - Renforcement des frontières des modules de premier niveau ([ADR-0069](./docs/ADRs/ADR-0069-first-class-module-boundary-hardening-and-subsystem-streamlining.md)) :
   retrait de `landseg.utils` et `landseg.notebooks`, façades publiques
   paresseuses pour chaque package de premier niveau, dépendance à sens unique

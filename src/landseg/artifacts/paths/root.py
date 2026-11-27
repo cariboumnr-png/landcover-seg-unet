@@ -41,7 +41,7 @@ import landseg.configs as configs
 
 
 # ----- `ArtifactPaths` definition
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class ArtifactPaths:
     '''Root entrypoint for all artifact path namespaces.'''
     root: pathlib.Path | None = None
@@ -53,20 +53,33 @@ class ArtifactPaths:
     knowledge_root: pathlib.Path | None = None
 
     def __post_init__(self):
-        if self.root is not None:
-            self.root = pathlib.Path(self.root)
-        if self.world_grid_root is not None:
-            self.world_grid_root = pathlib.Path(self.world_grid_root)
-        if self.harmonization_root is not None:
-            self.harmonization_root = pathlib.Path(self.harmonization_root)
-        if self.ingestion_root is not None:
-            self.ingestion_root = pathlib.Path(self.ingestion_root)
-        if self.preparation_root is not None:
-            self.preparation_root = pathlib.Path(self.preparation_root)
-        if self.session_root is not None:
-            self.session_root = pathlib.Path(self.session_root)
-        if self.knowledge_root is not None:
-            self.knowledge_root = pathlib.Path(self.knowledge_root)
+        for field_name in (
+            'root',
+            'world_grid_root',
+            'harmonization_root',
+            'ingestion_root',
+            'preparation_root',
+            'session_root',
+            'knowledge_root',
+        ):
+            val = getattr(self, field_name)
+            if val is not None:
+                object.__setattr__(self, field_name, pathlib.Path(val))
+
+    @classmethod
+    def from_exp_root(cls, exp_root: str | pathlib.Path) -> typing.Self:
+        '''
+        Construct `ArtifactPaths` using the conventional experiment layout.
+
+        Args:
+            exp_root:
+                Shared experiment root directory path.
+
+        Returns:
+            typing.Self:
+                Resolved `ArtifactPaths` container rooted at `exp_root`.
+        '''
+        return cls(root=pathlib.Path(exp_root))
 
     @classmethod
     def from_config(cls, config: 'configs.RootConfig') -> typing.Self:

@@ -22,7 +22,9 @@
 '''Unit tests for `landseg.artifacts.paths`.'''
 
 # standard imports
+import os
 import pathlib
+import time
 # third-party imports
 import pytest
 # local imports
@@ -124,12 +126,21 @@ def test_artifact_paths_from_config():
 def test_harmonization_paths(tmp_path):
     '''
     Given: A harmonization root directory path.
-    When: Initializing `HarmonizationPaths` across runs.
-    Then: Return expected run-isolated valid mask raster, config, and
-        harmonize_report.json file paths.
+    When: Constructing unbound and allocated `HarmonizationPaths` handles.
+    Then: Keep `from_root` side-effect-free, guard unbound run properties,
+        and auto-increment run IDs only on `allocate_run`.
     '''
     e = tmp_path
-    paths = paths_mod.HarmonizationPaths(root=e)
+    unbound = paths_mod.HarmonizationPaths.from_root(root=e)
+    assert not unbound.is_run_bound
+    assert list(e.iterdir()) == []
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='handle is not bound to a run folder'
+    ):
+        _ = unbound.effective_run_folder
+
+    paths = paths_mod.HarmonizationPaths.allocate_run(root=e)
+    assert paths.is_run_bound
     paths.init_pipeline_folders()
     r = paths.effective_run_folder
 
@@ -140,40 +151,76 @@ def test_harmonization_paths(tmp_path):
     assert paths.runs_manifest.is_file()
     assert ctrl_mod.Controller[dict](paths.runs_manifest).fetch() == {}
 
-    # second init auto-increments run_id
-    etl_paths_2 = paths_mod.HarmonizationPaths(root=e)
+    # second allocate_run auto-increments run_id
+    etl_paths_2 = paths_mod.HarmonizationPaths.allocate_run(root=e)
     etl_paths_2.init_pipeline_folders()
     assert etl_paths_2.run_id == 'run_0002'
 
 
-def test_harmonization_paths_get_run_folder(tmp_path):
+def test_harmonization_paths_open_and_list_runs(tmp_path):
     '''
     Given: Multiple harmonization run folders (run_0001, run_0002).
-    When: Calling `get_run_folder` with ints, folder strings, or paths.
-    Then: Resolve targeted folder or default to latest run.
+    When: Calling `list_runs`, `open_run`, and `from_run_folder`.
+    Then: List sorted runs, resolve targeted or latest by numeric ID
+        regardless of mtime, and perform zero allocations.
     '''
-    root = pathlib.Path(tmp_path)
+    root = pathlib.Path(tmp_path) / 'harm_root'
     run1 = root / 'run_0001'
     run2 = root / 'run_0002'
     run1.mkdir(parents=True, exist_ok=True)
     run2.mkdir(parents=True, exist_ok=True)
 
-    h_paths = paths_mod.HarmonizationPaths(root=root)
+    # Touch run1 newer than run2 to ensure numeric ordering is used
+    now = time.time()
+    os.utime(run2, (now - 100, now - 100))
+    os.utime(run1, (now + 100, now + 100))
 
-    # default (None) -> latest (run_0002)
-    assert h_paths.get_run_folder() == run2
+    listed = paths_mod.HarmonizationPaths.list_runs(root)
+    assert listed == ['run_0001', 'run_0002']
+
+    # default (None) -> highest numeric ID (run_0002)
+    latest = paths_mod.HarmonizationPaths.open_run(root)
+    assert latest.effective_run_folder == run2
 
     # int index -> run_0001
-    assert h_paths.get_run_folder(1) == run1
+    assert (
+        paths_mod.HarmonizationPaths.open_run(root, 1).effective_run_folder
+        == run1
+    )
 
     # digit string -> run_0001
-    assert h_paths.get_run_folder('1') == run1
+    assert (
+        paths_mod.HarmonizationPaths.open_run(root, '1').effective_run_folder
+        == run1
+    )
 
     # folder name string -> run_0001
-    assert h_paths.get_run_folder('run_0001') == run1
+    assert (
+        paths_mod.HarmonizationPaths.open_run(
+            root, 'run_0001'
+        ).effective_run_folder
+        == run1
+    )
 
-    # direct path string -> run_0001
-    assert h_paths.get_run_folder(run1) == run1
+    # direct path -> run_0001
+    assert (
+        paths_mod.HarmonizationPaths.open_run(root, run1).effective_run_folder
+        == run1
+    )
+
+    # decoupled run folder -> bound without allocation
+    decoupled = tmp_path / 'external_harm'
+    decoupled.mkdir()
+    bound = paths_mod.HarmonizationPaths.from_run_folder(decoupled)
+    assert bound.effective_run_folder == decoupled
+    assert sorted(p.name for p in root.iterdir()) == ['run_0001', 'run_0002']
+
+    # empty root raises ArtifactError instead of mkdir
+    empty = tmp_path / 'empty_harm'
+    empty.mkdir()
+    with pytest.raises(ctrl_mod.ArtifactError, match='No run folders found'):
+        paths_mod.HarmonizationPaths.open_run(empty)
+    assert list(empty.iterdir()) == []
 
 
 def test_ingestion_paths(tmp_path):
@@ -183,7 +230,7 @@ def test_ingestion_paths(tmp_path):
     Then: Return expected report, config, and domain map filepaths.
     '''
     f = tmp_path / 'ingested_data'
-    f_paths = paths_mod.IngestionPaths(root=f)
+    f_paths = paths_mod.IngestionPaths.allocate_run(root=f)
     f_paths.init_pipeline_folders()
 
     assert f_paths.report == f / 'run_0001' / 'report.json'
@@ -244,10 +291,23 @@ def test_preparation_paths():
 def test_session_paths_init_and_checkpoints(tmp_path):
     '''
     Given: A results root directory path.
-    When: Initializing `SessionPaths` across runs and tracing options.
-    Then: Auto-increment run IDs and build checkpoint paths.
+    When: Using unbound, allocated, opened, and decoupled `SessionPaths`.
+    Then: Keep `from_root` side-effect-free, auto-increment on allocation,
+        and build all session artifact and visual filepaths.
     '''
-    session_paths = paths_mod.SessionPaths(root=tmp_path)
+    unbound = paths_mod.SessionPaths.from_root(tmp_path)
+    assert not unbound.is_run_bound
+    assert list(tmp_path.iterdir()) == []
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='handle is not bound to a run folder'
+    ):
+        _ = unbound.checkpoints
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='handle is not bound to a run folder'
+    ):
+        _ = unbound.training_curves
+
+    session_paths = paths_mod.SessionPaths.allocate_run(root=tmp_path)
     session_paths.init_pipeline_folders()
 
     assert session_paths.run_id == 'run_0001'
@@ -257,21 +317,130 @@ def test_session_paths_init_and_checkpoints(tmp_path):
     assert session_paths.previews.is_dir()
 
     c = session_paths.checkpoints
+    p = session_paths.plots
+    v = session_paths.previews
     r = session_paths.effective_run_folder
     assert session_paths.best_checkpoint('model') == c / 'model_best.pt'
     assert session_paths.last_checkpoint('model') == c / 'model_last.pt'
-    assert session_paths.phase_status == c / 'status.json'
+    assert session_paths.checkpoint_catalog == c / 'status.json'
+    assert session_paths.training_curves == p / 'training_curves.png'
+    assert session_paths.per_class_plot('lc') == p / 'lc_per_class_iou.png'
+    assert (
+        session_paths.confusion_matrix_plot('lc')
+        == p / 'lc_confusion_matrix.png'
+    )
+    assert session_paths.preview('lc') == v / 'lc_preview.png'
     assert session_paths.config == r / 'config.json'
     assert session_paths.report == r / 'report.json'
 
-    # second run initialization auto-increments run_id
-    results_2 = paths_mod.SessionPaths(root=tmp_path)
+    (v / 'b_preview.png').write_bytes(b'b')
+    (v / 'a_preview.png').write_bytes(b'a')
+    assert session_paths.list_previews() == [
+        v / 'a_preview.png',
+        v / 'b_preview.png',
+    ]
+
+    # second run allocation auto-increments run_id
+    results_2 = paths_mod.SessionPaths.allocate_run(root=tmp_path)
     results_2.init_pipeline_folders()
     assert results_2.run_id == 'run_0002'
 
-    # trace_to_last option targets previous run
-    results_last = paths_mod.SessionPaths(root=tmp_path, trace_to_last=True)
+    # open_run selects highest numeric run without allocation
+    results_last = paths_mod.SessionPaths.open_run(root=tmp_path)
     assert results_last.run_id == 'run_0002'
+
+    # from_run_folder accepts non-canonical standalone run folders
+    standalone = tmp_path / 'standalone_trial'
+    standalone.mkdir()
+    bound_standalone = paths_mod.SessionPaths.from_run_folder(standalone)
+    assert bound_standalone.effective_run_folder == standalone
+    assert bound_standalone.run_id == 'standalone_trial'
+
+
+def test_resolve_session_run(tmp_path):
+    '''
+    Given: Experiment root, results root, canonical run folder, decoupled
+        run folder, and invalid foreign directories.
+    When: Calling `resolve_session_run`.
+    Then: Classify each input by schema markers, resolve target or latest
+        numeric run without side effects, and reject invalid directories.
+    '''
+    exp_root = tmp_path / 'exp'
+    results_root = exp_root / 'results'
+    run1 = paths_mod.SessionPaths.allocate_run(results_root).init_pipeline_folders()
+    run2 = paths_mod.SessionPaths.allocate_run(results_root).init_pipeline_folders()
+
+    # Make run_0001 newer on disk so mtime-based discovery would be wrong
+    now = time.time()
+    os.utime(run2.effective_run_folder, (now - 100, now - 100))
+    os.utime(run1.effective_run_folder, (now + 100, now + 100))
+
+    # 1. Experiment root -> latest numeric run (run_0002) and targeted run
+    resolved_exp = paths_mod.resolve_session_run(exp_root)
+    assert resolved_exp.effective_run_folder == run2.effective_run_folder
+    assert (
+        paths_mod.resolve_session_run(exp_root, run_id=1).effective_run_folder
+        == run1.effective_run_folder
+    )
+
+    # 2. Results root -> latest numeric run and targeted run
+    assert (
+        paths_mod.resolve_session_run(results_root).effective_run_folder
+        == run2.effective_run_folder
+    )
+    assert (
+        paths_mod.resolve_session_run(
+            results_root, run_id='run_0001'
+        ).effective_run_folder
+        == run1.effective_run_folder
+    )
+
+    # 3. Canonical run folder -> self
+    assert (
+        paths_mod.resolve_session_run(
+            run1.effective_run_folder
+        ).effective_run_folder
+        == run1.effective_run_folder
+    )
+    with pytest.raises(ctrl_mod.ArtifactError, match='does not match'):
+        paths_mod.resolve_session_run(run1.effective_run_folder, run_id='run_0002')
+
+    # 4. Decoupled run folder with session marker
+    decoupled = tmp_path / 'optuna_trial_0003'
+    (decoupled / 'checkpoints').mkdir(parents=True)
+    assert (
+        paths_mod.resolve_session_run(decoupled).effective_run_folder
+        == decoupled
+    )
+
+    # 5. Foreign / missing directories raise ArtifactError with no side effects
+    foreign = tmp_path / 'foreign'
+    foreign.mkdir()
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='Unrecognized session directory layout'
+    ):
+        paths_mod.resolve_session_run(foreign)
+    assert list(foreign.iterdir()) == []
+
+    missing = tmp_path / 'does_not_exist'
+    with pytest.raises(ctrl_mod.ArtifactError, match='does not exist'):
+        paths_mod.resolve_session_run(missing)
+    assert not missing.exists()
+
+
+def test_artifact_paths_from_exp_root(tmp_path):
+    '''
+    Given: An experiment root path.
+    When: Calling `ArtifactPaths.from_exp_root`.
+    Then: Populate stage roots beneath `<exp_root>/artifacts` and
+        `<exp_root>/results` without creating directories.
+    '''
+    exp = tmp_path / 'my_exp'
+    art = paths_mod.ArtifactPaths.from_exp_root(exp)
+    assert art.world_grid.root == exp / 'artifacts' / 'world_grids'
+    assert art.data_harmonization.root == exp / 'artifacts' / 'harmonized_data'
+    assert art.session.root == exp / 'results'
+    assert not exp.exists()
 
 
 # ----- `KnowledgePaths` tests
@@ -380,17 +549,24 @@ def test_harmonization_paths_validate(tmp_path):
     '''
     Given: A HarmonizationPaths instance.
     When: Calling `validate` with default and run requirements.
-    Then: Validate presence of runs_manifest and run folder contents.
+    Then: Validate presence of runs_manifest and bound run folder contents.
     '''
     harm_root = tmp_path / 'harmonization'
     harm_root.mkdir()
-    paths = paths_mod.HarmonizationPaths(root=harm_root)
+    unbound = paths_mod.HarmonizationPaths.from_root(root=harm_root)
 
     with pytest.raises(ctrl_mod.ArtifactError, match='manifest does not exist'):
-        paths.validate()
+        unbound.validate()
 
+    paths = paths_mod.HarmonizationPaths.allocate_run(root=harm_root)
     paths.init_pipeline_folders()
     assert paths.validate() is paths
+    assert unbound.validate() is unbound
+
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='handle is not bound to a run folder'
+    ):
+        unbound.validate(require_run=True)
 
     with pytest.raises(ctrl_mod.ArtifactError, match='valid mask raster'):
         paths.validate(require_run=True)
@@ -470,20 +646,26 @@ def test_preparation_paths_validate(tmp_path):
 
 def test_session_paths_validate(tmp_path):
     '''
-    Given: A SessionPaths instance.
+    Given: Unbound and bound `SessionPaths` instances.
     When: Calling `validate` with default and run requirements.
     Then: Validate root and session run directory structure.
     '''
     sess_root = tmp_path / 'results'
     sess_root.mkdir()
-    paths = paths_mod.SessionPaths(root=sess_root)
-    assert paths.validate() is paths
+    unbound = paths_mod.SessionPaths.from_root(root=sess_root)
+    assert unbound.validate() is unbound
 
-    with pytest.raises(ctrl_mod.ArtifactError, match='Session run directory'):
-        paths.validate(require_run=True)
+    with pytest.raises(
+        ctrl_mod.ArtifactError, match='handle is not bound to a run folder'
+    ):
+        unbound.validate(require_run=True)
 
-    paths.init_pipeline_folders()
-    assert paths.validate(require_run=True) is paths
+    bound = paths_mod.SessionPaths.allocate_run(root=sess_root)
+    with pytest.raises(ctrl_mod.ArtifactError, match='Checkpoints directory'):
+        bound.validate(require_run=True)
+
+    bound.init_pipeline_folders()
+    assert bound.validate(require_run=True) is bound
 
 
 def test_knowledge_paths_validate(tmp_path):
@@ -537,7 +719,9 @@ def test_artifact_paths_validate(tmp_path):
     # Create directories and files for world_grid and harmonization
     art.world_grid.root.mkdir(parents=True)
     art.world_grid.report.write_text('{}')
-    art.data_harmonization.init_pipeline_folders()
+    paths_mod.HarmonizationPaths.allocate_run(
+        art.data_harmonization.root
+    ).init_pipeline_folders()
 
     # Validating selected valid stages succeeds
     assert art.validate(stages=['world_grid', 'data_harmonization']) is art

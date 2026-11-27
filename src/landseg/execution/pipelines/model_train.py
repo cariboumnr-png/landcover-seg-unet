@@ -140,26 +140,26 @@ class ModelTraining(base.SessionPipeline):
         '''Plot training curves and test prediction previews.'''
         # 1. training curves plot
         try:
+            steps_ctrl = artifacts.Controller[list[dict[str, typing.Any]]](
+                self.pipeline_paths.step_results
+            )
             saved_plot = visual.generate_training_curves(
-                self.pipeline_paths.step_results,
-                self.pipeline_paths.plots,
+                steps_ctrl.fetch(),
+                self.pipeline_paths.training_curves,
             )
             self.logger.info(f'[OUTPUT] Training curves saved to {saved_plot}')
         except Exception as err: # pylint: disable=W0718
             self.logger.warning(f'Could not generate training curves: {err}')
 
-        # 2. inferred preview PNGs using best checkpoint
-        # TODO this won't work properly for multi-phase training
-        # at artifacts management need to define a canon final checkpoint
+        # 2. inferred preview PNGs using canonical final checkpoint
         try:
             if not self.context.splits.test:
                 self.logger.info('No test blocks found for inference preview ')
                 return
 
-            best_ckpt = next(self.pipeline_paths.checkpoints.glob('*_best.pt'))
-            if not best_ckpt.is_file(): # expect one 'best' checkpoint
-                self.logger.warning(f'Checkpoint file not found: {best_ckpt}')
-                return
+            best_ckpt = session.CheckpointCatalog.from_run(
+                self.pipeline_paths
+            ).final
 
             model = self._build_model(self.context)
             infer_results = session.run_preview_inference(
@@ -173,10 +173,14 @@ class ModelTraining(base.SessionPipeline):
                 self.logger.info('No inference results for preview ')
                 return
 
+            save_fpaths = {
+                head: self.pipeline_paths.preview(head)
+                for head in infer_results.infer_preds
+            }
             saved_previews = visual.generate_prediction_previews(
                 infer_results,
                 self.context,
-                self.pipeline_paths.previews,
+                save_fpaths,
             )
             if saved_previews:
                 self.logger.info(

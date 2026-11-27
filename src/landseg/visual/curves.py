@@ -23,8 +23,8 @@
 Training loss and validation metric curve plotting utilities.
 
 Public APIs:
-    - `plot_training_curves`: Generate training loss and metrics curves.
-    - `render_training_curves`: Display the latest saved training curves.
+    - `generate_training_curves`: Generate training loss and metric curves.
+    - `render_training_curves`: Display saved training curves PNG.
 '''
 
 # standard imports
@@ -37,7 +37,6 @@ import matplotlib.axes
 import matplotlib.pyplot
 import numpy
 # local imports
-import landseg.artifacts as artifacts
 import landseg.runtime as runtime
 
 
@@ -57,8 +56,8 @@ class _CurveStepPoint:
 
 # ----- public functions
 def generate_training_curves(
-    step_results: str | pathlib.Path,
-    save_dpath: str | pathlib.Path,
+    step_records: list[dict[str, typing.Any]],
+    save_fpath: str | pathlib.Path,
 ) -> pathlib.Path:
     '''
     Create training loss and validation metric curves across epochs.
@@ -68,16 +67,20 @@ def generate_training_curves(
     - Right: Validation tracking metrics (mIoU) for all active heads.
 
     Args:
-        step_results:
-            Path to `step_results.json`.
-        save_path:
-            File path to persist figure (e.g. `.png`).
+        step_records:
+            Sequence of serialized step summary mappings.
+        save_fpath:
+            Explicit file path where the rendered PNG is persisted.
 
     Returns:
         pathlib.Path:
-            `pithlib.Path` to the generated figure.
+            `pathlib.Path` to the generated PNG figure.
+
+    Raises:
+        ValueError:
+            If `step_records` is empty.
     '''
-    points = _load_step_results(step_results)
+    points = _extract_pts(step_records)
 
     # map of total loss over epoch
     loss_curve: dict[int, float] = {}
@@ -98,7 +101,7 @@ def generate_training_curves(
 
         matplotlib.pyplot.tight_layout()
 
-        target = pathlib.Path(save_dpath) / 'training_curves.png'
+        target = pathlib.Path(save_fpath)
         target.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(target, bbox_inches='tight', dpi=150)
 
@@ -108,19 +111,22 @@ def generate_training_curves(
     return target
 
 
-def render_training_curves(target_dpath: str | pathlib.Path) -> None:
+def render_training_curves(png_fpath: str | pathlib.Path) -> None:
     '''
-    Display the saved training curves from the latest experiment run.
+    Display a saved training curves PNG image.
 
-    This function only loads existing PNG files. It does not recompute
-    training metrics or generate new plots.
+    This function only loads an existing PNG file. It does not search
+    run directories, recompute training metrics, or generate new plots.
 
     Args:
-        target_dpath:
-            Results root or individual run directory.
+        png_fpath:
+            Explicit path to the saved `training_curves.png` file.
+
+    Raises:
+        FileNotFoundError:
+            If `png_fpath` does not exist.
     '''
-    run_dpath = _resolve_latest_run(target_dpath)
-    png_path = run_dpath / 'plots' / 'training_curves.png'
+    png_path = pathlib.Path(png_fpath)
 
     if not png_path.is_file():
         raise FileNotFoundError(f'No training curve PNG found: {png_path}')
@@ -139,47 +145,19 @@ def render_training_curves(target_dpath: str | pathlib.Path) -> None:
 
 
 # ----- private helpers
-def _resolve_latest_run(target_dpath: str | pathlib.Path) -> pathlib.Path:
-    '''Resolve the run directory containing the latest step results.'''
-    target = pathlib.Path(target_dpath)
-
-    if not target.is_dir():
-        raise FileNotFoundError(f'Results directory does not exist: {target}')
-
-    candidates = list(target.glob('**/step_results.json'))
-
-    if not candidates:
-        raise FileNotFoundError(f'No step_results.json found under {target}')
-
-    latest = max(candidates, key=lambda p: p.stat().st_mtime)
-    return latest.parent
-
-
-def _load_step_results(
-    source: str | pathlib.Path,
-) -> list[_CurveStepPoint]:
-    '''Load session step results from file into typed point data.'''
-    path = pathlib.Path(source)
-    if path.is_file():
-        target = path
-    elif path.is_dir():
-        # search for step_results.json in directory or session artifacts
-        candidates = list(path.glob('**/step_results.json'))
-        if candidates:
-            target = max(candidates, key=lambda p: p.stat().st_mtime)
-        else:
-            raise FileNotFoundError(f'No step_results.json under {path}')
-    else:
-        raise FileNotFoundError(f'Specified path does not exist: {path}')
-
-    steps = artifacts.Controller[list[dict[str, typing.Any]]](target).fetch()
-    if not steps:
+def _extract_pts(records: list[dict[str, typing.Any]]) -> list[_CurveStepPoint]:
+    '''Convert serialized step mappings into normalized curve points.'''
+    if not records:
         raise ValueError('No training step records found to plot.')
 
     points: list[_CurveStepPoint] = []
-    for index, step in enumerate(steps):
+    for index, step in enumerate(records):
 
-        epoch = step.get('epoch_in_phase') or (index + 1)
+        epoch = (
+            step.get('global_epoch')
+            or step.get('epoch_in_phase')
+            or (index + 1)
+        )
         train_data = step.get('training') or {}
         val_data = step.get('validation') or {}
 

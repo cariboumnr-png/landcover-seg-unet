@@ -31,9 +31,10 @@ import landseg.artifacts.paths.base as base
 
 
 # ----- public dataclasses
-@dataclasses.dataclass
-class HarmonizationPaths(base.PipelineArtifactsPaths):
+@dataclasses.dataclass(frozen=True)
+class HarmonizationPaths(base.RunScopedArtifactPaths):
     '''Paths for data harmonization ETL artifacts.'''
+
     @property
     def runs_manifest(self) -> pathlib.Path:
         '''Return path to the harmonization runs manifest JSON.'''
