@@ -74,7 +74,6 @@ class TensorBoardTracker(base.BaseTracker):
                 Parameter value.
         '''
         # not natively supported in TensorBoard
-        ...
 
     def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
         '''
@@ -101,7 +100,6 @@ class TensorBoardTracker(base.BaseTracker):
                 File path of the artifact.
         '''
         # not implemented here
-        ...
 
     def log_text(self, key: str, text: str, step: int):
         '''

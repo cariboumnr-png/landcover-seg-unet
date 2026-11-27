@@ -19,7 +19,7 @@
 #                       and limitations under the License.                    #
 # =========================================================================== #
 
-'''Unit tests for `landseg.session.checkpoint_catalog`.'''
+'''Unit tests for `landseg.session.orchestration.catalog`.'''
 
 # standard imports
 import json
@@ -29,8 +29,7 @@ import shutil
 import pytest
 # local imports
 import landseg.artifacts as artifacts
-import landseg.session as session
-import landseg.session.checkpoint_catalog as cat_mod
+import landseg.session.orchestration.catalog as catalog
 
 
 def _make_run(root: pathlib.Path) -> artifacts.SessionPaths:
@@ -53,7 +52,7 @@ def test_catalog_round_trip_preserves_best_and_relocates(tmp_path):
     best_pt.write_bytes(b'best')
     last_pt.write_bytes(b'last')
 
-    cat = session.CheckpointCatalog(run=run)
+    cat = catalog.CheckpointCatalog(run=run)
     cat.record_save(
         'base',
         last_fpath=last_pt,
@@ -72,7 +71,7 @@ def test_catalog_round_trip_preserves_best_and_relocates(tmp_path):
     cat.persist()
 
     raw = json.loads(run.checkpoint_catalog.read_text(encoding='utf-8'))
-    assert raw['schema_id'] == cat_mod.SCHEMA_ID
+    assert raw['schema_id'] == catalog.SCHEMA_ID
     assert raw['policy'] == 'last_phase_best'
     assert raw['phases']['base'] == {
         'best_fpath': 'checkpoints/base_epoch_best.pt',
@@ -83,7 +82,7 @@ def test_catalog_round_trip_preserves_best_and_relocates(tmp_path):
         'completed': True,
     }
 
-    reloaded = session.CheckpointCatalog.from_run(run)
+    reloaded = catalog.CheckpointCatalog.from_run(run)
     assert reloaded.best('base') == best_pt
     assert reloaded.last('base') == last_pt
     assert reloaded.final == best_pt
@@ -91,7 +90,7 @@ def test_catalog_round_trip_preserves_best_and_relocates(tmp_path):
     moved_dir = tmp_path / 'moved_run'
     shutil.move(str(run.effective_run_folder), str(moved_dir))
     moved_run = artifacts.SessionPaths.from_run_folder(moved_dir)
-    moved_cat = session.CheckpointCatalog.from_run(moved_run)
+    moved_cat = catalog.CheckpointCatalog.from_run(moved_run)
     assert moved_cat.final == moved_dir / 'checkpoints' / 'base_epoch_best.pt'
     assert moved_cat.best('base') == moved_cat.final
 
@@ -111,7 +110,7 @@ def test_catalog_multi_phase_uses_last_phase_best(tmp_path):
     for fp in (p1_best, p1_last, p2_best, p2_last):
         fp.write_bytes(b'pt')
 
-    cat = session.CheckpointCatalog(run=run)
+    cat = catalog.CheckpointCatalog(run=run)
     cat.record_save(
         'freeze', last_fpath=p1_last, epoch=3, best_fpath=p1_best, metric=0.91
     )
@@ -122,7 +121,7 @@ def test_catalog_multi_phase_uses_last_phase_best(tmp_path):
     cat.mark_phase_completed('finetune')
     cat.persist()
 
-    loaded = session.CheckpointCatalog.from_run(run)
+    loaded = catalog.CheckpointCatalog.from_run(run)
     assert loaded.policy == 'last_phase_best'
     assert loaded.final == p2_best
     assert loaded.best('freeze') == p1_best
@@ -143,7 +142,7 @@ def test_catalog_falls_back_to_prior_phase_and_validates_files(tmp_path):
     for fp in (p1_best, p1_last, p2_last):
         fp.write_bytes(b'pt')
 
-    cat = session.CheckpointCatalog(run=run)
+    cat = catalog.CheckpointCatalog(run=run)
     cat.record_save(
         'p1', last_fpath=p1_last, epoch=1, best_fpath=p1_best, metric=0.55
     )
@@ -156,7 +155,7 @@ def test_catalog_falls_back_to_prior_phase_and_validates_files(tmp_path):
     )
     cat.persist()
 
-    loaded = session.CheckpointCatalog.from_run(run)
+    loaded = catalog.CheckpointCatalog.from_run(run)
     assert loaded.phases['p2'].best_metric is None
     assert loaded.final == p1_best
 
@@ -179,12 +178,12 @@ def test_catalog_legacy_fallback_handles_zero_one_and_many(tmp_path):
     '''
     run_empty = _make_run(tmp_path / 'empty')
     with pytest.raises(artifacts.ArtifactError, match='No checkpoint catalog'):
-        session.CheckpointCatalog.from_run(run_empty)
+        catalog.CheckpointCatalog.from_run(run_empty)
 
     run_single = _make_run(tmp_path / 'single')
     legacy_best = run_single.checkpoints / 'model_epoch_best.pt'
     legacy_best.write_bytes(b'legacy')
-    legacy_cat = session.CheckpointCatalog.from_run(run_single)
+    legacy_cat = catalog.CheckpointCatalog.from_run(run_single)
     assert legacy_cat.final == legacy_best
     assert legacy_cat.best('model') == legacy_best
 
@@ -192,4 +191,4 @@ def test_catalog_legacy_fallback_handles_zero_one_and_many(tmp_path):
     (run_multi.checkpoints / 'phase1_epoch_best.pt').write_bytes(b'1')
     (run_multi.checkpoints / 'phase2_epoch_best.pt').write_bytes(b'2')
     with pytest.raises(artifacts.ArtifactError, match='Ambiguous legacy checkpoints'):
-        session.CheckpointCatalog.from_run(run_multi)
+        catalog.CheckpointCatalog.from_run(run_multi)

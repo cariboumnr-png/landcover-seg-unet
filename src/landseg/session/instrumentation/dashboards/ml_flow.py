@@ -106,8 +106,6 @@ class MLFlowTracker(base.BaseTracker):
             **kwargs:
                 Additional keyword arguments.
         '''
-        # no ops for now
-        pass
 
     def log_artifact(self, fpath: str):
         '''
@@ -131,13 +129,10 @@ class MLFlowTracker(base.BaseTracker):
             step:
                 Step index associated with the text entry.
         '''
-        # no ops for now
-        pass
 
     def flush(self):
         '''No-op flush because MLflow writes metrics immediately.'''
         # `mlflow` writes immediately; not required
-        ...
 
     def close(self):
         '''End the active MLflow run if owned by this tracker.'''

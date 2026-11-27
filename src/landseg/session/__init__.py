@@ -30,7 +30,6 @@ Public APIs:
     - `ContinuousRunner`: Single-phase training session runner.
     - `CurriculumRunner`: Multi-phase curriculum session runner.
     - `EpochRunner`: Single-epoch execution runner.
-    - `PhaseCheckpointEntry`: Per-phase checkpoint paths and metrics.
     - `SessionBuildContext`: Runtime context for session building.
     - `SessionConfigShape`: Configuration protocol for session assembly.
     - `SessionLogger`: Session-scoped structured logger.
@@ -49,7 +48,6 @@ __all__ = [
     'ContinuousRunner',
     'CurriculumRunner',
     'EpochRunner',
-    'PhaseCheckpointEntry',
     'SessionBuildContext',
     'SessionConfigShape',
     'SessionLogger',
@@ -61,10 +59,6 @@ __all__ = [
 
 # for static check
 if typing.TYPE_CHECKING:
-    from .checkpoint_catalog import (
-        CheckpointCatalog,
-        PhaseCheckpointEntry,
-    )
     from .engine import EpochRunner
     from .factory import (
         SessionBuildContext,
@@ -73,6 +67,7 @@ if typing.TYPE_CHECKING:
     )
     from .logger import SessionLogger
     from .orchestration import (
+        CheckpointCatalog,
         ContinuousRunner,
         CurriculumRunner,
     )
@@ -83,10 +78,6 @@ if typing.TYPE_CHECKING:
 
 
 __getattr__, __dir__ = _lazy.attach(__name__, {
-    '.checkpoint_catalog': [
-        'CheckpointCatalog',
-        'PhaseCheckpointEntry',
-    ],
     '.engine': ['EpochRunner'],
     '.factory': [
         'SessionBuildContext',
@@ -95,6 +86,7 @@ __getattr__, __dir__ = _lazy.attach(__name__, {
     ],
     '.logger': ['SessionLogger'],
     '.orchestration': [
+        'CheckpointCatalog',
         'ContinuousRunner',
         'CurriculumRunner',
     ],

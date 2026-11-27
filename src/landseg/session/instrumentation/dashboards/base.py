@@ -68,7 +68,6 @@ class BaseTracker(abc.ABC):
             step:
                 Global or epoch step index.
         '''
-        ...
 
     @abc.abstractmethod
     def log_params(self, key: str, value: typing.Any):
@@ -81,7 +80,6 @@ class BaseTracker(abc.ABC):
             value:
                 Parameter value to record.
         '''
-        ...
 
     @abc.abstractmethod
     def log_image(self, key: str, image: 'torch.Tensor', step: int, **kwargs):
@@ -98,7 +96,6 @@ class BaseTracker(abc.ABC):
             **kwargs:
                 Additional backend-specific keyword arguments.
         '''
-        ...
 
     @abc.abstractmethod
     def log_artifact(self, fpath: str):
@@ -109,7 +106,6 @@ class BaseTracker(abc.ABC):
             fpath:
                 File path of the artifact to log.
         '''
-        ...
 
     @abc.abstractmethod
     def log_text(self, key: str, text: str, step: int):
@@ -124,14 +120,11 @@ class BaseTracker(abc.ABC):
             step:
                 Global or epoch step index.
         '''
-        ...
 
     @abc.abstractmethod
     def flush(self):
         '''Flush buffered events to the tracking backend.'''
-        ...
 
     @abc.abstractmethod
     def close(self):
         '''Close the tracker and release underlying resources.'''
-        ...

@@ -26,6 +26,7 @@ Exposes selected public symbols via lazy resolution to keep import
 order simple and circular-free.
 
 Public APIs:
+    - `CheckpointCatalog`: Reader, writer, and resolver for session runs.
     - `ContinuousRunner`: Runner executing a single continuous phase.
     - `CurriculumRunner`: Runner executing sequential curriculum phases.
     - `OrchestrationConfigShape`: Protocol for orchestration configs.
@@ -38,6 +39,7 @@ import typing
 import landseg._lazy as _lazy
 
 __all__ = [
+    'CheckpointCatalog',
     'ContinuousRunner',
     'CurriculumRunner',
     'OrchestrationConfigShape',
@@ -48,6 +50,7 @@ __all__ = [
 # for static check
 if typing.TYPE_CHECKING:
     from .builder import build_runner
+    from .catalog import CheckpointCatalog
     from .protocols import OrchestrationConfigShape
     from .runner import (
         ContinuousRunner,
@@ -57,6 +60,7 @@ if typing.TYPE_CHECKING:
 
 __getattr__, __dir__ = _lazy.attach(__name__, {
     '.builder': ['build_runner'],
+    '.catalog': ['CheckpointCatalog'],
     '.protocols': ['OrchestrationConfigShape'],
     '.runner': [
         'ContinuousRunner',

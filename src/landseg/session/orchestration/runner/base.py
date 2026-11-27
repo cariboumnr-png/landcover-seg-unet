@@ -51,8 +51,8 @@ import typing
 # local imports
 import landseg.artifacts as artifacts
 import landseg.core as core
-import landseg.session.checkpoint_catalog as checkpoint_catalog
 import landseg.session.contracts as contracts
+import landseg.session.orchestration.catalog as catalog
 import landseg.session.orchestration.policy as policy
 import landseg.session.orchestration.protocols as protocols
 
@@ -162,9 +162,7 @@ class BaseRunner(abc.ABC):
         self._is_phase_end: bool = False
         self._current_epoch: int = -1
         self._current_metrics = core.SessionStepResults()
-        self._checkpoint_catalog = checkpoint_catalog.CheckpointCatalog(
-            run=self.paths
-        )
+        self._checkpoint_catalog = catalog.CheckpointCatalog(run=self.paths)
 
     @property
     def trainer(self) -> protocols.EngineBaseLike:

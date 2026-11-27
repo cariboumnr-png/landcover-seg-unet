@@ -27,9 +27,10 @@ Provides `BaseCallback`, an optional-hook base class implementing
 validation, inference, and checkpointing events.
 '''
 
-# pylint: disable=too-few-public-methods
 # pylint: disable=unused-argument
 
+# standard imports
+import pathlib
 # local imports
 import landseg.core as core
 import landseg.session.contracts as contracts
@@ -83,12 +84,10 @@ class BaseCallback(contracts.SessionObserverLike):
             phase:
                 Phase configuration entering execution.
         '''
-        ...
 
     # session step begins
     def on_session_step_begin(self) -> None:
         '''Handle session step start event.'''
-        ...
 
     # epoch begins
     def on_epoch_begin(self, epoch: int) -> None:
@@ -99,20 +98,16 @@ class BaseCallback(contracts.SessionObserverLike):
             epoch:
                 One-based index of the epoch starting execution.
         '''
-        ...
 
     # policy begins
     def on_train_policy_begin(self) -> None:
         '''Handle training policy start event.'''
-        ...
 
     def on_val_policy_begin(self) -> None:
         '''Handle validation policy start event.'''
-        ...
 
     def on_infer_policy_begin(self) -> None:
         '''Handle inference policy start event.'''
-        ...
 
     # batch begins
     def on_batch_begin(self, action: str, bidx: int) -> None:
@@ -125,7 +120,6 @@ class BaseCallback(contracts.SessionObserverLike):
             bidx:
                 Zero-based index of the batch starting execution.
         '''
-        ...
 
     # batch ends
     def on_train_batch_end(self, bidx: int, results: core.TrainStepResults) -> None:
@@ -138,15 +132,12 @@ class BaseCallback(contracts.SessionObserverLike):
             results:
                 Training step results for the completed batch.
         '''
-        ...
 
     def on_val_batch_end(self) -> None:
         '''Handle validation batch completion event.'''
-        ...
 
     def on_infer_batch_end(self) -> None:
         '''Handle inference batch completion event.'''
-        ...
 
     # policy ends
     def on_train_policy_end(self, results: core.TrainStepResults) -> None:
@@ -157,7 +148,6 @@ class BaseCallback(contracts.SessionObserverLike):
             results:
                 Aggregated training results for the epoch.
         '''
-        ...
 
     def on_val_policy_end(self, results: core.ValStepResults) -> None:
         '''
@@ -167,7 +157,6 @@ class BaseCallback(contracts.SessionObserverLike):
             results:
                 Aggregated validation results for the epoch.
         '''
-        ...
 
     def on_infer_policy_end(self, results: core.InferStepResults) -> None:
         '''
@@ -177,7 +166,6 @@ class BaseCallback(contracts.SessionObserverLike):
             results:
                 Aggregated inference results for the epoch.
         '''
-        ...
 
     # epoch ends
     def on_epoch_end(self, epoch: int) -> None:
@@ -188,7 +176,6 @@ class BaseCallback(contracts.SessionObserverLike):
             epoch:
                 One-based index of the completed epoch.
         '''
-        ...
 
     # session step ends
     def on_session_step_end(self, results: core.SessionStepSummary) -> None:
@@ -199,7 +186,6 @@ class BaseCallback(contracts.SessionObserverLike):
             results:
                 Summary of metrics and status for the completed step.
         '''
-        ...
 
     # session phase ends
     def on_session_phase_end(self, phase: str, reason: str) -> None:
@@ -212,15 +198,13 @@ class BaseCallback(contracts.SessionObserverLike):
             reason:
                 Reason the phase terminated.
         '''
-        ...
 
     # session end
     def on_session_end(self) -> None:
         '''Handle session termination event.'''
-        ...
 
     # utilities
-    def on_checkpointing(self, fp: str) -> None:
+    def on_checkpointing(self, fp: pathlib.Path) -> None:
         '''
         Handle checkpoint persistence event.
 
@@ -228,4 +212,3 @@ class BaseCallback(contracts.SessionObserverLike):
             fp:
                 File path where the checkpoint was saved.
         '''
-        ...
