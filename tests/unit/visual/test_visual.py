@@ -320,7 +320,7 @@ def test_generate_prediction_previews_missing_save_path():
         infer_inputs=torch.zeros((1, 64, 64), dtype=torch.float32),
         infer_preds={'h1': torch.ones((64, 64), dtype=torch.long)},
     )
-    with pytest.raises(ValueError, match='Missing output path for head'):
+    with pytest.raises(ValueError, match='Missing output for head'):
         visual.generate_prediction_previews(
             infer_results=infer_results,
             dataspecs=specs,
@@ -411,9 +411,6 @@ def test_render_prediction_preview_missing_or_single_path(
     missing = tmp_path / 'missing_preview.png'
     with pytest.raises(FileNotFoundError, match='No preview PNG found'):
         visual.render_prediction_preview([missing])
-
-    with pytest.raises(TypeError, match='Expected a sequence'):
-        visual.render_prediction_preview(missing)  # type: ignore[arg-type]
 
 
 def test_render_training_curves_loads_existing_png(tmp_path: pathlib.Path):

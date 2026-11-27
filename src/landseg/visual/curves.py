@@ -56,7 +56,7 @@ class _CurveStepPoint:
 
 # ----- public functions
 def generate_training_curves(
-    step_records: typing.Sequence[typing.Mapping[str, typing.Any]],
+    step_records: list[dict[str, typing.Any]],
     save_fpath: str | pathlib.Path,
 ) -> pathlib.Path:
     '''
@@ -80,7 +80,7 @@ def generate_training_curves(
         ValueError:
             If `step_records` is empty.
     '''
-    points = _extract_curve_points(step_records)
+    points = _extract_pts(step_records)
 
     # map of total loss over epoch
     loss_curve: dict[int, float] = {}
@@ -145,15 +145,13 @@ def render_training_curves(png_fpath: str | pathlib.Path) -> None:
 
 
 # ----- private helpers
-def _extract_curve_points(
-    step_records: typing.Sequence[typing.Mapping[str, typing.Any]],
-) -> list[_CurveStepPoint]:
+def _extract_pts(records: list[dict[str, typing.Any]]) -> list[_CurveStepPoint]:
     '''Convert serialized step mappings into normalized curve points.'''
-    if not step_records:
+    if not records:
         raise ValueError('No training step records found to plot.')
 
     points: list[_CurveStepPoint] = []
-    for index, step in enumerate(step_records):
+    for index, step in enumerate(records):
 
         epoch = (
             step.get('global_epoch')

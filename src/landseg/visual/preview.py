@@ -33,7 +33,6 @@ Public APIs:
 '''
 
 # standard imports
-import os
 import pathlib
 import typing
 # third-party imports
@@ -163,7 +162,7 @@ def plot_qualitative_predictions(
 def generate_prediction_previews(
     infer_results: core.InferStepResults | None,
     dataspecs: core.DataSpecs,
-    save_fpaths: typing.Mapping[str, str | pathlib.Path],
+    save_fpaths: dict[str, pathlib.Path],
 ) -> dict[str, pathlib.Path]:
     '''
     Render qualitative prediction preview PNGs from inference results.
@@ -209,10 +208,8 @@ def generate_prediction_previews(
 
     for head in active_heads:
         if head not in save_fpaths:
-            raise ValueError(
-                f'Missing output path for head {head!r} in save_fpaths.'
-            )
-        save_file = pathlib.Path(save_fpaths[head])
+            raise ValueError(f'Missing output for head {head} in save_fpaths.')
+        save_file = save_fpaths[head]
         pred_tensor = infer_results.infer_preds[head]
         gt_tensor = infer_results.infer_labels.get(head)
 
@@ -241,9 +238,7 @@ def generate_prediction_previews(
     return saved_paths
 
 
-def render_prediction_preview(
-    png_fpaths: typing.Sequence[str | pathlib.Path],
-) -> None:
+def render_prediction_preview(png_fpaths: list[pathlib.Path]) -> None:
     '''
     Display previously generated prediction preview PNGs.
 
@@ -255,25 +250,17 @@ def render_prediction_preview(
             Ordered sequence of preview PNG file paths to display.
 
     Raises:
-        TypeError:
-            If a single path-like object is passed instead of a sequence.
         FileNotFoundError:
             If `png_fpaths` is empty or any target PNG does not exist.
     '''
-    if isinstance(png_fpaths, (str, os.PathLike)):
-        raise TypeError(
-            'Expected a sequence of preview PNG paths, got single path.'
-        )
-
-    targets = [pathlib.Path(fp) for fp in png_fpaths]
-    if not targets:
+    if not png_fpaths:
         raise FileNotFoundError('No preview PNG paths supplied.')
 
-    for png_file in targets:
+    for png_file in png_fpaths:
         if not png_file.is_file():
             raise FileNotFoundError(f'No preview PNG found: {png_file}')
 
-    for png_file in targets:
+    for png_file in png_fpaths:
         image = matplotlib.pyplot.imread(png_file)
         fig, ax = matplotlib.pyplot.subplots(figsize=(14, 4))
 

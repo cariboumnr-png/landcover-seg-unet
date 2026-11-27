@@ -57,6 +57,7 @@ addopts = "-ra --import-mode=importlib"
 filterwarnings = [
     "ignore::DeprecationWarning:rasterio.*",
     "ignore:Setting the shape on a NumPy array:DeprecationWarning",
+    "ignore:.*FigureCanvasAgg.*:UserWarning",
 ]
 
 [tool.coverage.run]
