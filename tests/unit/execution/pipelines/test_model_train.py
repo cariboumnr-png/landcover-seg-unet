@@ -33,6 +33,7 @@ import landseg.artifacts as artifacts
 import landseg.configs as configs
 import landseg.execution.pipelines.model_train as train_pipeline
 import landseg.geopipe as geopipe
+import landseg.session as session
 
 
 # ----- `ModelTraining` validation tests
@@ -251,17 +252,30 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
     pipeline = train_pipeline.ModelTraining(config)
     pipeline.pipeline_paths = artifacts.SessionPaths.allocate_run(
         pipeline.pipeline_paths.root
-    )
+    ).init_pipeline_folders()
     pipeline.logger = mocker.Mock()
 
-    # Create dummy step_results.json
-    pipeline.pipeline_paths.step_results.parent.mkdir(parents=True, exist_ok=True)
-    pipeline.pipeline_paths.step_results.write_text('[]', encoding='utf-8')
+    # Persist step_results.json via Controller so hash integrity validates
+    step_data = [{'epoch_in_phase': 1, 'training': {'total_objective': 1.0}}]
+    artifacts.Controller[list](pipeline.pipeline_paths.step_results).persist(
+        step_data
+    )
 
-    # Create dummy best checkpoint
-    pipeline.pipeline_paths.checkpoints.mkdir(parents=True, exist_ok=True)
-    best_ckpt = pipeline.pipeline_paths.checkpoints / 'checkpoint_epoch_0005_best.pt'
+    # Create best checkpoint and populate CheckpointCatalog
+    best_ckpt = pipeline.pipeline_paths.best_checkpoint('base_epoch')
+    last_ckpt = pipeline.pipeline_paths.last_checkpoint('base_epoch')
     best_ckpt.write_bytes(b'ckpt')
+    last_ckpt.write_bytes(b'ckpt')
+    catalog = session.CheckpointCatalog(run=pipeline.pipeline_paths)
+    catalog.record_save(
+        'base',
+        last_fpath=last_ckpt,
+        epoch=1,
+        best_fpath=best_ckpt,
+        metric=0.80,
+    )
+    catalog.mark_phase_completed('base')
+    catalog.persist()
 
     # Mock dataspecs with test split
     mock_specs = mocker.Mock()
@@ -270,23 +284,23 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
 
     mock_model = mocker.Mock()
     mock_infer_results = mocker.Mock()
+    mock_infer_results.infer_preds = {'head1': mocker.Mock()}
     mocker.patch.object(pipeline, '_build_model', return_value=mock_model)
     mock_run_infer = mocker.patch(
         'landseg.session.run_preview_inference',
         return_value=mock_infer_results,
     )
-    mock_plot_curves = mocker.patch('landseg.visual.plot_training_curves')
+    mock_gen_curves = mocker.patch('landseg.visual.generate_training_curves')
     mock_gen_previews = mocker.patch(
         'landseg.visual.generate_prediction_previews',
-        return_value={'head1': mocker.Mock()},
+        return_value={'head1': pipeline.pipeline_paths.preview('head1')},
     )
 
     pipeline._generate_post_run_visuals()
 
-    mock_plot_curves.assert_called_once_with(
-        pipeline.pipeline_paths.step_results,
-        save_path=pipeline.pipeline_paths.plots / 'training_curves.png',
-        show=False,
+    mock_gen_curves.assert_called_once_with(
+        step_data,
+        pipeline.pipeline_paths.training_curves,
     )
     mock_run_infer.assert_called_once_with(
         checkpoint_fpath=best_ckpt,
@@ -294,12 +308,11 @@ def test_train_generate_post_run_visuals(tmp_path, mocker):
         model=mock_model,
         config=pipeline.config.session,
         device=pipeline.config.session.device,
-        logger=pipeline.logger,
     )
     mock_gen_previews.assert_called_once_with(
-        infer_results=mock_infer_results,
-        dataspecs=mock_specs,
-        previews_dpath=pipeline.pipeline_paths.previews,
+        mock_infer_results,
+        mock_specs,
+        {'head1': pipeline.pipeline_paths.preview('head1')},
     )
 
 

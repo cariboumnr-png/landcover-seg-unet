@@ -102,11 +102,7 @@ class ModelEvaluation(base.SessionPipeline):
         if not results.validation or not results.validation.head_metrics:
             return
 
-        plots_dir = (
-            getattr(self.pipeline_paths, 'plots', None) or
-            (self.pipeline_paths.effective_run_folder / 'plots')
-        )
-        plots_dir.mkdir(parents=True, exist_ok=True)
+        self.pipeline_paths.plots.mkdir(parents=True, exist_ok=True)
 
         for head_name, h_metrics in results.validation.head_metrics.items():
             try:
@@ -115,7 +111,7 @@ class ModelEvaluation(base.SessionPipeline):
                     getattr(h_metrics, 'per_class_iou', None)
                 )
                 if per_cls is not None:
-                    p_path = plots_dir / f'{head_name}_per_class_iou.png'
+                    p_path = self.pipeline_paths.per_class_plot(head_name)
                     visual.plot_per_class_metrics(
                         per_cls,
                         metric_name='IoU',
@@ -136,7 +132,7 @@ class ModelEvaluation(base.SessionPipeline):
                     cm_matrix = getattr(cm_obj, 'matrix', None)
 
                 if cm_matrix is not None:
-                    cm_path = plots_dir / f'{head_name}_confusion_matrix.png'
+                    cm_path = self.pipeline_paths.confusion_matrix_plot(head_name)
                     visual.plot_confusion_matrix(
                         cm_matrix,
                         title=f'Confusion Matrix - [{head_name}]',

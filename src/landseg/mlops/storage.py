@@ -46,7 +46,9 @@ import typing
 import optuna
 import pandas
 # local imports
+import landseg.artifacts as artifacts
 import landseg.runtime as runtime
+import landseg.session as session
 import landseg.study as study
 
 
@@ -341,10 +343,13 @@ def sync_optuna_study(
     best_value = None
     best_params = {}
     best_trial_num = None
+    best_run_folder = None
     try:
-        best_value = float(_study.best_value)
-        best_params = dict(_study.best_params)
-        best_trial_num = int(_study.best_trial.number)
+        best_trial = _study.best_trial
+        best_value = float(best_trial.value) if best_trial.value is not None else None
+        best_params = dict(best_trial.params)
+        best_trial_num = int(best_trial.number)
+        best_run_folder = best_trial.user_attrs.get('run_folder')
     except ValueError:
         pass
 
@@ -370,14 +375,13 @@ def sync_optuna_study(
     except Exception:  # pylint: disable=broad-exception-caught
         trials_csv = None
 
-    # 4. Search and sync best trial checkpoint to persistent volume
+    # 4. Resolve and sync best trial checkpoint to persistent volume
     best_ckpt_dest = None
-    if best_trial_num is not None:
-        candidate_ckpts = list(
-            target_dest.glob(f'**/*trial_{best_trial_num:04d}*.pt')
-        )
-        if candidate_ckpts:
-            src_ckpt = candidate_ckpts[0]
+    if isinstance(best_run_folder, str) and best_run_folder:
+        run_dpath = pathlib.Path(best_run_folder)
+        if run_dpath.is_dir():
+            trial_run = artifacts.SessionPaths.from_run_folder(run_dpath)
+            src_ckpt = session.CheckpointCatalog.from_run(trial_run).final
             dest_ckpt = checkpoints_dir / f'{study_name}_best.pt'
             try:
                 shutil.copy2(src_ckpt, dest_ckpt)
