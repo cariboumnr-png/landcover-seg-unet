@@ -307,6 +307,11 @@ generation, evaluation exports, and comparison reports.
 
 Recently completed or stabilized:
 
+- Artifact path handles and final checkpoint resolution ([ADR-0070](./docs/ADRs/ADR-0070-artifact-path-handles-and-final-checkpoint-resolution.md)):
+  side-effect-free `artifacts.paths` handles with explicit `allocate_run`,
+  schema-marker `resolve_session_run`, `session.CheckpointCatalog` resolving
+  `.final` via policy `last_phase_best`, and path-in/path-out `landseg.visual`
+  with zero `artifacts` imports.
 - First-class module boundary hardening ([ADR-0069](./docs/ADRs/ADR-0069-first-class-module-boundary-hardening-and-subsystem-streamlining.md)):
   retired `landseg.utils` and `landseg.notebooks`, lazy public facades for
   every top-level package, one-way `geopipe` -> `knowledge` dependency, and a

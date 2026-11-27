@@ -107,7 +107,7 @@ flowchart TD
     CFG --> CST & RUN
     EXE --> GEO & KNW & SES & VIS & STD & MLO & ART & CORE & RUN
     SES --> MOD & ART & CORE & RUN & VIS
-    VIS --> CORE & RUN & ART
+    VIS --> CORE & RUN
     GEO --> KNW & ART & CORE & RUN
     STD --> EXE & SES & MLO & CFG & CORE
     ART --> RUN

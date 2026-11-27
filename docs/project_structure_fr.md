@@ -99,8 +99,7 @@ src/landseg/
 |   |-- checkpoint.py             Sauvegarde/chargement de checkpoints
 |   |-- controller.py             Resolve/build/rebuild selon les politiques
 |   |-- ledger.py                 Calcul d'empreintes et detection de collisions
-|   |-- paths/                    Chemins canoniques des artefacts
-|   |-- payload_io.py             Persistance des payloads et metadonnees
+|   |-- paths/                    Poignees de chemins sans effets de bord et resolution de session
 |   |-- policy.py                 Regles de cycle de vie des artefacts
 |   `-- storage/                  Persistance d'archives séquentielles (npzio)
 |
@@ -230,6 +229,7 @@ src/landseg/
 |   |   `-- formatters/           Rendu et formatage de rapports
 |   |-- orchestration/
 |   |   |-- builder.py            Construction de l'orchestration de session
+|   |   |-- catalog.py            Index structure des checkpoints et politique de sélection finale
 |   |   |-- policy/               Policies d'epoch et de phase
 |   |   `-- runner/               Runners continuous et curriculum
 |   |-- factory.py                Factory de session
@@ -304,5 +304,6 @@ src/landseg/
   (`__getattr__` et `__dir__`) à `landseg._lazy.attach`, `src/landseg/__init__.py`
   restant limité aux métadonnées du paquet et les marqueurs vides sans exports.
 - `visual/` est une couche de présentation pure sans état opérant sur les contrats
-  `core` (`DataSpecs`, `InferStepResults`) et des chemins persistés ; l'inférence
-  d'aperçu réside dans `session/preview.py`.
+  `core` (`DataSpecs`, `InferStepResults`), des enregistrements en mémoire et
+  des chemins PNG explicites (sans importation de `artifacts/` ni découverte de
+  dossiers) ; l'inférence d'aperçu réside dans `session/preview.py`.

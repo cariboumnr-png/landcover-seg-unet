@@ -104,14 +104,14 @@ pipeline artifacts, and session execution results under an experiment root direc
 │       └── config.json                          # Preparation configuration record
 │
 ├── results/                                     # Produced by 'model-train' / 'model-evaluate'
-│   └── run_0001/                                # Serialized experiment run directory
+│   └── run_0001/                                # Serialized experiment run directory (allocated cleanly)
 │       ├── checkpoints/
-│       │   ├── status.json                      # Training phase status tracking
+│       │   ├── status.json                      # CheckpointCatalog (`checkpoint_catalog/v0.1.0`, `last_phase_best`)
 │       │   ├── <name>_best.pt                   # Best model checkpoint weights
-│       │   └── <name>_last.pt                   # Final model checkpoint weights
+│       │   └── <name>_last.pt                   # Last epoch model checkpoint weights
 │       ├── logs/                                # Training run execution logs
-│       ├── plots/                               # Metric and diagnostic visualization plots
-│       ├── previews/                            # Model output prediction previews
+│       ├── plots/                               # `training_curves.png`, evaluation metrics/confusion plots
+│       ├── previews/                            # Per-head `<head>_preview.png` prediction previews
 │       ├── config.json                          # Fully resolved execution configuration
 │       ├── evaluation.json                      # Evaluation metrics JSON (if evaluation run)
 │       ├── summary.json                         # Overall run summary metrics JSON
